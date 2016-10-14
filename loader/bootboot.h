@@ -56,7 +56,7 @@ typedef struct {
   uint32_t   fb_height;
   uint32_t   fb_scanline;
   uint32_t   pagesize;
-  uint8_t    protocol_ver;
+  uint8_t    protocol;
   uint8_t    loader_type;
   uint16_t   flags[2];
   int16_t    timezone;
