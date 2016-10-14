@@ -139,28 +139,30 @@ ParseEnvironment(unsigned char *cfg, int len)
 {
     unsigned char *ptr=cfg-1;
 	DBG(L" * Environment @%lx %d bytes\n",cfg,len);
-    while(ptr<cfg+len&&ptr[0]!=0) {
+    while(ptr<cfg+len && ptr[0]!=0) {
 		ptr++;
         if(ptr[0]==' '||ptr[0]=='\t'||ptr[0]=='\r'||ptr[0]=='\n')
             continue;
         if(ptr[0]=='/'&&ptr[1]=='/') {
-            while(ptr<cfg+len &&ptr[0]!='\r'&&ptr[0]!='\n'&&ptr[0]!=0)
+            while(ptr<cfg+len && ptr[0]!='\r' && ptr[0]!='\n' && ptr[0]!=0){
 				ptr++;
+			}
+			ptr--;
             continue;
         }
-        if(!strncmpa(ptr,(const CHAR8 *)"width=",6)){
+        if(!CompareMem(ptr,(const CHAR8 *)"width=",6)){
             ptr+=6;
             reqwidth=atoi(ptr);
         }
-        if(!strncmpa(ptr,(const CHAR8 *)"height=",7)){
+        if(!CompareMem(ptr,(const CHAR8 *)"height=",7)){
             ptr+=7;
             reqheight=atoi(ptr);
         }
-        if(!strncmpa(ptr,(const CHAR8 *)"kernel=",7)){
+        if(!CompareMem(ptr,(const CHAR8 *)"kernel=",7)){
             ptr+=7;
             kernelname=(char*)ptr;
-            while(ptr<cfg+len &&ptr[0]!='\r'&&ptr[0]!='\n'&&
-				ptr[0]!=' '&&ptr[0]!=0)
+            while(ptr<cfg+len && ptr[0]!='\r' && ptr[0]!='\n' &&
+				ptr[0]!=' ' && ptr[0]!='\t' && ptr[0]!=0)
 					ptr++;
 			*ptr=0;
 			ptr++;
@@ -203,23 +205,23 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
 		ReadSize = 16*1024*1024;
 	FreePool(FileInfo);
 	
-	BufferSize = (UINTN)ReadSize;
-	Status = uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (BufferSize+4095)/4096, (EFI_PHYSICAL_ADDRESS*)&Buffer);
+	BufferSize = (UINTN)((ReadSize+4095)/4096);
+	Status = uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, BufferSize, (EFI_PHYSICAL_ADDRESS*)&Buffer);
 	if (Buffer == NULL) {
 		uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
 		return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
 	}
-	Status = uefi_call_wrapper(FileHandle->Read, 3, FileHandle, &BufferSize, Buffer);
+	Status = uefi_call_wrapper(FileHandle->Read, 3, FileHandle, &ReadSize, Buffer);
 	uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
 	if (EFI_ERROR(Status)) {
-		FreePool(Buffer);
+		uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)(Buffer), BufferSize);
 		report(Status,L"Read error");
 		Print(L"  File: %s\n",FileName);
 		return Status;
 	}
 	
 	*FileData = Buffer;
-	*FileDataLength = BufferSize;
+	*FileDataLength = ReadSize;
 	return EFI_SUCCESS;
 }
 
@@ -321,6 +323,23 @@ LoadCore(UINT8 *initrd_ptr)
 	while(ptr==NULL && fsdrivers[i]!=NULL) {
 		ptr=(UINT8*)(*fsdrivers[i++])((unsigned char*)initrd_ptr,kernelname);
 	}
+	// if every driver failed, try brute force scan
+	if(ptr==NULL) {
+		i=initrd_len;
+		ptr=initrd_ptr;
+		while(i-->0) {
+			Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ptr);
+			if(!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)&&
+				ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
+				ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
+				ehdr->e_type==ET_EXEC&&ehdr->e_phnum>0){
+					break;
+				}
+			ptr++;
+		}
+		ptr=NULL;
+	}
+
 	DBG(L" * Parsing ELF @%lx\n",ptr);
 	if(ptr!=NULL) {
 		// Parse ELF64

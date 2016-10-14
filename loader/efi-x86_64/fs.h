@@ -36,6 +36,8 @@ unsigned char *fsz_initrd(unsigned char *initrd_p, char *kernel)
 	if(initrd_p==NULL || CompareMem(sb->magic,FSZ_MAGIC,4) || kernel==NULL){
 		return NULL;
 	}
+	// Make sure only files in lib/ will be loaded
+	CopyMem(kernel,"lib/",4);
 	DBG(L" * fs/Z rootdir inode %d @%lx %s\n",sb->rootdirfid,in,a2u(kernel));
 	// Get the inode of lib/core
 	int i;

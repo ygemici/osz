@@ -36,7 +36,7 @@ vdmk: images
 	@make -e --no-print-directory -C tools vdmk | grep -v 'Nothing to be done' || true
 
 clean:
-	@make -e --no-print-directory -C loader/$(LOADER) clean
+	@#make -e --no-print-directory -C loader/$(LOADER) clean
 	@make -e --no-print-directory -C src clean
 	@make -e --no-print-directory -C tools clean
 	@make -e --no-print-directory -C tools imgclean

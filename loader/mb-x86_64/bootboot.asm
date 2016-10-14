@@ -882,28 +882,56 @@ protmode_start:
 
 @@:			cmp			dword[esi], 'widt'
 			jne			@f
+			cmp			word[esi+4], 'h='
+			jne			@f
 			add			esi, 6
 			call		prot_getval
 			mov			dword [reqwidth], eax
 			jmp			.getnext
 @@:			cmp			dword[esi], 'heig'
 			jne			@f
+			cmp			word[esi+4], 'ht'
+			jne			@f
+			cmp			byte[esi+6], '='
+			jne			@f
 			add			esi, 7
 			call		prot_getval
 			mov			dword [reqheight], eax
 			jmp			.getnext
+@@:			cmp			dword[esi], 'kern'
+			jne			@f
+			cmp			word[esi+4], 'el'
+			jne			@f
+			cmp			byte[esi+6], '='
+			jne			@f
+			add			esi, 7
+			mov			edi, kernel
+.copy:		lodsb
+			or			al, al
+			jz			.copyend
+			cmp			al, ' '
+			jz			.copyend
+			cmp			al, 13
+			jbe			.copyend
+			cmp			esi, 0A000h
+			ja			.copyend
+			cmp			edi, loader_end-1
+			jae			.copyend
+			stosb
+			jmp			.copy
+.copyend:	xor			al, al
+			stosb
+			jmp			.getnext
 @@:
 			inc			esi
 .getnext:	cmp			esi, 0A000h
-			ja			.parseend
+			jae			.parseend
 			cmp			byte [esi], 0
 			je			.parseend
 			cmp			byte [esi], ' '
 			je			@b
-			cmp			byte [esi], 10
-			je			@b
 			cmp			byte [esi], 13
-			je			@b
+			jbe			@b
 			jmp			.nextvar
 .noconf:	repnz		stosd
 			mov			dword [ebx+0], '// N'
@@ -960,18 +988,21 @@ protmode_start:
 			mov			esi, dword [bootboot.initrd_ptr]
 			mov			ecx, dword [bootboot.initrd_size]
 			add			ecx, esi
-@@:			add			esi, 512
+			dec			esi
+@@:			inc			esi
 			cmp			esi, ecx
 			jae			.errfs3
-			cmp			word [esi+1], 'EL'
+			cmp			dword [esi], 464C457Fh ; ELF magic
 			jne			@b
 			cmp			word [esi+4], 0102h	;lsb 64 bit
 			jne			@b
 			cmp			word [esi+16], 02h	;executable (has phdr)
 			jne			@b
+			cmp			word [esi+0x38], 0	;e_phnum > 0
+			jz			@b
 .coreok:
 			; parse ELF
-			cmp			word [esi+1], 'EL'
+			cmp			dword [esi], 464C457Fh ; ELF magic
 			jne			.badcore
 			cmp			word [esi+4], 0102h	;lsb 64 bit
 			jne			.badcore
@@ -1292,8 +1323,8 @@ nocore:		db			"Kernel not found in initrd",0
 badcore:	db			"Kernel is not an executable ELF64 for x86_64",0
 novbe:		db			"VESA VBE error, no framebuffer",0
 nogzip:		db			"Compressed initrd not supported yet",0
-kernel:		db			"lib/core",0
-
+kernel:		db			"lib/core"
+			db			(256-($-kernel)) dup 0
 ;-----------padding to be multiple of 512----------
 			db			(511-($-loader+511) mod 512) dup 0
 loader_end:

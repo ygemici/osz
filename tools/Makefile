@@ -7,7 +7,7 @@ HOMEFILE = ../bin/part_home.dd
 DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VDMKIMAGE = ../bin/disk.vdmk
-ifneq ("$LOADER", "efi-x86_64")
+ifneq ("$(LOADER)", "efi-x86_64")
 SRCS = $(filter-out efirom.c,$(wildcard *.c))
 else
 SRCS = $(wildcard *.c)
