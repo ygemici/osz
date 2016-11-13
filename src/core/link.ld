@@ -18,6 +18,9 @@ SECTIONS
         _code = .;
         *(.text)
         . = ALIGN(4096);
+        _data = .;
+        *(.data)
+        . = ALIGN(4096);
     }
 /*
    .data : AT(ADDR(.data) - CORE_ADDRESS)

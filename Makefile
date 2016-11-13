@@ -37,6 +37,7 @@ vdmk: images
 
 clean:
 	@#make -e --no-print-directory -C loader/$(LOADER) clean
+	@make -e --no-print-directory -C loader/efi-x86_64/zlib_inflate clean
 	@make -e --no-print-directory -C src clean
 	@make -e --no-print-directory -C tools clean
 	@make -e --no-print-directory -C tools imgclean
