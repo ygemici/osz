@@ -1,0 +1,20 @@
+BINTARGET = ../../../../bin/root/lib/sys/$(TARGET)
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
+LIBS += -lc
+
+CFLAGS += -Wall -g -fpic -ffreestanding
+LDFLAGS += -nostdlib
+
+all: ../../main.o $(OBJS) $(BINTARGET)
+
+%.o: %.c
+	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+
+$(BINTARGET):
+	@echo "  src		$(TARGET)"
+	@mkdir -p ../../../../bin/root/lib/sys/$(firstword $(subst /, ,$(TARGET)))
+	@$(CC) $(LDFLAGS) -L../../../../bin/root/lib ../../../../bin/root/lib/crt.o ../../main.o $(OBJS) -o $(BINTARGET) $(LIBS)
+
+clean:
+	@rm *.o $(BINTARGET) 2>/dev/null || true

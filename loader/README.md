@@ -180,8 +180,8 @@ Installation
 1. make an initrd with your kernel in it. Example:
 
 ```shell
-mkdir -r tmp/lib
-cp kernel lib/core
+mkdir -r tmp/lib/sys
+cp kernel lib/sys/core
 # copy more files
 cd tmp
 find . | cpio -H hpodc -o ../INITRD
@@ -206,7 +206,7 @@ tar -cf ../INITRD *
 // Loader specific
 width=800
 height=600
-kernel=lib/core
+kernel=lib/sys/core
 
 // Kernel specific
 anythingyouwant=somevalue

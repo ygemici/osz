@@ -19,11 +19,13 @@ util: tools
 system: src
 	@echo "CORE"
 	@make -e --no-print-directory -C src/core all | grep -v 'Nothing to be done' || true
-	@make -e --no-print-directory -C src/libc all | grep -v 'Nothing to be done' || true
+	@make -e --no-print-directory -C src/lib/libc all | grep -v 'Nothing to be done' || true
 
 apps: src
-	@echo "APPLICATIONS"
+	@echo "USERSPACE"
 	@make -e --no-print-directory -C src all | grep -v 'Nothing to be done' || true
+	@echo "DRIVERS"
+	@make -e --no-print-directory -C src drivers | grep -v 'Nothing to be done' || true
 
 images: tools
 	@echo "IMAGES"

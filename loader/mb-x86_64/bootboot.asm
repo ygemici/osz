@@ -964,7 +964,7 @@ protmode_start:
 			shr			ecx, 2
 			repnz		movsd
 
-			;-----load /lib/core------
+			;-----load /lib/sys/core------
 			; *_initrd
 			mov			edx, fsdrivers
 .nextfs2:	xor			ebx, ebx
@@ -1323,7 +1323,7 @@ nocore:		db			"Kernel not found in initrd",0
 badcore:	db			"Kernel is not an executable ELF64 for x86_64",0
 novbe:		db			"VESA VBE error, no framebuffer",0
 nogzip:		db			"Compressed initrd not supported yet",0
-kernel:		db			"lib/core"
+kernel:		db			"lib/sys/core"
 			db			(256-($-kernel)) dup 0
 ;-----------padding to be multiple of 512----------
 			db			(511-($-loader+511) mod 512) dup 0

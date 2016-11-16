@@ -86,7 +86,7 @@ EFI_SIMPLE_FILE_SYSTEM_PROTOCOL	*Volume;
 EFI_FILE_HANDLE					RootDir;
 EFI_FILE_PROTOCOL				*Root;
 int reqwidth, reqheight;
-char *kernelname="lib/core";
+char *kernelname="lib/sys/core";
 #if PRINT_DEBUG
 int dbg=0;
 #endif
@@ -483,7 +483,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 			t.Year,t.Month,t.Day,t.Hour,t.Minute,t.Second,
 			bootboot->timezone>=0?L"+":L"",bootboot->timezone/60,bootboot->timezone%60,
 			t.Daylight?L"summertime":L"");
-		// get lib/core and parse
+		// get lib/sys/core and parse
 		status=LoadCore(initrd_ptr);
 		if (EFI_ERROR(status))
 			return status;
@@ -573,7 +573,7 @@ get_memory_map:
 			"mov %%rax,%%cr3"
 			: : "b"(paging) : "memory" );
 
-		//call _start() in lib/core
+		//call _start() in lib/sys/core
 		__asm__ __volatile__ (
 			"xor %%rsp, %%rsp;"
 			"push %0;"

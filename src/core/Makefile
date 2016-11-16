@@ -1,5 +1,5 @@
 include ../../Config
-TARGET = lib/core
+TARGET = lib/sys/core
 
 BINTARGET = ../../bin/root/$(TARGET)
 SRCS = $(wildcard *.c)

@@ -1,6 +1,11 @@
-APPS = $(filter-out core libc Makefile,$(wildcard *))
+DRVS = $(wildcard drv/*/*/*) $(wildcard drv/*/*) $(wildcard drv/*)
+LIBS = $(filter-out libc Makefile,$(wildcard lib/*))
+APPS = $(filter-out core lib Makefile,$(wildcard *))
 
-all: $(APPS)
+drivers: $(DRVS)
+	@cat `find drv -name pci.ids|sort` >../bin/root/etc/pci.ids
+
+all: $(LIBS) $(APPS)
 
 .PHONY: Makefile
 

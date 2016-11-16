@@ -26,7 +26,7 @@ _start:
 	movl	%eax, %fs
 	movl	%eax, %gs
 /* setup task register */
-/* ltr */
+/* TODO:ltr */
 /* setup stack (should be ok) */
 	xor		%rsp, %rsp
 	pushq	$0x8

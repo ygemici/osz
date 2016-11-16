@@ -95,6 +95,7 @@ ifeq ("$(wildcard ../bin/root)","")
 	@mkdir ../bin/root/etc || true
 	@mkdir ../bin/root/home || true
 	@mkdir ../bin/root/lib || true
+	@mkdir ../bin/root/lib/sys || true
 	@mkdir ../bin/root/root || true
 	@mkdir ../bin/root/sbin || true
 	@mkdir ../bin/root/run || true
