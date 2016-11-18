@@ -46,6 +46,6 @@ gdt64_start:
 	.quad 0x002098000000ffff	/* 10 core CS */
 	.quad 0x0080f2000000ffff	/* 18 user DS */
 	.quad 0x0020f8000000ffff	/* 20 user CS */
-	.quad 0x0400890302010068	/* 28 tss */
-	.quad 0x0000000008070605
+	.quad 0x0000890000000068	/* 28 tss */
+	.quad 0x0000000000000000
 gdt64_end:

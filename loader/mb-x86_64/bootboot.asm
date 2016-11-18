@@ -1219,6 +1219,19 @@ protmode_start:
 			add			eax, 2*1024*1024
 			dec			ecx
 			jnz			@b
+			;first 2M mapped by page
+			mov			dword [0F000h], 013001h
+			; first page is thread control block
+			mov			dword [13000h], 014001h
+			; others identity mapped
+			mov			edi, 013008h
+			mov			eax, 4097
+			mov			ecx, 511
+@@:			stosd
+			add			edi, 4
+			add			eax, 4096
+			dec			ecx
+			jnz			@b
 
 			;generate new 64 bit gdt
 			mov			edi, GDT_table+8

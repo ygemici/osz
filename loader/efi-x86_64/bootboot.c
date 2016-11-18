@@ -500,7 +500,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 			return report(EFI_DEVICE_ERROR,L"Initialize screen\n");
 
 		// create page tables
-		uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 21, (EFI_PHYSICAL_ADDRESS*)&paging);
+		uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 23, (EFI_PHYSICAL_ADDRESS*)&paging);
 		if (paging == NULL) {
 			return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
 		}
@@ -522,14 +522,20 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 			paging[3*512+2+i]=(UINT64)((UINT8 *)core_ptr+i*4096+1);
 		//2M PDPE
 		for(i=0;i<16;i++)
-			paging[4*512+i]=(UINT64)((UINT8 *)paging+(5+i)*4096+1);
+			paging[4*512+i]=(UINT64)((UINT8 *)paging+(7+i)*4096+1);
+		//first 2M mapped per page
+		paging[7*512]=(UINT64)((UINT8 *)paging+5*4096+1);
+		// first page is thread control block
+		paging[5*512]=(UINT64)((UINT8 *)paging+6*4096+1);
+		// others identity mapped
+		for(i=1;i<512;i++)
+			paging[5*512+i]=(UINT64)(i*4096+1);
 		//2M PDE
-		for(i=0;i<512*16;i++)
-			paging[5*512+i]=(UINT64)((i<<21)+0x81);
-
-		int cnt=10;
+		for(i=1;i<512*16;i++)
+			paging[7*512+i]=(UINT64)((i<<21)+0x81);
 
 		// Get memory map
+		int cnt=10;
 		UINTN                 memory_map_size;
 		EFI_MEMORY_DESCRIPTOR *memory_map, *mement;
 		UINTN                 map_key;

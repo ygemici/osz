@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <fsZ.h>
 #include "crc32.h"
@@ -104,7 +105,7 @@ void add_superblock()
 //appends an inode
 int add_inode(char *filetype, char *mimetype)
 {
-	int i;
+	int i,j=!strcmp(filetype,"url:")?secsize-1024:52;
 	FSZ_Inode *in;
 	fs=realloc(fs,size+secsize);
 	if(fs==NULL) exit(4);
@@ -123,7 +124,7 @@ int add_inode(char *filetype, char *mimetype)
 	}
 	if(mimetype!=NULL){
 		i=strlen(mimetype);
-		memcpy(in->mimetype,mimetype,i>52?52:i);
+		memcpy(j==52?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
 	}
 	in->checksum=crc32_calc((char*)in->filetype,secsize-8);
 	size+=secsize;
@@ -202,7 +203,8 @@ void add_file(char *name, char *datafile)
 	if(!strcmp(name+strlen(name)-3,".so"))
 		{memset(in->mimetype,0,52);memcpy(in->mimetype,"sharedlib",9);}
 	else
-    //TODO: use libmagic to get mime type
+	// this is a simple creator, should use libmagic. But this
+	// is enough for our purposes, so don't introduce a dependency
 	if(!strcmp(name+strlen(name)-2,".h")||
 	   !strcmp(name+strlen(name)-2,".c")||
 	   !strcmp(name+strlen(name)-3,".md")||
@@ -253,6 +255,7 @@ void add_dirs(char *dirname,int parent,int level)
 	struct dirent *ent;
 	if(level>4) return;
 	char *full=malloc(4096);
+	char *ptrto=malloc(512-128);
 	if(parent==0) parent=strlen(dirname)+1;
 	if ((dir = opendir (dirname)) != NULL) {
 	  while ((ent = readdir (dir)) != NULL) {
@@ -260,15 +263,20 @@ void add_dirs(char *dirname,int parent,int level)
 			continue;
 		sprintf(full,"%s/%s",dirname,ent->d_name);
 		if(ent->d_type==DT_DIR) {
+			// recursively add directory structure
 			int i=add_inode("dir:",NULL);
 			link_inode(i,full+parent,0);
 			add_dirs(full,parent,level+1);
 		}
 		if(ent->d_type==DT_REG) {
+			// add a plain file
 			add_file(full+parent,full);
 		}
 		if(ent->d_type==DT_LNK) {
-			// TODO: add symlink
+			// add a symbolic link
+			int s=readlink(dirname,ptrto,512-128-1); ptrto[s+1]=0;
+			int i=add_inode("url:",ptrto);
+			link_inode(i,full+parent,0);
 		}
 		// TODO: add other types, blkdev, socket etc.
 	  }
