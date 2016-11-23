@@ -30,9 +30,9 @@ __BEGIN_DECLS
 
 # define __need_size_t
 # define __need_NULL
-# include <stddef.h>
+//# include <stddef.h>
 
-# include <bits/types.h>
+//# include <bits/types.h>
 # define __need_FILE
 # define __need___FILE
 #endif /* Don't need FILE.  */
@@ -163,7 +163,7 @@ typedef _G_fpos64_t fpos64_t;
    L_cuserid	How long an array to pass to `cuserid'.
    FOPEN_MAX	Minimum number of files that can be open at once.
    FILENAME_MAX	Maximum length of a filename.  */
-#include <bits/stdio_lim.h>
+//#include <bits/stdio_lim.h>
 
 
 /* Standard streams.  */
@@ -852,7 +852,7 @@ __END_NAMESPACE_STD
    are available on this system.  Even if available, these variables
    should not be used directly.  The `strerror' function provides
    all the necessary functionality.  */
-#include <bits/sys_errlist.h>
+//#include <bits/sys_errlist.h>
 
 
 #ifdef	__USE_POSIX
@@ -932,13 +932,13 @@ extern void funlockfile (FILE *__stream) __THROW;
 /* If we are compiling with optimizing read this file.  It contains
    several optimizing inline functions and macros.  */
 #ifdef __USE_EXTERN_INLINES
-# include <bits/stdio.h>
+//# include <bits/stdio.h>
 #endif
 #if __USE_FORTIFY_LEVEL > 0 && defined __fortify_function
-# include <bits/stdio2.h>
+//# include <bits/stdio2.h>
 #endif
 #ifdef __LDBL_COMPAT
-# include <bits/stdio-ldbl.h>
+//# include <bits/stdio-ldbl.h>
 #endif
 
 __END_DECLS

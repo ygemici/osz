@@ -272,7 +272,8 @@ extern long int a64l (const char *__s)
 #endif	/* Use misc || extended X/Open.  */
 
 #if defined __USE_MISC || defined __USE_XOPEN_EXTENDED
-# include <sys/types.h>	/* we need int32_t... */
+//# include <sys/types.h>	/* we need int32_t... */
+# include <stdint.h>
 
 /* These are the functions that actually do things.  The `random', `srandom',
    `initstate' and `setstate' functions are those from BSD Unices.

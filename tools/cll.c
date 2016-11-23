@@ -311,7 +311,7 @@ int main(int argc, char**argv)
     int i,j;
     FILE *f;
     if(argc<3) {
-        printf("CL Dynamic Linkage section generator\n\nUsage:\n  %s (namespace) FILES...\n\nScans for CL definitions in given files and creates cl.S and cl.o with linkage info.\nLink that when creating shared objects and CL will use your .so.\n\nExample:\n  %s com.acme.libpng *.c *.h *.cpp *.java\n  gcc -shared cl.o main.o png.o -o com.acme.libpng.so\n",argv[0],argv[0]);
+        printf("CL Dynamic Linkage section generator\n\nUsage:\n  %s (namespace) FILES...\n\nScans for CL definitions in given files and creates cl.S and cl.o with linkage info.\nLink that when creating shared objects and CL will use your .so.\n\nExample:\n  %s com.acme.libpng *.c *.h *.cpp *.pas\n  gcc -shared cl.o main.o png.o -o com.acme.libpng.so\n",argv[0],argv[0]);
         exit(1);
     }
     addstr("",0);

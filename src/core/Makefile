@@ -11,7 +11,7 @@ CFLAGS = -Wall -fpic -ffreestanding -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -m
 all: $(OBJS) platf $(BINTARGET)
 
 %.o: %.c
-	@$(CC) -I../../etc/include -I. $(OPT) $(CFLAGS) -c $< -o $@
+	@$(CC) -I../../etc/include -I. -I./$(ARCH) $(OPT) $(CFLAGS) -c $< -o $@
 
 platf:
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true

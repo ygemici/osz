@@ -1,5 +1,5 @@
 /*
- * osZ.h
+ * sys/types.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,16 +22,26 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Mandatory include file for every OS/Z applications
+ * @brief System types
  */
 
-#define _OS_Z_ 1
-
-#include <features.h>
-#include <limits.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <types.h>
-#include <syscall.h>
+
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+
+#ifndef null
+#define null NULL
+#endif
+
+#ifndef true
+#define true 1
+#endif
+
+#ifndef false
+#define false 0
+#endif
+
+//typedef uint64_t __pid_t;
+//typedef uint64_t __size_t;

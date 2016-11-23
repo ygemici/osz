@@ -22,7 +22,7 @@ all: selfcheck $(OBJS)
 
 %.o: %.c
 	@echo "  src		$<"
-	@$(CC) -I../etc/include -I/usr/include/efi -I/usr/include/efi/x86_64 $(OPT) $(CFLAGS) $< -o $@ $(LIBS)
+	@$(CC) -I/usr/include/efi -I/usr/include/efi/x86_64 $(OPT) $(CFLAGS) $< -o $@ $(LIBS)
 
 clean:
 	@rm *.o 2>/dev/null || true

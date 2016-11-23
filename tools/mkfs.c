@@ -36,8 +36,8 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <fsZ.h>
-#include "crc32.h"
+#include "../etc/include/fsZ.h"
+#include "../etc/include/crc32.h"
 
 //-------------DATA-----------
 char *diskname;		//entire disk
