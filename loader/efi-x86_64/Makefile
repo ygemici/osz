@@ -1,9 +1,10 @@
+include ../../Config
 ARCH               = $(shell uname -m | sed s,i[3456789]86,ia32,)
 GNUEFI_INCLUDES    = -I/usr/include -I. -I/usr/include/efi -I/usr/include/efi/$(ARCH) -I/usr/include/efi/protocol
 GNUEFI_CRT_OBJS    = crt0-efi-$(ARCH).o
 GNUEFI_LDS         = elf_$(ARCH)_efi.lds
 
-CFLAGS = -mno-red-zone -mno-mmx -mno-sse -O2 -fpic -Wall -Wextra -Werror -fshort-wchar -fno-strict-aliasing -ffreestanding -fno-stack-protector -fno-stack-check -DCONFIG_$(ARCH) -DGNU_EFI_USE_MS_ABI -maccumulate-outgoing-args --std=c11 
+CFLAGS = -DPRINT_DEBUG=$(DEBUG) -mno-red-zone -mno-mmx -mno-sse -O2 -fpic -Wall -Wextra -Werror -fshort-wchar -fno-strict-aliasing -ffreestanding -fno-stack-protector -fno-stack-check -DCONFIG_$(ARCH) -DGNU_EFI_USE_MS_ABI -maccumulate-outgoing-args --std=c11 
 
 LDFLAGS = -nostdlib
 LDFLAGS += -shared -Bsymbolic -L. $(GNUEFI_CRT_OBJS)

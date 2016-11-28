@@ -30,7 +30,6 @@
 #include "../bootboot.h"
 #include "zlib_inflate/zlib.h"
 
-#define PRINT_DEBUG 0
 #if PRINT_DEBUG
 #define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
 #else

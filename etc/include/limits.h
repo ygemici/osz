@@ -34,6 +34,8 @@
 #define __PAGESIZE	4096
 #define __SYSCALL_WORDSIZE		64
 
+#define __PHYFRAG_MAX 2 //pages, each frag entry 16 bytes
+
 #  define CHAR_BIT	8
 #  define SCHAR_MIN	(-128)
 #  define SCHAR_MAX	127

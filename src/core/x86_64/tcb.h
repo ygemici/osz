@@ -25,19 +25,8 @@
  * @brief Thread Control Block. Must align with TSS
  */
 
-#define OSZ_TCB_MAGIC "THRD"
+#include "../tcb.h"
 
-enum OSZ_tcb_state
-{
-	tcb_receiving,
-	tcb_sending,
-	tcb_running,
-	tcb_waiting,
-	tcb_hybernated
-};
-
-#define OSZ_tcb_flag_dispatching	1
-#define OSZ_tcb_flag_calling		2
 #define OSZ_tcb_flag_needsxsave		4
 #define OSZ_tcb_flag_needxmmsave	8
 
@@ -56,8 +45,8 @@ typedef struct {
 	uint64_t usererrno;	// thread-safe libc errno
 	uint64_t linkmem;	// head of linked memory chain
 	uint64_t allocmem;	// head of allocated memory chain
-	pid_t next;		// next thread in this priority level
-	pid_t prev;		// previous thread in this priority level
+	pid_t next;			// next thread in this priority level
+	pid_t prev;			// previous thread in this priority level
 	uint64_t billcnt;	// ticks thread spent in userspace
 	uint64_t syscnt;	// ticks thread spent in kernelspace (core)
 	uint64_t evtq_ptr;	// event queue
@@ -66,7 +55,7 @@ typedef struct {
 	uint64_t evtq_lastserial;
 	pid_t recvfrom;
 	pid_t sendto;
-	pid_t blksend;	// head of blocked threads chain (sending to this thread)
+	pid_t blksend;		// head of blocked threads chain (sending to this thread)
 	uint64_t gpr[128];	// general purpose registers save area
 	uint8_t fx[512];	// floating point registers save area (16 aligned)
 	uint64_t acl[128];	// access control list

@@ -12,3 +12,4 @@ Files
 - *CONFIG* the default boot configuration. Must be 4096 bytes long.
   Will be copied to FS0:\BOOTBOOT\CONFIG on disk assembly.
 - *bochs.rc* bochs configuration file
+- *fonts16.psf* PC Screen Font for system8x16 font

@@ -1,5 +1,6 @@
 FBUF_ADDRESS = 0xffffffffe0000000;
 CORE_ADDRESS = 0xffffffffffe00000;
+
 ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
 SECTIONS
@@ -21,15 +22,8 @@ SECTIONS
         _data = .;
         *(.data)
         . = ALIGN(4096);
+        __bss_start = .;
     }
-/*
-   .data : AT(ADDR(.data) - CORE_ADDRESS)
-   {
-        _data = .;
-        *(.data)
-        . = ALIGN(4096);
-   }
-*/
    _end = .;
 
    /DISCARD/ :

@@ -7,7 +7,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS =
 CLL  = ../../../tools/cll.o
 
-CFLAGS = -fpic -ffreestanding
+CFLAGS = -fpic -fPIC -ffreestanding
 
 all: $(OBJS) $(BINTARGET)
 

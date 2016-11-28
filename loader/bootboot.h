@@ -74,7 +74,7 @@ typedef struct {
 #define MMapEnt_Ptr(a)  (a->ptr)
 #define MMapEnt_Size(a) (a->size & 0xFFFFFFFFFFFFFF00)
 #define MMapEnt_Type(a) (a->size & 0xFF)
-#define MMapEnt_IsFree(a) (a->size&0xFF==1||a->size&0xFF==3)
+#define MMapEnt_IsFree(a) ((a->size&0xFF)==1||(a->size&0xFF)==3)
 
 #define MMAP_FREE     1
 #define MMAP_RESERVED 2

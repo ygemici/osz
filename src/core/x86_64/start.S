@@ -1,6 +1,7 @@
 .section .text
 .global _start
 .extern main
+.extern isr_syscall
 
 /**********************************************************************
  *                     OS/Z Loader entry point                        *
@@ -18,7 +19,7 @@ _start:
 	lgdt	(%rax)
 	jmp		1f
 	nop
-1:	movl	$0x8, %eax
+1:	movl	$0x10, %eax
 	movl	%eax, %ds
 	movl	%eax, %es
 	movl	%eax, %ss
@@ -30,7 +31,19 @@ _start:
 	ltr		%ax
 /* setup stack (should be ok, but be sure) */
 	xor		%rsp, %rsp
-	pushq	$0x10
+/* setup syscall dispatcher */
+	/* STAR */
+	xorq	%rcx, %rcx
+	movl	$0xC0000081, %ecx
+	movq	$0x0013000800000000, %rax
+	wrmsr
+	/* LSTAR */
+	inc		%ecx
+	xorl	%edx, %edx
+	movq	$isr_syscall, %rax
+	wrmsr
+/* jump to 64 bit code segment */
+	pushq	$0x08
 	pushq	$main
 	lretq
 
@@ -42,8 +55,8 @@ gdt64:
 
 gdt64_start:
 	.quad 0x0000000000000000	/* always empty */
-	.quad 0x008092000000ffff	/* 08 core DS */
-	.quad 0x002098000000ffff	/* 10 core CS */
+	.quad 0x002098000000ffff	/* 08 core CS */
+	.quad 0x008092000000ffff	/* 10 core DS */
 	.quad 0x0080f2000000ffff	/* 18 user DS */
 	.quad 0x0020f8000000ffff	/* 20 user CS */
 	.quad 0x0000890000000068	/* 28 tss */

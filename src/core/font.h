@@ -1,7 +1,7 @@
 /*
- * libc/crt.S
+ * font.h
  * 
- * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
+ * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:
@@ -22,67 +22,23 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Zero level C runtime (crt0)
+ * @brief PSF font format for kprintf
  */
-.include "sys/core.h"
 
-.extern main
-.global _start
-.global exit
-.global atexit
-.intel_syntax noprefix
+#define OSZ_FONT_MAGICH 0x864ab572
 
-.section .text
-_start:
-	mov		rax, 6f
-	mov		qword [5f], rax
-	xor		rax, rax
-	call    main
-	mov     rcx, rax
-	jmp     1f
-exit:
-	mov     rcx, qword [rsp+8]
-1:	push	rcx
-	mov		rsi, 6f
-2:	cmp		rsi, 7f
-	je		3f
-	lodsq
-	or		rax, rax
-	jz		3f
-	push	rsi
-	call	rax
-	pop		rsi
-	jmp		2b
-3:	pop		rcx
-	mov     ebx, 60			# SYS_exit
-	mov     eax, 0x6C6C6163 # 'call'
-	syscall
-	ret
-atexit:
-	mov     rax, qword [rsp+8]
-	or		rax, rax
-	jz		4f
-	mov		rbx, qword [5f]
-	cmp		rbx, 7f
-	je		4f
-	cmp		rbx, qword [5f]
-	je		4f
-	mov		qword [rbx], rax
-	add		rbx, 8
-	mov		qword [5f], rbx
-4:	ret
+typedef struct {
+	uint32_t magic;
+	uint32_t version;
+	uint32_t headersize;/* offset of bitmaps in file */
+	uint16_t flags;		/* original PSF2 has 32 bit flags */
+	uint8_t hotspot_x;	/* addition to osZ */
+	uint8_t hotspot_y;
+	uint32_t numglyph;
+	uint32_t bytesperglyph;
+	uint32_t height;
+	uint32_t width;
+	uint8_t glyphs;
+} __attribute__((packed)) OSZ_font;
 
-.section .data
-5:
-.quad 6f
-6:
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-7:
-
+extern unsigned char _binary_font_start;

@@ -256,7 +256,7 @@ the rest of the loader in source. This is so because it was designed to
 help the needs of hobby OS developers, specially those who want to write
 their own filesystem.
 
-The reference implementations support cpio, tar and fs/Z as initrd.
+The reference implementations support cpio, tar and FS/Z as initrd.
 Gzip uncompressor coming soon in EFI version.
 
 Troubleshooting

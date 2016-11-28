@@ -4,7 +4,7 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS =
 
-CFLAGS = -Wall -fpic -ffreestanding
+CFLAGS = -Wall -fpic -ffreestanding -fPIC
 
 all: $(OBJS) ok
 

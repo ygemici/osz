@@ -33,13 +33,7 @@
  *       0-16G RAM identity mapped
  */
 
-#include <osZ.h>
-#include "../../loader/bootboot.h"
-
-// import virtual addresses from linker
-extern BOOTBOOT bootboot;
-extern unsigned char environment[4096];
-extern uint8_t fb;
+#include "core.h"
 
 /**********************************************************************
  *                         OS/Z Core start                            *
@@ -47,16 +41,29 @@ extern uint8_t fb;
 */
 void main()
 {
-    int x,y,s=bootboot.fb_scanline,w=bootboot.fb_width,h=bootboot.fb_height;
-    // cross-hair
-    for(y=0;y<h;y++) { *((uint32_t*)(&fb + s*y + (w*2)))=0x00FFFFFF; }
-    for(x=0;x<w;x++) { *((uint32_t*)(&fb + s*(h/2)+x*4))=0x00FFFFFF; }
+	// initialize kernel version of printf
+	kprintf_init();
+#if DEBUG
+	kprintf("OS/Z Starting...");
+#endif
+	// initialize physical memory manager
+	pmm_init();
 
-    // boxes
-    for(y=0;y<20;y++) { for(x=0;x<20;x++) { *((uint32_t*)(&fb + s*(y+10) + (x+10)*4))=0x00FF0000; } }
-    for(y=0;y<20;y++) { for(x=0;x<20;x++) { *((uint32_t*)(&fb + s*(y+10) + (x+40)*4))=0x0000FF00; } }
-    for(y=0;y<20;y++) { for(x=0;x<20;x++) { *((uint32_t*)(&fb + s*(y+10) + (x+70)*4))=0x000000FF; } }
+	int x,y,s=bootboot.fb_scanline,w=bootboot.fb_width,h=bootboot.fb_height;
+	// cross-hair
+	for(y=0;y<h;y++) { *((uint32_t*)(&fb + s*y + (w*2)))=0x00FFFFFF; }
+	for(x=0;x<w;x++) { *((uint32_t*)(&fb + s*(h/2)+x*4))=0x00FFFFFF; }
+	
+	// boxes
+	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+10)*4))=0x00FF0000; } }
+	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+40)*4))=0x0000FF00; } }
+	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+70)*4))=0x000000FF; } }
+    
+	kprintf("\n\n  R   G   B\nHello OSDev!   "
+		"%%d, %%c, %%x, '%%s' efiptr=%%x   %d, %c, %x, '%s' efiptr=%x\n"
+		"utf-8 0-7FF: ¾ßŔƂ ΑΒΓΔΕΖΗΘ αβγδεζηθ ϢϣϤϥϦ ЀЁЂЃЄАБВГДЕЖ абвгдеж ЉԱԲԳԴ אבגד ابةتثج ۱۲۳ ܐܒܓܔܕ \n  ",
+		65,'B',0x1a2b3c4d5e6f,"s%domething", bootboot.efi_ptr);
 
-    __asm__ __volatile__ ( "mov %0, %%eax;cli;hlt" : : "m"(bootboot) : "memory" );
+	__asm__ __volatile__ ( "movq %0, %%rax;xchgw %%bx,%%bx;cli;hlt" : : "m"(bootboot.efi_ptr) : "memory" );
 
 }

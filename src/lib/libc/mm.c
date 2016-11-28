@@ -1,5 +1,5 @@
 /*
- * libc/crt.S
+ * libc/mm.c
  * 
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,67 +22,21 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Zero level C runtime (crt0)
+ * @brief Memory management
  */
-.include "sys/core.h"
 
-.extern main
-.global _start
-.global exit
-.global atexit
-.intel_syntax noprefix
+#include <osZ.h>
 
-.section .text
-_start:
-	mov		rax, 6f
-	mov		qword [5f], rax
-	xor		rax, rax
-	call    main
-	mov     rcx, rax
-	jmp     1f
-exit:
-	mov     rcx, qword [rsp+8]
-1:	push	rcx
-	mov		rsi, 6f
-2:	cmp		rsi, 7f
-	je		3f
-	lodsq
-	or		rax, rax
-	jz		3f
-	push	rsi
-	call	rax
-	pop		rsi
-	jmp		2b
-3:	pop		rcx
-	mov     ebx, 60			# SYS_exit
-	mov     eax, 0x6C6C6163 # 'call'
-	syscall
-	ret
-atexit:
-	mov     rax, qword [rsp+8]
-	or		rax, rax
-	jz		4f
-	mov		rbx, qword [5f]
-	cmp		rbx, 7f
-	je		4f
-	cmp		rbx, qword [5f]
-	je		4f
-	mov		qword [rbx], rax
-	add		rbx, 8
-	mov		qword [5f], rbx
-4:	ret
+/* Allocate SIZE bytes of memory.  */
+void *malloc (size_t __size){}
+/* Allocate NMEMB elements of SIZE bytes each, all initialized to 0.  */
+void *calloc (size_t __nmemb, size_t __size){}
+/* Re-allocate the previously allocated block
+   in PTR, making the new block SIZE bytes long.  */
+void *realloc (void *__ptr, size_t __size){}
+/* Free a block allocated by `malloc', `realloc' or `calloc'.  */
+void free (void *__ptr){}
+/* ISO C variant of aligned allocation.  */
+void *aligned_alloc (size_t __alignment, size_t __size){}
 
-.section .data
-5:
-.quad 6f
-6:
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-7:
 

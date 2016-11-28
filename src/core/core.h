@@ -1,7 +1,7 @@
 /*
- * libc/crt.S
+ * core.h
  * 
- * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
+ * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:
@@ -22,67 +22,25 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Zero level C runtime (crt0)
+ * @brief Core functions (ring 0)
  */
-.include "sys/core.h"
 
-.extern main
-.global _start
-.global exit
-.global atexit
-.intel_syntax noprefix
+#include <osZ.h>
+#include <limits.h>
+#include "../../loader/bootboot.h"
 
-.section .text
-_start:
-	mov		rax, 6f
-	mov		qword [5f], rax
-	xor		rax, rax
-	call    main
-	mov     rcx, rax
-	jmp     1f
-exit:
-	mov     rcx, qword [rsp+8]
-1:	push	rcx
-	mov		rsi, 6f
-2:	cmp		rsi, 7f
-	je		3f
-	lodsq
-	or		rax, rax
-	jz		3f
-	push	rsi
-	call	rax
-	pop		rsi
-	jmp		2b
-3:	pop		rcx
-	mov     ebx, 60			# SYS_exit
-	mov     eax, 0x6C6C6163 # 'call'
-	syscall
-	ret
-atexit:
-	mov     rax, qword [rsp+8]
-	or		rax, rax
-	jz		4f
-	mov		rbx, qword [5f]
-	cmp		rbx, 7f
-	je		4f
-	cmp		rbx, qword [5f]
-	je		4f
-	mov		qword [rbx], rax
-	add		rbx, 8
-	mov		qword [5f], rbx
-4:	ret
+// import virtual addresses from linker
+extern BOOTBOOT bootboot;
+extern unsigned char environment[4096];
+extern uint8_t fb;
 
-.section .data
-5:
-.quad 6f
-6:
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-7:
-
+// kernel function routines
+extern void kprintf_init();
+extern void kprintf(char* ptr, ...);
+extern void kmemcpy(char *dest, char *src, int size);
+extern void kmemset(char *dest, int c, int size);
+extern void kmemvid(char *dest, char *src, int size);
+extern void* kalloc(int pages);
+extern void kfree(void* ptr);
+extern void kmap(void* virt, void* phys);
+extern void pmm_init();

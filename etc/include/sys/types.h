@@ -45,3 +45,4 @@
 
 //typedef uint64_t __pid_t;
 //typedef uint64_t __size_t;
+typedef uint64_t size_t;

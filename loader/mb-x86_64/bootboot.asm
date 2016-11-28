@@ -1149,6 +1149,7 @@ protmode_start:
 			mov			word [bootboot.fb_type],FB_BGRA
 @@:			; set video mode
 			mov			bx, cx
+			bts			bx, 14 ;flat linear
 			mov			ax, 4f02h
 			int			10h
 			cmp			ax, 004fh
