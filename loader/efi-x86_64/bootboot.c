@@ -386,7 +386,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 	CHAR16 *configfile;
 	CHAR16 **argv;
 	INTN argc;
-	int i;
+	UINTN i;
 	CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [-?|-h|/?|/h] [INITRDFILE [ENVIRONMENTFILE]]\n\nDESCRIPTION\n  Bootstraps the OS/Z (or any other compatible) operating system via\n  the BOOTBOOT Protocol. If not given, the loader defaults to\n   FS0:\\BOOTBOOT\\INITRD as ramdisk image and\n   FS0:\\BOOTBOOT\\CONFIG for boot environment.\n  This is a loader, it is not supposed to return control to the shell.\n\n";
 
 	// Initialize UEFI Library
@@ -517,9 +517,9 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 		//4k PT
 		paging[3*512+0]=(UINT64)(bootboot)+1;
 		paging[3*512+1]=(UINT64)(env_ptr)+1;
-		for(i=0;i<509;i++)
+		for(i=0;i<(core_len/4096);i++)
 			paging[3*512+2+i]=(UINT64)((UINT8 *)core_ptr+i*4096+1);
-		paging[3*512+511]=(UINT64)((UINT8 *)paging+8*4096+1);
+		paging[3*512+511]=(UINT64)((UINT8 *)paging+23*4096+1);
 		//2M PDPE
 		for(i=0;i<16;i++)
 			paging[4*512+i]=(UINT64)((UINT8 *)paging+(7+i)*4096+1);

@@ -386,7 +386,7 @@ getmemmap:	xor			eax, eax
 			cmp			dword [bootboot.initrd_ptr], ecx
 			jnz			.entryok
 			;is it big enough for the core and the ramdisk?
-			mov			ebp, INITRD_MAXSIZE*1024*1024 + CORE_MAX + 4096-1
+			mov			ebp, INITRD_MAXSIZE*1024*1024 + CORE_MAX
 			add			ebp, 1024*1024-1
 			shr			ebp, 20
 			shl			ebp, 20

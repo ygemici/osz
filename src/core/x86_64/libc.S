@@ -73,18 +73,35 @@ kmap_init:
 	shlq	$3, %rbx
 	add		%rax, %rbx
 	/* map it at tmppte */
+	pushq	%rdi
 	mov		%rbx, %rax
+	addq	$8, %rax
+	movq	%rax, %rdi
 	andw	$0x0F000, %ax
 	incw	%ax
 	mov		%rax, (%rbx)
+	/* clear the rest */
+	pushq	%rcx
+	pushq	%rax
+	xorq	%rax, %rax
+	movq	%rbx, %rcx
+	addq	$4095, %rcx
+	andw	$0xF000, %cx
+	subq	%rbx, %rcx
+	shrq	$3, %rcx
+	dec		%rcx
+	dec		%rcx
+	repnz	stosq
+	popq	%rax
+	popq	%rcx
+	popq	%rdi
 	/* record pointer */
 	subq	$16, %rbx
-	andw	$0x0FFF, %bx
+	andq	$0x0FFF, %rbx
 	addq	%rcx, %rbx
-	mov		%rbx, %rax
-	invlpg	(%rax)
-	pop		%rcx
-	pop		%rbx
+	movq	%rbx, %rax
+	popq	%rcx
+	popq	%rbx
 	ret
 
 kmap_getpte:
@@ -99,7 +116,6 @@ kmap_getpte:
 	andw	$0xF000, %dx
 	incw	%dx
 	movq	%rdx, (%rbx)
-	invlpg	(%rbx)
 	invlpg	tmpmap
 	addq	$tmpmap, %rax
 	/* PDPE */

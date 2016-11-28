@@ -33,8 +33,8 @@ extern void* __bss_start;
 
 // Main scructure
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
-
-void *kmap_tmp;
+// pointer to tmpmap
+void __attribute__ ((section (".data"))) *kmap_tmp;
 
 void* kalloc(int pages)
 {
@@ -70,6 +70,7 @@ void pmm_init()
 	// first 3 pages are for temporary mappings, tmpmap and tmp2map
 	// let's initialize them
 	kmap_tmp = kmap_init();
+
 	// buffers
 	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 3*__PAGESIZE);
 	pmm.bss = (uint8_t*)&__bss_start;
@@ -79,9 +80,6 @@ void pmm_init()
 	while(num>0) {
 		if(MMapEnt_IsFree(entry) &&
 		   MMapEnt_Size(entry)/__PAGESIZE>=nrphymax) {
-#if DEBUG
-				kprintf("        pmm.entries %x (phy %x)",fmem,MMapEnt_Ptr(entry));
-#endif
 				// map free physical pages to pmm.entries
 				for(i=0;i<nrphymax;i++)
 					kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
@@ -94,8 +92,7 @@ void pmm_init()
 		num--;
 		entry++;
 	}
-// TODO: mapping ok? remove
-return;
+
 	// iterate through memory map again but this time
 	// record free areas in pmm.entries
 	num = (bootboot.size-128)/16;
@@ -104,7 +101,7 @@ return;
 		if(MMapEnt_IsFree(entry)) {
 			fmem->base = MMapEnt_Ptr(entry);
 			fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
-			if(fmem->size>0) {
+			if(fmem->size!=0) {
 				fmem++;
 				pmm.size++;
 			} else {
