@@ -42,6 +42,9 @@
 ;*  10000h -11000h PDE 2M
 ;*  11000h -12000h PDE 2M
 ;*  12000h -13000h PDE 2M
+;*  13000h -14000h PTE 4K
+;*  14000h -16000h thread control block
+;*  15000h -16000h core stack
 ;*
 ;*  At first big enough free hole, initrd. Usually at 1Mbyte.
 ;*
@@ -353,7 +356,7 @@ getmemmap:	xor			eax, eax
 			cmp			dword [di], 0
 			jnz			.notfirst
 			; "allocate" memory for loader
-			mov			eax, 14000h
+			mov			eax, 16000h
 			add			dword [di], eax
 			sub			dword [di+8], eax
 .notfirst:	mov			al, byte [di+16]
@@ -1174,7 +1177,7 @@ protmode_start:
 			;address 0xffffffffffe00000
 			xor			eax, eax
 			mov			edi, 0A000h
-			mov			ecx, (10000h-0A000h)/4
+			mov			ecx, (16000h-0A000h)/4
 			repnz		stosd
 
 			;PML4
@@ -1205,12 +1208,13 @@ protmode_start:
 			mov			edi, 0D010h
 			mov			eax, dword[core_ptr]	;map ELF text segment
 			inc			eax
-			mov			ecx, 510
+			mov			ecx, 509
 @@:			stosd
 			add			edi, 4
 			add			eax, 4096
 			dec			ecx
 			jnz			@b
+			mov			dword[0DFF8h], 015001h	;map core stack
 
             ;2M PDPE
 			mov			edi, 0E000h

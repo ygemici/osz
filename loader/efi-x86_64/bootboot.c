@@ -499,11 +499,11 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 			return report(EFI_DEVICE_ERROR,L"Initialize screen\n");
 
 		// create page tables
-		uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 23, (EFI_PHYSICAL_ADDRESS*)&paging);
+		uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 24, (EFI_PHYSICAL_ADDRESS*)&paging);
 		if (paging == NULL) {
 			return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
 		}
-		ZeroMem((void*)paging,21*4096);
+		ZeroMem((void*)paging,24*4096);
 		DBG(L" * Pagetables PML4 @%lx\n",paging);
 		//PML4
 		paging[0]=(UINT64)((UINT8 *)paging+4*4096)+1;	// pointer to 2M PDPE (16G RAM identity mapped)
@@ -517,8 +517,9 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 		//4k PT
 		paging[3*512+0]=(UINT64)(bootboot)+1;
 		paging[3*512+1]=(UINT64)(env_ptr)+1;
-		for(i=0;i<510;i++)
+		for(i=0;i<509;i++)
 			paging[3*512+2+i]=(UINT64)((UINT8 *)core_ptr+i*4096+1);
+		paging[3*512+511]=(UINT64)((UINT8 *)paging+8*4096+1);
 		//2M PDPE
 		for(i=0;i<16;i++)
 			paging[4*512+i]=(UINT64)((UINT8 *)paging+(7+i)*4096+1);

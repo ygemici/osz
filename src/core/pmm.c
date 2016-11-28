@@ -62,15 +62,14 @@ void pmm_init()
 	uint i;
 
 	// allocate at least 1 page for free memory entries
-	if(nrphymax<1)
-		nrphymax=1;
+	if(nrphymax<2)
+		nrphymax=2;
 	// initialize pmm structure
 	pmm.magic = OSZ_PMM_MAGICH;
 	pmm.size = 0;
 	// first 3 pages are for temporary mappings, tmpmap and tmp2map
 	// let's initialize them
 	kmap_tmp = kmap_init();
-//kprintf("kmap_tmp=%x ",kmap_tmp);
 	// buffers
 	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 3*__PAGESIZE);
 	pmm.bss = (uint8_t*)&__bss_start;

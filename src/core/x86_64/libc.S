@@ -4,6 +4,7 @@
 .global kmemvid
 .global kmap
 .global kmap_init
+.extern kmap_tmp
 .extern tmpmap
 .extern tmp2map
 .extern tmppte
@@ -27,6 +28,11 @@ kmemvid:
 	ret
 
 kmap:
+	call	kmap_getpte
+	andw	$0xF000, %si
+	incw	%si
+	movq	%rsi, (%rax)
+	invlpg	(%rsi)
 	ret
 
 kmap_init:
@@ -79,4 +85,57 @@ kmap_init:
 	invlpg	(%rax)
 	pop		%rcx
 	pop		%rbx
+	ret
+
+kmap_getpte:
+	/* we have at least tmpmap, so we can map PTE */
+	movq	kmap_tmp, %rbx
+	/* PML4 */
+	movq	%rdi, %rax
+	shrq	$12+9+9+9, %rax
+	andl	$0x1FF, %eax
+	shlq	$3, %rax
+	movq	%cr3, %rdx
+	andw	$0xF000, %dx
+	incw	%dx
+	movq	%rdx, (%rbx)
+	invlpg	(%rbx)
+	invlpg	tmpmap
+	addq	$tmpmap, %rax
+	/* PDPE */
+	mov		(%rax), %rdx
+	movq	%rdi, %rax
+	shrq	$12+9+9, %rax
+	andl	$0x1FF, %eax
+	shlq	$3, %rax
+	andw	$0xF000, %dx
+	incw	%dx
+	movq	%rdx, (%rbx)
+	invlpg	(%rbx)
+	invlpg	tmpmap
+	addq	$tmpmap, %rax
+	/* PDE */
+	mov		(%rax), %rdx
+	movq	%rdi, %rax
+	shrq	$12+9, %rax
+	andl	$0x1FF, %eax
+	shlq	$3, %rax
+	andw	$0xF000, %dx
+	incw	%dx
+	movq	%rdx, (%rbx)
+	invlpg	(%rbx)
+	invlpg	tmpmap
+	addq	$tmpmap, %rax
+	/* PTE */
+	mov		(%rax), %rdx
+	movq	%rdi, %rax
+	shrq	$12, %rax
+	andl	$0x1FF, %eax
+	shlq	$3, %rax
+	andw	$0xF000, %dx
+	incw	%dx
+	movq	%rdx, (%rbx)
+	invlpg	(%rbx)
+	invlpg	tmpmap
+	addq	$tmpmap, %rax
 	ret
