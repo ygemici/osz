@@ -30,6 +30,26 @@
 // parsed values
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 
-void env_init(unsigned char *env)
+void env_init()
 {
+    unsigned char *env = environment;
+    int i=__PAGESIZE;
+    while(i-->0 && *env!=0) {
+        // number of physical memory fragment pages
+        if(!kmemcmp(env, "nrphymax=", 9)) {
+            env+=9;
+            // no atoi() yet
+            nrphymax=0;
+            do{
+                nrphymax*=10;
+                nrphymax+=(uint64_t)((unsigned char)(*env)-'0');
+                env++;
+            } while(*env>='0'&&*env<='9'&&nrphymax<256);
+            // upper bound
+            if(nrphymax>255)
+                nrphymax=255;
+            break;
+        }
+        env++;
+    }
 }

@@ -86,6 +86,7 @@ EFI_FILE_HANDLE					RootDir;
 EFI_FILE_PROTOCOL				*Root;
 int reqwidth, reqheight;
 char *kernelname="lib/sys/core";
+unsigned char *kne;
 #if PRINT_DEBUG
 int dbg=0;
 #endif
@@ -163,6 +164,7 @@ ParseEnvironment(unsigned char *cfg, int len)
             while(ptr<cfg+len && ptr[0]!='\r' && ptr[0]!='\n' &&
 				ptr[0]!=' ' && ptr[0]!='\t' && ptr[0]!=0)
 					ptr++;
+			kne=ptr;
 			*ptr=0;
 			ptr++;
         }
@@ -431,6 +433,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 		if (bootboot == NULL) {
 			return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
 		}
+		kne=NULL;
 		// if there's an evironment file, load it
 		if(LoadFile(configfile,&env_ptr,&env_len)==EFI_SUCCESS)
 			ParseEnvironment(env_ptr,env_len);
@@ -486,6 +489,8 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 		status=LoadCore(initrd_ptr);
 		if (EFI_ERROR(status))
 			return status;
+		if(kne!=NULL)
+			*kne=' ';
 
 		//WaitForSingleEvent(ST->ConIn->WaitForKey, 0);
 

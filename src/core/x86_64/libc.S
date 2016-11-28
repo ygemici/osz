@@ -1,6 +1,7 @@
 .section .text
 .global kmemcpy
 .global kmemset
+.global kmemcmp
 .global kmemvid
 .global kmap
 .global kmap_init
@@ -23,6 +24,23 @@ kmemset:
 	movq	24(%rsp), %rcx
 	repnz	stosb
 	ret
+
+kmemcmp:
+	xorq	%rax, %rax
+1:	decl	%edx
+	jz		3f
+	lodsb
+	or		%al, %al
+	jnz		2f
+	cmpb	$0, (%rdi)
+	je		3f
+	incb	%al
+	jmp		3f
+2:	subb	(%rdi), %al
+	incq	%rdi
+	or		%al, %al
+	jz		1b
+3:	ret
 
 kmemvid:
 	ret

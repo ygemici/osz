@@ -42,6 +42,7 @@ extern void* kmap_init();
 extern void kprintf(char* ptr, ...);
 extern void kmemcpy(char *dest, char *src, int size);
 extern void kmemset(char *dest, int c, int size);
+extern int kmemcmp(void *dest, void *src, int size);
 extern void kmemvid(char *dest, char *src, int size);
 extern void* kalloc(int pages);
 extern void kfree(void* ptr);

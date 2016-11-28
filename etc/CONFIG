@@ -4,7 +4,7 @@
 width=800
 height=600
 kernel=lib/sys/core
-                               
+nrphymax=4                     
                                                                         
                                                                         
                                                                         

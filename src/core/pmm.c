@@ -61,7 +61,8 @@ void pmm_init()
 	uint num = (bootboot.size-128)/16;
 	uint i;
 
-	// allocate at least 1 page for free memory entries
+	// allocate at least 2 pages for free memory entries
+	// that's 2*4096/16 = 512 maximum fragments
 	if(nrphymax<2)
 		nrphymax=2;
 	// initialize pmm structure
