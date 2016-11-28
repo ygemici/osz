@@ -51,7 +51,7 @@ typedef struct {
   uint64_t   initrd_size;
   uint64_t   mmap_ptr;
   uint64_t   unused[2];
-  void      *fb_ptr;
+  uint8_t    *fb_ptr;
   uint32_t   fb_size;
   uint32_t   fb_width;
   uint32_t   fb_height;

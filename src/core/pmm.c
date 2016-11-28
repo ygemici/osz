@@ -34,6 +34,8 @@ extern void* __bss_start;
 // Main scructure
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
 
+void *kmap_tmp;
+
 void* kalloc(int pages)
 {
 	//phys=pmm_alloc()
@@ -65,10 +67,14 @@ void pmm_init()
 	// initialize pmm structure
 	pmm.magic = OSZ_PMM_MAGICH;
 	pmm.size = 0;
-	// first 2 pages are for temporary mappings, tmpmap and tmp2map
-	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 2*__PAGESIZE);
+	// first 3 pages are for temporary mappings, tmpmap and tmp2map
+	// let's initialize them
+	kmap_tmp = kmap_init();
+//kprintf("kmap_tmp=%x ",kmap_tmp);
+	// buffers
+	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 3*__PAGESIZE);
 	pmm.bss = (uint8_t*)&__bss_start;
-	pmm.bss_end = (uint8_t*)&__bss_start + __PAGESIZE * (nrphymax+2);
+	pmm.bss_end = (uint8_t*)&__bss_start + __PAGESIZE * (nrphymax+3);
 	// this is a chicken and egg scenario. We need free memory to
 	// store the free memory table...
 	while(num>0) {

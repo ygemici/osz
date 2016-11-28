@@ -29,6 +29,10 @@
 #include "font.h"
 
 /* first position in line */
+/* re-entrant counter */
+char __attribute__ ((section (".data"))) reent;
+/* for temporary strings */
+char __attribute__ ((section (".data"))) tmp[33];
 int __attribute__ ((section (".data"))) fx;
 /* current cursor position */
 int __attribute__ ((section (".data"))) kx;
@@ -39,10 +43,6 @@ int __attribute__ ((section (".data"))) maxy;
 /* colors */
 uint32_t __attribute__ ((section (".data"))) fg;
 uint32_t __attribute__ ((section (".data"))) bg;
-/* re-entrant counter */
-char __attribute__ ((section (".data"))) reent;
-/* for temporary strings */
-char __attribute__ ((section (".data"))) tmp[33];
 
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
@@ -112,16 +112,19 @@ void kprintf(char* ptr, ...)
 	uint64_t arg;
 	char *p;
 	vastart(args, ptr);
+
 /*
 // UNICODE table
+ky=0;
 int x,y;
-for(y=0;y<32;y++){
+for(y=0;y<33;y++){
 	kx=0;ky++;
 	for(x=0;x<64;x++){
 		kprintf_putchar(y*64+x);
 		kx++;
     }
 }
+return;
 */
 	while(ptr[0]!=0) {
 		// special characters

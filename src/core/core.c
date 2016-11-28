@@ -67,6 +67,6 @@ void main()
 		" אבגד ابةتثج ۱۲۳ ࠀࠁࠂࠃ\n  ",
 		65,'B',0x1a2b3c4d5e6f,"%d something", bootboot.efi_ptr);
 
-	__asm__ __volatile__ ( "movq %0, %%rbx;xchgw %%bx,%%bx;cli;hlt" : : "m"(bootboot) : "memory" );
+	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 
 }

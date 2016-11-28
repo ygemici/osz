@@ -346,7 +346,17 @@ getmemmap:	xor			eax, eax
 			jc			.nomoremap
 			cmp			eax, 'PAMS'
 			jne			.nomoremap
-			mov			al, byte [di+16]
+			;is this the first memory hole? If so, mark
+			;ourself as reserved memory
+			cmp			dword [di+4], 0
+			jnz			.notfirst
+			cmp			dword [di], 0
+			jnz			.notfirst
+			; "allocate" memory for loader
+			mov			eax, 14000h
+			add			dword [di], eax
+			sub			dword [di+8], eax
+.notfirst:	mov			al, byte [di+16]
 			cmp			al, 2
 			jne			.noov
 			mov			al, 5
@@ -387,7 +397,7 @@ getmemmap:	xor			eax, eax
 			cmp			eax, ebp
 			jb			.entryok
 .bigenough:	mov			eax, dword [di]
-			; "allocate"
+			; "allocate" initrd
 			add			dword [di], ebp
 			sub			dword [di+8], ebp
 			;save first free memory as core pointer
