@@ -124,18 +124,25 @@ for(y=0;y<32;y++){
 }
 */
 	while(ptr[0]!=0) {
+		// special characters
 		if(ptr[0]==8) {
+			// backspace
 			kx--;
+			kprintf_putchar((int)' ');
 		} else
 		if(ptr[0]==9) {
+			// tab
 			kx=((kx+8)/8)*8;
 		} else
 		if(ptr[0]==10) {
+			// newline
 			goto newline;
 		} else
 		if(ptr[0]==13) {
+			// carrige return
 			kx=fx;
 		} else
+		// argument access
 		if(ptr[0]=='%' && !reent) {
 			ptr++;
 			if(ptr[0]=='%') {
@@ -159,11 +166,24 @@ for(y=0;y<32;y++){
 			}
 			reent--;
 		} else {
+			// convert utf-8 (at ptr) into unicode (to arg)
 put:		arg=(uint64_t)((unsigned char)ptr[0]);
 			if((arg & 128) != 0) {
-				arg=((ptr[0] & 0x1F)<<6)+(ptr[1] & 0x3F);
-				ptr++;
+				if((arg & 32) == 0 ) {
+					arg=((ptr[0] & 0x1F)<<6)+(ptr[1] & 0x3F);
+					ptr++;
+				} else
+				if((arg & 16) == 0 ) {
+					arg=((((ptr[0] & 0xF)<<6)+(ptr[1] & 0x3F))<<6)+(ptr[2] & 0x3F);
+					ptr+=2;
+				} else
+				if((arg & 8) == 0 ) {
+					arg=((((((ptr[0] & 0x7)<<6)+(ptr[1] & 0x3F))<<6)+(ptr[2] & 0x3F))<<6)+(ptr[3] & 0x3F);
+					ptr+=3;
+				} else
+					arg=0;
 			}
+			// display unicode character and move cursor
 			kprintf_putchar((int)arg);
 nextchar:	kx++;
 			if(kx>=maxx) {

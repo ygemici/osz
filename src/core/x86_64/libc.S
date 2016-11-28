@@ -3,7 +3,8 @@
 .global kmemset
 .global kmemvid
 .global kmap
-.global kmap_tmp
+.extern tmpmap
+.extern tmp2map
 
 /* misc memory functions */
 kmemcpy:
@@ -25,5 +26,3 @@ kmemvid:
 
 kmap:
 	ret
-kmap_tmp:
-.quad 0

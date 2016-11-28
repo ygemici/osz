@@ -41,11 +41,13 @@
 */
 void main()
 {
-	// initialize kernel version of printf
+	// initialize kernel implementation of printf
 	kprintf_init();
 #if DEBUG
 	kprintf("OS/Z Starting...");
 #endif
+	// parse environment
+	env_init();
 	// initialize physical memory manager
 	pmm_init();
 
@@ -55,15 +57,16 @@ void main()
 	for(x=0;x<w;x++) { *((uint32_t*)(&fb + s*(h/2)+x*4))=0x00FFFFFF; }
 	
 	// boxes
-	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+10)*4))=0x00FF0000; } }
-	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+40)*4))=0x0000FF00; } }
-	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+70)*4))=0x000000FF; } }
+	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+12)*4))=0x00FF0000; } }
+	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+36)*4))=0x0000FF00; } }
+	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+60)*4))=0x000000FF; } }
     
-	kprintf("\n\n  R   G   B\nHello OSDev!   "
-		"%%d, %%c, %%x, '%%s' efiptr=%%x   %d, %c, %x, '%s' efiptr=%x\n"
-		"utf-8 0-7FF: ¾ßŔƂ ΑΒΓΔΕΖΗΘ αβγδεζηθ ϢϣϤϥϦ ЀЁЂЃЄАБВГДЕЖ абвгдеж ЉԱԲԳԴ אבגד ابةتثج ۱۲۳ ܐܒܓܔܕ \n  ",
-		65,'B',0x1a2b3c4d5e6f,"s%domething", bootboot.efi_ptr);
+	kprintf("\n\n  R  G  B\t\tHello OSDev!\n\n"
+		"%%d, %%c, %%x, '%%s' efiptr=%%x        %d, %c, %x, '%s' efiptr=%x\n"
+		"utf-8 (0-7FF only): ¾ßŔƂ ΑΒΓΔΕΖΗΘ αβγδεζηθ ϢϣϤϥϦ ЀЁЂЃЄАБВГДЕЖ абвгдеж ЉԱԲԳԴ"
+		" אבגד ابةتثج ۱۲۳ ࠀࠁࠂࠃ\n  ",
+		65,'B',0x1a2b3c4d5e6f,"%d something", bootboot.efi_ptr);
 
-	__asm__ __volatile__ ( "movq %0, %%rax;xchgw %%bx,%%bx;cli;hlt" : : "m"(bootboot.efi_ptr) : "memory" );
+	__asm__ __volatile__ ( "movq %0, %%rbx;xchgw %%bx,%%bx;cli;hlt" : : "m"(bootboot) : "memory" );
 
 }

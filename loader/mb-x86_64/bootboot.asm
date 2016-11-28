@@ -317,7 +317,6 @@ realmode_start:
 
 			;-----detect memory map-----
 getmemmap:	xor			eax, eax
-			mov			word [bootboot.mmap_num], ax
 			mov			dword [bootboot.acpi_ptr], eax
 			mov			dword [bootboot.smbi_ptr], eax
 			mov			dword [bootboot.initrd_ptr], eax
@@ -325,10 +324,9 @@ getmemmap:	xor			eax, eax
 			mov			dword [maxbase+4], eax
 			mov			eax, bootboot_MAGIC
 			mov			dword [bootboot.magic], eax
-			mov			eax, bootboot.mmap-bootboot.magic
-			mov			dword [bootboot.size], eax
+			mov			dword [bootboot.size], 128
 			mov			dword [bootboot.pagesize], 4096
-			mov			dword [bootboot.mmap_ptr], 0FFE00000h + bootboot.mmap - bootboot
+			mov			dword [bootboot.mmap_ptr], 0FFE00000h + 128
 			mov			dword [bootboot.mmap_ptr+4], 0FFFFFFFFh
 			mov			di, bootboot.mmap
 			mov			cx, 800h
@@ -337,7 +335,7 @@ getmemmap:	xor			eax, eax
 			mov			di, bootboot.mmap
 			xor			ebx, ebx
 			clc
-.nextmap:	cmp			word [bootboot.mmap_num], 238
+.nextmap:	cmp			word [bootboot.size], 4096
 			jae			.nomoremap
 			mov			edx, 'PAMS'
 			xor			ecx, ecx
@@ -389,6 +387,9 @@ getmemmap:	xor			eax, eax
 			cmp			eax, ebp
 			jb			.entryok
 .bigenough:	mov			eax, dword [di]
+			; "allocate"
+			add			dword [di], ebp
+			sub			dword [di+8], ebp
 			;save first free memory as core pointer
 			mov			dword [core_ptr], eax
 			;page align
@@ -415,8 +416,7 @@ getmemmap:	xor			eax, eax
 			;save new limit
 .newmax:	mov			dword [maxbase], eax
 			mov			dword [maxbase+4], edx
-.notmax:	inc			word [bootboot.mmap_num]
-			add			dword [bootboot.size], 16
+.notmax:	add			dword [bootboot.size], 16
 			;bubble up entry if necessary
 			push		si
 			push		di
@@ -449,9 +449,8 @@ getmemmap:	xor			eax, eax
 			jae			.nomoremap
 .skip:		or			ebx, ebx
 			jnz			.nextmap
-.nomoremap:	xor			ecx, ecx
-			cmp			word [bootboot.mmap_num], cx
-			jnz			.E820ok
+.nomoremap:	cmp			dword [bootboot.size], 128
+			jne			.E820ok
 .noE820:	mov			si, memerr
 			jmp			real_diefunc
 
@@ -470,7 +469,6 @@ getmemmap:	xor			eax, eax
 			mov			si, noenmem
 			jmp			real_diefunc
 .enoughmem:
-
 			;-----detect system structures-----
 .detacpi:	;do we need that scanning shit?
 			mov			eax, dword [bootboot.acpi_ptr]

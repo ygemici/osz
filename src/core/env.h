@@ -1,5 +1,5 @@
 /*
- * pmm.h
+ * env.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,21 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Physical memory manager
+ * @brief Core environment variables (defined in FS0:\BOOTBOOT\CONFIG)
  */
 
-#define OSZ_PMM_MAGIC "FMEM"
-#define OSZ_PMM_MAGICH 0x4d454d46
-
-typedef struct {
-	uint64_t base;
-	uint64_t size;
-} OSZ_pmm_entry;
-
-typedef struct {
-	uint32_t magic;
-	uint32_t size;
-	OSZ_pmm_entry *entries;
-	void *bss;
-	void *bss_end;
-} __attribute__((packed)) OSZ_pmm;
+extern uint64_t nrphymax;

@@ -27,14 +27,12 @@
 
 #include "core.h"
 #include "pmm.h"
+#include "env.h"
 
 extern void* __bss_start;
 
-// Preallocate these as allocation relies on them
-OSZ_pmm __attribute__ ((section (".data")))
-	pmm;
-OSZ_pmm_entry __attribute__ ((section (".data")))
-	pmm_entries[__PHYFRAG_MAX];
+// Main scructure
+OSZ_pmm __attribute__ ((section (".data"))) pmm;
 
 void* kalloc(int pages)
 {
@@ -56,40 +54,56 @@ void pmm_init()
 {
 	// memory map provided by the loader
 	MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
-	// our new free pages directory
+	// our new free pages directory, pmm.entries
 	OSZ_pmm_entry *fmem;
-	uint num = bootboot.mmap_num;
-	char first=1;
+	uint num = (bootboot.size-128)/16;
+	uint i;
 
-	// set up structures
+	// allocate at least 1 page for free memory entries
+	if(nrphymax<1)
+		nrphymax=1;
+	// initialize pmm structure
 	pmm.magic = OSZ_PMM_MAGICH;
-	pmm.size = 32;
-	pmm.buff = fmem = __bss_start;
-	pmm.bss = pmm.bss_end = __bss_start + __PAGESIZE *
-		(__PHYFRAG_MAX>2?__PHYFRAG_MAX:2);
-	// iterate through memory map and record free areas
+	pmm.size = 0;
+	// first 2 pages are for temporary mappings, tmpmap and tmp2map
+	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 2*__PAGESIZE);
+	pmm.bss = (uint8_t*)&__bss_start;
+	pmm.bss_end = (uint8_t*)&__bss_start + __PAGESIZE * (nrphymax+2);
+	// this is a chicken and egg scenario. We need free memory to
+	// store the free memory table...
+	while(num>0) {
+		if(MMapEnt_IsFree(entry) &&
+		   MMapEnt_Size(entry)/__PAGESIZE>=nrphymax) {
+#if DEBUG
+				kprintf("        pmm.entries %x (phy %x)",fmem,MMapEnt_Ptr(entry));
+#endif
+				// map free physical pages to pmm.entries
+				for(i=0;i<nrphymax;i++)
+					kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
+						(uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE);
+			// "preallocate" the memory for pmm.entries
+			entry->ptr +=nrphymax*__PAGESIZE;
+			entry->size-=nrphymax*__PAGESIZE;
+			break;
+		}
+		num--;
+		entry++;
+	}
+// TODO: mapping ok? remove
+return;
+	// iterate through memory map again but this time
+	// record free areas in pmm.entries
+	num = (bootboot.size-128)/16;
+	entry = (MMapEnt*)&bootboot.mmap;
 	while(num>0) {
 		if(MMapEnt_IsFree(entry)) {
-			if(first) {
-				// chicken and the egg problem. We cannot use alloc yet
-				// since the free memory directory doesn't even mapped
-				kmap(__bss_start, (void*)&MMapEnt_Ptr(entry));
-				// now there's one mapped free page at least for fmem,
-				// but no base+length pairs saved there yet
-			}
 			fmem->base = MMapEnt_Ptr(entry);
 			fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
-			if(first) {
-				// now the chicken. "Allocate" one page for fmem
-				// this assumes fragmentation will be below 256 entries.
-				// TODO: worth mapping more pages?
-				fmem->base += __PAGESIZE;
-				fmem->size--;
-				first=0;
-			}
 			if(fmem->size>0) {
 				fmem++;
-				pmm.size+=sizeof(MMapEnt);
+				pmm.size++;
+			} else {
+				fmem->base = 0;
 			}
 		}
 		num--;

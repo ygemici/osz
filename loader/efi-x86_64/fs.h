@@ -38,7 +38,7 @@ unsigned char *fsz_initrd(unsigned char *initrd_p, char *kernel)
 	}
 	// Make sure only files in lib/ will be loaded
 	CopyMem(kernel,"lib/",4);
-	DBG(L" * FS/Z rootdir inode %d @%lx %s\n",sb->rootdirfid,in,a2u(kernel));
+	DBG(L" * FS/Z rootdir inode %d @%lx\n",sb->rootdirfid,in);
 	// Get the inode of lib/sys/core
 	int i;
 	char *s,*e;
@@ -77,7 +77,7 @@ again:
 	} else {
 		i=0;
 	}
-	DBG(L" * Kernel inode %d @%lx\n",i,i?initrd_p+i*FSZ_SECSIZE:0);
+	DBG(L" * Kernel=%s inode %d @%lx\n",a2u(kernel),i,i?initrd_p+i*FSZ_SECSIZE:0);
 	if(i!=0) {
 		// fid -> inode ptr -> data ptr
 		FSZ_Inode *in=(FSZ_Inode *)(initrd_p+i*FSZ_SECSIZE);

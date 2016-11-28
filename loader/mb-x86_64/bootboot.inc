@@ -48,6 +48,7 @@ virtual at bootboot
   bootboot.initrd_ptr:  dq	0
   bootboot.initrd_size: dq	0
   bootboot.mmap_ptr:    dq	0
+  bootboot.unused:      dq	0,0
   bootboot.fb_ptr:      dq	0
   bootboot.fb_size:     dd	0
   bootboot.fb_width:    dd	0
@@ -59,7 +60,6 @@ virtual at bootboot
   bootboot.flags:       dw	0,0,0
   bootboot.timezone:    dw	0
   bootboot.fb_type:     dw	0
-  bootboot.mmap_num:    dw	0
   bootboot.mmap:
 end virtual
 

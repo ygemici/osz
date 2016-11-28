@@ -339,7 +339,7 @@ LoadCore(UINT8 *initrd_ptr)
 		ptr=NULL;
 	}
 
-	DBG(L" * Parsing ELF @%lx\n",ptr);
+	DBG(L" * Parsing ELF64 @%lx\n",ptr);
 	if(ptr!=NULL) {
 		// Parse ELF64
 		Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ptr);
@@ -504,7 +504,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 			return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
 		}
 		ZeroMem((void*)paging,21*4096);
-		DBG(L" * Pagetables PML4 at @%lx\n",paging);
+		DBG(L" * Pagetables PML4 @%lx\n",paging);
 		//PML4
 		paging[0]=(UINT64)((UINT8 *)paging+4*4096)+1;	// pointer to 2M PDPE (16G RAM identity mapped)
 		paging[511]=(UINT64)((UINT8 *)paging+4096)+1;	// pointer to 4k PDPE (core mapped at -2M)
@@ -540,27 +540,25 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 		UINTN                 map_key;
 		UINTN                 desc_size;
 		UINT32                desc_version;
-		MMapEnt				  *mmapent;
+		MMapEnt               *mmapent;
 get_memory_map:
+		mmapent=(MMapEnt *)&(bootboot->mmap);
 		memory_map = LibMemoryMap(&memory_map_size, &map_key, &desc_size, &desc_version);
 		if (memory_map == NULL) {
 			return report(EFI_OUT_OF_RESOURCES,L"LibMemoryMap\n");
 		}
-		mmapent=(MMapEnt *)&(bootboot->mmap);
-		bootboot->mmap_num=0;
 		for(mement=memory_map;mement<memory_map+memory_map_size;mement=NextMemoryDescriptor(mement,desc_size)) {
 			mmapent->ptr=mement->PhysicalStart;
-			mmapent->size=(mement->NumberOfPages*4096)|
+			mmapent->size=(mement->NumberOfPages*4096)+
 				((mement->Type>0&&mement->Type<5)||mement->Type==7?MMAP_FREE:
 				(mement->Type==8?MMAP_BAD:
 				(mement->Type==9?MMAP_ACPIFREE:
 				(mement->Type==10?MMAP_ACPINVS:
 				(mement->Type==11||mement->Type==12?MMAP_MMIO:
 				MMAP_RESERVED)))));
-			bootboot->mmap_num++;
 			bootboot->size+=16;
 			mmapent++;
-			if(bootboot->size>=4080) break;
+			if(bootboot->size>=4096) break;
 		}
 		// --- NO PRINT AFTER THIS POINT ---
 		

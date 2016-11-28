@@ -42,5 +42,6 @@ extern void kmemset(char *dest, int c, int size);
 extern void kmemvid(char *dest, char *src, int size);
 extern void* kalloc(int pages);
 extern void kfree(void* ptr);
-extern void kmap(void* virt, void* phys);
+extern void kmap(uint64_t virt, uint64_t phys);
+extern void env_init();
 extern void pmm_init();

@@ -43,14 +43,15 @@ typedef struct {
   uint8_t    magic[4];
   uint32_t   size;
   uint64_t   datetime;
-  uint8_t   *acpi_ptr;
-  uint8_t   *smbi_ptr;
-  uint8_t   *efi_ptr;
-  uint8_t   *mp_ptr;
-  uint8_t   *initrd_ptr;
+  uint64_t   acpi_ptr;
+  uint64_t   smbi_ptr;
+  uint64_t   efi_ptr;
+  uint64_t   mp_ptr;
+  uint64_t   initrd_ptr;
   uint64_t   initrd_size;
-  uint8_t   *mmap_ptr;
-  uint8_t   *fb_ptr;
+  uint64_t   mmap_ptr;
+  uint64_t   unused[2];
+  void      *fb_ptr;
   uint32_t   fb_size;
   uint32_t   fb_width;
   uint32_t   fb_height;
@@ -58,10 +59,9 @@ typedef struct {
   uint32_t   pagesize;
   uint8_t    protocol;
   uint8_t    loader_type;
-  uint16_t   flags[2];
+  uint16_t   flags[3];
   int16_t    timezone;
   uint16_t   fb_type;
-  uint16_t   mmap_num;
   uint8_t    mmap; /* MMapEnt[] */
 } __attribute__((packed)) BOOTBOOT;
 

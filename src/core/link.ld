@@ -23,6 +23,11 @@ SECTIONS
         *(.data)
         . = ALIGN(4096);
         __bss_start = .;
+        tmpmap = .;
+        . += 4096;
+        tmp2map = .;
+        . += 4096;
+        pmm_entries = .;
     }
    _end = .;
 
