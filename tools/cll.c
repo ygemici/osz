@@ -1,5 +1,5 @@
 /*
- * cll.c
+ * tools/cll.c
  * 
  * Copyright 2016 GPLv3 bztsrc@github
  * 

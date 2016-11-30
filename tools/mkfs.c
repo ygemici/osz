@@ -1,5 +1,5 @@
 /*
- * mkfs.c
+ * tools/mkfs.c
  * 
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,11 +22,11 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Small utility to create fs3d disk images
+ * @brief Small utility to create FS/Z disk images
  *
  *  Compile: gcc mkfs.c -o mkfs
  *  Usage:
- *  ./mkfs create (file) (dir) - creates a new fs/Z image file
+ *  ./mkfs create (file) (dir) - creates a new FS/Z image file
  *  ./mkfs disk - assembles partition images into one GPT disk
  */
 

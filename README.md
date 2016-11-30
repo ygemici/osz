@@ -2,7 +2,7 @@ OS/Z - an alternative hacker operating system
 =============================================
 
 Is a hobby OS project. It's aim is to be small, and to handle
-enormous amounts of data.
+enormous amounts of data (I eliminate limits by design as much as I can).
 
 Features
 --------
@@ -62,9 +62,9 @@ command to write it on a USB stick and you're ready to go.
 Testing
 -------
 
-No matter what kind of image you use with the emoulator (BIOS or EFI),
+No matter what kind of booting you use with the emulator (BIOS or EFI),
 it should boot OS/Z and you should see a white crosshair and in order
-red, green and blue boxes on the top left corner.
+red, green and blue boxes on the top left corner along with a debug string.
 
 You can boot OS/Z in a virtual machine right from your working directory
 with TianoCore EFI. For that, type
