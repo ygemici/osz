@@ -12,16 +12,13 @@
 
 /* misc memory functions */
 kmemcpy:
-	movq	8(%rsp), %rdi
-	movq	16(%rsp), %rsi
-	movq	24(%rsp), %rcx
+	movq	%rcx, %rdx
 	repnz	movsb
 	ret
 
 kmemset:
-	movq	8(%rsp), %rdi
-	movq	16(%rsp), %rax
-	movq	24(%rsp), %rcx
+	movb	%sil, %al
+	movq	%rcx, %rdx
 	repnz	stosb
 	ret
 

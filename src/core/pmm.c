@@ -36,20 +36,21 @@ OSZ_pmm __attribute__ ((section (".data"))) pmm;
 // pointer to tmpmap
 void __attribute__ ((section (".data"))) *kmap_tmp;
 
-void* kalloc(int pages)
+// allocate a physical page
+// returns physical address
+void* pmm_alloc()
 {
-	//phys=pmm_alloc()
-	//pmm_map(virt,phys)
-    return 0;
-}
-
-void kfree(void* ptr)
-{
-}
-
-void* pmm_alloc(int pages)
-{
-    return 0;
+	OSZ_pmm_entry *fmem = pmm.entries;
+	int i = pmm.size;
+	while(i-->0 && fmem->size==0)
+		fmem++;
+	if(i) {
+		fmem->base+=__PAGESIZE;
+		fmem->size--;
+	} else {
+		// out of memory, should never happen during boot
+	}
+    return i ? (void*)fmem->base - __PAGESIZE : NULL;
 }
 
 void pmm_init()
@@ -69,12 +70,12 @@ void pmm_init()
 	pmm.magic = OSZ_PMM_MAGICH;
 	pmm.size = 0;
 	// first 3 pages are for temporary mappings, tmpmap and tmp2map
-	// let's initialize them
+	// and their pte. Let's initialize them
 	kmap_tmp = kmap_init();
 
 	// buffers
 	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 3*__PAGESIZE);
-	pmm.bss = (uint8_t*)&__bss_start;
+		pmm.bss = (uint8_t*)&__bss_start;
 	pmm.bss_end = (uint8_t*)&__bss_start + __PAGESIZE * (nrphymax+3);
 	// this is a chicken and egg scenario. We need free memory to
 	// store the free memory table...
@@ -112,4 +113,24 @@ void pmm_init()
 		num--;
 		entry++;
 	}
+}
+
+// allocate kernel bss
+// returns linear address
+void* kalloc(int pages)
+{
+	void *bss = pmm.bss_end;
+	if(pages<1)
+		pages=1;
+	if(pages>512)
+		pages=512;
+	while(pages-->0){
+		kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc());
+		pmm.bss_end += __PAGESIZE;
+	}
+	return bss;
+}
+
+void kfree(void* ptr)
+{
 }

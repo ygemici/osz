@@ -1,5 +1,5 @@
 /*
- * core.h
+ * x86_64/isr.c
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,29 +22,9 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Core functions (ring 0)
+ * @brief Interrupt Service Routines
  */
 
-#include <osZ.h>
-#include <limits.h>
-#include "../../loader/bootboot.h"
-
-// import virtual addresses from linker
-extern BOOTBOOT bootboot;
-extern unsigned char environment[4096];
-extern uint8_t fb;
-
-// kernel function routines
-extern void kprintf_init();
-extern void env_init();
-extern void pmm_init();
-extern void* kmap_init();
-extern void isr_init();
-extern void kprintf(char* ptr, ...);
-extern void kmemcpy(char *dest, char *src, int size);
-extern void kmemset(char *dest, int c, int size);
-extern int kmemcmp(void *dest, void *src, int size);
-extern void kmemvid(char *dest, char *src, int size);
-extern void* kalloc(int pages);
-extern void kfree(void* ptr);
-extern void kmap(uint64_t virt, uint64_t phys);
+void isr_init()
+{
+}

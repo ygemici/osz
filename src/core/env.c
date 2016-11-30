@@ -28,7 +28,9 @@
 #include "core.h"
 
 // parsed values
-uint64_t __attribute__ ((section (".data"))) nrphymax;
+uint8_t __attribute__ ((section (".data"))) nrphymax;
+uint8_t __attribute__ ((section (".data"))) identity;
+uint8_t __attribute__ ((section (".data"))) verbose;
 
 void env_init()
 {
@@ -48,7 +50,16 @@ void env_init()
             // upper bound
             if(nrphymax>255)
                 nrphymax=255;
-            break;
+        }
+        // define identity
+        if(!kmemcmp(env, "identity=", 9)) {
+            env+=9;
+            identity = (*env=='1'||*env=='t'||*env=='T');
+        }
+        // output verbosity level
+        if(!kmemcmp(env, "verbose=", 8)) {
+            env+=8;
+            verbose = (*env>='0'&&*env<='9'?*env - '0':0);
         }
         env++;
     }
