@@ -43,8 +43,7 @@
 ;*  11000h -12000h PDE 2M
 ;*  12000h -13000h PDE 2M
 ;*  13000h -14000h PTE 4K
-;*  14000h -16000h thread control block
-;*  15000h -16000h core stack
+;*  14000h -15000h core stack
 ;*
 ;*  At first big enough free hole, initrd. Usually at 1Mbyte.
 ;*
@@ -356,7 +355,7 @@ getmemmap:	xor			eax, eax
 			cmp			dword [di], 0
 			jnz			.notfirst
 			; "allocate" memory for loader
-			mov			eax, 16000h
+			mov			eax, 15000h
 			add			dword [di], eax
 			sub			dword [di+8], eax
 .notfirst:	mov			al, byte [di+16]
@@ -1177,7 +1176,7 @@ protmode_start:
 			;address 0xffffffffffe00000
 			xor			eax, eax
 			mov			edi, 0A000h
-			mov			ecx, (16000h-0A000h)/4
+			mov			ecx, (15000h-0A000h)/4
 			repnz		stosd
 
 			;PML4
@@ -1214,9 +1213,10 @@ protmode_start:
 			add			eax, 4096
 			dec			ecx
 			jnz			@b
-			mov			dword[0DFF8h], 015001h	;map core stack
+			mov			dword[0DFF8h], 014001h	;map core stack
 
-            ;2M PDPE
+			;identity mapping
+			;2M PDPE
 			mov			edi, 0E000h
 			mov			dword [edi], 0F001h
 			mov			dword [edi+8], 010001h
@@ -1234,12 +1234,9 @@ protmode_start:
 			jnz			@b
 			;first 2M mapped by page
 			mov			dword [0F000h], 013001h
-			; first page is thread control block
-			mov			dword [13000h], 014001h
-			; others identity mapped
-			mov			edi, 013008h
-			mov			eax, 4097
-			mov			ecx, 511
+			mov			edi, 013000h
+			mov			eax, 1
+			mov			ecx, 512
 @@:			stosd
 			add			edi, 4
 			add			eax, 4096
