@@ -81,14 +81,14 @@ void pmm_init()
 	// store the free memory table...
 	while(num>0) {
 		if(MMapEnt_IsFree(entry) &&
-		   MMapEnt_Size(entry)/__PAGESIZE>=nrphymax) {
-				// map free physical pages to pmm.entries
-				for(i=0;i<nrphymax;i++)
-					kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
-						(uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE);
+		   (uint)(MMapEnt_Size(entry)/__PAGESIZE)>=(uint)nrphymax) {
+			// map free physical pages to pmm.entries
+			for(i=0;(uint)i<(uint)nrphymax;i++)
+				kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
+					(uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE);
 			// "preallocate" the memory for pmm.entries
-			entry->ptr +=nrphymax*__PAGESIZE;
-			entry->size-=nrphymax*__PAGESIZE;
+			entry->ptr +=(uint64_t)((uint)nrphymax*__PAGESIZE);
+			entry->size-=(uint64_t)((uint)nrphymax*__PAGESIZE);
 			break;
 		}
 		num--;

@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Thread Control Block. Must align with TSS
+ * @brief Thread Control Block, architecture specific part
  */
 
 #include "../tcb.h"

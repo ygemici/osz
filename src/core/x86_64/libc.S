@@ -47,7 +47,7 @@ kmap:
 	andw	$0xF000, %si
 	incw	%si
 	movq	%rsi, (%rax)
-	invlpg	(%rsi)
+	invlpg	(%rdi)
 	ret
 
 kmap_init:

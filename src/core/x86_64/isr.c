@@ -25,6 +25,10 @@
  * @brief Interrupt Service Routines
  */
 
+#include "../core.h"
+#include "tcb.h"
+#include "ccb.h"
+
 void isr_init()
 {
 }

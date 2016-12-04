@@ -50,9 +50,10 @@ void main()
 	// parse environment
 	env_init();
 	// initialize physical memory manager
-//	pmm_init();
+	pmm_init();
 	// interrupt service routines (idt)
-//	isr_init();
+	isr_init();
+
 #if DEBUG
 	int x,y,s=bootboot.fb_scanline,w=bootboot.fb_width,h=bootboot.fb_height;
 	// cross-hair

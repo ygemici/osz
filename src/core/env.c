@@ -28,7 +28,7 @@
 #include "core.h"
 
 // parsed values
-uint8_t __attribute__ ((section (".data"))) nrphymax;
+uint __attribute__ ((section (".data"))) nrphymax;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) verbose;
 
