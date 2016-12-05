@@ -29,6 +29,11 @@
 #include "tcb.h"
 #include "ccb.h"
 
+extern uint64_t gdt64_tss[2];
+
 void isr_init()
 {
+    OSZ_ccb *ccb=kalloc(1);
+    uint64_t *idt=kalloc(1);
+    kprintf("ccb=%x idt=%x\n",ccb,idt);
 }

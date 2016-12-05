@@ -28,11 +28,11 @@
 #include "core.h"
 #include "font.h"
 
-/* first position in line */
 /* re-entrant counter */
 char __attribute__ ((section (".data"))) reent;
 /* for temporary strings */
 char __attribute__ ((section (".data"))) tmp[33];
+/* first position in line */
 int __attribute__ ((section (".data"))) fx;
 /* current cursor position */
 int __attribute__ ((section (".data"))) kx;
@@ -96,7 +96,7 @@ void kprintf_putdec(int64_t c)
 
 void kprintf_puthex(int64_t c)
 {
-	int i=32;
+	int i=16;
 	tmp[i]=0;
 	do {
 		char n=c & 0xf;
