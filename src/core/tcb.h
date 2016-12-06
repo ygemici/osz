@@ -26,6 +26,7 @@
  */
 
 #define OSZ_TCB_MAGIC "THRD"
+#define OSZ_TCB_MAGICH 0x44524854
 
 enum OSZ_tcb_state
 {

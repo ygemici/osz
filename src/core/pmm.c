@@ -85,7 +85,8 @@ void pmm_init()
 			// map free physical pages to pmm.entries
 			for(i=0;(uint)i<(uint)nrphymax;i++)
 				kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
-					(uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE);
+					(uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
+					PG_CORE_NOCACHE);
 			// "preallocate" the memory for pmm.entries
 			entry->ptr +=(uint64_t)((uint)nrphymax*__PAGESIZE);
 			entry->size-=(uint64_t)((uint)nrphymax*__PAGESIZE);
@@ -125,7 +126,7 @@ void* kalloc(int pages)
 	if(pages>512)
 		pages=512;
 	while(pages-->0){
-		kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc());
+		kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(),PG_CORE);
 		pmm.bss_end += __PAGESIZE;
 	}
 	return bss;

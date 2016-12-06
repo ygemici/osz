@@ -29,7 +29,7 @@
 #define OSZ_CCB_MAGIC "CPUB"
 #define OSZ_CCB_MAGICH 0x42555043
 
-// index to hd_active
+// index to hd_active and cr_active queues, priority levels
 enum {
 	PRI_SYS, // priority 0, system, non-interruptible
 	PRI_RT,  // priority 1, real time tasks queue
@@ -42,23 +42,25 @@ enum {
 };
 
 typedef struct {
-	uint32_t magic;
-	uint64_t rsp0;
-	uint64_t rsp1;
-	uint64_t rsp2;
-	uint16_t realid;	// real APIC ID
-	uint16_t id;		// logical APIC ID
-	uint32_t minprior;	// firwt task at this priority level
-	uint64_t ist1;		// user (exception, syscall) stack
-	uint64_t ist2;		// NMI stack
-	uint64_t ist3;		// IRQ stack
-	uint64_t ist4;		// not used at the moment
-	uint64_t mutex;
-	uint64_t excerr;	// exception error code
-	uint64_t lastxreg;	// pointer to the tcb last used extra registers
-	OSZ_tcb *hd_timerq;	// timer queue head (alarm)
-	uint32_t dummy;
-	uint32_t iomapbase;	// IO permission map base
+	uint32_t magic;		// +00 (TSS64 offset)
+	uint64_t rsp0;		// +04
+	uint64_t rsp1;		// +0C
+	uint64_t rsp2;		// +14
+	uint16_t realid;	// +1C real APIC ID
+	uint16_t id;		// +1E logical APIC ID
+	uint32_t minprior;	// +20 first task at this priority level
+	uint64_t ist1;		// +24 user (exception, syscall) stack
+	uint64_t ist2;		// +2C NMI stack
+	uint64_t ist3;		// +34 IRQ stack
+	uint64_t ist4;		// +3C not used at the moment
+	uint64_t ist5;		// +44 not used at the moment
+	uint64_t excerr;	// +4C exception error code
+	OSZ_tcb *lastxreg;	// +54 thread that last used extra registers
+	uint32_t mutex[3];	// +5C
+	uint16_t iomapbase;	// +66 IO permission map base, not used
+	uint16_t dummy0;
+	OSZ_tcb *hd_timerq;	// +68 timer queue head (alarm)
 	OSZ_tcb *hd_blocked;// blocked queue head
-	OSZ_tcb *hd_active[8];	// priority queues (active threads)
+	OSZ_tcb *hd_active[8];	// priority queues (heads of active threads)
+	OSZ_tcb *cr_active[8];	// priority queues (current threads)
 } __attribute__((packed)) OSZ_ccb;

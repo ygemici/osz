@@ -12,13 +12,13 @@
 
 /* misc memory functions */
 kmemcpy:
-	movq	%rcx, %rdx
+	movq	%rdx, %rcx
 	repnz	movsb
 	ret
 
 kmemset:
 	movb	%sil, %al
-	movq	%rcx, %rdx
+	movq	%rdx, %rcx
 	repnz	stosb
 	ret
 
@@ -45,7 +45,7 @@ kmemvid:
 kmap:
 	call	kmap_getpte
 	andw	$0xF000, %si
-	incw	%si
+	mov		%dl, %sil
 	movq	%rsi, (%rax)
 	invlpg	(%rdi)
 	ret

@@ -1,5 +1,6 @@
 .section .text
 .global _start
+.global gdt64_tss
 .extern main
 .extern isr_syscall
 
@@ -26,22 +27,8 @@ _start:
 	movl	$0x18, %eax
 	movl	%eax, %fs
 	movl	%eax, %gs
-/* setup task register */
-	movl	$0x28 + 3, %eax
-	ltr		%ax
 /* setup stack (should be ok, but be sure) */
 	xor		%rsp, %rsp
-/* setup syscall dispatcher */
-	/* STAR */
-	xorq	%rcx, %rcx
-	movl	$0xC0000081, %ecx
-	movq	$0x0013000800000000, %rax
-	wrmsr
-	/* LSTAR */
-	inc		%ecx
-	xorl	%edx, %edx
-	movq	$isr_syscall, %rax
-	wrmsr
 /* jump to 64 bit code segment */
 	pushq	$0x08
 	pushq	$main

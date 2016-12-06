@@ -1,5 +1,5 @@
 /*
- * core.h
+ * x86_64/isr.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,29 +22,14 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Core functions (ring 0)
+ * @brief Interrupt Service Routines header file
  */
 
-#include <osZ.h>
-#include <limits.h>
-#include "../../loader/bootboot.h"
-
-// import virtual addresses from linker
-extern BOOTBOOT bootboot;
-extern unsigned char environment[4096];
-extern uint8_t fb;
-
-// kernel function routines
-extern void kprintf_init();
-extern void env_init();
-extern void pmm_init();
-extern void* kmap_init();
-extern void isr_init();
-extern void kprintf(char* ptr, ...);
-extern void kmemcpy(char *dest, char *src, int size);
-extern void kmemset(char *dest, int c, int size);
-extern int kmemcmp(void *dest, void *src, int size);
-extern void kmemvid(char *dest, char *src, int size);
-extern void* kalloc(int pages);
-extern void kfree(void* ptr);
-extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);
+// IDT constants
+#define IDT_EXC 0xEF010008
+#define IDT_NMI 0x8F020008
+#define IDT_INT 0x8E030008
+//#define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)/65536)&(uint64_t)0xFFFF)<<48) & (uint64_t)((uint32_t)(type)<<16) & ((uint64_t)(offset) & (uint64_t)0xFFFF))
+#define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))
+#define IDT_GATE_HI(offset) ((uint64_t)(offset)>>32)
+#define ISR_MAX 128

@@ -31,7 +31,7 @@
 #define OSZ_tcb_flag_needxmmsave	8
 
 typedef struct {
-	uint8_t magic[4];
+	uint32_t magic;
 	uint8_t state;		// thread state
 	uint8_t priority;	// thread priority
 	uint16_t cpu;		// APIC ID of cpu on which this thread runs

@@ -23,6 +23,11 @@
  *     the original.
  *
  * @brief Zero level C runtime (crt0)
+ *
+ * Calling convention: SystemV AMD64 ABI
+ *  integer or pointer RDI, RSI, RDX, RCX, R8, R9
+ *  floating point XMM0-XMM7
+ *  preserve RBP, RBX
  */
 .include "sys/core.h"
 
