@@ -74,13 +74,6 @@ if ~ msg eq si
 end if
 }
 
-;macro to remap IRQs, to avoid conflict with exceptions (legacy PIC instead of APIC)
-macro		real_remapIRQ	port, value
-{
-			mov			al, value
-			out			port, al
-}
-
 ;protected and real mode are functions, because we have to switch beetween
 macro		real_protmode
 {
@@ -234,6 +227,8 @@ realmode_start:
 			mov			eax, 1
 			cpuid
 			shr			al, 4
+			shr			ebx, 24
+			mov			dword [bootboot.bspid], ebx
 			;look for minimum family
 			cmp			ax, 0600h
 			jb			.cpuerror
@@ -585,24 +580,11 @@ getmemmap:	xor			eax, eax
 			mov			word [bootboot.datetime+6], dx
 .nobtime:
 
-			;---- PIC remap IRQ-s ----
+			;---- enable protmode ----
 			cli
 			cld
-			;to 20h-27h and 28h-2Fh to avoid conflict with exceptions
-			real_remapIRQ	 020h, 11h
-			real_remapIRQ	 0A0h, 11h
-			real_remapIRQ	 021h, 20h
-			real_remapIRQ	 0A1h, 28h
-			real_remapIRQ	 021h, 04h
-			real_remapIRQ	 0A1h, 02h
-			real_remapIRQ	 021h, 01h
-			real_remapIRQ	 0A1h, 01h
-			;mask all IRQs
-			real_remapIRQ	 021h, 0FFh
-			real_remapIRQ	 0A1h, 0FFh
-
 			lgdt		[GDT_value]
-			mov			eax, cr0		;enable protected mode
+			mov			eax, cr0
 			or			al, 1
 			mov			cr0, eax
 			jmp			CODE_PROT:protmode_start

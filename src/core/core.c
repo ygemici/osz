@@ -44,9 +44,6 @@ void main()
 {
 	// initialize kernel implementation of printf
 	kprintf_init();
-#if DEBUG
-	kprintf("OS/Z Starting...");
-#endif
 	// parse environment
 	env_init();
 	// initialize physical memory manager
@@ -54,23 +51,6 @@ void main()
 	// interrupt service routines (idt)
 	isr_init();
 
-#if DEBUG
-	int x,y,s=bootboot.fb_scanline,w=bootboot.fb_width,h=bootboot.fb_height;
-	// cross-hair
-	for(y=0;y<h;y++) { *((uint32_t*)(&fb + s*y + (w*2)))=0x00FFFFFF; }
-	for(x=0;x<w;x++) { *((uint32_t*)(&fb + s*(h/2)+x*4))=0x00FFFFFF; }
-
-	// boxes
-	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+12)*4))=0x00FF0000; } }
-	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+36)*4))=0x0000FF00; } }
-	for(y=0;y<16;y++) { for(x=0;x<16;x++) { *((uint32_t*)(&fb + s*(y+16) + (x+60)*4))=0x000000FF; } }
-    
-	kprintf("\n\n  R  G  B\t\tHello OSDev!\n\n"
-		"%%d, %%c, %%x, '%%s' efiptr=%%x        %d, %c, %x, '%s' efiptr=%x\n"
-		"utf-8 (0-7FF only): ¾ßŔƂ ΑΒΓΔΕΖΗΘ αβγδεζηθ ϢϣϤϥϦ ЀЁЂЃЄАБВГДЕЖ абвгдеж ЉԱԲԳԴ"
-		" אבגד ابةتثج ۱۲۳ ࠀࠁࠂࠃ\n  ",
-		65,'B',0x1a2b3c4d5e6f,"%d something", bootboot.efi_ptr);
-#endif
-	__asm__ __volatile__ ( "movq $1, %%rbx;xchgw %%bx,%%bx;cli;hlt" : : : );
+	__asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 
 }

@@ -450,6 +450,12 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 		// Ok, it's time to collect information on system
 		ZeroMem((void*)bootboot,4096);
 		CopyMem(bootboot->magic,BOOTPARAMS_MAGIC,4);
+		__asm__ __volatile__ (
+			"mov $1, %%eax;"
+			"cpuid;"
+			"shrl $24, %%ebx;"
+			"mov %%ebx,%0"
+			: : "b"(bootboot->bspid) : "memory" );
 		bootboot->protocol=PROTOCOL_STATIC;
 		bootboot->loader_type=LOADER_UEFI;
 		bootboot->size=128;

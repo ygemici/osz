@@ -29,7 +29,7 @@
 #define IDT_EXC 0xEF010008
 #define IDT_NMI 0x8F020008
 #define IDT_INT 0x8E030008
-//#define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)/65536)&(uint64_t)0xFFFF)<<48) & (uint64_t)((uint32_t)(type)<<16) & ((uint64_t)(offset) & (uint64_t)0xFFFF))
 #define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))
 #define IDT_GATE_HI(offset) ((uint64_t)(offset)>>32)
 #define ISR_MAX 128
+#define ISR_STACK 64

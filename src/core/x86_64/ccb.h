@@ -29,6 +29,11 @@
 #define OSZ_CCB_MAGIC "CPUB"
 #define OSZ_CCB_MAGICH 0x42555043
 
+// mutex flags
+#define MUTEX_OFFS 0x5C
+#define LOCK_TASKSWITCH 0
+
+#ifndef _AS
 // index to hd_active and cr_active queues, priority levels
 enum {
 	PRI_SYS, // priority 0, system, non-interruptible
@@ -46,9 +51,8 @@ typedef struct {
 	uint64_t rsp0;		// +04
 	uint64_t rsp1;		// +0C
 	uint64_t rsp2;		// +14
-	uint16_t realid;	// +1C real APIC ID
-	uint16_t id;		// +1E logical APIC ID
-	uint32_t minprior;	// +20 first task at this priority level
+	uint32_t realid;	// +1C real APIC ID
+	uint32_t id;		// +20 logical APIC ID
 	uint64_t ist1;		// +24 user (exception, syscall) stack
 	uint64_t ist2;		// +2C NMI stack
 	uint64_t ist3;		// +34 IRQ stack
@@ -64,3 +68,4 @@ typedef struct {
 	OSZ_tcb *hd_active[8];	// priority queues (heads of active threads)
 	OSZ_tcb *cr_active[8];	// priority queues (current threads)
 } __attribute__((packed)) OSZ_ccb;
+#endif

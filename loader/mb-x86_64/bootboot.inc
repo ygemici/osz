@@ -48,7 +48,8 @@ virtual at bootboot
   bootboot.initrd_ptr:  dq	0
   bootboot.initrd_size: dq	0
   bootboot.mmap_ptr:    dq	0
-  bootboot.unused:      dq	0,0
+  bootboot.unused:      dd	0,0,0
+  bootboot.bspid:       dd	0
   bootboot.fb_ptr:      dq	0
   bootboot.fb_size:     dd	0
   bootboot.fb_width:    dd	0

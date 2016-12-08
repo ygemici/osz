@@ -74,9 +74,9 @@ void pmm_init()
 	kmap_tmp = kmap_init();
 
 	// buffers
-	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 3*__PAGESIZE);
+	pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 4*__PAGESIZE);
 		pmm.bss = (uint8_t*)&__bss_start;
-	pmm.bss_end = (uint8_t*)&__bss_start + (uint64_t)(__PAGESIZE * ((uint)nrphymax+3));
+	pmm.bss_end = (uint8_t*)&__bss_start + (uint64_t)(__PAGESIZE * ((uint)nrphymax+4));
 	// this is a chicken and egg scenario. We need free memory to
 	// store the free memory table...
 	while(num>0) {

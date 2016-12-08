@@ -1,10 +1,12 @@
+include ../../../Config
+
 SRCS = $(wildcard *.c)
 SRCS+= $(wildcard *.S)
 TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS =
 
-CFLAGS = -Wall -fpic -ffreestanding
+CFLAGS = -DDEBUG=$(DEBUG) -Wall -fpic -ffreestanding
 
 all: $(OBJS) ok
 

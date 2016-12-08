@@ -56,11 +56,13 @@ void env_init()
             env+=9;
             identity = (*env=='1'||*env=='t'||*env=='T');
         }
+#if DEBUG
         // output verbosity level
         if(!kmemcmp(env, "verbose=", 8)) {
             env+=8;
             verbose = (*env>='0'&&*env<='9'?*env - '0':0);
         }
+#endif
         env++;
     }
 }

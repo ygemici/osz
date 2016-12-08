@@ -57,6 +57,7 @@ void kprintf_init()
 	reent = 0;
 	fg = 0xC0C0C0;
 	bg = 0;
+	kprintf("OS/Z Starting...\n");
 }
 
 void kprintf_putchar(int c)

@@ -40,27 +40,29 @@ extern "C" {
 #define INITRD_MAXSIZE 2 //Mb
 
 typedef struct {
-  uint8_t    magic[4];
-  uint32_t   size;
-  uint64_t   datetime;
-  uint64_t   acpi_ptr;
+  uint8_t    magic[4];    // BOOT
+  uint32_t   size;        // length of bootboot structure
+  uint64_t   datetime;    // in BCD yyyymmddhhiiss
+  uint64_t   acpi_ptr;    // system table pointers
   uint64_t   smbi_ptr;
   uint64_t   efi_ptr;
   uint64_t   mp_ptr;
-  uint64_t   initrd_ptr;
+  uint64_t   initrd_ptr;  // ramdisk image position and size
   uint64_t   initrd_size;
-  uint64_t   mmap_ptr;
-  uint64_t   unused[2];
-  uint8_t    *fb_ptr;
+  uint64_t   mmap_ptr;    // virtual address of mmap
+  uint64_t   unused0;
+  uint32_t   unused1;
+  uint32_t   bspid;       // Local APIC id of BSP
+  uint8_t    *fb_ptr;     // framebuffer pointer and dimensions
   uint32_t   fb_size;
   uint32_t   fb_width;
   uint32_t   fb_height;
   uint32_t   fb_scanline;
-  uint32_t   pagesize;
-  uint8_t    protocol;
-  uint8_t    loader_type;
+  uint32_t   pagesize;    // 4096
+  uint8_t    protocol;    // 1, static addresses
+  uint8_t    loader_type; // LOADER_BIOS or LOADER_UEFI
   uint16_t   flags[3];
-  int16_t    timezone;
+  int16_t    timezone;    //in minutes -1440..1440
   uint16_t   fb_type;
   uint8_t    mmap; /* MMapEnt[] */
 } __attribute__((packed)) BOOTBOOT;
