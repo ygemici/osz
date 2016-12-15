@@ -22,11 +22,8 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Libc initialization
+ * @brief Empty shared object initialization code if there's no _init()
  */
 
 .section .text
-.global _init
-
-_init:
     ret

@@ -5,7 +5,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
 CFLAGS += -Wall -fpic -fPIC -ffreestanding
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -fPIC
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -fPIC -L../../../../bin/root/lib
 
 all: $(OBJS) $(BINTARGET)
 
@@ -15,6 +15,7 @@ all: $(OBJS) $(BINTARGET)
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
 	@mkdir -p ../../../../bin/root/lib/sys/$(firstword $(subst /, ,$(TARGET)))
+	@../../../../tools/drivers.sh $(TARGET)
 	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:

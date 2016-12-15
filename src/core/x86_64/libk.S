@@ -42,11 +42,16 @@
 kpanic:
     movl    $0xFF0000, fg
     movl    $0x200000, bg
+    pushq   %rdi
+    movq    $kpanicprefix, %rdi
+    call    kprintf
+    popq    %rdi
     addq    $8, %rsp
     call    kprintf
     cli
     hlt
-
+kpanicprefix:
+.asciz "core - E - "
 
 /* misc memory functions */
 kmemcpy:

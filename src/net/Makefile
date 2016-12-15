@@ -1,3 +1,3 @@
 TARGET = sbin/net
-LIBS =
+LINKER = service
 include ../Makefile.rules

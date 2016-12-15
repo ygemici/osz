@@ -45,6 +45,10 @@ uint64_t __attribute__ ((section (".data"))) core_mapping;
 uint64_t __attribute__ ((section (".data"))) shlib_mapping;
 uint64_t __attribute__ ((section (".data"))) fullsize;
 
+typedef unsigned char *valist;
+#define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*8))
+#define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
+
 pid_t thread_new()
 {
     OSZ_tcb *newtcb,*tcb = (OSZ_tcb*)&tmp2map;
@@ -126,7 +130,7 @@ void *thread_loadelf(char *fn)
     }
     ret = i;
 #if DEBUG
-    kprintf("loadelf(%s) %x:%d @%d\n",fn,elf,size,ret);
+    kprintf("  loadelf %s %x:%d @%d\n",fn,elf,size,ret);
 #endif
     while(size--) {
         paging[i]=(uint64_t)(elf + (i-ret)*__PAGESIZE+1);
@@ -141,6 +145,7 @@ void thread_loadso(char *fn)
 {
     // map SHLIB_ADDRESS' PT at tmp2map
     kmap((uint64_t)&tmp2map, shlib_mapping, PG_CORE_NOCACHE);
+kprintf("  ");
     thread_loadelf(fn);
 //    uint64_t *paging = (uint64_t *)&tmp2map;
 //    Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(thread_loadelf(fn) + SHLIB_ADDRESS);
@@ -159,19 +164,37 @@ void thread_remove(pid_t thread)
     // uint64_t ptr = thread * __PAGESIZE;
 }
 
-/* Function to start a system service */
-void service_init2(char *fn, char *so)
+/* fill in .rela.plt entries. Relies on identity mapping */
+void thread_dynlink(pid_t thread)
 {
+//    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
+    kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
+}
+
+void thread_mapbss(uint64_t phys, uint64_t size)
+{
+}
+
+/* Function to start a system service */
+void service_init2(char *fn, uint64_t n, ...)
+{
+    valist args;
+    vastart(args, n);
     OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
     pid_t pid = thread_new();
+
     fullsize = 0;
     // map executable
     thread_loadelf(fn);
     // map libc
     thread_loadso("lib/libc.so");
-    // map additional shared library
-    if(so!=NULL)
-        thread_loadso(so);
+    // map additional shared libraries
+    while(n>0) {
+        thread_loadso(vaarg(args, char*));
+        n--;
+    }
+    // dynamic linker
+    thread_dynlink(pid);
     // modify TCB
     kmap((uint64_t)&tmp2map, (uint64_t)(pid*__PAGESIZE), PG_CORE_NOCACHE);
     tcb->linkmem += fullsize;
@@ -181,5 +204,5 @@ void service_init2(char *fn, char *so)
 
 void service_init(char *fn)
 {
-    service_init2(fn, NULL);
+    service_init2(fn, 0);
 }

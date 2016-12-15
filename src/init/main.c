@@ -1,7 +1,6 @@
 #include <osZ.h>
 
-int main(int argc,char**argv)
+void main()
 {
     printf("a");
-    return 0;
 }

@@ -60,8 +60,13 @@ void main()
     isr_init();
     // start "syslog" process so others can log errors
     service_init("sbin/syslog");
-    // initialize "fs" process to load files from initrd
-    service_init("sbin/fs");
+    // initialize "fs" process to load files
+    service_init2("sbin/fs", 3,
+        "lib/sys/fs/gpt.so",
+        "lib/sys/fs/fsz.so",
+        "lib/sys/fs/vfat.so"
+    );
+    thread_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
     // initialize "ui" process to handle user input / output
     service_init("sbin/ui");
     if(networking) {

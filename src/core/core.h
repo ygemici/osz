@@ -60,4 +60,7 @@ extern void *thread_loadelf(char *fn);
 extern void thread_loadso(char *fn);
 extern void thread_add(pid_t thread);
 extern void thread_remove(pid_t thread);
+extern void thread_dynlink(pid_t thread);
+extern void thread_mapbss(uint64_t phys, uint64_t size);
 extern void service_init(char *fn);
+extern void service_init2(char *fn, uint64_t n, ...);

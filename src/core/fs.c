@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Pre FS service elf loader to load fs.o
+ * @brief Pre FS service elf loader to load system services
  */
 
 #include "core.h"
@@ -58,13 +58,13 @@ void *fs_locate(char *fn)
     if(bootboot.initrd_ptr==0 || fn==NULL || kmemcmp(sb->magic,FSZ_MAGIC,4)){
         return NULL;
     }
-    // Get the inode
+    // Get the inode from directory hierarchy
     int i;
     char *s,*e;
     s=e=fn;
     i=0;
 again:
-    while(*e!='/'&&*e!=0){e++;}
+    while(*e!='/'&&*e!=0&&*e!='\n'){e++;}
     if(*e=='/'){e++;}
     if(!kmemcmp(in->magic,FSZ_IN_MAGIC,4)){
         //is it inlined?
@@ -82,7 +82,7 @@ again:
         int j=hdr->numentries;
         while(j-->0){
             if(!kmemcmp(ent->name,s,e-s)) {
-                if(*e==0) {
+                if(*e==0||*e=='\n') {
                     i=ent->fid;
                     break;
                 } else {
@@ -96,6 +96,7 @@ again:
     } else {
         i=0;
     }
+    // if we have an inode, load it's contents
     if(i!=0) {
         // fid -> inode ptr -> data ptr
         FSZ_Inode *in=(FSZ_Inode *)(bootboot.initrd_ptr+i*FSZ_SECSIZE);
@@ -103,19 +104,13 @@ again:
             fs_size = in->size;
             if(in->sec==i) {
                 // inline data
-                Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(in->inlinedata);
-                if(kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
-                    return NULL;
-                void *ptr=pmm_alloc(1);
-                kmemcpy(ptr,(char*)&in->inlinedata,in->size);
-                return ptr;
+                return (void*)&in->inlinedata;
             } else {
-                Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(bootboot.initrd_ptr + in->sec * FSZ_SECSIZE);
-                if(!kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+                if(in->size <= FSZ_SECSIZE)
                     // direct data
                     return (void*)(bootboot.initrd_ptr + in->sec * FSZ_SECSIZE);
                 else
-                    // sector directory
+                    // sector directory (only one level supported here)
                     return (void*)(bootboot.initrd_ptr + (unsigned int)(((FSZ_SectorList *)(bootboot.initrd_ptr+in->sec*FSZ_SECSIZE))->fid) * FSZ_SECSIZE);
             }
         }

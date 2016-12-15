@@ -1,3 +1,4 @@
+
 /* Copyright (C) 2014-2016 Free Software Foundation, Inc.
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
@@ -5,9 +6,8 @@
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
 	      "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
-ENTRY(_init)
-SEARCH_DIR("../../../bin/root/lib");
-STARTUP("init.o");
+ENTRY(main)
+SEARCH_DIR("../../bin/root/lib");
 
 PHDRS
 {
@@ -19,7 +19,8 @@ PHDRS
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  . = SEGMENT_START("text-segment", 0x0000000100000000) + SIZEOF_HEADERS;
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x200000));
+  . = SEGMENT_START("text-segment", 0x200000) + SIZEOF_HEADERS;
   PROVIDE (_code = .);
   .text           :
   {
@@ -73,11 +74,23 @@ SECTIONS
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
   .dynamic        : { *(.dynamic) } :data :dynamic
-  .cl             : { *(.cl) } :dynamic
   .got            : { *(.got) *(.igot) } :data
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
   PROVIDE (_edata = .);
-  . = ALIGN(64 / 8);
+  . = .;
+  __bss_start = 0x0000001000000000;
+  .bss            :
+  {
+   *(.dynbss)
+   *(.bss .bss.* .gnu.linkonce.b.*)
+   *(COMMON)
+   /* Align here to ensure that the .bss section occupies space up to
+      _end.  Align after .bss to ensure correct alignment even if the
+      .bss section disappears because there are no input sections.
+      FIXME: Why do we need it? When there is no .bss section, we don't
+      pad the .data section.  */
+   . = ALIGN(. != 0 ? 64 / 8 : 1);
+  }
   _end = .;
   . = DATA_SEGMENT_END (.);
   /* Stabs debugging sections.  */
@@ -87,5 +100,6 @@ SECTIONS
   .stab.exclstr  0 : { *(.stab.exclstr) }
   .stab.index    0 : { *(.stab.index) }
   .stab.indexstr 0 : { *(.stab.indexstr) }
-  /DISCARD/ : { *(.note.*) *(.gnu_debuglink) *(.gnu.lto_*) *(.eh*) *(.comment*) }
+  .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
+  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) *(.interp) *(.eh*) }
 }

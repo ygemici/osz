@@ -31,23 +31,24 @@
 
 extern uint8_t tmp2map;
 extern uint64_t fullsize;
+extern void acpi_init();
 
 void dev_init()
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
-    pid_t pid = thread_new();
     // this is so early, we don't have initrd in fs process' bss yet.
     // so we have to rely on identity mapping to locate the files
+    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
+    pid_t pid = thread_new();
     fullsize = 0;
-    // map dispatcher
+    // map device driver dispatcher
     thread_loadelf("sbin/system");
     // map libc
     thread_loadso("lib/libc.so");
-    // hardcoded devices
-    thread_loadso("lib/sys/input/ps2.so");
-    thread_loadso("lib/sys/display/fb.so");
-    // call ACPI parser
+    // call ACPI parser to detect devices and load drivers for them
+    acpi_init();
 
+    // dynamic linker
+    thread_dynlink(pid);
     // modify TCB for system task
     kmap((uint64_t)&tmp2map, (uint64_t)(pid*__PAGESIZE), PG_CORE_NOCACHE);
     tcb->linkmem += fullsize;

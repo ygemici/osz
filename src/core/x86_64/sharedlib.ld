@@ -7,6 +7,10 @@ OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_init)
 SEARCH_DIR("../bin/root/lib");
+SEARCH_DIR("../lib");
+SEARCH_DIR("../../lib");
+SEARCH_DIR("../../../lib");
+STARTUP("libc/init.o");
 
 PHDRS
 {
@@ -60,6 +64,7 @@ SECTIONS
   PROVIDE (_etext = .);
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
+  . = ALIGN(4096);
   . = DATA_SEGMENT_ALIGN (4096, 4096);
   PROVIDE(_data = .);
   .data           :

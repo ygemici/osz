@@ -5,7 +5,11 @@ OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
 CFLAGS += -Wall -fpic -ffreestanding
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -L../../bin/root/lib
+
+ifeq ($(LINKER),)
+LINKER = executable
+endif
 
 all: $(OBJS) $(BINTARGET)
 
@@ -14,7 +18,7 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
-	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../core/$(ARCH)/executable.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true
