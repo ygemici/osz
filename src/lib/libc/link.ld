@@ -5,27 +5,21 @@
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
 	      "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
-ENTRY(_start)
+ENTRY(_init)
 SEARCH_DIR("../bin/root/lib");
 
 PHDRS
 {
   text PT_LOAD FILEHDR PHDRS ;
   data PT_LOAD ;
-  link PT_DYNAMIC ;
+  dynamic PT_DYNAMIC ;
 }
 
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   . = SEGMENT_START("text-segment", 0x0000000100000000) + SIZEOF_HEADERS;
-  .init           :
-  {
-    KEEP (*(SORT_NONE(.init)))
-  } :text
-  .plt            : { *(.plt) *(.iplt) }
-.plt.got        : { *(.plt.got) }
-.plt.bnd        : { *(.plt.bnd) }
+  PROVIDE (_code = .);
   .text           :
   {
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
@@ -33,21 +27,8 @@ SECTIONS
     *(.text.startup .text.startup.*)
     *(.text.hot .text.hot.*)
     *(.text .stub .text.* .gnu.linkonce.t.*)
-    /* .gnu.warning sections are handled specially by elf32.em.  */
-    *(.gnu.warning)
-  }
-  .fini           :
-  {
-    KEEP (*(SORT_NONE(.fini)))
-  }
-  PROVIDE (__etext = .);
-  PROVIDE (_etext = .);
-  PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
-  .rodata1        : { *(.rodata1) }
-  .dynamic        : { *(.dynamic) }
-  .hash           : { *(.hash) }
-  .dynsym         : { *(.dynsym) }
+  } :text
+  .dynsym         : { *(.dynsym) } :text
   .dynstr         : { *(.dynstr) }
   .rela.dyn       :
     {
@@ -70,54 +51,33 @@ SECTIONS
   .rela.plt       :
     {
       *(.rela.plt)
+      PROVIDE_HIDDEN (__rela_iplt_start = .);
       *(.rela.iplt)
+      PROVIDE_HIDDEN (__rela_iplt_end = .);
     }
-  .cl             : { *(.cl) } :link
-  . = ALIGN(4096);
-  . = SEGMENT_START("data-segment", .);
-  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) } :data
-  .ctors          :
-  {
-    /* gcc uses crtbegin.o to find the start of
-       the constructors, so we make sure it is
-       first.  Because this is a wildcard, it
-       doesn't matter if the user does not
-       actually link against crtbegin.o; the
-       linker won't look for a file to match a
-       wildcard.  The wildcard also means that it
-       doesn't matter which directory crtbegin.o
-       is in.  */
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
-    /* We don't want to include the .ctor section from
-       the crtend.o file until after the sorted ctors.
-       The .ctor section from the crtend file contains the
-       end of ctors marker and it must be last */
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
-    KEEP (*(SORT(.ctors.*)))
-    KEEP (*(.ctors))
-  }
-  .dtors          :
-  {
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
-    KEEP (*(SORT(.dtors.*)))
-    KEEP (*(.dtors))
-  }
-  .got            : { *(.got) *(.igot) }
-/*  . = DATA_SEGMENT_RELRO_END (SIZEOF (.got.plt) >= 24 ? 24 : 0, .); */
-  .got.plt        : { *(.got.plt)  *(.igot.plt) }
+  .plt            : { *(.plt) *(.iplt) }
+.plt.got        : { *(.plt.got) }
+.plt.bnd        : { *(.plt.bnd) }
+  PROVIDE (_etext = .);
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .rodata1        : { *(.rodata1) }
+  . = DATA_SEGMENT_ALIGN (4096, 4096);
+  PROVIDE (_data = .);
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
-  }
+  } :data
   .data1          : { *(.data1) }
-  _edata = .; PROVIDE (edata = .);
+  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
+  .dynamic        : { *(.dynamic) } :data :dynamic
+  .cl             : { *(.cl) } :dynamic
+  .got            : { *(.got) *(.igot) } :data
+  .got.plt        : { *(.got.plt)  *(.igot.plt) }
+  PROVIDE (_edata = .);
   . = ALIGN(64 / 8);
-  _end = .; PROVIDE (end = .);
-/*  . = DATA_SEGMENT_END (.); */
+  _end = .;
+  . = DATA_SEGMENT_END (.);
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

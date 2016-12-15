@@ -48,7 +48,7 @@ SECTIONS
         /* physical memory manager free memory entries */
         pmm_entries = .;
     }
-   PROVIDE(__etext = .);
+   PROVIDE(_etext = .);
 
    /DISCARD/ :
    {

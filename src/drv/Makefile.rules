@@ -14,7 +14,7 @@ all: $(OBJS) $(BINTARGET)
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
 	@mkdir -p ../../../../bin/root/lib/sys/$(firstword $(subst /, ,$(TARGET)))
-	@$(CC) $(LDFLAGS) -L../../../../bin/root/lib $(OBJS) -Xlinker --build-id=none -T ../../../sharedlib.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

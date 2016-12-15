@@ -25,6 +25,12 @@
  * @brief Common event dispatcher for device drivers
  */
 
+#include <osZ.h>
+
+void register_irq(uint8_t irq, void *handler)
+{
+}
+
 void main()
 {
 }

@@ -1,10 +1,10 @@
 DRVS = $(wildcard drv/*/*/*) $(wildcard drv/*/*)
-LIBS = $(filter-out libc Makefile,$(wildcard lib/*))
-APPS = $(filter-out core lib Makefile,$(wildcard *))
+LIBS = $(filter-out libc drv Makefile,$(wildcard lib/*))
+APPS = $(filter-out core lib drv Makefile,$(wildcard *))
 
 drivers: $(DRVS)
 	@cat `find drv -name pci.ids|sort` >../bin/root/etc/pci.ids
-	@$(CC) -D __executable_start=0 -nostdlib -nodefaultlibs -nostartfiles ../bin/root/lib/crt0.o drv/main.c -T executable.ld -Xlinker --build-id=none -o ../bin/root/sbin/system
+	@make -e -C drv all | grep -v 'Nothing to be done' || true
 
 all: $(LIBS) $(APPS)
 

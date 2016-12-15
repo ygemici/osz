@@ -1,10 +1,10 @@
 BINTARGET = ../../bin/root/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-LIBS +=
+LIBS += -lc
 
 CFLAGS += -Wall -fpic -ffreestanding
-LDFLAGS += -nostdlib
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles
 
 all: $(OBJS) $(BINTARGET)
 
@@ -13,7 +13,7 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
-	@$(CC) $(LDFLAGS) -L../../bin/root/lib ../../bin/root/lib/crt0.o $(OBJS) -Xlinker --build-id=none -T ../executable.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../executable.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true
