@@ -1,5 +1,13 @@
-FBUF_ADDRESS = 0xffffffffe0000000;
-CORE_ADDRESS = 0xffffffffffe00000;
+/* user space addresses */
+TCB_ADDRESS   = 0;
+MQ_ADDRESS    = 4096;
+TEXT_ADDRESS  = 65536;
+SHLIB_ADDRESS = 0x0000000100000000;
+BSS_ADDRESS   = 0x0000001000000000;
+STACK_ADDRESS = 0x0000800000000000;
+/* kernel space addresses */
+FBUF_ADDRESS  = 0xffffffffe0000000;
+CORE_ADDRESS  = 0xffffffffffe00000;
 
 ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
@@ -17,16 +25,16 @@ SECTIONS
     .text : AT(ADDR(.text) - CORE_ADDRESS)
     {
         /* code */
-        _code = .;
+        PROVIDE(_code = .);
         *(.text)
         . = ALIGN(4096);
         /* initialized and preallocated data */
-        _data = .;
+        PROVIDE(_data = .);
         *(.rodata)
         *(.data)
         . = ALIGN(4096);
         /* uninitialized data */
-        __bss_start = .;
+        PROVIDE(__bss_start = .);
         /* mappings hack */
         tmpmap = .;
         . += 4096;
@@ -40,12 +48,13 @@ SECTIONS
         /* physical memory manager free memory entries */
         pmm_entries = .;
     }
-   _end = .;
+   PROVIDE(__etext = .);
 
    /DISCARD/ :
    {
         *(.comment)
         *(.note*)
         *(.eh_frame*)
+        *(.gnu.*)
    }
 }

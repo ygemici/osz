@@ -1,5 +1,5 @@
 /*
- * core.c
+ * core/core.c
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -35,6 +35,11 @@
  */
 
 #include "core.h"
+#include "pmm.h"
+
+extern uint8_t identity_map;
+extern uint8_t networking;
+extern uint8_t rescueshell;
 
 /**********************************************************************
  *                         OS/Z Core start                            *
@@ -42,15 +47,35 @@
 */
 void main()
 {
-	// initialize kernel implementation of printf
-	kprintf_init();
-	// parse environment
-	env_init();
-	// initialize physical memory manager
-	pmm_init();
-	// interrupt service routines (idt)
-	isr_init();
+    // this is so early, we don't have initrd in fs process' bss yet.
+    // so we have to rely on identity mapping to locate files
+    identity_map = true;
+    // initialize kernel implementation of printf
+    kprintf_init();
+    // parse environment
+    env_init();
+    // initialize physical memory manager, required by new thread creation
+    pmm_init();
+    // interrupt service routines (idt), initialize CCB
+    isr_init();
+    // start "syslog" process so others can log errors
+    service_init("sbin/syslog");
+    // initialize "fs" process to load files from initrd
+    service_init("sbin/fs");
+    // initialize "ui" process to handle user input / output
+    service_init("sbin/ui");
+    if(networking) {
+        // initialize "net" process for ipv4 and ipv6
+        service_init("sbin/net");
+    }
+    // initialize the "system" process
+    // detect device drivers (parse system tables and link shared objects)
+    dev_init();
+    // load "init" or "sh" process
+    service_init(rescueshell ? "bin/sh" : "sbin/init");
 
-	__asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
+    identity_map = false;
+
+    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 
 }

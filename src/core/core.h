@@ -1,5 +1,5 @@
 /*
- * core.h
+ * core/core.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -31,8 +31,11 @@
 
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;
-extern unsigned char environment[4096];
+extern unsigned char environment[__PAGESIZE];
 extern uint8_t fb;
+
+// kernel variables
+extern uint64_t fs_size;
 
 // kernel function routines
 extern void kprintf_init();
@@ -40,7 +43,11 @@ extern void env_init();
 extern void pmm_init();
 extern void* kmap_init();
 extern void isr_init();
-extern void kprintf(char* ptr, ...);
+extern void fs_init();
+extern void dev_init();
+extern void syslog_init();
+extern void kpanic(char *reason, ...);
+extern void kprintf(char* fmt, ...);
 extern void kmemcpy(char *dest, char *src, int size);
 extern void kmemset(char *dest, int c, int size);
 extern int kmemcmp(void *dest, void *src, int size);
@@ -48,3 +55,9 @@ extern void kmemvid(char *dest, char *src, int size);
 extern void* kalloc(int pages);
 extern void kfree(void* ptr);
 extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);
+extern pid_t thread_new();
+extern void *thread_loadelf(char *fn);
+extern void thread_loadso(char *fn);
+extern void thread_add(pid_t thread);
+extern void thread_remove(pid_t thread);
+extern void service_init(char *fn);

@@ -1,0 +1,7 @@
+# Full data: /usr/share/iana-etc/protocol-numbers.iana
+
+icmp           1 ICMP
+ipv4           4 IPv4
+tcp            6 TCP
+udp           17 UDP
+pipe         131 PIPE

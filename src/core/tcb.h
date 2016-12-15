@@ -1,5 +1,5 @@
 /*
- * tcb.h
+ * core/tcb.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -30,12 +30,24 @@
 
 enum OSZ_tcb_state
 {
-	tcb_receiving,
-	tcb_sending,
-	tcb_running,
-	tcb_waiting,
-	tcb_hybernated
+    tcb_receiving,
+    tcb_sending,
+    tcb_running,
+    tcb_waiting,
+    tcb_hybernated
 };
 
-#define OSZ_tcb_flag_dispatching	1
-#define OSZ_tcb_flag_calling		2
+// index to hd_active and cr_active queues, priority levels
+enum {
+    PRI_SYS, // priority 0, system, non-interruptible
+    PRI_RT,  // priority 1, real time tasks queue
+    PRI_DRV, // priority 2, device drivers queue
+    PRI_SRV, // priority 3, service queue
+    PRI_APPH,// priority 4, application high priority queue
+    PRI_APP, // priority 5, application normal priority queue
+    PRI_APPL,// priority 6, application low priority queue
+    PRI_IDLE // priority 7, idle queue (defragmenter, screensaver etc.)
+};
+
+#define OSZ_tcb_flag_dispatching    1
+#define OSZ_tcb_flag_calling        2

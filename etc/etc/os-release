@@ -1,0 +1,8 @@
+NAME="OS/Z"
+ID=osZ
+VERSION="0.0.1"
+PRETTY_NAME="OS/Z Bende"
+ANSI_COLOR="0;44;37"
+HOME_URL="https://github.com/bztsrc/osz"
+SUPPORT_URL="https://github.com/bztsrc/osz/issues"
+BUG_REPORT_URL="https://github.com/bztsrc/osz/issues"

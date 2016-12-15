@@ -32,7 +32,7 @@
 #ifndef _SYSLOG_H
 #define _SYSLOG_H 1
 
-#define SRV_SYSLOG 0x100
+#define SRV_SYSLOG 0x1000
 
 #define LOG_openlog     (SRV_SYSLOG | 0)
 #define LOG_closelog    (SRV_SYSLOG | 1)
@@ -40,8 +40,6 @@
 #define LOG_vsyslog     (SRV_SYSLOG | 3)
 
 #include <features.h>
-#define __need___va_list
-#include <stdarg.h>
 
 /*
  * priorities/facilities are encoded into a single 32-bit quantity, where the
@@ -201,7 +199,7 @@ extern void syslog (int __pri, const char *__fmt, ...)
    cancellation point.  But due to similarity with an POSIX interface
    or due to the implementation it is a cancellation point and
    therefore not marked with __THROW.  */
-extern void vsyslog (int __pri, const char *__fmt, __gnuc_va_list __ap)
+extern void vsyslog (int __pri, const char *__fmt, va_list __ap)
      __attribute__ ((__format__ (__printf__, 2, 0)));
 #endif
 

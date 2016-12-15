@@ -86,7 +86,7 @@ isr_initgates:
     rdmsr
     btsl	$10, %eax
     btsl	$11, %eax
-    wrmsr
+#    wrmsr
     /* IOAPIC init */
     
 	ret

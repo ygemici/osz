@@ -3,10 +3,10 @@ SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
-CFLAGS += -Wall -g -fpic -ffreestanding
-LDFLAGS += -nostdlib
+CFLAGS += -Wall -fpic -fPIC -ffreestanding
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -fPIC
 
-all: ../../main.o $(OBJS) $(BINTARGET)
+all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
 	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
@@ -14,7 +14,7 @@ all: ../../main.o $(OBJS) $(BINTARGET)
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
 	@mkdir -p ../../../../bin/root/lib/sys/$(firstword $(subst /, ,$(TARGET)))
-	@$(CC) $(LDFLAGS) -L../../../../bin/root/lib ../../../../bin/root/lib/crt.o ../../main.o $(OBJS) -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) -L../../../../bin/root/lib $(OBJS) -Xlinker --build-id=none -T ../../../sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

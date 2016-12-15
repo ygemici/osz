@@ -1,7 +1,7 @@
 /*
- * libc/str.S
+ * loader/rpi-AArch64//bootboot.S
  * 
- * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
+ * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:
@@ -22,91 +22,11 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Low level string operations
+ * @brief Boot loader for the Raspberry Pi AArch64
  */
 
-.global strcpy
-.global strncpy
-.global strcat
-.global strncat
-.global strcmp
-.global strncmp
-.global strdup
-.global strndup
-.global strchr
-.global strrchr
-.global strstr
-.global strlen
-.global strnlen
-.global strerror
-.global ffs
-.global strcasecmp
-.global strncasecmp
-.global strsignal
-.global basename
-.global dirname
-.global sprintf
+interrupt_handlers:
+.quad 0
+.quad 0
 
-.section .text
-strcpy:
-	ret
-
-strncpy:
-	ret
-
-strcat:
-	ret
-
-strncat:
-	ret
-
-strcmp:
-	ret
-
-strncmp:
-	ret
-
-strdup:
-	ret
-
-strndup:
-	ret
-
-strchr:
-	ret
-
-strrchr:
-	ret
-
-strstr:
-	ret
-
-strlen:
-	ret
-
-strnlen:
-	ret
-
-strerror:
-	ret
-
-ffs:
-	ret
-
-strcasecmp:
-	ret
-
-strncasecmp:
-	ret
-
-strsignal:
-	ret
-
-basename:
-	ret
-
-dirname:
-	ret
-
-sprintf:
-	ret
+_start:

@@ -331,13 +331,13 @@ int main(int argc, char**argv)
                 fprintf(f,".extern %s\n", methods[i].functionname);
         }
         j+=offs;
-        fprintf(f,"\n# Header\n.section .cl\n.byte 'C','L','D','L'\n.hword %d, %d\t\t\t# size\n",j%65536,j/65536);
+        fprintf(f,"\n# Header\n.section .cl\n.byte 'C','L','D','L'\n.long %d\t\t\t# size\n",j);
         for(i=0;i<num_method;i++){
             if(!methods[i].flags&1&&(methods[i].functionname==NULL||methods[i].functionname[0]==0)) {
                 fprintf(stderr,"CLL-ERROR: %s.%s does not have entry point\n",
                   strs[methods[i].classname],strs[methods[i].returnclass.name]);
             }
-            fprintf(f,"\n.hword 0x%04x\t\t\t# %s%s%s %s\n.hword %d, %d, %d\t# %s%s %s.%s\n.long ",
+            fprintf(f,"\n.hword 0x%04x\t\t\t# %s%s%s %s\n.hword %d, %d, %d\t# %s%s %s.%s\n.quad ",
                 methods[i].flags,
                 methods[i].flags&16?"extern ":"",
                 methods[i].flags&4?"protected":(methods[i].flags&2?"public":"private"),

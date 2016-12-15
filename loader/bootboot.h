@@ -1,5 +1,5 @@
 /*
- * bootboot.h
+ * loader/bootboot.h
  * 
  * Copyright 2016 BOOTBOOT bztsrc@github
  * 

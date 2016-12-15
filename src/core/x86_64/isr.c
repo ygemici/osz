@@ -1,5 +1,5 @@
 /*
- * x86_64/isr.c
+ * core/x86_64/isr.c
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -29,7 +29,6 @@
 #include "../core.h"
 #include "../pmm.h"
 #include "tcb.h"
-#include "ccb.h"
 #include "isr.h"
 
 extern void isr_exc00divzero();
@@ -43,7 +42,6 @@ void isr_init()
 {
     uint64_t *idt = kalloc(1);      //allocate Interrupt Descriptor Table
     uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
-    OSZ_tcb *tcb = 0;               //normal ISRs stack at top of TCB
     void *ptr;
     int i;
 
@@ -57,19 +55,8 @@ void isr_init()
     //irq stack (kernel, rest of that page)
     ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE-256;
 
-    // allocate and map Thread Control Block at offset 0
-    ptr=pmm_alloc();
-    kmap((uint64_t)0, (uint64_t)ptr, PG_CORE_NOCACHE);
-    tcb->magic = OSZ_TCB_MAGICH;
-    tcb->state = tcb_running;
-    tcb->priority = PRI_SYS;
-    tcb->self = (uint64_t)ptr;
-
     // generate IDT
     ptr = &isr_exc00divzero;
-#if DEBUG
-    kprintf("ccb=%x isr_exc00=%x\n",ccb,&isr_exc00divzero);
-#endif
     // 0-31 exception handlers
     for(i=0;i<32;i++) {
         idt[i*2+0] = IDT_GATE_LO(i==2||i==8?IDT_NMI:IDT_EXC, ptr);
@@ -98,15 +85,18 @@ void isr_irq(uint64_t irq)
 void excabort(uint64_t excno, uint64_t errcode)
 {
     kprintf("exception %d\n",excno);
+	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }
 
 /* exception specific code */
 void exc00divzero(uint64_t excno)
 {
     kprintf("divzero %d\n",excno);
+	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }
 
 void exc01debug(uint64_t excno)
 {
     kprintf("debug %d\n",excno);
+	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }

@@ -1,7 +1,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H 1
 
-#define SRV_NET 0x400
+#define SRV_NET 0x4000
 
 #define SYS_socket (SRV_NET | 0)
 #define SYS_connect (SRV_NET | 1)

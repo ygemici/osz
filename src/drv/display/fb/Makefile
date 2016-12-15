@@ -1,3 +1,3 @@
-TARGET = display/fb
+TARGET = display/fb.so
 
 include ../../Makefile.rules

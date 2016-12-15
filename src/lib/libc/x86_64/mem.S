@@ -1,5 +1,5 @@
 /*
- * libc/mem.S
+ * libc/x86_64/mem.S
  * 
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -34,35 +34,35 @@
 
 .section .text
 memcpy:
-	movq	24(%rsp), %rcx
-	movq	16(%rsp), %rsi
-	movq	8(%rsp), %rdi
-	repnz	movsb
-	ret
+    movq    24(%rsp), %rcx
+    movq    16(%rsp), %rsi
+    movq    8(%rsp), %rdi
+    repnz   movsb
+    ret
 
 memzero:
-	movq	16(%rsp), %rcx
-	movq	8(%rsp), %rdi
-	xor		%rax, %rax
-	repnz	stosb
-	ret
+    movq    16(%rsp), %rcx
+    movq    8(%rsp), %rdi
+    xor     %rax, %rax
+    repnz   stosb
+    ret
 
 memmove:
-	movq	24(%rsp), %rcx
-	movq	16(%rsp), %rsi
-	movq	8(%rsp), %rdi
-	repnz	movsb
-	ret
+    movq    24(%rsp), %rcx
+    movq    16(%rsp), %rsi
+    movq    8(%rsp), %rdi
+    repnz   movsb
+    ret
 
 memset:
-	movq	24(%rsp), %rcx
-	movq	16(%rsp), %rax
-	movq	8(%rsp), %rdi
-	repnz	stosb
-	ret
+    movq    24(%rsp), %rcx
+    movq    16(%rsp), %rax
+    movq    8(%rsp), %rdi
+    repnz   stosb
+    ret
 
 memcmp:
-	ret
+    ret
 
 memchr:
-	ret
+    ret

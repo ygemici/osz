@@ -1,3 +1,3 @@
-TARGET = mmedia/sblive
+TARGET = mmedia/sblive.so
 
 include ../../Makefile.rules

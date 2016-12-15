@@ -1,24 +1,33 @@
-OS/Z - an alternative hacker operating system
-=============================================
+OS/Z - an operating system for hackers
+======================================
 
-Is a hobby OS project. It's aim is to be small, and to handle
-enormous amounts of data (I eliminate limits by design as much as I can).
+Is a hobby OS project. As such it's primary goal is not
+everyday use. Instead it demostrates different concepts
+for those who like hacking with hobby OSes. It's aim is
+to be small, and to handle enormous amounts of data in
+a user friendly way. To achieve that goal, I've eliminated
+as many limits as possible by design.
+For example only storage capacity limits the number of inodes
+on a disk. And only RAM limits the number of concurent tasks
+at any given time.
 
 Features
 --------
 
  - GNU toolchain only (save MultiBoot loader)
- - Single disk image for booting from MBR, VBR, ROM BIOS, GRUB and UEFI.
+ - Single disk image for booting from MBR, VBR, ROM BIOS, GRUB or UEFI.
  - ELF64 object format
  - Higher half kernel mapping, full 64 bit support
  - Microkernel architecture
- - It's filesystem can handle YotaBytes of data
+ - It's filesystem can handle YotaBytes of data (unimagineable as of writing)
+ - UNICODE support with UTF-8
 
 Requirements
 ------------
 
 - gcc
 - qemu / bochs / VirtualBox
+- optionally fasm
 
 Compilation
 -----------
@@ -29,7 +38,7 @@ To compile, simply type
 $ make
 ```
 
-You should see this:
+You should see something similar to this:
 
 ```
 TOOLS
@@ -56,17 +65,16 @@ IMAGES
   mkfs		gpt disk image
 ```
 
-The resulting disk image can be found at `bin/disk.dd`. Use the `dd`
+The disk image is generated to `bin/disk.dd`. Use the `dd`
 command to write it on a USB stick and you're ready to go.
 
 Testing
 -------
 
-No matter what kind of booting you use with the emulator (BIOS or EFI),
-it should boot OS/Z and you should see a white crosshair and in order
-red, green and blue boxes on the top left corner along with a debug string.
+That disk image should boot OS/Z in emulators and on real machines
+regardless to configuration.
 
-You can boot OS/Z in a virtual machine right from your working directory
+You can boot OS/Z in a virtual machine right from your `bin` directory
 with TianoCore EFI. For that, type
 
 ```shell
@@ -100,14 +108,16 @@ Non-EFI booting
 If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
 Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting.
 
-The `bootboot.bin` can be booted via `mbr.bin`, as a BIOS extension ROM (tested with bochs at 0D0000h) and with
-GRUB using the MultiBoot protocol (not tested).
+The `bootboot.bin` can be booted via 
+ - `mbr.bin`
+ - BIOS extension ROM (tested with bochs at 0D0000h)
+ - GRUB using the MultiBoot protocol (not tested).
 
 License
 -------
 
-The boot loader and the whole BOOBOOT Protocol is licensed under GPLv3. The core and every code running under
-it as well as fs/Z filesystem licensed under CC-by-nc-sa-4.0.
+The boot loader and the whole BOOBOOT Protocol is licensed under GPLv3.
+Other parts of OS/Z like FS/Z filesystem licensed under CC-by-nc-sa-4.0.
 
  Copyright 2016 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
  

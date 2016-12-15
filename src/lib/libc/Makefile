@@ -15,11 +15,11 @@ all: $(OBJS) $(BINTARGET)
 	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET): $(SRCS)
-	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c $(ARCH)/crt.S  -o ../../../bin/root/lib/crt.o
+	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c $(ARCH)/crt0.S -o ../../../bin/root/lib/crt0.o
 	@echo "  src		$(TARGET) ($(ARCH))"
-	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
+	make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 	@$(CLL) *.c
-	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic $(OBJS) $(filter-out crt.o,$(wildcard $(ARCH)/*.o)) cl.o -o $(BINTARGET) $(LIBS)
+	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic *.o -Xlinker --build-id=none -T link.ld -o $(BINTARGET) $(LIBS)
 
 clean:
-	@rm cl.S *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt.o 2>/dev/null || true
+	@rm cl.S *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt0.o 2>/dev/null || true

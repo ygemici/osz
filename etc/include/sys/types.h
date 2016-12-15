@@ -25,6 +25,9 @@
  * @brief System types
  */
 
+#ifndef	_TYPES_H
+#define	_TYPES_H	1
+
 #include <stdint.h>
 
 #ifndef NULL
@@ -35,14 +38,42 @@
 #define null NULL
 #endif
 
+#ifndef TRUE
+#define TRUE 1
+#endif
+
 #ifndef true
 #define true 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
 #endif
 
 #ifndef false
 #define false 0
 #endif
 
-//typedef uint64_t __pid_t;
-//typedef uint64_t __size_t;
+typedef void *va_list;
+typedef unsigned char uchar;
+typedef unsigned int uint;
 typedef uint64_t size_t;
+typedef uint64_t loff_t;
+typedef uint64_t ino_t;
+typedef uint64_t dev_t;
+typedef uint64_t gid_t;
+typedef uint64_t mode_t;
+typedef uint32_t nlink_t;
+typedef uint64_t uid_t;
+typedef uint64_t off_t;
+typedef uint64_t pid_t;
+typedef uint64_t id_t;
+typedef uint64_t ssize_t;
+typedef uint64_t key_t;
+typedef int register_t;
+typedef uint64_t blksize_t;
+typedef uint64_t blkcnt_t;	 /* Type to count number of disk blocks.  */
+typedef uint64_t fsblkcnt_t; /* Type to count file system blocks.  */
+typedef uint64_t fpos_t;
+
+#endif /* sys/types.h */

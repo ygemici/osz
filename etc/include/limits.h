@@ -23,18 +23,20 @@
 #define _LIBC_LIMITS_H_	1
 #define _LIMITS_H	1
 
-
-
 /* Maximum length of any multibyte character in any locale.
    We define this value here since the gcc header does not define
    the correct value.  */
 #define MB_LEN_MAX	16
 
+#define TMP_MAX	8
+#define FILENAME_MAX	111
+
+// (TEXT_ADDRESS-MQ_ADDRESS)/__PAGESIZE
+#define NRMQ_MAX	511
+
 #define __WORDSIZE	64
 #define __PAGESIZE	4096
 #define __SYSCALL_WORDSIZE		64
-
-#define __PHYFRAG_MAX 2 //pages, each frag entry 16 bytes
 
 #  define CHAR_BIT	8
 #  define SCHAR_MIN	(-128)

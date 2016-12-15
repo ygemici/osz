@@ -7,8 +7,11 @@ BOOTBOOT Reference Implementations
 2. *mb-x86_64* BIOS and MultiBoot (GRUB) compatible, OBSOLETE loader.
     If you want to recompile this, you'll need fasm (not included).
 
-Please note that the reference implementations do not fully support
-the protocol, for example they only handle static mappings.
+3. *rpi-AArch64* ARM boot loader for Raspberry Pi 3 (only planned as of now)
+
+Please note that the reference implementations do not support
+the full protocol at level 2, they only handle static mappings
+which makes them level 1 loaders.
 
 BOOTBOOT Protocol
 =================
@@ -27,8 +30,8 @@ OS loader application.
 
 The difference to other booting protocols is that BOOTBOOT expects the
 kernel to fit in the ramdisk. This is ideal for hobby OSes and microkernels.
-The advantage it gaves is that your kernel will be loaded along with
-other files on the ramdisk.
+The advantage it gaves is that your kernel can be splitted into several files
+and yet they will be loaded together as if it was a monolitic kernel.
 
 License
 -------

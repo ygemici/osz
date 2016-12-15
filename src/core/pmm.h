@@ -1,5 +1,5 @@
 /*
- * pmm.h
+ * core/pmm.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -36,14 +36,14 @@
 #define PG_USER_DRVMEM 0b01111
 
 typedef struct {
-	uint64_t base;
-	uint64_t size;
+    uint64_t base;
+    uint64_t size;
 } OSZ_pmm_entry;
 
 typedef struct {
-	uint32_t magic;
-	uint32_t size;
-	OSZ_pmm_entry *entries;
-	void *bss;
-	void *bss_end;
+    uint32_t magic;
+    uint32_t size;
+    OSZ_pmm_entry *entries;
+    void *bss;
+    void *bss_end;
 } __attribute__((packed)) OSZ_pmm;

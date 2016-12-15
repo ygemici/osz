@@ -1,5 +1,5 @@
 ;*
-;* bootboot.inc
+;* loader/mb-x86_64/bootboot.inc
 ;*
 ;* Copyright 2016 BOOTBOOT bztsrc@github
 ;*

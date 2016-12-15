@@ -1,3 +1,3 @@
-TARGET = network/ne2k
+TARGET = network/ne2k.so
 
 include ../../Makefile.rules

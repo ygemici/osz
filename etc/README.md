@@ -12,4 +12,5 @@ Files
 - *CONFIG* the default boot configuration. Must be 4096 bytes long.
   Will be copied to FS0:\BOOTBOOT\CONFIG on disk assembly.
 - *bochs.rc* bochs configuration file
-- *fonts16.psf* PC Screen Font for system8x16 font
+- *system.8x16.psf* PC Screen Font, unicode font for kprintf
+- *system.8x16.txt* font source, use [writepsf](https://github.com/talamus/solarize-12x29-psf/blob/master/writepsf) to compile

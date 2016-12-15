@@ -1,3 +1,3 @@
-TARGET = input/ps2
+TARGET = input/ps2.so
 
 include ../../Makefile.rules

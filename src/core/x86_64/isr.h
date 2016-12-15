@@ -1,5 +1,5 @@
 /*
- * x86_64/isr.h
+ * core/x86_64/isr.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

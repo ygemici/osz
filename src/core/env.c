@@ -1,5 +1,5 @@
 /*
- * env.c
+ * core/env.c
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -29,13 +29,17 @@
 
 // parsed values
 uint __attribute__ ((section (".data"))) nrphymax;
+uint __attribute__ ((section (".data"))) nrmqmax;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) verbose;
+uint8_t __attribute__ ((section (".data"))) networking;
+uint8_t __attribute__ ((section (".data"))) rescueshell;
 
 void env_init()
 {
     unsigned char *env = environment;
     int i=__PAGESIZE;
+    networking=1;
     while(i-->0 && *env!=0) {
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
@@ -46,10 +50,28 @@ void env_init()
                 nrphymax*=10;
                 nrphymax+=(uint64_t)((unsigned char)(*env)-'0');
                 env++;
-            } while(*env>='0'&&*env<='9'&&nrphymax<256);
-            // upper bound
-            if(nrphymax>255)
-                nrphymax=255;
+            } while(*env>='0'&&*env<='9'&&nrphymax<=255);
+        }
+        // number of message queue pages
+        if(!kmemcmp(env, "nrmqmax=", 8)) {
+            env+=8;
+            // no atoi() yet
+            nrmqmax=0;
+            do{
+                nrmqmax*=10;
+                nrmqmax+=(uint64_t)((unsigned char)(*env)-'0');
+                env++;
+            } while(*env>='0'&&*env<='9'&&nrmqmax<=NRMQ_MAX);
+        }
+        // disable networking
+        if(!kmemcmp(env, "networking=", 11)) {
+            env+=11;
+            networking = !(*env=='0'||*env=='f'||*env=='F');
+        }
+        // rescue shell
+        if(!kmemcmp(env, "rescueshell=", 12)) {
+            env+=12;
+            rescueshell = (*env=='1'||*env=='t'||*env=='T');
         }
         // define identity
         if(!kmemcmp(env, "identity=", 9)) {
@@ -65,4 +87,14 @@ void env_init()
 #endif
         env++;
     }
+    // lower bounds
+    if(nrphymax<2)
+        nrphymax=2;
+    if(nrmqmax<1)
+        nrmqmax=1;
+    // upper bounds
+    if(nrphymax>255)
+        nrphymax=255;
+    if(nrmqmax>NRMQ_MAX)
+        nrmqmax=NRMQ_MAX;
 }

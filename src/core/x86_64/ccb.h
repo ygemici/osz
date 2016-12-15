@@ -1,5 +1,5 @@
 /*
- * x86_64/ccb.h
+ * core/x86_64/ccb.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -29,43 +29,33 @@
 #define OSZ_CCB_MAGIC "CPUB"
 #define OSZ_CCB_MAGICH 0x42555043
 
+#define EXCERR_OFFS 0x4C
+
 // mutex flags
 #define MUTEX_OFFS 0x5C
 #define LOCK_TASKSWITCH 0
 
 #ifndef _AS
-// index to hd_active and cr_active queues, priority levels
-enum {
-	PRI_SYS, // priority 0, system, non-interruptible
-	PRI_RT,  // priority 1, real time tasks queue
-	PRI_DRV, // priority 2, device drivers queue
-	PRI_SRV, // priority 3, service queue
-	PRI_APPH,// priority 4, application high priority queue
-	PRI_APP, // priority 5, application normal priority queue
-	PRI_APPL,// priority 6, application low priority queue
-	PRI_IDLE // priority 7, idle queue (defragmenter, screensaver etc.)
-};
-
 typedef struct {
-	uint32_t magic;		// +00 (TSS64 offset)
-	uint64_t rsp0;		// +04
-	uint64_t rsp1;		// +0C
-	uint64_t rsp2;		// +14
-	uint32_t realid;	// +1C real APIC ID
-	uint32_t id;		// +20 logical APIC ID
-	uint64_t ist1;		// +24 user (exception, syscall) stack
-	uint64_t ist2;		// +2C NMI stack
-	uint64_t ist3;		// +34 IRQ stack
-	uint64_t ist4;		// +3C not used at the moment
-	uint64_t ist5;		// +44 not used at the moment
-	uint64_t excerr;	// +4C exception error code
-	OSZ_tcb *lastxreg;	// +54 thread that last used extra registers
-	uint32_t mutex[3];	// +5C
-	uint16_t iomapbase;	// +66 IO permission map base, not used
-	uint16_t dummy0;
-	OSZ_tcb *hd_timerq;	// +68 timer queue head (alarm)
-	OSZ_tcb *hd_blocked;// blocked queue head
-	OSZ_tcb *hd_active[8];	// priority queues (heads of active threads)
-	OSZ_tcb *cr_active[8];	// priority queues (current threads)
+    uint32_t magic;     // +00 (TSS64 offset)
+    uint64_t rsp0;      // +04
+    uint64_t rsp1;      // +0C
+    uint64_t rsp2;      // +14
+    uint32_t realid;    // +1C real APIC ID
+    uint32_t id;        // +20 logical APIC ID
+    uint64_t ist1;      // +24 user (exception, syscall) stack
+    uint64_t ist2;      // +2C NMI stack
+    uint64_t ist3;      // +34 IRQ stack
+    uint64_t ist4;      // +3C not used at the moment
+    uint64_t ist5;      // +44 not used at the moment
+    uint64_t excerr;    // +4C exception error code
+    OSZ_tcb *lastxreg;  // +54 thread that last used extra registers
+    uint32_t mutex[3];  // +5C
+    uint16_t iomapbase; // +66 IO permission map base, not used
+    uint16_t dummy0;
+    OSZ_tcb *hd_timerq; // +6A timer queue head (alarm)
+    OSZ_tcb *hd_blocked;// blocked queue head
+    OSZ_tcb *hd_active[8];  // priority queues (heads of active threads)
+    OSZ_tcb *cr_active[8];  // priority queues (current threads)
 } __attribute__((packed)) OSZ_ccb;
 #endif

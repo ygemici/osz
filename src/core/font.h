@@ -1,5 +1,5 @@
 /*
- * font.h
+ * core/font.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -28,17 +28,17 @@
 #define OSZ_FONT_MAGICH 0x864ab572
 
 typedef struct {
-	uint32_t magic;
-	uint32_t version;
-	uint32_t headersize;/* offset of bitmaps in file */
-	uint16_t flags;		/* original PSF2 has 32 bit flags */
-	uint8_t hotspot_x;	/* addition to osZ */
-	uint8_t hotspot_y;
-	uint32_t numglyph;
-	uint32_t bytesperglyph;
-	uint32_t height;
-	uint32_t width;
-	uint8_t glyphs;
+    uint32_t magic;
+    uint32_t version;
+    uint32_t headersize;/* offset of bitmaps in file */
+    uint16_t flags;     /* original PSF2 has 32 bit flags */
+    uint8_t hotspot_x;  /* addition to osZ */
+    uint8_t hotspot_y;
+    uint32_t numglyph;
+    uint32_t bytesperglyph;
+    uint32_t height;
+    uint32_t width;
+    uint8_t glyphs;
 } __attribute__((packed)) OSZ_font;
 
 extern unsigned char _binary_font_start;

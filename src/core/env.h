@@ -1,5 +1,5 @@
 /*
- * env.h
+ * core/env.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

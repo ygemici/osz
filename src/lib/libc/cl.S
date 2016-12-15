@@ -5,11 +5,11 @@
 # Header
 .section .cl
 .byte 'C','L','D','L'
-.hword 116, 0			# size
+.long 116			# size
 
 .hword 0x000a			# public static method
 .hword 75, 80, 87	# uint32 libc.printf
-.long printf			# entry point
+.quad printf			# entry point
 .hword 0
 .hword 0x0001			# pointer mask
 # Arguments

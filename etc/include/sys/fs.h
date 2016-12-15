@@ -1,7 +1,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H 1
 
-#define SRV_FS 0x200
+#define SRV_FS 0x2000
 
 #define SYS_read (SRV_FS | 0)
 #define SYS_write (SRV_FS | 1)

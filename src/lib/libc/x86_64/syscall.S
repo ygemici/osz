@@ -1,5 +1,5 @@
 /*
- * libc/syscall.S
+ * libc/x86_64/syscall.S
  * 
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -25,43 +25,51 @@
  * @brief Low base library to interact with the kernel at object level
  */
 
+#define _AS 1
+#include <tcb.h>
+
 .global clcall
 .global clsend
 .global clrecv
 .global clismg
 .global cldl
-.intel_syntax noprefix
 
+/* dest: pid_t<<12 + msg type */
 .section .text
+/* uint64_t clcall(dest,arg0,arg1,arg2) */
 clcall:
-	# blocking, send a request and receive result
-	mov     ebx, dword [rsp+8]
-	mov     eax, 0x6C6C6163 # 'call'
-	syscall
-	ret
+    # blocking, send a request and receive result
+    # rdi: destination pid + message type
+    movl     $0x6C6C6163, %eax # 'call'
+    syscall
+    ret
 
+/* void clsend(dest,arg0,arg1,arg2) */
 clsend:
-	# non-blocking send message
-	mov     eax, 0x646E6573 # 'send'
-	syscall
-	ret
+    # non-blocking send message
+    movl     $0x646E6573, %eax # 'send'
+    syscall
+    ret
 
+/* uint64_t clrecv(from) */
 clrecv:
-	# blocking receive message
-	mov     eax, 0x76636572 # 'recv'
-	syscall
-	ret
+    # blocking receive message
+    movl     $0x76636572, %eax # 'recv'
+    syscall
+    ret
 
+/* uint64_t clismg() */
 clismg:
-	# non-blocking is there a message?
-	mov     eax, 0x676D7369 # 'ismg'
-	syscall
-	ret
+    # non-blocking is there a message?
+    movq     OSZ_tcb_evtq_ptr, %rax
+    subq     OSZ_tcb_evtq_endptr, %rax
+    ret
 
+/* void *cldl(&symtable,objectfile) */
 cldl:
-	# dynamically link a class
-	mov     ecx, dword [rsp+16] # handler
-	mov     ebx, dword [rsp+8] # elf binary with .cl section
-	mov     eax, 0x6B6E696C # 'link'
-	syscall
-	ret
+    # dynamically link a shared object
+    # rdi: pointer to symtable to fill
+    # rsi: pointer to .so file
+    movl     $0x6B6E696C, %eax # 'link'
+    syscall
+    ret

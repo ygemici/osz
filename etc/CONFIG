@@ -1,12 +1,19 @@
 // BOOTBOOT Options
 // this file has to be 4096 bytes long.
 
+// screen dimension
 width=800
 height=600
+
+// elf binary to load
 kernel=lib/sys/core
-nrphymax=4                     
-                                                                        
-                                                                        
+
+// number of pages to store free physical memory fragments
+nrphymax=2
+
+// number of pages for message queue
+nrmqmax=1
+               
                                                                         
                                                                         
                                                                         
