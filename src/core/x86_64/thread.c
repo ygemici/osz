@@ -26,20 +26,13 @@
  */
 
 #include "../core.h"
-#include "../pmm.h"
+#include "../env.h"
 #include "tcb.h"
 #include <elf.h>
 #include <fsZ.h>
 
 /* external resources */
-extern uint8_t tmpmap;
-extern uint8_t tmp2map;
-extern uint8_t identity_map;
 extern uint8_t MQ_ADDRESS;
-extern uint nrmqmax;
-extern void *pmm_alloc();
-extern void *fs_locate(char *fn);
-extern void *fs_mapelf(char *fn);
 
 uint64_t __attribute__ ((section (".data"))) core_mapping;
 uint64_t __attribute__ ((section (".data"))) shlib_mapping;
@@ -114,12 +107,7 @@ kprintf("tcb=%x\n",newtcb->self);
 void *thread_loadelf(char *fn)
 {
     uint64_t *paging = (uint64_t *)&tmp2map;
-    void *elf;
-    if(identity_map){
-        elf=(void *)fs_locate(fn);
-    }else{
-        elf=fs_mapelf(fn);
-    }
+    void *elf=(void *)fs_locate(fn);
     int i,ret,size=(fs_size+__PAGESIZE-1)/__PAGESIZE;
     if(elf==NULL)
         return NULL;
@@ -145,11 +133,10 @@ void thread_loadso(char *fn)
 {
     // map SHLIB_ADDRESS' PT at tmp2map
     kmap((uint64_t)&tmp2map, shlib_mapping, PG_CORE_NOCACHE);
-kprintf("  ");
+#if DEBUG
+    kprintf("  ");
+#endif
     thread_loadelf(fn);
-//    uint64_t *paging = (uint64_t *)&tmp2map;
-//    Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(thread_loadelf(fn) + SHLIB_ADDRESS);
-// TODO: relocate if returned address is not zero
 }
 
 // add a TCB to priority queue
@@ -167,7 +154,7 @@ void thread_remove(pid_t thread)
 /* fill in .rela.plt entries. Relies on identity mapping */
 void thread_dynlink(pid_t thread)
 {
-//    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
+    OSZ_tcb *tcb = (OSZ_tcb*)(thread*__PAGESIZE);
     kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
 }
 

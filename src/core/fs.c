@@ -25,15 +25,10 @@
  * @brief Pre FS service elf loader to load system services
  */
 
-#include "core.h"
-#include "pmm.h"
 #include <elf.h>
 #include <fsZ.h>
 
-extern void *pmm_alloc();
-
 uint64_t __attribute__ ((section (".data"))) fs_size;
-uint8_t __attribute__ ((section (".data"))) identity_map;
 
 /* map any file from initrd into bss segment */
 void *fs_mapfile(char *fn)
@@ -116,4 +111,54 @@ again:
         }
     }
     return NULL;
+}
+
+void fs_init()
+{
+    // this is so early, we don't have initrd in fs process' bss yet.
+    // so we have to rely on identity mapping to locate the files
+    char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
+    char *drvs_end = drvs + fs_size;
+    char fn[256];
+    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
+    pid_t pid = thread_new();
+    fullsize = 0;
+    // map device driver dispatcher
+    thread_loadelf("sbin/fs");
+    // map libc
+    thread_loadso("lib/libc.so");
+    // load filesystem drivers
+    if(drvs==NULL) {
+        // hardcoded devices if driver list not found
+        thread_loadso("lib/sys/fs/gpt.so");
+        thread_loadso("lib/sys/fs/fsz.so");
+        thread_loadso("lib/sys/fs/vfat.so");
+    } else {
+        for(s=drvs;s<drvs_end;) {
+            f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
+            if(f[0]=='*' && f[1]==9 && f[2]=='f' && f[3]=='s') {
+                f+=2;
+                if(s-f<255-8) {
+                    kmemcpy(&fn[0], "lib/sys/", 8);
+                    kmemcpy(&fn[8], f, s-f);
+                    fn[s-f+8]=0;
+                    thread_loadso(fn);
+                }
+                continue;
+            }
+            // failsafe
+            if(s>=drvs_end || *s==0) break;
+            if(*s=='\n') s++;
+        }
+    }
+
+    // dynamic linker
+    thread_dynlink(pid);
+    // modify TCB for system task
+    kmap((uint64_t)&tmp2map, (uint64_t)(pid*__PAGESIZE), PG_CORE_NOCACHE);
+    tcb->linkmem += fullsize;
+    thread_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
+
+    // add to queue so that scheduler will know about this thread
+    thread_add(pid);
 }

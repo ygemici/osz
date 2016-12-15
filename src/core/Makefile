@@ -11,7 +11,7 @@ CFLAGS = -DDEBUG=$(DEBUG) -Wall -fpic -ffreestanding -mno-red-zone -mno-mmx -mno
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@$(CC) -I../../etc/include -I. -I./$(ARCH) $(OPT) $(CFLAGS) -c $< -o $@
+	@$(CC) -I../../etc/include -I. -I./$(ARCH) -include core.h -include ./$(ARCH)/tcb.h $(OPT) $(CFLAGS) -c $< -o $@
 
 platform:
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true

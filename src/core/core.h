@@ -28,24 +28,29 @@
 #include <osZ.h>
 #include <limits.h>
 #include "../../loader/bootboot.h"
+#include "pmm.h"
 
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;
 extern unsigned char environment[__PAGESIZE];
 extern uint8_t fb;
+extern uint8_t tmpmap;
+extern uint8_t tmp2map;
 
 // kernel variables
 extern uint64_t fs_size;
+extern uint64_t fullsize;
 
 // kernel function routines
 extern void kprintf_init();
 extern void env_init();
 extern void pmm_init();
+extern void *pmm_alloc();
 extern void* kmap_init();
 extern void isr_init();
 extern void fs_init();
+extern void *fs_locate(char *fn);
 extern void dev_init();
-extern void syslog_init();
 extern void kpanic(char *reason, ...);
 extern void kprintf(char* fmt, ...);
 extern void kmemcpy(char *dest, char *src, int size);

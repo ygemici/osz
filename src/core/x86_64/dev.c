@@ -26,11 +26,8 @@
  */
 
 #include "../core.h"
-#include "../pmm.h"
 #include "tcb.h"
 
-extern uint8_t tmp2map;
-extern uint64_t fullsize;
 extern void acpi_init();
 
 void dev_init()

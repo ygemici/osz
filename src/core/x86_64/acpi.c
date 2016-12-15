@@ -26,9 +26,6 @@
  */
 
 #include "../core.h"
-#include "../pmm.h"
-
-extern void *fs_locate(char *fn);
 
 char *acpi_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -53,7 +50,8 @@ void acpi_init()
         // load devices which don't have entry in any ACPI tables
         for(s=drvs;s<drvs_end;) {
             f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
-            if(*f=='*' && *(f+1)==9) {
+            // skip filesystem drivers
+            if(f[0]=='*' && f[1]==9 && (f[2]!='f' || f[3]!='s')) {
                 f+=2;
                 if(s-f<255-8) {
                     kmemcpy(&fn[0], "lib/sys/", 8);

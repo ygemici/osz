@@ -25,7 +25,6 @@
  * @brief Ring 0 printf implementation for core
  */
 
-#include "core.h"
 #include "font.h"
 
 /* re-entrant counter */
@@ -79,6 +78,7 @@ void kprintf_putchar(int c)
             mask>>=1;
             line+=4;
         }
+        *((uint32_t*)(&fb + line))=bg;
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }

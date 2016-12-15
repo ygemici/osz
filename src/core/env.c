@@ -25,8 +25,6 @@
  * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG)
  */
 
-#include "core.h"
-
 // parsed values
 uint __attribute__ ((section (".data"))) nrphymax;
 uint __attribute__ ((section (".data"))) nrmqmax;

@@ -1,6 +1,5 @@
 ./tools/mkfs.c:281:        // TODO: add other types, blkdev, socket etc.
 ./loader/efi-x86_64/bootboot.c:508:        // TODO: if GOP fails, fallback to UGA
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:36:    // TODO: debug why this isn't working. No errors, no output
-./src/core/x86_64/dev.c:56:    //TODO: set IOPL=3 in rFlags
-./src/core/x86_64/thread.c:152:// TODO: relocate if returned address is not zero
+./src/core/x86_64/dev.c:53:    //TODO: set IOPL=3 in rFlags
 ./src/core/x86_64/isrs.sh:171:		    /* TODO: map apic at pmm.bss and save pointer */

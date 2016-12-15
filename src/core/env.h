@@ -26,3 +26,6 @@
  */
 
 extern uint64_t nrphymax;
+extern uint nrmqmax;
+extern uint8_t networking;
+extern uint8_t rescueshell;

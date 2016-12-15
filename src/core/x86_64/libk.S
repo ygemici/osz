@@ -40,18 +40,31 @@
 
 /* kernel panic */
 kpanic:
-    movl    $0xFF0000, fg
-    movl    $0x200000, bg
+    movl    $0xFFDD33, fg
+    movl    $0x330000, bg
     pushq   %rdi
     movq    $kpanicprefix, %rdi
     call    kprintf
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
+    movl    $0x800000, fg
+    movl    $0x000000, bg
+    movq    $kpanicsuffix, %rdi
+    call    kprintf
     cli
     hlt
 kpanicprefix:
-.asciz "core - E - "
+.asciz "\nOS/Z CORE PANIC: "
+kpanicsuffix:
+.ascii "\n"
+.ascii "                                                   _     ___\n"
+.ascii "    __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|    #_~`--'__ `===-,\n"
+.ascii "   (    (   |   / _|    __/ _ \\  .  |  |  (       `.`.     `#.,//\n"
+.ascii "  \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|    ,_\\_\\     ## #\\\n"
+.ascii "                                                  `__.__    `####\\\n"
+.ascii "         KEEP CALM AND RESTART COMPUTER                ~~\\ ,###'~\n"
+.asciz "                                                          \\##'\n"
 
 /* misc memory functions */
 kmemcpy:

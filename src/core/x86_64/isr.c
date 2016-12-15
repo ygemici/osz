@@ -27,14 +27,12 @@
 
 
 #include "../core.h"
-#include "../pmm.h"
 #include "tcb.h"
 #include "isr.h"
 
 extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void *isr_initgates(uint64_t *idt, OSZ_ccb *tss);
-extern void *pmm_alloc();
 extern OSZ_ccb ccb;
 
 /* Initialize interrupts */

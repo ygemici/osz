@@ -25,8 +25,6 @@
  * @brief Physical Memory Manager architecture specific part
  */
 
-#include "core.h"
-#include "pmm.h"
 #include "env.h"
 
 extern void* __bss_start;
