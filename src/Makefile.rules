@@ -1,3 +1,4 @@
+include ../../Config
 BINTARGET = ../../bin/root/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
@@ -13,7 +14,7 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
-	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../executable.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../core/$(ARCH)/executable.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

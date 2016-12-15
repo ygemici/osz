@@ -1,3 +1,4 @@
+include ../../../../Config
 BINTARGET = ../../../../bin/root/lib/sys/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
@@ -14,7 +15,7 @@ all: $(OBJS) $(BINTARGET)
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
 	@mkdir -p ../../../../bin/root/lib/sys/$(firstword $(subst /, ,$(TARGET)))
-	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../sharedlib.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

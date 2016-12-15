@@ -14,4 +14,4 @@ all: $(LIBS) $(APPS)
 	@test -f $@/Makefile && make -e -C $@ all | grep -v 'Nothing to be done' || true
 
 clean:
-	@rm */*.o */*/*.o */*/*/*.o */*/*/*/*.o ../bin/root/sbin/system 2>/dev/null || true
+	@rm */*.o */*/*.o */*/*/*.o */*/*/*/*.o 2>/dev/null || true
