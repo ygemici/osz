@@ -50,6 +50,8 @@ Priority levels
 
 OS/Z has 8 priority levels:
 
+| Nr. | Level | Description |
+| --- | ----- | ----------- |
 | 0 | PRI_SYS | System |
 | 1 | PRI_RT | Real Time tasks |
 | 2 | PRI_DRV | Userspace drivers |
@@ -92,11 +94,11 @@ They will be scheduled in order:
 
 All threads had the chance to run, so there was no stravation and time was splitted up as follows:
 
- A: 4 times
- B: 4 times
- C: 4 times
- D: 2 times
- E: 1 time
+ A: 4 times,
+ B: 4 times,
+ C: 4 times,
+ D: 2 times,
+ E: 1 time,
  F: 1 time
  
 Which is pretty much the distribution one would expect for those priority levels.

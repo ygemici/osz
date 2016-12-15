@@ -23,7 +23,7 @@ System process
 | -4G .. 0        | global  | core memory (supervisor only) |
 | 0 .. 4096       | thread  | Thread Control Block |
 | 4096 .. 2M      | thread  | message queue |
-| 2M .. 4G        | process (https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
+| 2M .. 4G        | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
 | 4G .. 16G-1     | process | device drivers (shared objects) |
 | 16G .. x        | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
 | x  .. 2^56      | thread  | thread local stack, growing downwards |

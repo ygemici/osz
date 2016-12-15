@@ -13,7 +13,14 @@ Special service which runs in supervisor mode. It's always mapped in all memory 
 The lowest level code of OS/Z like ISRs, physical memory allocation, task switch, timers are implemented here.
 All the other services (including system services) run in non-privileged user mode (ring 3).
 
-Typical functions: alarm(), setuid(), setsighandler(), yield().
+Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve().
+
+Syslog
+------
+
+The system logger daemon. Syslog's bss segment is periodically flushed to disk.
+
+Only one function: syslog().
 
 FS
 --
@@ -24,12 +31,6 @@ it's bss, and uses free memory as a disk cache.
 
 Typical functions: fopen(), fread(), fclose(), mount().
 
-Syslog
-------
-
-The system logger daemon. Syslog's bss segment is periodically flushed to disk.
-
-Only one function: syslog().
 
 UI
 --
@@ -44,7 +45,8 @@ Typical functions: printf(), draw_box(), draw_arc(), glPush().
 Net
 ---
 
-Service that is responsible for handling interfaces and routes, and all other networking stuff.
+Service that is responsible for handling interfaces and routes, and all other networking stuff. You
+can disable networking with the boot parameter `networking=false`.
 
 Typical functions: connect(), accept(), bind(), listen().
 
@@ -53,7 +55,8 @@ Init
 
 This service manages all the other, non-system services, like mailer daemon, print daemon, web server etc. 
 which have their own shared library other than libc. On startup init is forked as the login process and
-it manages the user session as well.
+it manages the user session as well. You can skip init and start a rescue shell instead with the boot patamerer
+`rescueshell=true`.
 
 Typical functions: start(), stop(), restart(), status().
 
