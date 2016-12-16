@@ -1,7 +1,7 @@
 OS/Z - an operating system for hackers
 ======================================
 
-[Download latest live image](https://github.com/bztsrc/osz/bin/disk.dd)
+[Download latest live image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true)
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
