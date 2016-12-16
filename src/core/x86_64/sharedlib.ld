@@ -62,7 +62,9 @@ SECTIONS
 .plt.got        : { *(.plt.got) }
 .plt.bnd        : { *(.plt.bnd) }
   PROVIDE (_etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .dynamic        : { *(.dynamic) } :text :dynamic
+  .cl             : { *(.cl) } :text :dynamic
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :text
   .rodata1        : { *(.rodata1) }
   . = ALIGN(4096);
   . = DATA_SEGMENT_ALIGN (4096, 4096);
@@ -74,12 +76,11 @@ SECTIONS
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
-  .dynamic        : { *(.dynamic) } :data :dynamic
-  .cl             : { *(.cl) } :dynamic
-  .got            : { *(.got) *(.igot) } :data
+  .got            : { *(.got) *(.igot) }
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
   PROVIDE (_edata = .);
-  . = ALIGN(64 / 8);
+  . = ALIGN(4096);
+  _GLOBAL_OFFSET_TABLE_ = .;
   _end = .;
   . = DATA_SEGMENT_END (.);
   /* Stabs debugging sections.  */

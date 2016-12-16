@@ -64,7 +64,8 @@ SECTIONS
 .plt.got        : { *(.plt.got) }
 .plt.bnd        : { *(.plt.bnd) }
   PROVIDE (_etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .dynamic        : { *(.dynamic) } :text :dynamic
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :text
   .rodata1        : { *(.rodata1) }
   . = ALIGN(4096);
   . = DATA_SEGMENT_ALIGN (4096, 4096);
@@ -76,11 +77,9 @@ SECTIONS
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
-  .dynamic        : { *(.dynamic) } :data :dynamic
-  .got            : { *(.got) *(.igot) } :data
+  .got            : { *(.got) *(.igot) }
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
   PROVIDE (_edata = .);
-  . = .;
   __bss_start = 0x0000001000000000;
   .bss            :
   {

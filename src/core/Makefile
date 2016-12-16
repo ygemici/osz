@@ -23,7 +23,7 @@ font.o:
 
 $(BINTARGET): platform font.o $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
-	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/link.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
 	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)
 
 clean:
