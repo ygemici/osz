@@ -10,27 +10,34 @@ Core
 ----
 
 Special service which runs in supervisor mode. It's always mapped in all memory map.
-The lowest level code of OS/Z like ISRs, physical memory allocation, task switch, timers are implemented here.
-All the other services (including system services) run in non-privileged user mode (ring 3).
+The lowest level code of OS/Z like ISRs, physical memory allocation, task switch, timers and such
+are implemented here. All the other services (including system service) are running in non-privileged
+user mode (ring 3).
 
 Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve().
+
+System
+------
+
+A process that has all the device drivers mapped as shared libraries. Whenever an IRQ occurs, the core
+switches to this process. It's also the idle thread.
 
 Syslog
 ------
 
-The system logger daemon. Syslog's bss segment is periodically flushed to disk.
+The system logger daemon. Syslog's bss segment is a circular buffer that periodically flushed to disk.
 
-Only one function: syslog().
+Typical functions: syslog(), setlogmask().
 
 FS
 --
 
 The file system daemon. It's responsible for calling the right driver to load the block from disk
 and to pass that data to a filesystem driver to interpret it. This process has the initrd mapped in
-it's bss, and uses free memory as a disk cache.
+it's bss, and uses free memory as a disk cache. On boot, the file system drivers are loaded into it's
+address space as shared libraries.
 
 Typical functions: fopen(), fread(), fclose(), mount().
-
 
 UI
 --
@@ -49,6 +56,14 @@ Service that is responsible for handling interfaces and routes, and all other ne
 can disable networking with the boot parameter `networking=false`.
 
 Typical functions: connect(), accept(), bind(), listen().
+
+Sound
+-----
+
+Service that mixes several audio channels into a single stream. You
+can disable audio as a whole with the boot parameter `sound=false`.
+
+Typical functions: speak(), setvolume().
 
 Init
 ----
