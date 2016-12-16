@@ -1,7 +1,7 @@
 OS/Z - an operating system for hackers
 ======================================
 
-[Download latest live image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true)
+[Download latest live image, osZ-x86_64-latest.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true)
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
@@ -37,7 +37,7 @@ Testing
 
 I always push a source to git that known to compile by a simple `make clean all`.
 
-The [latest live dd image](https://github.com/bztsrc/osz/osZ-x86_64-latest.dd) should boot OS/Z in emulators and on real machines.
+The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines.
 
 You can boot OS/Z in a virtual machine right from your `bin` directory
 (not using bin/disk.dd) with TianoCore EFI. For that, type
