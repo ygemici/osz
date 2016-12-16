@@ -1,7 +1,9 @@
 OS/Z - an operating system for hackers
 ======================================
 
-Is a hobby OS project. As such it's primary goal is not
+[Download latest live image](https://github.com/bztsrc/osz/osZ-x86_64-latest.dd)
+
+OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
 for those who like hacking with hobby OSes. It's aim is
 to be small, and to handle enormous amounts of data in
@@ -14,7 +16,7 @@ at any given time.
 Features
 --------
 
- - GNU toolchain only (save MultiBoot loader)
+ - GNU toolchain without cross-compiler
  - Single disk image for booting from MBR, VBR, ROM BIOS, GRUB or UEFI.
  - ELF64 object format
  - Higher half kernel mapping, full 64 bit support
@@ -25,57 +27,20 @@ Features
 Requirements
 ------------
 
-- gcc
-- qemu / bochs / VirtualBox
-- optionally fasm
-
-Compilation
------------
-
-To compile, simply type
-
-```shell
-$ make
-```
-
-You should see something similar to this:
-
-```
-TOOLS
-  src		cll.c
-  src		mkfs.c
-LOADER
-  src		efi-x86_64
-CORE
-  src		lib/core (x86_64)
-  src		lib/libc.so (x86_64)
-APPLICATIONS
-  src		sbin/ui
-  src		bin/sh
-  src		sbin/syslog
-  src		sbin/fs
-  src		sbin/net
-  src		sbin/init
-IMAGES
-  mkfs		initrd
-  mkfs		ESP
-  mkfs		usr
-  mkfs		var
-  mkfs		home
-  mkfs		gpt disk image
-```
-
-The disk image is generated to `bin/disk.dd`. Use the `dd`
-command to write it on a USB stick and you're ready to go.
+ - 5 Mb free disk space
+ - 256 Mb RAM
+ - 800x600/ARGB32 display
+ - x86_64 processor
 
 Testing
 -------
 
-That disk image should boot OS/Z in emulators and on real machines
-regardless to configuration.
+I always push a source to git that known to compile by a simple `make clean all`.
+
+The [latest live dd image](https://github.com/bztsrc/osz/osZ-x86_64-latest.dd) should boot OS/Z in emulators and on real machines.
 
 You can boot OS/Z in a virtual machine right from your `bin` directory
-with TianoCore EFI. For that, type
+(not using bin/disk.dd) with TianoCore EFI. For that, type
 
 ```shell
 make testefi
@@ -88,7 +53,7 @@ the resulting image in qemu with BIOS, type
 make testq
 ```
 
-To run the result in bochs,
+To run the result with BIOS in bochs,
 
 ```shell
 make testb
@@ -100,13 +65,12 @@ To convert the raw disk image to something that VirtualBox can be fed with:
 make vdi
 ```
 
-There's a rule called 'test' in Makefile which points to one of the above.
-
 Non-EFI booting
 ---------------
 
 If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
-Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting.
+Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting. So
+I've added the BIOS images to the source, and you should be able to compile efi loader with GNU toolchain only.
 
 The `bootboot.bin` can be booted via 
  - `mbr.bin`

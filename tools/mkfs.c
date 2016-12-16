@@ -517,14 +517,14 @@ int main(int argc, char* argv[])
     memcpy(path+i,"../bin/",8); i+=8; path[i]=0;
     diskname=malloc(i+16); sprintf(diskname,"%sdisk.dd",path);
     stage1=malloc(i+16); sprintf(stage1,"%s/../loader/mbr.bin",path);
-    espfile=malloc(i+16); sprintf(espfile,"%spart_esp.dd",path);
-    usrfile=malloc(i+16); sprintf(usrfile,"%spart_usr.dd",path);
-    varfile=malloc(i+16); sprintf(varfile,"%spart_var.dd",path);
-    homefile=malloc(i+16); sprintf(homefile,"%spart_home.dd",path);
+    espfile=malloc(i+16); sprintf(espfile,"%sesp.part",path);
+    usrfile=malloc(i+16); sprintf(usrfile,"%susr.part",path);
+    varfile=malloc(i+16); sprintf(varfile,"%svar.part",path);
+    homefile=malloc(i+16); sprintf(homefile,"%shome.part",path);
 
     //parse arguments
     if(argv[1]==NULL||!strcmp(argv[1],"help")) {
-        printf("fs/Z mkfs utility\n./%s (imagetocreate) (createfromdir)\n./%s disk\n",argv[0],argv[0]);
+        printf("FS/Z mkfs utility\n./%s (imagetocreate) (createfromdir)\n./%s disk\n",argv[0],argv[0]);
         exit(0);
     }
     if(argc>0){

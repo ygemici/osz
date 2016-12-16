@@ -1,9 +1,9 @@
 include ../Config
 INITRD = ../bin/ESP/BOOTBOOT/INITRD
-ESPFILE = ../bin/part_esp.dd
-USRFILE = ../bin/part_usr.dd
-VARFILE = ../bin/part_var.dd
-HOMEFILE = ../bin/part_home.dd
+ESPFILE = ../bin/esp.part
+USRFILE = ../bin/usr.part
+VARFILE = ../bin/var.part
+HOMEFILE = ../bin/home.part
 DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VDMKIMAGE = ../bin/disk.vdmk
@@ -28,7 +28,7 @@ clean:
 	@rm *.o 2>/dev/null || true
 
 imgclean:
-	@rm -rf ../bin/*.dd ../bin/*.vdi ../bin/*.vdmk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
+	@rm -rf ../bin/*.part ../bin/*.vdi ../bin/*.vdmk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
 
 esp: initrd
 	@echo "  mkfs		ESP partition"

@@ -31,13 +31,14 @@ uint __attribute__ ((section (".data"))) nrmqmax;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) verbose;
 uint8_t __attribute__ ((section (".data"))) networking;
+uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
 
 void env_init()
 {
     unsigned char *env = environment;
-    int i=__PAGESIZE;
-    networking=1;
+    int i = __PAGESIZE;
+    networking = sound = 1;
     while(i-->0 && *env!=0) {
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
@@ -66,12 +67,17 @@ void env_init()
             env+=11;
             networking = !(*env=='0'||*env=='f'||*env=='F');
         }
+        // disable sound
+        if(!kmemcmp(env, "sound=", 6)) {
+            env+=6;
+            sound = !(*env=='0'||*env=='f'||*env=='F');
+        }
         // rescue shell
         if(!kmemcmp(env, "rescueshell=", 12)) {
             env+=12;
             rescueshell = (*env=='1'||*env=='t'||*env=='T');
         }
-        // define identity
+        // run first time ask for identity process
         if(!kmemcmp(env, "identity=", 9)) {
             env+=9;
             identity = (*env=='1'||*env=='t'||*env=='T');

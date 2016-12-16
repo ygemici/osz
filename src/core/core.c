@@ -63,9 +63,18 @@ void main()
         // initialize "net" process for ipv4 and ipv6
         service_init("sbin/net");
     }
-    // initialize the "system" process
+    if(sound) {
+        // initialize "sound" process to handle audio channels
+        service_init("sbin/sound");
+    }
+    // finally initialize the "system" process, the last subsystem
     // detect device drivers (parse system tables and link shared objects)
     dev_init();
+
+    if(identity) {
+        // start first time set up process
+        service_init("sbin/identity");
+    }
     // load "init" or "sh" process
     service_init(rescueshell ? "bin/sh" : "sbin/init");
 

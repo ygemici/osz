@@ -28,4 +28,6 @@
 extern uint64_t nrphymax;
 extern uint nrmqmax;
 extern uint8_t networking;
+extern uint8_t sound;
 extern uint8_t rescueshell;
+extern uint8_t identity;

@@ -95,8 +95,8 @@ typedef struct {
     uint64_t    size;
     uint64_t    size_hi;
 } __attribute__((packed)) FSZ_SectorList;
-// used at several places. Free and bad block list in
-// superblock and as data locators in inodes.
+// used at several places, like free and bad block list in
+// superblock or data locators in inodes.
 
 //sizeof = 16, one Access Control Entry
 typedef struct {
@@ -110,7 +110,7 @@ typedef struct {
 #define FSZ_APPEND  (1<<3)
 #define FSZ_DELETE  (1<<4)
 #define FSZ_SUID    (1<<6)          // Set user id on execution
-#define FSZ_SGID    (1<<7)          // Inherit ACL
+#define FSZ_SGID    (1<<7)          // Inherit ACL, no groups per se in OS/Z
 
 // if inode.fid == inode.sec => inline data
 //sizeof = 4096
@@ -146,59 +146,84 @@ typedef struct {
 #define FSZ_IN_MAGIC "FSIN"
 
 // regular files, 4th character never ':'
-#define FSZ_IN_FILETYPE_REG_TEXT   "text"  // main part of mime type
-#define FSZ_IN_FILETYPE_REG_IMAGE  "imag"
-#define FSZ_IN_FILETYPE_REG_VIDEO  "vide"
-#define FSZ_IN_FILETYPE_REG_AUDIO  "audi"
-#define FSZ_IN_FILETYPE_REG_APP    "appl"
+#define FILETYPE_REG_TEXT   "text"  // main part of mime type
+#define FILETYPE_REG_IMAGE  "imag"
+#define FILETYPE_REG_VIDEO  "vide"
+#define FILETYPE_REG_AUDIO  "audi"
+#define FILETYPE_REG_APP    "appl"
 // special entities, 4th character always ':'
-#define FSZ_IN_FILETYPE_DIR        "dir:"  // see below
-#define FSZ_IN_FILETYPE_SECLST     "lst:"  // for free and bad sector lists
-#define FSZ_IN_FILETYPE_INDEX      "idx:"  // search cache, not implemented yet
-#define FSZ_IN_FILETYPE_META       "mta:"  // meta labels, not implemented yet
-#define FSZ_IN_FILETYPE_CHARDEV    "chr:"  // character device
-#define FSZ_IN_FILETYPE_BLKDEV     "blk:"  // block device
-#define FSZ_IN_FILETYPE_FIFO       "fio:"  // First In First Out queue
-#define FSZ_IN_FILETYPE_SOCK       "sck:"  // socket
-#define FSZ_IN_FILETYPE_MOUNT      "mnt:"  // mount point
+#define FILETYPE_DIR        "dir:"  // see below
+#define FILETYPE_SECLST     "lst:"  // for free and bad sector lists
+#define FILETYPE_INDEX      "idx:"  // search cache, not implemented yet
+#define FILETYPE_META       "mta:"  // meta labels, not implemented yet
+#define FILETYPE_CHARDEV    "chr:"  // character device
+#define FILETYPE_BLKDEV     "blk:"  // block device
+#define FILETYPE_FIFO       "fio:"  // First In First Out queue
+#define FILETYPE_SOCK       "sck:"  // socket
+#define FILETYPE_MOUNT      "mnt:"  // mount point
 
-// logical sector address to data sector translation. These sizes
-// are calculated with 4096 sector size. If you change the sector
-// size in FSZ_SuperBlock, translation limits will change too.
-/*  data size < sector size - 1024 (3072)
+// logical sector address to data sector translation. These file sizes
+// were calculated with 4096 sector size. That is configurable in the
+// FSZ_SuperBlock if you think 11 sector reads is too much to access
+// data at any arbitrary position in a Yotta magnitude file.
+
+/*  any data size
+    FSZ_Inode.sec points to sector with FSZ_SectorList
+    entries
+    FSZ_Inode.sec -> sl -> data */
+#define FSZ_IN_FLAG_SECLIST (0xFE<<0)
+
+/*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
-    the data is included in the inode sector */
+    the data is included in the inode sector
+    FSZ_Inode.sec -> FSZ_Inode.sec  */
 #define FSZ_IN_FLAG_INLINE  (0xFF<<0)
+
 /*  data size < sector size (4096)
-    FSZ_Inode.sec points to data sector directly */
+    The inode points to data sector directly
+    FSZ_Inode.sec -> data */
 #define FSZ_IN_FLAG_DIRECT  (0<<0)
-/*  data size < sector size * sector size / 16 (1M)
+
+/*  data size < sector size * sector size / 16 (1 M)
     FSZ_Inode.sec points to a sector directory,
     which is a sector with up to 512 sector
-    addresses */
+    addresses
+    FSZ_Inode.sec -> sd -> data */
 #define FSZ_IN_FLAG_SD      (1<<0)
-/*  data size < sector size * sector size / 16 * sector size / 16 (256M)
+
+/*  data size < sector size * sector size / 16 * sector size / 16 (256 M)
     FSZ_Inode.sec points to a sector directory,
     which is a sector with up to 512 sector
     directory addresses, which in turn point
-    to 512*512 sector addresses */
+    to 512*512 sector addresses
+    FSZ_Inode.sec -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD2     (2<<0)
-/*  data size < (64G)
-    FSZ_Inode.sec -> sd -> sd -> sd */
+
+/*  data size < (64 G)
+    FSZ_Inode.sec -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD3     (3<<0)
-/*  data size < (16T)
-    FSZ_Inode.sec -> sd -> sd -> sd -> sd */
+
+/*  data size < (16 T)
+    FSZ_Inode.sec -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD4     (4<<0)
-/*  data size < (4 Exa, equals 4096 Peta)
-    FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd */
+
+/*  data size < (4 Peta, equals 4096 Terra)
+    FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD5     (5<<0)
-/*  data size < (never reached)
-    FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd */
+
+/*  data size < (1 Exa, equals 1024 Peta)
+    FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD6     (6<<0)
-/*  any data size
-    FSZ_Inode.sec points to sector with FSZ_SectorList
-    entries */
-#define FSZ_IN_FLAG_SECLIST (7<<0)
+
+/*  data size < (256 Exa)
+    FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> sd -> data */
+#define FSZ_IN_FLAG_SD7     (7<<0)
+
+/*  data size < (64 Zetta, equals 65536 Exa) */
+#define FSZ_IN_FLAG_SD8     (8<<0)
+
+/*  data size < (16 Yotta, equals 16384 Zetta) */
+#define FSZ_IN_FLAG_SD9     (9<<0)
 
 /*********************************************************
  *                      Directory                        *

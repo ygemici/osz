@@ -154,7 +154,7 @@ void thread_remove(pid_t thread)
 /* fill in .rela.plt entries. Relies on identity mapping */
 void thread_dynlink(pid_t thread)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)(thread*__PAGESIZE);
+//    OSZ_tcb *tcb = (OSZ_tcb*)(thread*__PAGESIZE);
     kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
 }
 
