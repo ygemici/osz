@@ -46,14 +46,14 @@ Every directory has 128 bytes long entries. The first entry is the directory hea
 File paths
 ----------
 
-All full path to a file looks like:
+A fully qualified path looks like:
 
 ```
  (drive):(directory)/(filename);(version)#(offset)
 ```
 
 Drive specifies the media where the filesystem is stored. If not given, `root:` will be substituted, which points to the
-initrd loacted in memory.
+initrd located in memory.
 
 Directory part is a list of directories, separated by '/'.
 
@@ -63,7 +63,7 @@ UNICODE characters allowed.
 
 Version part by default is ';0' which points to the current version of the file. The version ';-1' refers to the version
 before the current one, ';-2' the version before that and so forth. Providing positive numbers as version refers to a date
-in the form ';mmdd' or ';yyyymd' or ';yyyymmddHHii'. The actual version for that date will be returned, or the oldest one
+in the form ';mmdd' or ';yyyymmdd' or ';yyyymmddHHii'. The actual version for that date will be returned, or the oldest one
 if such version is not found. For dates in the future the current version is used.
 
 Offset part defaults to '#0' which is the beginning of the file. Positive numbers are offsets into the file, while negative
@@ -76,3 +76,11 @@ You can refer to a piece of data on the disk as a directory or as a file. Direct
 also the case if the directory is a mount point for a block device. There refering to as a file (no trailing '/') would
 allow to fread() and fwrite() the storage at block level, whilst referencing with a terminating '/' would allow to use opendir()
 and readdir(), which would return the root directory of the filesystem stored on that device.
+
+Examples, all pointing to the same directory, as boot device (the first bootable partition of the first bootable disk, FS0 in EFI)
+is mounted on the root volume at /boot:
+```
+ /boot/EFI/
+ root:/boot/EFI/
+ boot:/EFI/
+```
