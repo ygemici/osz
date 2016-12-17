@@ -35,6 +35,7 @@
  */
 
 #include "env.h"
+extern OSZ_pmm pmm;
 
 /**********************************************************************
  *                         OS/Z Core start                            *
@@ -77,6 +78,8 @@ void main()
     }
     // load "init" or "sh" process
     service_init(rescueshell ? "bin/sh" : "sbin/init");
+kprintf("mem %d free of total %d pages\n", pmm.freepages, pmm.totalpages);
+
     __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 
 }

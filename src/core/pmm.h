@@ -36,6 +36,8 @@ typedef struct {
 typedef struct {
     uint32_t magic;
     uint32_t size;
+    uint64_t totalpages;
+    uint64_t freepages;
     OSZ_pmm_entry *entries;
     void *bss;
     void *bss_end;

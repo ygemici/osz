@@ -46,6 +46,7 @@ void* pmm_alloc()
         kmemset((char *)fmem->base, 0, __PAGESIZE);
         fmem->base+=__PAGESIZE;
         fmem->size--;
+        pmm.freepages--;
     } else {
         // out of memory, should never happen during boot
         kpanic("pmm_alloc: Out of physical RAM");
@@ -100,13 +101,15 @@ void pmm_init()
     // record free areas in pmm.entries
     num = (bootboot.size-128)/16;
     entry = (MMapEnt*)&bootboot.mmap;
+    pmm.totalpages = 0;
     while(num>0) {
         if(MMapEnt_IsFree(entry)) {
             fmem->base = MMapEnt_Ptr(entry);
             fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
             if(fmem->size!=0) {
-                fmem++;
                 pmm.size++;
+                pmm.totalpages += fmem->size;
+                fmem++;
             } else {
                 fmem->base = 0;
             }
@@ -114,6 +117,7 @@ void pmm_init()
         num--;
         entry++;
     }
+    pmm.freepages = pmm.totalpages;
 }
 
 // allocate kernel bss
