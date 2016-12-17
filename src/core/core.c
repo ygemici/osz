@@ -77,7 +77,6 @@ void main()
     }
     // load "init" or "sh" process
     service_init(rescueshell ? "bin/sh" : "sbin/init");
-
     __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 
 }

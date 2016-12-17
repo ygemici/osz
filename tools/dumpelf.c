@@ -57,7 +57,7 @@ int main(int argc,char** argv)
     // the string table
     char *strtable = elf + strt->sh_offset;
     int i;
-    
+
     /* Section header */
     for(i = 0; i < ehdr->e_shnum; i++){
         if(!strcmp(strtable+shdr->sh_name, ".rela.plt")){

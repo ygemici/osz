@@ -198,7 +198,6 @@ kmap_getpte:
     andw    $0xF000, %dx
     incw    %dx
     movq    %rdx, (%rbx)
-    invlpg  (%rbx)
     invlpg  tmpmap
     addq    $tmpmap, %rax
     /* PDE */
@@ -222,7 +221,6 @@ kmap_getpte:
     andw    $0xF000, %dx
     incw    %dx
     movq    %rdx, (%rbx)
-    invlpg  (%rbx)
     invlpg  tmpmap
     addq    $tmpmap, %rax
     ret

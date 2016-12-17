@@ -26,8 +26,7 @@
  */
 
 
-#include "../core.h"
-#include "tcb.h"
+#include "platform.h"
 #include "isr.h"
 
 extern void isr_exc00divzero();

@@ -28,15 +28,15 @@
 #include "../core.h"
 #include "tcb.h"
 
+extern OSZ_pmm pmm;
 extern void acpi_init();
 
 void dev_init()
 {
     // this is so early, we don't have initrd in fs process' bss yet.
     // so we have to rely on identity mapping to locate the files
-    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
+    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new();
-    fullsize = 0;
     // map device driver dispatcher
     thread_loadelf("sbin/system");
     // map libc
@@ -47,8 +47,6 @@ void dev_init()
     // dynamic linker
     thread_dynlink(pid);
     // modify TCB for system task
-    kmap((uint64_t)&tmp2map, (uint64_t)(pid*__PAGESIZE), PG_CORE_NOCACHE);
-    tcb->linkmem += fullsize;
     tcb->priority = PRI_SYS;
     //TODO: set IOPL=3 in rFlags
 

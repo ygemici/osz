@@ -28,13 +28,6 @@
 #define OSZ_PMM_MAGIC "FMEM"
 #define OSZ_PMM_MAGICH 0x4d454d46
 
-#define PG_CORE 0b00011
-#define PG_CORE_NOCACHE 0b11011
-#define PG_USER_RO 0b00101
-#define PG_USER_RW 0b00111
-#define PG_USER_RWNOCACHE 0b10111
-#define PG_USER_DRVMEM 0b01111
-
 typedef struct {
     uint64_t base;
     uint64_t size;

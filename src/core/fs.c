@@ -120,9 +120,7 @@ void fs_init()
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
-    OSZ_tcb *tcb = (OSZ_tcb*)&tmp2map;
     pid_t pid = thread_new();
-    fullsize = 0;
     // map device driver dispatcher
     thread_loadelf("sbin/fs");
     // map libc
@@ -154,9 +152,6 @@ void fs_init()
 
     // dynamic linker
     thread_dynlink(pid);
-    // modify TCB for system task
-    kmap((uint64_t)&tmp2map, (uint64_t)(pid*__PAGESIZE), PG_CORE_NOCACHE);
-    tcb->linkmem += fullsize;
     thread_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
     // add to queue so that scheduler will know about this thread

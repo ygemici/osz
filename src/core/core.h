@@ -39,7 +39,6 @@ extern uint8_t tmp2map;
 
 // kernel variables
 extern uint64_t fs_size;
-extern uint64_t fullsize;
 
 // kernel function routines
 extern void kprintf_init();

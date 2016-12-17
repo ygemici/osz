@@ -23,9 +23,9 @@ System process
 | -4G .. 0        | global  | core memory (supervisor only) |
 | 0 .. 4096       | thread  | Thread Control Block |
 | 4096 .. 2M      | thread  | message queue |
-| 2M .. 4G        | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
-| 4G .. 16G-1     | process | device drivers (shared objects) |
-| 16G .. x        | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
+| 2M .. x         | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
+| x .. 4G-1       | process | device drivers (shared objects) |
+| 4G .. x         | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
 | x  .. 2^56      | thread  | thread local stack, growing downwards |
 
 The system process is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
@@ -44,9 +44,9 @@ User processes
 | -4G .. 0        | global  | core memory (supervisor only) |
 | 0 .. 4096       | thread  | Thread Control Block |
 | 4096 .. 2M      | thread  | message queue |
-| 2M .. 4G-1      | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment |
-| 4G .. 16G-1     | process | shared libraries |
-| 16G .. x        | process | dynamically allocated bss memory, growing upwards |
+| 2M .. x         | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment |
+| x .. 4G-1       | process | shared libraries |
+| 4G .. x         | process | dynamically allocated bss memory, growing upwards |
 | x  .. 2^56      | thread  | thread local stack, growing downwards |
 
 Normal userspace processes do not have any MMIO, only physical RAM can be mapped in their bss segment.

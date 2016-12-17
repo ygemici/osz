@@ -16,14 +16,13 @@ PHDRS
 {
   text PT_LOAD FILEHDR PHDRS ;
   data PT_LOAD ;
-  dynamic PT_DYNAMIC ;
 }
 
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x200000));
-  . = SEGMENT_START("text-segment", 0x200000) + SIZEOF_HEADERS;
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0));
+  . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
   PROVIDE (_code = .);
   .text           :
   {
@@ -33,7 +32,7 @@ SECTIONS
     *(.text.hot .text.hot.*)
     *(.text .stub .text.* .gnu.linkonce.t.*)
   } :text
-  .dynsym         : { *(.dynsym) } :text
+  .dynsym         : { *(.dynsym) }
   .dynstr         : { *(.dynstr) }
   .rela.dyn       :
     {
@@ -61,11 +60,10 @@ SECTIONS
       PROVIDE_HIDDEN (__rela_iplt_end = .);
     }
   .plt            : { *(.plt) *(.iplt) }
-.plt.got        : { *(.plt.got) }
-.plt.bnd        : { *(.plt.bnd) }
+  .plt.got        : { *(.plt.got) }
+  .plt.bnd        : { *(.plt.bnd) }
   PROVIDE (_etext = .);
-  .dynamic        : { *(.dynamic) } :text :dynamic
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } :text
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
   . = ALIGN(4096);
   . = DATA_SEGMENT_ALIGN (4096, 4096);
@@ -77,10 +75,11 @@ SECTIONS
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
+  .dynamic        : { *(.dynamic) }
   .got            : { *(.got) *(.igot) }
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
   PROVIDE (_edata = .);
-  __bss_start = 0x0000001000000000;
+  __bss_start = 0x100000000;
   .bss            :
   {
    *(.dynbss)
@@ -102,6 +101,5 @@ SECTIONS
   .stab.exclstr  0 : { *(.stab.exclstr) }
   .stab.index    0 : { *(.stab.index) }
   .stab.indexstr 0 : { *(.stab.indexstr) }
-  .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
-  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) *(.interp) *(.eh*) }
+  /DISCARD/ : { *(.note.*) *(.gnu_debuglink) *(.gnu.lto_*) *(.interp) *(.eh*) *(.comment*) }
 }
