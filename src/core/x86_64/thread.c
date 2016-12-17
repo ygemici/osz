@@ -107,11 +107,15 @@ kprintf("tcb=%x\n",newtcb->self);
 void *thread_loadelf(char *fn)
 {
     uint64_t *paging = (uint64_t *)&tmp2map;
-    void *elf=(void *)fs_locate(fn);
-    int i,ret,size=(fs_size+__PAGESIZE-1)/__PAGESIZE;
-    if(elf==NULL)
+    Elf64_Ehdr *elf=(Elf64_Ehdr *)fs_locate(fn);
+    int i=0,ret,size=(fs_size+__PAGESIZE-1)/__PAGESIZE;
+    // valid elf for this platform?
+    if(elf==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG) ||
+        ehdr->e_ident[EI_CLASS]!=ELFCLASS64 ||
+        ehdr->e_ident[EI_DATA]!=ELFDATA2LSB ||
+        ehdr->e_phnum<1)
         return NULL;
-    // relocate and map. PT at tmp2map
+    // PT at tmp2map
     while((paging[i]&1)!=0 && i<1024-size) i++;
     if((paging[i]&1)!=0) {
         kpanic("thread_loadelf: Out of memory");
@@ -120,19 +124,17 @@ void *thread_loadelf(char *fn)
 #if DEBUG
     kprintf("  loadelf %s %x:%d @%d\n",fn,elf,size,ret);
 #endif
+    fullsize += size;
     while(size--) {
         paging[i]=(uint64_t)(elf + (i-ret)*__PAGESIZE+1);
         i++;
     }
-    fullsize += size;
     return (void*)((uint64_t)ret * __PAGESIZE);
 }
 
 /* load an ELF64 shared object into text segment at 4G */
 void thread_loadso(char *fn)
 {
-    // map SHLIB_ADDRESS' PT at tmp2map
-    kmap((uint64_t)&tmp2map, shlib_mapping, PG_CORE_NOCACHE);
 #if DEBUG
     kprintf("  ");
 #endif
@@ -173,6 +175,7 @@ void service_init2(char *fn, uint64_t n, ...)
     fullsize = 0;
     // map executable
     thread_loadelf(fn);
+
     // map libc
     thread_loadso("lib/libc.so");
     // map additional shared libraries

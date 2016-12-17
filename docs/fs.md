@@ -53,7 +53,7 @@ A fully qualified path looks like:
 ```
 
 Drive specifies the media where the filesystem is stored. If not given, `root:` will be substituted, which points to the
-initrd located in memory.
+initrd located in memory. Drives will be translated to `/dev/(drive)/`.
 
 Directory part is a list of directories, separated by '/'.
 
@@ -83,4 +83,9 @@ is mounted on the root volume at /boot:
  /boot/EFI/
  root:/boot/EFI/
  boot:/EFI/
+ /dev/boot/EFI/
+
+ /dev/boot       // sees as a block device, you can use fread() and fwrite()
+ /dev/boot/      // root directory of the filesystem on the device, use with opendir(), readdir()
 ```
+It worth mentioning that this ability of FS/Z allows to take a look what's on a device without the need of mounting it.

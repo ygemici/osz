@@ -8,12 +8,12 @@ DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VDMKIMAGE = ../bin/disk.vdmk
 ifneq ("$(LOADER)", "efi")
-SRCS = $(filter-out efirom.c,$(wildcard *.c))
+SRCS = $(filter-out efirom.c dumpelf.c,$(wildcard *.c))
 else
 SRCS = $(wildcard *.c)
 endif
 OPT  = -g
-LIBS = -lm
+LIBS =
 OBJS = $(SRCS:.c=.o)
 
 CFLAGS = -Wall -fshort-wchar
