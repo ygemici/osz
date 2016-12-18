@@ -19,7 +19,7 @@ all: $(OBJS) $(BINTARGET)
 %.o: %.c
 	@$(CC) -I../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
 
-$(BINTARGET):
+$(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
 	@$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 

@@ -54,7 +54,7 @@ pid_t thread_new()
     self = (uint64_t)ptr+1;
     tcb->allocmem = 7 + nrmqmax;
     tcb->evtq_ptr = tcb->evtq_endptr = (OSZ_event*)&MQ_ADDRESS;
-
+    tcb->evtq_size = (nrmqmax*__PAGESIZE)/sizeof(OSZ_event);
     /* allocate memory mappings */
     // PML4
     ptr=pmm_alloc();

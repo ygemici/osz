@@ -71,17 +71,20 @@ void kprintf_init()
         ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
         ((bootboot.fb_width/2-32) * 4);
     int x,y, line;
-    char *data = &_binary_logo_tga_start + 0x12;
+    char *data = &_binary_logo_tga_start + 0x255;
+    char *palette = &_binary_logo_tga_start + 0x12;
     for(y=0;y<64;y++){
         line=offs;
         for(x=0;x<64;x++){
-            // make it read instead of blue
-            *((uint32_t*)(&fb + line))=(uint32_t)(
-                (((uint8_t)data[0]>>5)<<0)+
-                (((uint8_t)data[1]>>5)<<8)+
-                (((uint8_t)data[2]>>5)<<16)
-            );
-            data+=3;
+            if(data[0]!=0) {
+                // make it darker as normal
+                *((uint32_t*)(&fb + line))=(uint32_t)(
+                    (((uint8_t)palette[(uint8_t)data[0]*3+0]>>3)<<0)+
+                    (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
+                    (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
+                );
+            }
+            data++;
             line+=4;
         }
         offs+=bootboot.fb_scanline;
@@ -92,20 +95,22 @@ void kprintf_putlogo()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     int offs =
-        (ky * font->height * bootboot.fb_scanline) +
+        ((ky * font->height - font->height/2) * bootboot.fb_scanline) +
         (kx * (font->width+1) * 4);
     int x,y, line;
-    char *data = &_binary_logo_tga_start + 0x12;
+    char *data = &_binary_logo_tga_start + 0x255;
     for(y=0;y<64;y++){
         line=offs;
         for(x=0;x<64;x++){
-            // make it red instead of blue
-            *((uint32_t*)(&fb + line))=(uint32_t)(
-                (((uint8_t)data[2]>>4)<<0)+
-                (((uint8_t)data[1]>>2)<<8)+
-                (((uint8_t)data[0]>>0)<<16)
-            );
-            data+=3;
+            if(data[0]!=0) {
+                // make it red instead of blue
+                *((uint32_t*)(&fb + line))=(uint32_t)(
+                    (((uint8_t)data[2]>>4)<<0)+
+                    (((uint8_t)data[1]>>2)<<8)+
+                    (((uint8_t)data[0]>>0)<<16)
+                );
+            }
+            data++;
             line+=4;
         }
         offs+=bootboot.fb_scanline;

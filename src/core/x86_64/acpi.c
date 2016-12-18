@@ -68,3 +68,7 @@ void dev_init()
         // parse ACPI tables to detect devices
     }
 }
+
+void dev_poweroff()
+{
+}

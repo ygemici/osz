@@ -70,6 +70,23 @@ typedef struct _EFI_FILE_PROTOCOL {
   EFI_FILE_FLUSH        Flush;
 } EFI_FILE_PROTOCOL;
 
+typedef struct _EFI_UGA_DRAW_PROTOCOL EFI_UGA_DRAW_PROTOCOL;
+
+typedef
+EFI_STATUS
+(EFIAPI *EFI_UGA_DRAW_PROTOCOL_SET_MODE) (
+  IN  EFI_UGA_DRAW_PROTOCOL * This,
+  IN  UINT32                HorizontalResolution,
+  IN  UINT32                VerticalResolution,
+  IN  UINT32                ColorDepth,
+  IN  UINT32                RefreshRate
+);
+
+typedef struct _EFI_UGA_DRAW_PROTOCOL {
+  EFI_UGA_DRAW_PROTOCOL_SET_MODE  GetMode;
+  EFI_UGA_DRAW_PROTOCOL_SET_MODE  SetMode;
+} EFI_UGA_DRAW_PROTOCOL;
+
 #define PAGESIZE 4096
 
 UINT8 *env_ptr;
@@ -498,13 +515,32 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 
         //GOP
         status = LibLocateProtocol(&GraphicsOutputProtocol, (void **)&gop);
-        if (EFI_ERROR(status))
-            return report(status,L"Locate GOP\n");
-        status = SetScreenRes(gop);
-        // TODO: if GOP fails, fallback to UGA
-        if (EFI_ERROR(status))
-            return report(EFI_DEVICE_ERROR,L"Initialize screen\n");
-
+        if (!EFI_ERROR(status))
+            status = SetScreenRes(gop);
+        // if GOP fails, fallback to UGA
+        if (EFI_ERROR(status)) {
+            EFI_UGA_DRAW_PROTOCOL *uga;
+            EFI_GUID UGAProtocol;
+            UGAProtocol.Data1 = 0x982c298b;
+            UGAProtocol.Data2 = 0xf4fa;
+            UGAProtocol.Data3 = 0x41cb;
+            UGAProtocol.Data4[0]=0xb8;
+            UGAProtocol.Data4[1]=0x38;
+            UGAProtocol.Data4[2]=0x77;
+            UGAProtocol.Data4[3]=0xaa;
+            UGAProtocol.Data4[4]=0x68;
+            UGAProtocol.Data4[5]=0x8f;
+            UGAProtocol.Data4[6]=0xb8;
+            UGAProtocol.Data4[7]=0x39;
+            UINT64 depth=32, rate=60;
+            status = LibLocateProtocol(&UGAProtocol, (void **)&uga);
+            if (EFI_ERROR(status))
+                return report(status,L"Locate GOP or UGA\n");
+            status = uefi_call_wrapper(uga->SetMode, 5, uga,
+                reqwidth, reqheight, depth, rate);
+            if (EFI_ERROR(status))
+                return report(EFI_DEVICE_ERROR,L"Initialize screen\n");
+        }
         // create page tables
         uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 23, (EFI_PHYSICAL_ADDRESS*)&paging);
         if (paging == NULL) {

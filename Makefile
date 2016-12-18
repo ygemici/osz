@@ -5,14 +5,16 @@ all: todogen util boot system apps images
 todogen:
 	@grep -ni 'TODO:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >TODO.txt || true
 
-boot: loader
-	@date +'#define _OS_Z_BUILD "%Y-%m-%d %H:%M:%S UTC"' >etc/include/lastbuild.h
-	@echo '#define _OS_Z_ARCH "$(ARCH)"' >>etc/include/lastbuild.h
-	@echo '#define _OS_Z_LOADER "$(LOADER)-$(ARCH)"' >>etc/include/lastbuild.h
+boot: loader/bootboot.bin
+
+loader/bootboot.bin:
 	@echo "LOADER"
 	@make -e --no-print-directory -C loader/$(LOADER)-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
 
 util: tools
+	@date +'#define _OS_Z_BUILD "%Y-%m-%d %H:%M:%S UTC"' >etc/include/lastbuild.h
+	@echo '#define _OS_Z_ARCH "$(ARCH)"' >>etc/include/lastbuild.h
+	@echo '#define _OS_Z_LOADER "$(LOADER)-$(ARCH)"' >>etc/include/lastbuild.h
 	@echo "TOOLS"
 	@make --no-print-directory -C tools all | grep -v 'Nothing to be done' || true
 

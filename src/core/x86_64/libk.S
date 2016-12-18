@@ -41,31 +41,40 @@
 /* kernel panic */
 kpanic:
     movl    $0xFFDD33, fg
-    movl    $0x330000, bg
+    movl    $0x000000, bg
     pushq   %rdi
     movq    $kpanicprefix, %rdi
     call    kprintf
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
-    movl    $0xFD3018, fg
-    movl    $0x000000, bg
+    movl    $0x8c2c0b, fg
+    movl    $0x100000, bg
     movq    $kpanicsuffix, %rdi
+    cmpl    $0, kx
+    jne     1f
+    incq    %rdi
+1:  call    kprintf
+    movl    $0x500000, fg
+    movq    $kpanicsuffix2, %rdi
     call    kprintf
-    movl    $48, kx
-    subl    $4, ky
+    movl    $46, kx
+    subl    $6, ky
     call    kprintf_putlogo
     cli
     hlt
 kpanicprefix:
 .asciz "OS/Z core panic: "
 kpanicsuffix:
-.ascii "\n                                                        \n"
-.ascii "     __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
-.ascii "    (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
-.ascii "   \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n"
-.ascii "                                                        \n"
-.asciz "       KEEP CALM AND RESTART YOUR COMPUTER              "
+.ascii "\n                                                      \n"
+.ascii "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
+.ascii "  (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
+.asciz " \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n"
+kpanicsuffix2:
+.ascii "                                                      \n"
+.ascii "                       KEEP CALM                      \n"
+.ascii "               AND RESTART YOUR COMPUTER              \n"
+.asciz "                                                      "
 
 /* misc memory functions */
 kmemcpy:

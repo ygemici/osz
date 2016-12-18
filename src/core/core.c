@@ -38,14 +38,12 @@
 extern OSZ_pmm pmm;
 
 /**********************************************************************
- *                         OS/Z Core start                            *
+ *                         OS/Z Life Cycle                            *
  **********************************************************************
 */
 void main()
 {
-    // this is so early, we don't have initrd in fs process' bss yet.
-    // so we have to rely on identity mapping to locate files
-
+    /* step 0: open eyes */
     // initialize kernel implementation of printf
     kprintf_init();
     // parse environment
@@ -55,40 +53,52 @@ void main()
     // interrupt service routines (idt), initialize CCB
     isr_init();
 
-    service_init(NULL);
-/*
-    // start "syslog" process so others can log errors
-    service_init("sbin/syslog");
-    // initialize "fs" process to load files
+    /* step 1: historic memory */
+    service_init(0, NULL);
+    // start "syslog" process so other subsystems can log errors
+    // to solve the chicken egg scenario here, service_init()
+    // does not use filesystem drivers, it has a built-in fs reader.
+    service_init(SUB_SYSLOG, "sbin/syslog");
+    // initialize "fs" process
     fs_init();
+
+    /* step 2: communication */
     // initialize "ui" process to handle user input / output
-    service_init("sbin/ui");
+    service_init(SUB_UI, "sbin/ui");
     if(networking) {
         // initialize "net" process for ipv4 and ipv6
-        service_init("sbin/net");
+        service_init(SUB_NET, "sbin/net");
     }
     if(sound) {
         // initialize "sound" process to handle audio channels
-        service_init("sbin/sound");
+        service_init(SUB_SOUND, "sbin/sound");
     }
+
+    /* step 3: motoric reflexes */
     // finally initialize the "system" process, the last subsystem
-    // detect device drivers (parse system tables and link shared objects)
-*/
+    // detect device drivers (parse system tables and load sharedlibs)
     sys_init();
 
+    /* step 4: who am I */
     if(identity) {
         // start first time set up process
-        service_init("sbin/identity");
+        service_init(USER_PROCESS, "sbin/identity");
     }
+
+    /* step 5: stand up and prosper. */
     // load "init" or "sh" process
-//    service_init(rescueshell ? "bin/sh" : "sbin/init");
+    service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
 #if DEBUG
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
 #endif
+    kprintf_clr();
     // enable interrupts. After the first timer IRQ the
-    // scheduler will choose a thread to run and we'll never return...
+    // scheduler will choose a thread to run and we'll...
     isr_enable();
-    // ...and reach this code
-    __asm__ __volatile__ ( "int $13;xchgw %%bx,%%bx;cli;hlt" : : : );
-    kpanic("core_init: scheduler returned to main thread");
+
+    /* step 6: go to dreamless sleep. */
+    // ...should not reach this code until shutdown process finished
+    dev_poweroff();
+
+    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 }

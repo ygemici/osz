@@ -278,7 +278,7 @@ void add_dirs(char *dirname,int parent,int level)
             int i=add_inode("url:",ptrto);
             link_inode(i,full+parent,0);
         }
-        // TODO: add other types, blkdev, socket etc.
+        // maybe add other types, blkdev, socket etc.
       }
       closedir (dir);
     }

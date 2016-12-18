@@ -59,6 +59,7 @@ typedef struct {
     uint32_t evtq_cnt;  // event counter (number of items in event queue)
     OSZ_event *evtq_ptr;// event queue
     OSZ_event *evtq_endptr;
+    uint64_t evtq_size;
     uint64_t evtq_nextserial;
     uint64_t evtq_lastserial;
     uint64_t gpr[16];   // general purpose registers save area

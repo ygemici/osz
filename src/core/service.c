@@ -45,6 +45,9 @@ typedef struct {
 // memory allocated for relocation addresses
 OSZ_rela __attribute__ ((section (".data"))) *relas;
 
+/* thread ids of system tasks. */
+pid_t  __attribute__ ((section (".data"))) subsystems[8];
+
 /* load an ELF64 executable into text segment starting at 2M
  *  - tmp2map: the text segment's PT mapped,
  *  - pmm.bss_end: current thread's TCB mapped */
@@ -119,7 +122,8 @@ void service_loadso(char *fn)
 
 /* Fill in GOT entries. Relies on identity mapping
  *  - tmp2map: the text segment's PT mapped,
- *  - pmm.bss_end: current thread's TCB mapped */
+ *  - pmm.bss_end: current thread's TCB mapped,
+ *  - relas: array of OSZ_rela items alloceted with kalloc() */
 void service_dynlink()
 {
     int i, j, k, n = 0;
@@ -148,7 +152,7 @@ void service_dynlink()
 #if DEBUG
                 if(verbose>1)
                     kprintf("  Import %x (%d bytes):\n",
-                        phdr->p_offset, (int)phdr->p_memsz
+                        phdr->p_offset + j*__PAGESIZE, (int)phdr->p_memsz
                     );
 #endif
                 while(d->d_tag != DT_NULL) {
@@ -299,7 +303,7 @@ void service_mapbss(uint64_t phys, uint64_t size)
 }
 
 /* Initialize a system service, save "fs" and "system" */
-void service_init(char *fn)
+void service_init(int subsystem, char *fn)
 {
     if(fn==NULL) {
         // allocate space for dynamic linking
@@ -307,7 +311,7 @@ void service_init(char *fn)
         return;
     }
     pid_t pid = thread_new();
-
+    subsystems[subsystem] = pid;
     // map executable
     service_loadelf(fn);
     // map libc
@@ -325,6 +329,7 @@ void fs_init()
     char *drvs_end = drvs + fs_size;
     char fn[256];
     pid_t pid = thread_new();
+    subsystems[SUB_FS] = pid;
     // map file system dispatcher
     service_loadelf("sbin/fs");
     // map libc
@@ -357,6 +362,7 @@ void fs_init()
 
     // dynamic linker
     service_dynlink();
+    // map initrd in "fs" process' memory
     service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
     // add to queue so that scheduler will know about this thread
@@ -370,6 +376,7 @@ void sys_init()
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new();
+    subsystems[SUB_SYSTEM] = pid;
     // map device driver dispatcher
     service_loadelf("sbin/system");
     // map libc
