@@ -54,6 +54,9 @@ void main()
     pmm_init();
     // interrupt service routines (idt), initialize CCB
     isr_init();
+
+    service_init(NULL);
+/*
     // start "syslog" process so others can log errors
     service_init("sbin/syslog");
     // initialize "fs" process to load files
@@ -70,16 +73,22 @@ void main()
     }
     // finally initialize the "system" process, the last subsystem
     // detect device drivers (parse system tables and link shared objects)
-    dev_init();
+*/
+    sys_init();
 
     if(identity) {
         // start first time set up process
         service_init("sbin/identity");
     }
     // load "init" or "sh" process
-    service_init(rescueshell ? "bin/sh" : "sbin/init");
-kprintf("mem %d free of total %d pages\n", pmm.freepages, pmm.totalpages);
+//    service_init(rescueshell ? "bin/sh" : "sbin/init");
 
-    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
+    kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
 
+    // enable interrupts. After the first timer IRQ the
+    // scheduler will choose a thread to run and we'll never return...
+    isr_enable();
+    // ...and reach this code
+    __asm__ __volatile__ ( "int $13;xchgw %%bx,%%bx;cli;hlt" : : : );
+    kpanic("core_init: scheduler returned to main thread");
 }

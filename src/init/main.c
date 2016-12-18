@@ -1,6 +1,6 @@
 #include <osZ.h>
 
-void main()
+void _init()
 {
     printf("Hello World");
 }

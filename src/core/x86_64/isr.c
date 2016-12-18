@@ -72,6 +72,12 @@ void isr_init()
     isr_initgates(idt, &ccb);
 }
 
+void isr_enable()
+{
+      // TODO: enable interrupts
+//    __asm__ __volatile__ ( "sti" : : : );
+}
+
 /* common IRQ handler */
 void isr_irq(uint64_t irq)
 {
@@ -88,12 +94,18 @@ void excabort(uint64_t excno, uint64_t errcode)
 /* exception specific code */
 void exc00divzero(uint64_t excno)
 {
-    kprintf("divzero %d\n",excno);
+    kpanic("divzero %d",excno);
 	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }
 
 void exc01debug(uint64_t excno)
 {
-    kprintf("debug %d\n",excno);
+    kpanic("debug %d",excno);
+	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
+}
+
+void exc13genprot(uint64_t excno)
+{
+    kpanic("General Protection Fault %d",excno);
 	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }

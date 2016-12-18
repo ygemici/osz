@@ -13,8 +13,10 @@ nrphymax=2
 
 // number of pages for message queue
 nrmqmax=1
-               
-                                                                        
+
+// verbosity
+verbose=2
+                                                                
                                                                         
                                                                         
                                                                         

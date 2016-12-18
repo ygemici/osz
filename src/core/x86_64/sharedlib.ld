@@ -16,6 +16,7 @@ PHDRS
 {
   text PT_LOAD FILEHDR PHDRS ;
   data PT_LOAD ;
+  dynamic PT_DYNAMIC ;
 }
 
 SECTIONS
@@ -31,6 +32,7 @@ SECTIONS
     *(.text.hot .text.hot.*)
     *(.text .stub .text.* .gnu.linkonce.t.*)
   } :text
+  /* important that dynstr follows dynsym */
   .dynsym         : { *(.dynsym) }
   .dynstr         : { *(.dynstr) }
   .rela.dyn       :
@@ -62,7 +64,8 @@ SECTIONS
   .plt.got        : { *(.plt.got) }
   .plt.bnd        : { *(.plt.bnd) }
   PROVIDE (_etext = .);
-  .cl             : { *(.cl) }
+  .cl             : { *(.cl) } :text
+  .buildid        : { *(.buildid) *(.note.gnu.build-id) }
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
   . = ALIGN(4096);
@@ -75,8 +78,9 @@ SECTIONS
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
-  .dynamic        : { *(.dynamic) }
-  .got            : { *(.got) *(.igot) }
+  .dynamic        : { *(.dynamic) } :data :dynamic
+  . = ALIGN(8);
+  .got            : { *(.got) *(.igot) } :data
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
   PROVIDE (_edata = .);
   _end = .;

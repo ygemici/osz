@@ -232,11 +232,7 @@ SetMode(int mode,EFI_GRAPHICS_OUTPUT_PROTOCOL *gop)
     EFI_STATUS rc;
     bootboot->fb_ptr=0;
     bootboot->fb_size=0;
-#if PRINT_DEBUG
-    rc = mode ? EFI_SUCCESS : EFI_SUCCESS;
-#else
     rc = uefi_call_wrapper(gop->SetMode, 2, gop, mode);
-#endif
     if(!EFI_ERROR(rc)){
         bootboot->fb_ptr=(void*)gop->Mode->FrameBufferBase;
         bootboot->fb_size=gop->Mode->FrameBufferSize;
@@ -389,7 +385,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     CHAR16 **argv;
     INTN argc;
     UINTN i;
-    CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [-?|-h|/?|/h] [INITRDFILE [ENVIRONMENTFILE]]\n\nDESCRIPTION\n  Bootstraps the OS/Z (or any other compatible) operating system via\n  the BOOTBOOT Protocol. If not given, the loader defaults to\n   FS0:\\BOOTBOOT\\INITRD as ramdisk image and\n   FS0:\\BOOTBOOT\\CONFIG for boot environment.\n  This is a loader, it is not supposed to return control to the shell.\n\n";
+    CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE ] ]\n\nDESCRIPTION\n  Bootstraps the OS/Z (or any other compatible) operating system via\n  the BOOTBOOT Protocol. If not given, the loader defaults to\n    FS0:\\BOOTBOOT\\INITRD  as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG  for boot environment.\n  This is a loader, it is not supposed to return control to the shell.\n\n";
 
     // Initialize UEFI Library
     InitializeLib(image, systab);

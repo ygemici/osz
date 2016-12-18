@@ -8,9 +8,9 @@ DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VDMKIMAGE = ../bin/disk.vdmk
 ifneq ("$(LOADER)", "efi")
-SRCS = $(filter-out efirom.c dumpelf.c,$(wildcard *.c))
+SRCS = $(filter-out efirom.c dumpelf.c dynamic.c,$(wildcard *.c))
 else
-SRCS = $(wildcard *.c)
+SRCS = $(filter-out dumpelf.c dynamic.c,$(wildcard *.c))
 endif
 OPT  = -g
 LIBS =

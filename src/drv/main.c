@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Common event dispatcher for device drivers
+ * @brief Common event dispatcher for device drivers, the "system" process
  */
 
 #include <osZ.h>
@@ -31,6 +31,7 @@ void register_irq(uint8_t irq, void *handler)
 {
 }
 
-void main()
+void _init()
 {
+	printf("Hello from system");
 }

@@ -32,7 +32,7 @@ char *acpi_getdriver(char *device, char *drvs, char *drvs_end)
     return NULL;
 }
 
-void acpi_init()
+void dev_init()
 {
     // this is so early, we don't have initrd in fs process' bss yet.
     // so we have to rely on identity mapping to locate the files
@@ -44,8 +44,8 @@ void acpi_init()
         // should never happen!
         kprintf("core - W - missing /etc/sys/drivers\n");
         // hardcoded devices if driver list not found
-        thread_loadso("lib/sys/input/ps2.so");
-        thread_loadso("lib/sys/display/fb.so");
+        service_loadso("lib/sys/input/ps2.so");
+        service_loadso("lib/sys/display/fb.so");
     } else {
         // load devices which don't have entry in any ACPI tables
         for(s=drvs;s<drvs_end;) {
@@ -57,7 +57,7 @@ void acpi_init()
                     kmemcpy(&fn[0], "lib/sys/", 8);
                     kmemcpy(&fn[8], f, s-f);
                     fn[s-f+8]=0;
-                    thread_loadso(fn);
+                    service_loadso(fn);
                 }
                 continue;
             }

@@ -36,12 +36,6 @@ void *fs_mapfile(char *fn)
     return NULL;
 }
 
-/* map an ELF64 file from initrd into text segment */
-void *fs_mapelf(char *fn)
-{
-    return NULL;
-}
-
 /* return starting offset of file in identity mapped initrd */
 void *fs_locate(char *fn)
 {
@@ -111,49 +105,4 @@ again:
         }
     }
     return NULL;
-}
-
-void fs_init()
-{
-    // this is so early, we don't have initrd in fs process' bss yet.
-    // so we have to rely on identity mapping to locate the files
-    char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
-    char *drvs_end = drvs + fs_size;
-    char fn[256];
-    pid_t pid = thread_new();
-    // map device driver dispatcher
-    thread_loadelf("sbin/fs");
-    // map libc
-    thread_loadso("lib/libc.so");
-    // load filesystem drivers
-    if(drvs==NULL) {
-        // hardcoded devices if driver list not found
-        thread_loadso("lib/sys/fs/gpt.so");
-        thread_loadso("lib/sys/fs/fsz.so");
-        thread_loadso("lib/sys/fs/vfat.so");
-    } else {
-        for(s=drvs;s<drvs_end;) {
-            f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
-            if(f[0]=='*' && f[1]==9 && f[2]=='f' && f[3]=='s') {
-                f+=2;
-                if(s-f<255-8) {
-                    kmemcpy(&fn[0], "lib/sys/", 8);
-                    kmemcpy(&fn[8], f, s-f);
-                    fn[s-f+8]=0;
-                    thread_loadso(fn);
-                }
-                continue;
-            }
-            // failsafe
-            if(s>=drvs_end || *s==0) break;
-            if(*s=='\n') s++;
-        }
-    }
-
-    // dynamic linker
-    thread_dynlink(pid);
-    thread_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
-
-    // add to queue so that scheduler will know about this thread
-    thread_add(pid);
 }

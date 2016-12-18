@@ -1,5 +1,5 @@
 /*
- * x86_64/isrs.S - GENERATED FILE
+ * core/x86_64/isrs.S - GENERATED FILE DO NOT EDIT
  * 
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -36,65 +36,65 @@
 .extern excabort
 
 .section .data
-	.align	16
+    .align	16
 idt64:
-	.word	32*16-1
-	.quad	0
-	.align	64
+    .word	32*16-1
+    .quad	0
+    .align	64
 apic:
-	.quad	0
+    .quad	0
 .section .text
 
 /* store thread's context into Thread Control Block */
 isr_savecontext:
-	ret
+    ret
 
 /* restore thread's context from Thread Control Block */
 isr_loadcontext:
-	ret
+    ret
 
 isr_initgates:
 /* TSS64 descriptor in GDT */
-	movq	$gdt64_tss, %rbx
-	movl	%edi, %eax
-	andl	$0xFFFFFF, %eax
-	addl	%eax, 2(%rbx)
-	movq	%rsi, %rax
-	shlq	$24, %rax
-	addl	%eax, 7(%rbx)
+    movq	$gdt64_tss, %rbx
+    movl	%edi, %eax
+    andl	$0xFFFFFF, %eax
+    addl	%eax, 2(%rbx)
+    movq	%rsi, %rax
+    shlq	$24, %rax
+    addl	%eax, 7(%rbx)
 /* setup task register */
-	movl	$0x28 + 3, %eax
-	ltr		%ax
+    movl	$0x28 + 3, %eax
+    ltr		%ax
 /* IDTR */
-	movq	$idt64, %rax
-	movq	%rdi, 2(%rax)
-	lidt	(%rax)
+    movq	$idt64, %rax
+    movq	%rdi, 2(%rax)
+    lidt	(%rax)
 /* setup syscall dispatcher */
-	/* STAR */
-	xorq	%rcx, %rcx
-	movl	$0xC0000081, %ecx
-	movq	$0x0013000800000000, %rax
-	wrmsr
-	/* LSTAR */
-	inc		%ecx
-	xorl	%edx, %edx
-	movq	$isr_syscall, %rax
-	wrmsr
+    /* STAR */
+    xorq	%rcx, %rcx
+    movl	$0xC0000081, %ecx
+    movq	$0x0013000800000000, %rax
+    wrmsr
+    /* LSTAR */
+    inc		%ecx
+    xorl	%edx, %edx
+    movq	$isr_syscall, %rax
+    wrmsr
 /* enable IRQs */
     /* x2APIC init */
     movl	$0x1B, %ecx
     rdmsr
     btsl	$10, %eax
     btsl	$11, %eax
-#    wrmsr
+    wrmsr
     /* IOAPIC init */
     
-	ret
+    ret
 
 /* syscall dispatcher */
 .align	16
 isr_syscall:
-	sysret
+    sysret
 
 /* exception handler ISRs */
 .align 128
@@ -300,7 +300,7 @@ isr_exc13genprot:
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$13, %dil
-    callq	excabort
+    callq	exc13genprot
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS

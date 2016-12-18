@@ -55,7 +55,7 @@ kpanic:
     cli
     hlt
 kpanicprefix:
-.asciz "\nOS/Z CORE PANIC: "
+.asciz "OS/Z core panic: "
 kpanicsuffix:
 .ascii "\n"
 .ascii "                                                   _     ___\n"
@@ -63,7 +63,7 @@ kpanicsuffix:
 .ascii "   (    (   |   / _|    __/ _ \\  .  |  |  (       `.`.     `#.,//\n"
 .ascii "  \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|    ,_\\_\\     ## #\\\n"
 .ascii "                                                  `__.__    `####\\\n"
-.ascii "         KEEP CALM AND RESTART COMPUTER                ~~\\ ,###'~\n"
+.ascii "       KEEP CALM AND RESTART YOUR COMPUTER             ~~\\ ,###'~\n"
 .asciz "                                                          \\##'\n"
 
 /* misc memory functions */

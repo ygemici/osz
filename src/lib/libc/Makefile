@@ -7,7 +7,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS =
 CLL  = ../../../tools/cll.o
 
-CFLAGS = -fpic -fPIC -ffreestanding
+CFLAGS = -Wall -fpic -fPIC -ffreestanding
 
 all: $(OBJS) $(BINTARGET)
 
@@ -19,7 +19,7 @@ $(BINTARGET): $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
 	make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 	@$(CLL) *.c
-	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic -L../../../bin/root/lib *.o -Xlinker --build-id=none -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic -Bshareable -L../../../bin/root/lib *.o -Xlinker --build-id=sha1 -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm cl.S *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt0.o 2>/dev/null || true

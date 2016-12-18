@@ -28,15 +28,15 @@
 #include <osZ.h>
 
 /* Allocate SIZE bytes of memory.  */
-void *malloc (size_t __size){}
+void *malloc (size_t __size){ return NULL; }
 /* Allocate NMEMB elements of SIZE bytes each, all initialized to 0.  */
-void *calloc (size_t __nmemb, size_t __size){}
+void *calloc (size_t __nmemb, size_t __size){ return NULL; }
 /* Re-allocate the previously allocated block
    in PTR, making the new block SIZE bytes long.  */
-void *realloc (void *__ptr, size_t __size){}
+void *realloc (void *__ptr, size_t __size){ return NULL; }
 /* Free a block allocated by `malloc', `realloc' or `calloc'.  */
 void free (void *__ptr){}
 /* ISO C variant of aligned allocation.  */
-void *aligned_alloc (size_t __alignment, size_t __size){}
+void *aligned_alloc (size_t __alignment, size_t __size){ return NULL; }
 
 

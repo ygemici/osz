@@ -47,16 +47,21 @@ typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
-void kprintf_init()
+void kprintf_clr()
 {
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
     kx = ky = fx = 0;
-    maxx = bootboot.fb_width / font->width;
-    maxy = bootboot.fb_height / font->height;
     reent = 0;
     fg = 0xC0C0C0;
     bg = 0;
-    kprintf("OS/Z Starting...\n",1,2,3);
+}
+
+void kprintf_init()
+{
+    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    maxx = bootboot.fb_width / font->width;
+    maxy = bootboot.fb_height / font->height;
+    kprintf_clr();
+    kprintf("OS/Z starting...\n",1,2,3);
 }
 
 void kprintf_putchar(int c)

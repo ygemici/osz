@@ -9,4 +9,5 @@ void valami()
 void _init()
 {
 	register_irq(1, valami);
+	printf("fb");
 }
