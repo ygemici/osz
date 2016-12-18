@@ -21,7 +21,7 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
-	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

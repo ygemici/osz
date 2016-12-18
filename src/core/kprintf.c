@@ -47,6 +47,8 @@ typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
+extern char _binary_logo_tga_start;
+
 void kprintf_clr()
 {
     kx = ky = fx = 0;
@@ -61,7 +63,52 @@ void kprintf_init()
     maxx = bootboot.fb_width / font->width;
     maxy = bootboot.fb_height / font->height;
     kprintf_clr();
+#if DEBUG
     kprintf("OS/Z starting...\n",1,2,3);
+#endif
+    int offs =
+        ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
+        ((bootboot.fb_width/2-32) * 4);
+    int x,y, line;
+    char *data = &_binary_logo_tga_start + 0x12;
+    for(y=0;y<64;y++){
+        line=offs;
+        for(x=0;x<64;x++){
+            // make it read instead of blue
+            *((uint32_t*)(&fb + line))=(uint32_t)(
+                (((uint8_t)data[0]>>5)<<0)+
+                (((uint8_t)data[1]>>5)<<8)+
+                (((uint8_t)data[2]>>5)<<16)
+            );
+            data+=3;
+            line+=4;
+        }
+        offs+=bootboot.fb_scanline;
+    }
+}
+
+void kprintf_putlogo()
+{
+    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    int offs =
+        (ky * font->height * bootboot.fb_scanline) +
+        (kx * (font->width+1) * 4);
+    int x,y, line;
+    char *data = &_binary_logo_tga_start + 0x12;
+    for(y=0;y<64;y++){
+        line=offs;
+        for(x=0;x<64;x++){
+            // make it read instead of blue
+            *((uint32_t*)(&fb + line))=(uint32_t)(
+                (((uint8_t)data[2]>>2)<<0)+
+                (((uint8_t)data[1]>>2)<<8)+
+                (((uint8_t)data[0]>>0)<<16)
+            );
+            data+=3;
+            line+=4;
+        }
+        offs+=bootboot.fb_scanline;
+    }
 }
 
 void kprintf_putchar(int c)

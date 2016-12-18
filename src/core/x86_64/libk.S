@@ -48,23 +48,24 @@ kpanic:
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
-    movl    $0x800000, fg
+    movl    $0xFD3032, fg
     movl    $0x000000, bg
     movq    $kpanicsuffix, %rdi
     call    kprintf
+    movl    $48, kx
+    subl    $4, ky
+    call    kprintf_putlogo
     cli
     hlt
 kpanicprefix:
 .asciz "OS/Z core panic: "
 kpanicsuffix:
-.ascii "\n"
-.ascii "                                                   _     ___\n"
-.ascii "    __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|    #_~`--'__ `===-,\n"
-.ascii "   (    (   |   / _|    __/ _ \\  .  |  |  (       `.`.     `#.,//\n"
-.ascii "  \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|    ,_\\_\\     ## #\\\n"
-.ascii "                                                  `__.__    `####\\\n"
-.ascii "       KEEP CALM AND RESTART YOUR COMPUTER             ~~\\ ,###'~\n"
-.asciz "                                                          \\##'\n"
+.ascii "\n                                                        \n"
+.ascii "     __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
+.ascii "    (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
+.ascii "   \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n"
+.ascii "                                                        \n"
+.asciz "       KEEP CALM AND RESTART YOUR COMPUTER              "
 
 /* misc memory functions */
 kmemcpy:

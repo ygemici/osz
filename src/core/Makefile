@@ -21,9 +21,12 @@ font.o:
 	@objcopy -O elf64-x86-64 -B i386 -I binary font font.o
 	@rm font
 
-$(BINTARGET): platform font.o $(SRCS)
+logo.o:
+	@objcopy -O elf64-x86-64 -B i386 -I binary logo.tga logo.o
+
+$(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
-	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
 	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)
 
 clean:

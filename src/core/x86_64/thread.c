@@ -85,7 +85,9 @@ pid_t thread_new()
     }
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmp2map, (uint64_t)ptr2, PG_CORE_NOCACHE);
-kprintf("tcb=%x\n",tcb->self);
+#if DEBUG
+    kprintf("tcb=%x\n",tcb->self);
+#endif
     return self/__PAGESIZE;
 }
 

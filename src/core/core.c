@@ -82,9 +82,9 @@ void main()
     }
     // load "init" or "sh" process
 //    service_init(rescueshell ? "bin/sh" : "sbin/init");
-
+#if DEBUG
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
-
+#endif
     // enable interrupts. After the first timer IRQ the
     // scheduler will choose a thread to run and we'll never return...
     isr_enable();
