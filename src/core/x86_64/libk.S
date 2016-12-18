@@ -48,7 +48,7 @@ kpanic:
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
-    movl    $0xFD3032, fg
+    movl    $0xFD3018, fg
     movl    $0x000000, bg
     movq    $kpanicsuffix, %rdi
     call    kprintf

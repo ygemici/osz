@@ -66,6 +66,7 @@ void kprintf_init()
 #if DEBUG
     kprintf("OS/Z starting...\n",1,2,3);
 #endif
+    // display boot logo
     int offs =
         ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
         ((bootboot.fb_width/2-32) * 4);
@@ -98,9 +99,9 @@ void kprintf_putlogo()
     for(y=0;y<64;y++){
         line=offs;
         for(x=0;x<64;x++){
-            // make it read instead of blue
+            // make it red instead of blue
             *((uint32_t*)(&fb + line))=(uint32_t)(
-                (((uint8_t)data[2]>>2)<<0)+
+                (((uint8_t)data[2]>>4)<<0)+
                 (((uint8_t)data[1]>>2)<<8)+
                 (((uint8_t)data[0]>>0)<<16)
             );
