@@ -5,7 +5,7 @@ void stop(){}
 void restart(){}
 void status(){}
 
-void _init()
+void _init(int argc, char**argv)
 {
-    printf("Hello World");
+	while(1);
 }

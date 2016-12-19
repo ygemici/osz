@@ -82,7 +82,11 @@ void isr_enable()
     thread_map(subsystems[SRV_system]);
     // start interrupts, fake an interrupt
     // handler return to start multitasking
-    __asm__ __volatile__ ( "movq %0, %%rsp; iretq" : : "b"(&tcb->rip) : "%rsp" );
+    __asm__ __volatile__ (
+        "movq %0, %%rsp; movq %1, %%rbp; iretq" :
+        :
+        "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
+        "%rsp" );
 }
 
 void isr_disable()

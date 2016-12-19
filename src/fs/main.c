@@ -11,6 +11,7 @@ void dup(){}
 void dup2(){}
 void ioctl(){}
 
-void _init()
+void _init(int argc, char**argv)
 {
+	while(1);
 }

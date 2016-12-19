@@ -1,5 +1,6 @@
 #include <osZ.h>
 
-void _init()
+void _init(int argc, char **argv)
 {
+	while(1);
 }

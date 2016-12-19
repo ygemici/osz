@@ -6,6 +6,7 @@ void opentty(){}
 void openwin(){}
 void openwrd(){}
 
-void _init()
+void _init(int argc, char **argv)
 {
+	while(1);
 }

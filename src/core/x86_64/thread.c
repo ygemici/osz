@@ -95,9 +95,9 @@ pid_t thread_new(char *cmdline)
     eventhdr_t *evthdr = (eventhdr_t *)&tmp2map;
     evthdr->evtq_ptr = evthdr->evtq_endptr = (msg_t*)(MQ_ADDRESS+sizeof(eventhdr_t));
     evthdr->evtq_nextserial = 1;
-    // set up stack
+    // set up stack, watch out for alignment
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
-    i = 511-(kstrlen(cmdline)+2+7)/8;
+    i = 511-((kstrlen(cmdline)+2+15)/16*2);
     kstrcpy((char*)(&paging[i--]), cmdline);
     paging[i--] = 0;                                 // argv[1]
     paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+2)*8;i--; // argv[0]
@@ -108,7 +108,7 @@ pid_t thread_new(char *cmdline)
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmp2map, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    kprintf("tcb=%x stack=%x %s\n",tcb->self,stack_ptr,cmdline);
+    kprintf("tcb=%x stack=%x %s\n",self,stack_ptr,cmdline);
 #endif
     return self/__PAGESIZE;
 }
