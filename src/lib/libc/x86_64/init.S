@@ -28,4 +28,5 @@
 .section .crt0
 
     /* initial RIP on thread execution, first byte of text segment */
-    ret
+xchg %bx, %bx
+    retq

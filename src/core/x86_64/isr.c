@@ -77,12 +77,12 @@ void isr_init()
 
 void isr_enable()
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
     // map "system" process
-    OSZ_tcb *systcb = (OSZ_tcb *)(subsystems[SRV_system]<<12);
-    __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(systcb->memroot) : "%rax" );
-//  start interrupts
-//    __asm__ __volatile__ ( "iret" : : : );
-//    __asm__ __volatile__ ( "sti" : : : );
+    thread_map(subsystems[SRV_system]);
+    // start interrupts, fake an interrupt
+    // handler return to start multitasking
+    __asm__ __volatile__ ( "movq %0, %%rsp; iretq" : : "b"(&tcb->rip) : "%rsp" );
 }
 
 void isr_disable()
@@ -95,31 +95,27 @@ void isr_disable()
 /* common IRQ handler */
 void isr_irq(uint64_t irq)
 {
-    kprintf("interrupt %d\n",irq);
+    kprintf("---- interrupt %d -----\n",irq);
 }
 
 /* fallback exception handler */
 void excabort(uint64_t excno, uint64_t errcode)
 {
-    kprintf("exception %d\n",excno);
-	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
+    kpanic("---- exception %d ----",excno);
 }
 
 /* exception specific code */
 void exc00divzero(uint64_t excno)
 {
     kpanic("divzero %d",excno);
-	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }
 
 void exc01debug(uint64_t excno)
 {
     kpanic("debug %d",excno);
-	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }
 
 void exc13genprot(uint64_t excno)
 {
     kpanic("General Protection Fault %d",excno);
-	__asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }

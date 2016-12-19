@@ -40,7 +40,7 @@
 .section .data
     .align	16
 idt64:
-    .word	32*16-1
+    .word	(32+16)*16-1
     .quad	0
     .align	8
 apic:
@@ -63,12 +63,12 @@ isr_loadcontext:
 isr_initgates:
 /* TSS64 descriptor in GDT */
     movq	$gdt64_tss, %rbx
-    movl	%edi, %eax
+    movl	%esi, %eax
     andl	$0xFFFFFF, %eax
     addl	%eax, 2(%rbx)
     movq	%rsi, %rax
-    shlq	$24, %rax
-    addl	%eax, 7(%rbx)
+    shrq	$24, %rax
+    addq	%rax, 7(%rbx)
 /* setup task register */
     movl	$0x28 + 3, %eax
     ltr		%ax

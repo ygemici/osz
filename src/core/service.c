@@ -126,9 +126,10 @@ void service_loadso(char *fn)
 void service_rtlink()
 {
     int i, j, k, n = 0;
-//    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
+    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     OSZ_rela *rel = relas;
     uint64_t *paging = (uint64_t *)&tmp2map;
+
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1));    
@@ -304,6 +305,9 @@ void service_rtlink()
         }
     }
     // go again and save entry points onto stack
+    // crt0 starts with a 'ret', so _start function address
+    // will be popped up and executed.
+
     // TODO: properly pad stack
     for(j=0; j<__PAGESIZE/8; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1));    
@@ -311,8 +315,12 @@ void service_rtlink()
             continue;
         *stack_ptr = ehdr->e_entry + TEXT_ADDRESS + j*__PAGESIZE;
         stack_ptr--;
+        tcb->rsp -= 8;
+        if(j==0) {
+            // record crt0 entry point at begining of text section
+            tcb->rip = (uint64_t)(TEXT_ADDRESS + ehdr->e_ehsize+ehdr->e_phnum*ehdr->e_phentsize);
+        }
     }
-    // TODO: record stack pointer in TCB
 }
 
 void service_mapbss(uint64_t phys, uint64_t size)
@@ -409,7 +417,8 @@ void sys_init()
     service_rtlink();
     // modify TCB for system task
     tcb->priority = PRI_SYS;
-    //TODO: set IOPL=3 in rFlags
+    //set IOPL=3 in rFlags
+    tcb->rflags |= (3<<12);
 
     // add to queue so that scheduler will know about this thread
     thread_add(pid);

@@ -62,12 +62,7 @@ typedef struct {
     uint8_t gpr[120];   // general purpose registers save area
     uint8_t fx[512];    // floating point and media registers save area (16 aligned)
     // ordering does not matter
-    uint32_t evtq_size; // number of pending events max
-    uint64_t corersp;   // core stack pointer
-    uint64_t userrip;   // user instruction pointer on syscall
     uint64_t memroot;   // memory mapping root
-    uint64_t userflags; // user space cpu flags
-    uint64_t usererrno; // thread-safe libc errno
     uint64_t linkmem;   // number of linked memory pages
     uint64_t allocmem;  // number of allocated memory pages
     pid_t next;         // next thread in this priority level
@@ -78,7 +73,14 @@ typedef struct {
     uint64_t billcnt;   // ticks thread spent in userspace
     uint64_t syscnt;    // ticks thread spent in kernelspace (core)
     uint64_t self;      // self pointer (physical address of TLB PT)
+    uint64_t evtq_size; // number of pending events max
     uuid_t acl[128];     // access control list
+    uint8_t padding[__PAGESIZE-2784-40];
+    uint64_t rip;
+    uint64_t cs;
+    uint64_t rflags;
+    uint64_t rsp;
+    uint64_t ss;
 } __attribute__((packed)) OSZ_tcb;
 
 #include "ccb.h"        // CPU Control Block

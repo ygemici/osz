@@ -97,6 +97,8 @@ extern void kfree(void* ptr);
 extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
+/** Map a thread's address space */
+extern void thread_map(pid_t thread);
 /** Add thread to scheduling */
 extern void thread_add(pid_t thread);
 /** Remove thread from scheduling */

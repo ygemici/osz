@@ -55,6 +55,10 @@ pid_t thread_new(char *cmdline)
     self = (uint64_t)ptr;
     tcb->allocmem = 8 + nrmqmax;
     tcb->evtq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
+    tcb->cs = 0x20+3; // ring 3 user code
+    tcb->ss = 0x18+3; // ring 3 user data
+    tcb->rflags = 0x2; // enable interrupts and mandatory 2
+
     /* allocate memory mappings */
     // PML4
     ptr=pmm_alloc();
@@ -62,18 +66,18 @@ pid_t thread_new(char *cmdline)
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDPE
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+PG_CORE;
+    paging[0]=(uint64_t)ptr+PG_USER_RW;
     paging[511]=core_mapping;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDE
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+PG_CORE;
+    paging[0]=(uint64_t)ptr+PG_USER_RW;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PT text
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+PG_CORE;
+    paging[0]=(uint64_t)ptr+PG_USER_RW;
     ptr2=pmm_alloc();
-    paging[1]=(uint64_t)ptr2+PG_CORE;
+    paging[1]=(uint64_t)ptr2+PG_USER_RW;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // map TCB
     tcb->self = (uint64_t)ptr;
@@ -95,17 +99,26 @@ pid_t thread_new(char *cmdline)
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     i = 511-(kstrlen(cmdline)+2+7)/8;
     kstrcpy((char*)(&paging[i--]), cmdline);
-    paging[i--] = 0;                                            // argv[1]
+    paging[i--] = 0;                                 // argv[1]
     paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+2)*8;i--; // argv[0]
     paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+1)*8;i--; // argv
-    paging[i--] = 1;                                            // argc
+    paging[i--] = 1;                                 // argc
     stack_ptr = ptr + i*8;
+    tcb->rsp = TEXT_ADDRESS - __PAGESIZE + (i+1)*8;
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmp2map, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
     kprintf("tcb=%x stack=%x %s\n",tcb->self,stack_ptr,cmdline);
 #endif
     return self/__PAGESIZE;
+}
+
+// map a thread
+void thread_map(pid_t thread)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)(&tmp2map);
+    kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
+    __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(tcb->memroot) : "%rax" );
 }
 
 // add a TCB to priority queue

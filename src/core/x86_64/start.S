@@ -51,17 +51,13 @@ _start:
     jmp     1f
     nop
 1:  movl    $0x10, %eax
-    movl    %eax, %ds
     movl    %eax, %es
     movl    %eax, %ss
-    movl    $0x18, %eax
+    movl    $0x1b, %eax
+    movl    %eax, %ds
+    movl    %eax, %es
     movl    %eax, %fs
     movl    %eax, %gs
-/* save core mappings pointer in PML4 */
-    movq    %cr3, %rax
-    addq    $4096-8, %rax
-    movq    (%rax), %rax
-    movq    %rax, core_mapping
 /* setup stack (should be ok, but be sure) */
     xor     %rsp, %rsp
 /* jump to 64 bit code segment */
@@ -134,7 +130,7 @@ cpu_init:
     movl    $0xC0000080, %ecx
     rdmsr
     orl     $0x2400, %eax
-    wrmsr
+/*    wrmsr*/
 
     /* enable OSFXSR and TSC */
     movq    %cr4, %rax

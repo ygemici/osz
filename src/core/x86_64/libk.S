@@ -161,6 +161,10 @@ kmap_init:
     movq    %cr3, %rax
     movq    %rax, identity_mapping
     add     %rax, %rbx
+    /* save core mappings pointer in PML4 */
+    addq    $4096-8, %rax
+    movq    (%rax), %rax
+    movq    %rax, core_mapping
     /* PDPE */
     movq    (%rbx), %rax
     xorb    %al, %al
