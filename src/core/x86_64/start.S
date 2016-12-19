@@ -98,10 +98,6 @@ cpu_init:
     movq    $0x52535846, %rsi
     bt      $24, %edx
     jnc     1f
-    /* PSE */
-    movq    $0x00455350, %rsi
-    bt      $3, %edx
-    jnc     1f
     /* TSC */
     movq    $0x00435354, %rsi
     bt      $4, %edx
@@ -121,20 +117,21 @@ cpu_init:
     movq    $0x0000584E, %rsi
     bt      $20, %edx
     jnc     1f
-    /* SCALL */
+    /* SYSCALL */
     movq    $0x4C4C4143535953, %rsi
     bt      $11, %edx
     jnc     1f
 
-    /* enable FXSAFE and NX */
+    /* enable NX and SYSCALL */
     movl    $0xC0000080, %ecx
     rdmsr
-    orl     $0x2400, %eax
-/*    wrmsr*/
+    orl     $0x801, %eax
+    wrmsr
 
     /* enable OSFXSR and TSC */
     movq    %cr4, %rax
-    orl    $0x102, %eax
+    orl     $0x200, %eax
+    andb    $0xFB, %al
     movq    %rax, %cr4
     ret
 

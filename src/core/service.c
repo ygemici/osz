@@ -101,7 +101,7 @@ void *service_loadelf(char *fn)
     while(size--) {
         void *pm = pmm_alloc();
         kmemcpy(pm,(char *)elf + (i-ret)*__PAGESIZE,__PAGESIZE);
-        paging[i]=(uint64_t)(pm) + PG_USER_RW;
+        paging[i]=((uint64_t)(pm) + PG_USER_RW)|((uint64_t)1<<63);
         tcb->allocmem++;
         i++;
     }
@@ -132,7 +132,7 @@ void service_rtlink()
 
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
         Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
@@ -201,7 +201,7 @@ void service_rtlink()
                 uint64_t o =rela->r_offset + j*__PAGESIZE;
                 /* because the thread is not mapped yet, we have to translate
                  * address manually */
-                rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)) + (o&(__PAGESIZE-1));
+                rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
                 if(verbose>1)
@@ -218,7 +218,7 @@ void service_rtlink()
 
     /*** resolve addresses ***/
     for(j=0; j<__PAGESIZE/8; j++) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
         Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
@@ -310,7 +310,7 @@ void service_rtlink()
 
     // TODO: properly pad stack
     for(j=0; j<__PAGESIZE/8; j++) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
         *stack_ptr = ehdr->e_entry + TEXT_ADDRESS + j*__PAGESIZE;

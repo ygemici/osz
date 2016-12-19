@@ -57,7 +57,7 @@ pid_t thread_new(char *cmdline)
     tcb->evtq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
     tcb->cs = 0x20+3; // ring 3 user code
     tcb->ss = 0x18+3; // ring 3 user data
-    tcb->rflags = 0x2; // enable interrupts and mandatory 2
+    tcb->rflags = 2/*0x102*/; // enable interrupts and mandatory bit 1
 
     /* allocate memory mappings */
     // PML4
@@ -75,21 +75,21 @@ pid_t thread_new(char *cmdline)
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PT text
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+PG_USER_RW;
+    paging[0]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     ptr2=pmm_alloc();
     paging[1]=(uint64_t)ptr2+PG_USER_RW;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // map TCB
     tcb->self = (uint64_t)ptr;
-    paging[0]=self+PG_USER_RO;
+    paging[0]=(self+PG_USER_RO)|((uint64_t)1<<63);
     // allocate message queue
     for(i=0;i<nrmqmax;i++) {
         ptr=pmm_alloc();
-        paging[i+(MQ_ADDRESS/__PAGESIZE)]=(uint64_t)ptr+PG_USER_RW;
+        paging[i+(MQ_ADDRESS/__PAGESIZE)]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     }
     // allocate stack
     ptr=pmm_alloc();
-    paging[511]=(uint64_t)ptr+PG_USER_RW;
+    paging[511]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     // we don't need the table any longer, so map it to message queue header
     kmap((uint64_t)&tmp2map, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
     eventhdr_t *evthdr = (eventhdr_t *)&tmp2map;

@@ -984,21 +984,21 @@ protmode_start:
 @@:         inc         esi
             cmp         esi, ecx
             jae         .errfs3
+            cmp         dword [esi], 5A2F534Fh ; OS/Z magic
+            je          .alt
             cmp         dword [esi], 464C457Fh ; ELF magic
             jne         @b
-            cmp         word [esi+4], 0102h ;lsb 64 bit
-            jne         @b
-            cmp         word [esi+16], 02h  ;executable (has phdr)
+.alt:       cmp         word [esi+4], 0102h ;lsb 64 bit
             jne         @b
             cmp         word [esi+0x38], 0  ;e_phnum > 0
             jz          @b
 .coreok:
             ; parse ELF
+            cmp         dword [esi], 5A2F534Fh ; OS/Z magic
+            je          @f
             cmp         dword [esi], 464C457Fh ; ELF magic
             jne         .badcore
-            cmp         word [esi+4], 0102h ;lsb 64 bit
-            jne         .badcore
-            cmp         word [esi+16], 02h  ;executable (has phdr)
+@@:         cmp         word [esi+4], 0102h ;lsb 64 bit
             je          @f
 .badcore:   mov         esi, badcore
             jmp         prot_diefunc

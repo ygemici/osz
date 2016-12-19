@@ -50,6 +50,7 @@ timer:
     .align 8
 nopic:
     .asciz	"%s not supported"
+
 .section .text
 
 /* store thread's context into Thread Control Block */
@@ -80,12 +81,13 @@ isr_initgates:
     /* STAR */
     xorq	%rcx, %rcx
     movl	$0xC0000081, %ecx
-    movq	$0x0013000800000000, %rax
+    movq	$0x0023000800000000, %rax
     wrmsr
     /* LSTAR */
-    inc		%ecx
-    xorl	%edx, %edx
+    incl	%ecx
     movq	$isr_syscall, %rax
+    movq    %rax, %rdx
+    shrq    $32, %rdx
     wrmsr
 /* enable IRQs */
     /* APIC init */
@@ -119,12 +121,13 @@ isr_initgates:
     ret
 
 /* syscall dispatcher */
-.align	16
+.align	16, 0x90
 isr_syscall:
+xchg %bx, %bx
     sysret
 
 /* exception handler ISRs */
-.align 128
+.align 128, 0x90
 isr_exc00divzero:
     cli
     lock
@@ -139,7 +142,7 @@ isr_exc00divzero:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc01debug:
     cli
     lock
@@ -154,7 +157,7 @@ isr_exc01debug:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc02nmi:
     cli
     lock
@@ -169,7 +172,7 @@ isr_exc02nmi:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc03chkpoint:
     cli
     lock
@@ -184,7 +187,7 @@ isr_exc03chkpoint:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc04overflow:
     cli
     lock
@@ -199,7 +202,7 @@ isr_exc04overflow:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc05bound:
     cli
     lock
@@ -214,7 +217,7 @@ isr_exc05bound:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc06invopcode:
     cli
     lock
@@ -229,7 +232,7 @@ isr_exc06invopcode:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc07devunavail:
     cli
     lock
@@ -244,7 +247,7 @@ isr_exc07devunavail:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc08dblfault:
     cli
     lock
@@ -259,7 +262,7 @@ isr_exc08dblfault:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc09coproc:
     cli
     lock
@@ -274,7 +277,7 @@ isr_exc09coproc:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc10invtss:
     cli
     lock
@@ -289,7 +292,7 @@ isr_exc10invtss:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc11segfault:
     cli
     lock
@@ -304,7 +307,7 @@ isr_exc11segfault:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc12stackfault:
     cli
     lock
@@ -319,7 +322,7 @@ isr_exc12stackfault:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc13genprot:
     cli
     lock
@@ -334,7 +337,7 @@ isr_exc13genprot:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc14pagefault:
     cli
     lock
@@ -349,7 +352,7 @@ isr_exc14pagefault:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc15unknown:
     cli
     lock
@@ -364,7 +367,7 @@ isr_exc15unknown:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc16float:
     cli
     lock
@@ -379,7 +382,7 @@ isr_exc16float:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc17alignment:
     cli
     lock
@@ -394,7 +397,7 @@ isr_exc17alignment:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc18machinecheck:
     cli
     lock
@@ -409,7 +412,7 @@ isr_exc18machinecheck:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_exc19double:
     cli
     lock
@@ -425,7 +428,7 @@ isr_exc19double:
     iretq
 
 /* IRQ handler ISRs */
-.align 128
+.align 128, 0x90
 isr_irq0:
     cli
     lock
@@ -443,7 +446,7 @@ isr_irq0:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq1:
     cli
     lock
@@ -461,7 +464,7 @@ isr_irq1:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq2:
     cli
     lock
@@ -479,7 +482,7 @@ isr_irq2:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq3:
     cli
     lock
@@ -497,7 +500,7 @@ isr_irq3:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq4:
     cli
     lock
@@ -515,7 +518,7 @@ isr_irq4:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq5:
     cli
     lock
@@ -533,7 +536,7 @@ isr_irq5:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq6:
     cli
     lock
@@ -551,7 +554,7 @@ isr_irq6:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq7:
     cli
     lock
@@ -569,7 +572,7 @@ isr_irq7:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq8:
     cli
     lock
@@ -587,7 +590,7 @@ isr_irq8:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq9:
     cli
     lock
@@ -605,7 +608,7 @@ isr_irq9:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq10:
     cli
     lock
@@ -623,7 +626,7 @@ isr_irq10:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq11:
     cli
     lock
@@ -641,7 +644,7 @@ isr_irq11:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq12:
     cli
     lock
@@ -659,7 +662,7 @@ isr_irq12:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq13:
     cli
     lock
@@ -677,7 +680,7 @@ isr_irq13:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq14:
     cli
     lock
@@ -695,7 +698,7 @@ isr_irq14:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq15:
     cli
     lock
@@ -713,7 +716,7 @@ isr_irq15:
     sti
     iretq
 
-.align 128
+.align 128, 0x90
 isr_irq16:
     cli
     lock

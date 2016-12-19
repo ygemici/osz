@@ -343,10 +343,10 @@ LoadCore(UINT8 *initrd_ptr)
         ptr=initrd_ptr;
         while(i-->0) {
             Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ptr);
-            if(!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)&&
+            if((!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||!CompareMem(ehdr->e_ident,"OS/Z",4))&&
                 ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
                 ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
-                ehdr->e_type==ET_EXEC&&ehdr->e_phnum>0){
+                ehdr->e_phnum>0){
                     break;
                 }
             ptr++;
@@ -358,10 +358,10 @@ LoadCore(UINT8 *initrd_ptr)
     if(ptr!=NULL) {
         // Parse ELF64
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ptr);
-        if(CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||
+        if((CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)&&CompareMem(ehdr->e_ident,"OS/Z",4))||
             ehdr->e_ident[EI_CLASS]!=ELFCLASS64||
             ehdr->e_ident[EI_DATA]!=ELFDATA2LSB||
-            ehdr->e_type!=ET_EXEC||ehdr->e_phnum==0){
+            ehdr->e_phnum==0){
                 return report(EFI_LOAD_ERROR,L"Kernel is not an executable ELF64 for x86_64");
             }
         // Check program header

@@ -33,7 +33,7 @@ void register_irq(uint8_t irq, void *handler)
 
 void _init(int argc, char **argv)
 {
-	printf("Hello from system");
-    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
+//	printf("Hello from system");
+    __asm__ __volatile__ ( "xchgw %%bx,%%bx;syscall" : : : );
 	while(1);
 }

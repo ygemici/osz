@@ -5,16 +5,19 @@ all: todogen util boot system apps images
 todogen:
 	@grep -ni 'TODO:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >TODO.txt || true
 
-boot: loader/bootboot.bin
+boot: loader/bootboot.bin loader/bootboot.efi
 
 loader/bootboot.bin:
 	@echo "LOADER"
-	@make -e --no-print-directory -C loader/$(LOADER)-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
+	@make -e --no-print-directory -C loader/mb-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
+
+loader/bootboot.efi:
+	@echo "LOADER"
+	@make -e --no-print-directory -C loader/efi-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
 
 util: tools
 	@date +'#define _OS_Z_BUILD "%Y-%m-%d %H:%M:%S UTC"' >etc/include/lastbuild.h
 	@echo '#define _OS_Z_ARCH "$(ARCH)"' >>etc/include/lastbuild.h
-	@echo '#define _OS_Z_LOADER "$(LOADER)-$(ARCH)"' >>etc/include/lastbuild.h
 	@echo "TOOLS"
 	@make --no-print-directory -C tools all | grep -v 'Nothing to be done' || true
 
@@ -40,7 +43,6 @@ vdmk: images
 	@make -e --no-print-directory -C tools vdmk | grep -v 'Nothing to be done' || true
 
 clean:
-	@#make -e --no-print-directory -C loader/$(LOADER)-$(ARCH) clean
 	@make -e --no-print-directory -C loader/efi-x86_64/zlib_inflate clean
 	@make -e --no-print-directory -C src clean
 	@make -e --no-print-directory -C tools clean

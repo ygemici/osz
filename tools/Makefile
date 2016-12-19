@@ -7,11 +7,7 @@ HOMEFILE = ../bin/home.part
 DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VDMKIMAGE = ../bin/disk.vdmk
-ifneq ("$(LOADER)", "efi")
-SRCS = $(filter-out efirom.c dumpelf.c dynamic.c,$(wildcard *.c))
-else
 SRCS = $(filter-out dumpelf.c dynamic.c,$(wildcard *.c))
-endif
 OPT  = -g
 LIBS =
 OBJS = $(SRCS:.c=.o)

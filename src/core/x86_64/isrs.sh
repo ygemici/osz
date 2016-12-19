@@ -124,6 +124,7 @@ cat >>isrs.S <<EOF
     .align 8
 nopic:
     .asciz	"%s not supported"
+
 .section .text
 
 /* store thread's context into Thread Control Block */
@@ -154,12 +155,13 @@ isr_initgates:
     /* STAR */
     xorq	%rcx, %rcx
     movl	\$0xC0000081, %ecx
-    movq	\$0x0013000800000000, %rax
+    movq	\$0x0023000800000000, %rax
     wrmsr
     /* LSTAR */
-    inc		%ecx
-    xorl	%edx, %edx
+    incl	%ecx
     movq	\$isr_syscall, %rax
+    movq    %rax, %rdx
+    shrq    \$32, %rdx
     wrmsr
 /* enable IRQs */
 EOF
@@ -260,8 +262,9 @@ cat >>isrs.S <<EOF
     ret
 
 /* syscall dispatcher */
-.align	16
+.align	16, 0x90
 isr_syscall:
+xchg %bx, %bx
     sysret
 
 /* exception handler ISRs */
@@ -275,7 +278,7 @@ do
 		handler="excabort"
 	fi
 	cat >>isrs.S <<-EOF
-	.align $isrmax
+	.align $isrmax, 0x90
 	isr_$isr:
 	    cli
 	    lock
@@ -300,7 +303,7 @@ for isr in `seq 0 $numirq`
 do
 	echo irq$isr
 	cat >>isrs.S <<-EOF
-	.align $isrmax
+	.align $isrmax, 0x90
 	isr_irq$isr:
 	    cli
 	    lock

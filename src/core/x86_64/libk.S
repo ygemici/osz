@@ -143,6 +143,10 @@ kmap:
     call    kmap_getpte
     andw    $0xF000, %si
     mov     %dl, %sil
+    /* copy W bit to NX bit */
+    andb    $2, %dl
+    shlq    $62, %rdx
+    addq    %rdx, %rsi
     movq    %rsi, (%rax)
     invlpg  (%rdi)
     ret
