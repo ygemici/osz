@@ -2,7 +2,6 @@
 
 a=$1
 a="${a##*/}"
-i=0
 readelf --dyn-syms $1 | grep 'FUNC' | grep -v ': 0000000000000000     0 FUNC' | while read line
 do
 	idx=`echo "$line" | cut -d ':' -f 1`

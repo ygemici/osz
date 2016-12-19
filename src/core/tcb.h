@@ -28,15 +28,6 @@
 #define OSZ_TCB_MAGIC "THRD"
 #define OSZ_TCB_MAGICH 0x44524854
 
-enum OSZ_tcb_state
-{
-    tcb_receiving,
-    tcb_sending,
-    tcb_running,
-    tcb_waiting,
-    tcb_hybernated
-};
-
 // index to hd_active and cr_active queues, priority levels
 enum {
     PRI_SYS, // priority 0, system, non-interruptible
@@ -49,5 +40,16 @@ enum {
     PRI_IDLE // priority 7, idle queue (defragmenter, screensaver etc.)
 };
 
-#define OSZ_tcb_flag_dispatching    1
-#define OSZ_tcb_flag_calling        2
+#define TCB_STATE(s) ((s)&0x7)
+enum OSZ_tcb_state
+{
+    tcb_receiving,
+    tcb_sending,
+    tcb_running,
+    tcb_waiting,
+    tcb_hybernated
+};
+
+/* TCB flags in state */
+#define OSZ_tcb_dispatching    8
+#define OSZ_tcb_calling        16

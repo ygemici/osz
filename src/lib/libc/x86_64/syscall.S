@@ -34,8 +34,9 @@
 .global clismg
 .global cldl
 
-/* dest: pid_t<<12 + msg type */
 .section .text
+
+/* dest: pid_t<<16 + msg type */
 /* uint64_t clcall(dest,arg0,arg1,arg2) */
 clcall:
     # blocking, send a request and receive result
@@ -61,8 +62,8 @@ clrecv:
 /* uint64_t clismg() */
 clismg:
     # non-blocking is there a message?
-    movq     OSZ_tcb_evtq_ptr, %rax
-    subq     OSZ_tcb_evtq_endptr, %rax
+    movq     OSZ_evtq_ptr, %rax
+    subq     OSZ_evtq_endptr, %rax
     ret
 
 /* void *cldl(&symtable,objectfile) */

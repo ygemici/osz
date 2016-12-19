@@ -24,8 +24,9 @@
  *
  * @brief Low level exception and Interrupt Service Routines
  */
-#include "isr.h"
 #define _AS 1
+#include "isr.h"
+#include "platform.h"
 #include "ccb.h"
 
 .global isr_initgates
@@ -34,15 +35,21 @@
 .extern gdt64_tss
 .extern isr_irq
 .extern excabort
+.extern pmm
 
 .section .data
     .align	16
 idt64:
     .word	32*16-1
     .quad	0
-    .align	64
+    .align	8
 apic:
     .quad	0
+timer:
+    .asciz "APIC"
+    .align 8
+nopic:
+    .asciz	"%s not supported"
 .section .text
 
 /* store thread's context into Thread Control Block */
@@ -81,10 +88,30 @@ isr_initgates:
     movq	$isr_syscall, %rax
     wrmsr
 /* enable IRQs */
-    /* x2APIC init */
+    /* APIC init */
+    xorq	%rax, %rax
+    incb	%al
+    cpuid
+    btl 	$9, %edx
+    jc  	1f
+    movq	$nopic, %rdi
+    movq	$timer, %rsi
+    call	kpanic
+    1:
+    /* find apic physical address */
     movl	$0x1B, %ecx
     rdmsr
-    btsl	$10, %eax
+    andw	$0xF000, %ax
+    /* map apic at pmm.bss_end and increase bss pointer */
+    movq	pmm + 40, %rdi
+    movq	%rdi, apic
+    movq	%rax, %rsi
+    movb	$PG_CORE_NOCACHE, %dl
+    call	kmap
+    addq	$4096, pmm + 40
+    /* enable */
+    movl	$0x1B, %ecx
+    rdmsr
     btsl	$11, %eax
     wrmsr
     /* IOAPIC init */
@@ -407,10 +434,9 @@ isr_irq0:
     xorq	%rdi, %rdi
     movb	$0, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -426,10 +452,9 @@ isr_irq1:
     xorq	%rdi, %rdi
     movb	$1, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -445,10 +470,9 @@ isr_irq2:
     xorq	%rdi, %rdi
     movb	$2, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -464,10 +488,9 @@ isr_irq3:
     xorq	%rdi, %rdi
     movb	$3, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -483,10 +506,9 @@ isr_irq4:
     xorq	%rdi, %rdi
     movb	$4, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -502,10 +524,9 @@ isr_irq5:
     xorq	%rdi, %rdi
     movb	$5, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -521,10 +542,9 @@ isr_irq6:
     xorq	%rdi, %rdi
     movb	$6, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -540,10 +560,9 @@ isr_irq7:
     xorq	%rdi, %rdi
     movb	$7, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -559,10 +578,9 @@ isr_irq8:
     xorq	%rdi, %rdi
     movb	$8, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -578,10 +596,9 @@ isr_irq9:
     xorq	%rdi, %rdi
     movb	$9, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -597,10 +614,9 @@ isr_irq10:
     xorq	%rdi, %rdi
     movb	$10, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -616,10 +632,9 @@ isr_irq11:
     xorq	%rdi, %rdi
     movb	$11, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -635,10 +650,9 @@ isr_irq12:
     xorq	%rdi, %rdi
     movb	$12, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -654,10 +668,9 @@ isr_irq13:
     xorq	%rdi, %rdi
     movb	$13, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -673,10 +686,9 @@ isr_irq14:
     xorq	%rdi, %rdi
     movb	$14, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -692,10 +704,9 @@ isr_irq15:
     xorq	%rdi, %rdi
     movb	$15, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -711,10 +722,9 @@ isr_irq16:
     xorq	%rdi, %rdi
     movb	$16, %dil
     call	isr_irq
-    /* x2APIC EOI */
-    xorl	%eax, %eax
-    movl	$0x80B, %ecx
-    wrmsr
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS

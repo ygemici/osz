@@ -30,7 +30,7 @@
 
 /* external resources */
 extern OSZ_pmm pmm;
-extern char TEXT_ADDRESS;
+extern uint64_t *stack_ptr;
 
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*8))
@@ -48,9 +48,7 @@ OSZ_rela __attribute__ ((section (".data"))) *relas;
 /* thread ids of system tasks. */
 pid_t  __attribute__ ((section (".data"))) subsystems[SRV_NUM];
 
-/* load an ELF64 executable into text segment starting at 2M
- *  - tmp2map: the text segment's PT mapped,
- *  - pmm.bss_end: current thread's TCB mapped */
+/* load an ELF64 binary into text segment starting at 2M */
 void *service_loadelf(char *fn)
 {
     // this is so early, we don't have initrd in fs process' bss yet.
@@ -111,7 +109,7 @@ void *service_loadelf(char *fn)
     return (void*)((uint64_t)ret * __PAGESIZE);
 }
 
-/* load an ELF64 shared object into text segment */
+/* load an ELF64 shared library */
 void service_loadso(char *fn)
 {
 #if DEBUG
@@ -123,8 +121,9 @@ void service_loadso(char *fn)
 /* Fill in GOT entries. Relies on identity mapping
  *  - tmp2map: the text segment's PT mapped,
  *  - pmm.bss_end: current thread's TCB mapped,
- *  - relas: array of OSZ_rela items alloceted with kalloc() */
-void service_dynlink()
+ *  - relas: array of OSZ_rela items alloceted with kalloc()
+ *  - stack_ptr: physical address of thread's stack */
+void service_rtlink()
 {
     int i, j, k, n = 0;
 //    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
@@ -156,26 +155,30 @@ void service_dynlink()
                     );
 #endif
                 while(d->d_tag != DT_NULL) {
-                    if(d->d_tag == DT_STRTAB) {
-                        strtable = (char *)ehdr + (d->d_un.d_ptr&0xFFFF);
-                    }
-                    if(d->d_tag == DT_SYMTAB) {
-                        sym = (Elf64_Sym *)((uint8_t *)ehdr + (d->d_un.d_ptr&0xFFFF));
-                    }
-                    if(d->d_tag == DT_SYMENT) {
-                        syment = d->d_un.d_val;
-                    }
-                    if(d->d_tag == DT_JMPREL) {
-                        rela = (Elf64_Rela *)((uint8_t *)ehdr + (d->d_un.d_ptr&0xFFFF));
-                    }
-                    if(d->d_tag == DT_PLTRELSZ) {
-                        relasz = d->d_un.d_val;
-                    }
-                    if(d->d_tag == DT_RELAENT) {
-                        relaent = d->d_un.d_val;
-                    }
-                    if(d->d_tag == DT_PLTGOT) {
-                        got = (d->d_un.d_ptr&0xFFFF);
+                    switch(d->d_tag) {
+                        case DT_STRTAB:
+                            strtable = (char *)ehdr + d->d_un.d_ptr;
+                            break;
+                        case DT_SYMTAB:
+                            sym = (Elf64_Sym *)((uint8_t *)ehdr + d->d_un.d_ptr);
+                            break;
+                        case DT_SYMENT:
+                            syment = d->d_un.d_val;
+                            break;
+                        case DT_JMPREL:
+                            rela = (Elf64_Rela *)((uint8_t *)ehdr + d->d_un.d_ptr);
+                            break;
+                        case DT_PLTRELSZ:
+                            relasz = d->d_un.d_val;
+                            break;
+                        case DT_RELAENT:
+                            relaent = d->d_un.d_val;
+                            break;
+                        case DT_PLTGOT:
+                            got = d->d_un.d_ptr;
+                            break;
+                        default:
+                            break;
                     }
                     /* move pointer to next dynamic entry */
                     d++;
@@ -228,17 +231,21 @@ void service_dynlink()
             if(phdr->p_type==PT_DYNAMIC) {
                 d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr->p_offset);
                 while(d->d_tag != DT_NULL) {
-                    if(d->d_tag == DT_STRTAB) {
-                        strtable = (char *)ehdr + (d->d_un.d_ptr&0xFFFF);
-                    }
-                    if(d->d_tag == DT_STRSZ) {
-                        strsz = d->d_un.d_val;
-                    }
-                    if(d->d_tag == DT_SYMTAB) {
-                        sym = (Elf64_Sym *)((uint8_t *)ehdr + (d->d_un.d_ptr&0xFFFF));
-                    }
-                    if(d->d_tag == DT_SYMENT) {
-                        syment = d->d_un.d_val;
+                    switch(d->d_tag) {
+                        case DT_STRTAB:
+                            strtable = (char *)ehdr + d->d_un.d_ptr;
+                            break;
+                        case DT_STRSZ:
+                            strsz = d->d_un.d_val;
+                            break;
+                        case DT_SYMTAB:
+                            sym = (Elf64_Sym *)((uint8_t *)ehdr + d->d_un.d_ptr);
+                            break;
+                        case DT_SYMENT:
+                            syment = d->d_un.d_val;
+                            break;
+                        default:
+                            break;
                     }
                     /* move pointer to next dynamic entry */
                     d++;
@@ -259,8 +266,8 @@ void service_dynlink()
         for(i=0;i<(strtable-(char*)sym)/syment;i++) {
             if(s->st_name > strsz) break;
             // is it defined in this object?
-            if(s->st_value && s->st_size) {
-                uint64_t offs = (uint64_t)s->st_value + j*__PAGESIZE+(uint64_t)&TEXT_ADDRESS;
+            if(s->st_value) {
+                uint64_t offs = (uint64_t)s->st_value + j*__PAGESIZE+TEXT_ADDRESS;
 #if DEBUG
                 if(verbose>0)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
@@ -269,7 +276,7 @@ void service_dynlink()
                 // this symbol's virtual address
                 for(k=0;k<n;k++){
                     OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
-                    if(r->offs!=0 && !kmemcmp(r->sym, strtable + s->st_name, 32)) {
+                    if(r->offs != 0 && !kstrcmp(r->sym, strtable + s->st_name)) {
 #if DEBUG
                         if(verbose>0)
                             kprintf(" %x", r->offs);
@@ -296,6 +303,16 @@ void service_dynlink()
             kpanic("shared library missing for %s()\n", r->sym);
         }
     }
+    // go again and save entry points onto stack
+    // TODO: properly pad stack
+    for(j=0; j<__PAGESIZE/8; j++) {
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1));    
+        if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+            continue;
+        *stack_ptr = ehdr->e_entry + TEXT_ADDRESS + j*__PAGESIZE;
+        stack_ptr--;
+    }
+    // TODO: record stack pointer in TCB
 }
 
 void service_mapbss(uint64_t phys, uint64_t size)
@@ -305,19 +322,23 @@ void service_mapbss(uint64_t phys, uint64_t size)
 /* Initialize a system service, save "fs" and "system" */
 void service_init(int subsystem, char *fn)
 {
+    char *cmd = fn;
     if(fn==NULL) {
         // allocate space for dynamic linking
         relas = (OSZ_rela*)kalloc(2);
         return;
     }
-    pid_t pid = thread_new();
+    while(cmd[0]!='/')
+        cmd++;
+    cmd++;
+    pid_t pid = thread_new(cmd);
     subsystems[subsystem] = pid;
     // map executable
     service_loadelf(fn);
     // map libc
     service_loadso("lib/libc.so");
     // dynamic linker
-    service_dynlink();
+    service_rtlink();
     // add to queue so that scheduler will know about this thread
     thread_add(pid);
 }
@@ -328,7 +349,7 @@ void fs_init()
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
-    pid_t pid = thread_new();
+    pid_t pid = thread_new("fs");
     subsystems[SRV_fs] = pid;
     // map file system dispatcher
     service_loadelf("sbin/fs");
@@ -361,7 +382,7 @@ void fs_init()
     }
 
     // dynamic linker
-    service_dynlink();
+    service_rtlink();
     // map initrd in "fs" process' memory
     service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
@@ -375,7 +396,7 @@ void sys_init()
     // this is so early, we don't have initrd in fs process' bss yet.
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    pid_t pid = thread_new();
+    pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
     // map device driver dispatcher
     service_loadelf("sbin/system");
@@ -385,7 +406,7 @@ void sys_init()
     dev_init();
 
     // dynamic linker
-    service_dynlink();
+    service_rtlink();
     // modify TCB for system task
     tcb->priority = PRI_SYS;
     //TODO: set IOPL=3 in rFlags

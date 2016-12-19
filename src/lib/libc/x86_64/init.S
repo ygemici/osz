@@ -25,5 +25,7 @@
  * @brief Empty shared object initialization code if there's no _init()
  */
 
-.section .text
+.section .crt0
+
+    /* initial RIP on thread execution, first byte of text segment */
     ret

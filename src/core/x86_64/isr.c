@@ -33,6 +33,9 @@ extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void *isr_initgates(uint64_t *idt, OSZ_ccb *tss);
 extern OSZ_ccb ccb;
+extern pid_t subsystems[];
+
+uint64_t __attribute__ ((section (".data"))) identity_mapping;
 
 /* Initialize interrupts */
 void isr_init()
@@ -74,8 +77,19 @@ void isr_init()
 
 void isr_enable()
 {
-      // TODO: enable interrupts
+    // map "system" process
+    OSZ_tcb *systcb = (OSZ_tcb *)(subsystems[SRV_system]<<12);
+    __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(systcb->memroot) : "%rax" );
+//  start interrupts
+//    __asm__ __volatile__ ( "iret" : : : );
 //    __asm__ __volatile__ ( "sti" : : : );
+}
+
+void isr_disable()
+{
+      // clear interrupts and identity map memory
+      // (required by ACPI parser to power off machine)
+      __asm__ __volatile__ ( "cli; mov %0, %%rax; mov %%rax, %%cr3" : : "r"(identity_mapping) : "%rax" );
 }
 
 /* common IRQ handler */

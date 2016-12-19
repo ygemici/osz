@@ -71,4 +71,7 @@ void dev_init()
 
 void dev_poweroff()
 {
+    isr_disable();
+    // TODO: APCI poweroff
+    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 }

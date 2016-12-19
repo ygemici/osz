@@ -27,6 +27,8 @@ SECTIONS
   PROVIDE (_code = .);
   .text           :
   {
+    /* text segment must start with crt0 code */
+    *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
     *(.text.exit .text.exit.*)
     *(.text.startup .text.startup.*)

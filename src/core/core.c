@@ -46,6 +46,8 @@ void main()
     /* step 0: open eyes */
     // initialize kernel implementation of printf
     kprintf_init();
+    // check processor capabilities
+    cpu_init();
     // parse environment
     env_init();
     // initialize physical memory manager, required by new thread creation
@@ -91,7 +93,7 @@ void main()
 #if DEBUG
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
 #endif
-    kprintf_clr();
+    kprintf_reset();
     // enable interrupts. After the first timer IRQ the
     // scheduler will choose a thread to run and we'll...
     isr_enable();
@@ -99,6 +101,4 @@ void main()
     /* step 6: go to dreamless sleep. */
     // ...should not reach this code until shutdown process finished
     dev_poweroff();
-
-    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
 }

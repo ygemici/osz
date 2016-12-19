@@ -25,20 +25,24 @@
  * @brief Thread Control Block, architecture specific part
  */
 
-/* WARNING: must match OSZ_tcb.evtq_ptr - OSZ_tcb.magic */
-#define OSZ_tcb_evtq_ptr 16
-#define OSZ_tcb_evtq_endptr 24
-#define OSZ_tcb_gpr 48
-#define OSZ_tcb_fx 176
+#include <limits.h>
 
-/* WARNING: must match sizeof(msg_t) */
+/* WARNING: must match tcb struct, for asm */
+#define OSZ_tcb_gpr   8
+#define OSZ_tcb_fx  128
+
+/* WARNING: must match sizeof(msg_t), for asm */
 #define OSZ_event_size 32
+
+/* WARNING: must match eventhdr_t struct, for asm */
+#define OSZ_evtq_ptr    (__PAGESIZE)
+#define OSZ_evtq_endptr (__PAGESIZE+8)
 
 #ifndef _AS
 #include "../tcb.h"
 
-#define OSZ_tcb_flag_needsxsave     4
-#define OSZ_tcb_flag_needxmmsave    8
+/* platform specific TCB flags */
+#define OSZ_tcb_needsxsave     32
 
 // structure at MQ_ADDRESS
 typedef struct {
@@ -51,14 +55,13 @@ typedef struct {
 
 typedef struct {
     uint32_t magic;
-    uint8_t state;      // thread state
+    uint8_t state;      // thread state and flags
     uint8_t priority;   // thread priority
     uint16_t cpu;       // APIC ID of cpu on which this thread runs
     // tcb+8
     uint8_t gpr[120];   // general purpose registers save area
     uint8_t fx[512];    // floating point and media registers save area (16 aligned)
     // ordering does not matter
-    uint32_t flags;     // thread flags
     uint32_t evtq_size; // number of pending events max
     uint64_t corersp;   // core stack pointer
     uint64_t userrip;   // user instruction pointer on syscall

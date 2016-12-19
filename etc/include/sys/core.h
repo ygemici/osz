@@ -1,9 +1,8 @@
-#ifndef _SYSCALL_H
-#define _SYSCALL_H 1
-
-#define SRV_CORE 0
+#ifndef _SYS_CORE_H
+#define _SYS_CORE_H 1
 
 #define SYS_exit 60
+/*
 #define SYS_msgget 68
 #define SYS_msgsnd 69
 #define SYS_msgrcv 70
@@ -333,5 +332,6 @@
 #define SYS_copy_file_range 326
 #define SYS_preadv2 327
 #define SYS_pwritev2 328
+*/
 
 #endif

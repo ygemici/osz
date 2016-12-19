@@ -34,3 +34,5 @@
 #include <syscall.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+extern void exit(int code);

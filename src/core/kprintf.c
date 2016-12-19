@@ -49,7 +49,7 @@ typedef unsigned char *valist;
 
 extern char _binary_logo_tga_start;
 
-void kprintf_clr()
+void kprintf_reset()
 {
     kx = ky = fx = 0;
     reent = 0;
@@ -59,20 +59,26 @@ void kprintf_clr()
 
 void kprintf_init()
 {
+    int x, y, line, offs = 0;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     maxx = bootboot.fb_width / font->width;
     maxy = bootboot.fb_height / font->height;
-    kprintf_clr();
-#if DEBUG
-    kprintf("OS/Z starting...\n",1,2,3);
-#endif
+    // default fg and bg, cursor at home
+    kprintf_reset();
+    // clear screen
+    for(y=0;y<bootboot.fb_height;y++){
+        line=offs;
+        for(x=0;x<bootboot.fb_width;x++){
+            *((uint32_t*)(&fb + line))=(uint32_t)0;
+            line+=4;
+        }
+        offs+=bootboot.fb_scanline;
+    }
     // display boot logo
-    int offs =
-        ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
-        ((bootboot.fb_width/2-32) * 4);
-    int x,y, line;
     char *data = &_binary_logo_tga_start + 0x255;
     char *palette = &_binary_logo_tga_start + 0x12;
+    offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
+           ((bootboot.fb_width/2-32) * 4);
     for(y=0;y<64;y++){
         line=offs;
         for(x=0;x<64;x++){
@@ -89,6 +95,9 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
+#if DEBUG
+    kprintf("OS/Z starting...\n",1,2,3);
+#endif
 }
 
 void kprintf_putlogo()
@@ -140,6 +149,15 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
+}
+
+void kprintf_putascii(int64_t c)
+{
+	uint64_t *t = (uint64_t*)&tmp;
+    int i;
+    for(i=0;i<9;i++) tmp[i]=0;
+	*t = c;
+    kprintf(&tmp[0]);
 }
 
 void kprintf_putdec(int64_t c)
@@ -218,6 +236,9 @@ return;
                 goto nextchar;
             }
             reent++;
+            if(fmt[0]=='a') {
+                kprintf_putascii(arg);
+            }
             if(fmt[0]=='d') {
                 kprintf_putdec(arg);
             }

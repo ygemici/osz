@@ -27,6 +27,7 @@
 
 .section .text
 .global _start
+.global cpu_init
 .global gdt64_tss
 .extern main
 .extern core_mapping
@@ -84,3 +85,65 @@ gdt64_tss:
     .quad 0x0000890000000068    /* 28 tss */
     .quad 0x0000000000000000
 gdt64_end:
+
+cpu_init:
+    xorq	%rax, %rax
+    incb    %al
+    cpuid
+    /* minimum processor family */
+    movq    $0x796C696D6166, %rsi
+    cmp     $0x0600, %ax
+    jb      1f
+    /* SSE3 */
+    movq    $0x33455353, %rsi
+    bt      $0, %ecx
+    jnc     1f
+    /* FXSR */
+    movq    $0x52535846, %rsi
+    bt      $24, %edx
+    jnc     1f
+    /* PSE */
+    movq    $0x00455350, %rsi
+    bt      $3, %edx
+    jnc     1f
+    /* TSC */
+    movq    $0x00435354, %rsi
+    bt      $4, %edx
+    jnc     1f
+    /* MSR */
+    movq    $0x0052534D, %rsi
+    bt      $5, %edx
+    jnc     1f
+    /* PAT */
+    movq    $0x00544150, %rsi
+    bt      $16, %edx
+    jnc     1f
+
+    movl    $0x80000001, %eax
+    cpuid
+    /* NX */
+    movq    $0x0000584E, %rsi
+    bt      $20, %edx
+    jnc     1f
+    /* SCALL */
+    movq    $0x4C4C4143535953, %rsi
+    bt      $11, %edx
+    jnc     1f
+
+    /* enable FXSAFE and NX */
+    movl    $0xC0000080, %ecx
+    rdmsr
+    orl     $0x2400, %eax
+    wrmsr
+
+    /* enable OSFXSR and TSC */
+    movq    %cr4, %rax
+    orl    $0x102, %eax
+    movq    %rax, %cr4
+    ret
+
+    /* feature not supported */
+1:  movq    $nocpu, %rdi
+    call    kpanic
+nocpu:
+.asciz "CPU feature %a not supported"

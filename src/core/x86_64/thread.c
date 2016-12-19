@@ -29,12 +29,13 @@
 #include "../env.h"
 
 /* external resources */
-extern uint8_t MQ_ADDRESS;
 extern OSZ_pmm pmm;
 
 uint64_t __attribute__ ((section (".data"))) core_mapping;
+uint64_t __attribute__ ((section (".data"))) corepde_mapping;
+uint64_t __attribute__ ((section (".data"))) *stack_ptr;
 
-pid_t thread_new()
+pid_t thread_new(char *cmdline)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmp2map, self;
@@ -80,20 +81,29 @@ pid_t thread_new()
     // allocate message queue
     for(i=0;i<nrmqmax;i++) {
         ptr=pmm_alloc();
-        paging[i+((uint64_t)&MQ_ADDRESS/__PAGESIZE)]=(uint64_t)ptr+PG_USER_RW;
+        paging[i+(MQ_ADDRESS/__PAGESIZE)]=(uint64_t)ptr+PG_USER_RW;
     }
     // allocate stack
     ptr=pmm_alloc();
     paging[511]=(uint64_t)ptr+PG_USER_RW;
     // we don't need the table any longer, so map it to message queue header
-    kmap((uint64_t)&tmp2map, (uint64_t)(paging[((uint64_t)&MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmp2map, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
     eventhdr_t *evthdr = (eventhdr_t *)&tmp2map;
-    evthdr->evtq_ptr = evthdr->evtq_endptr = (msg_t*)(&MQ_ADDRESS+sizeof(eventhdr_t));
+    evthdr->evtq_ptr = evthdr->evtq_endptr = (msg_t*)(MQ_ADDRESS+sizeof(eventhdr_t));
     evthdr->evtq_nextserial = 1;
+    // set up stack
+    kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
+    i = 511-(kstrlen(cmdline)+2+7)/8;
+    kstrcpy((char*)(&paging[i--]), cmdline);
+    paging[i--] = 0;                                            // argv[1]
+    paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+2)*8;i--; // argv[0]
+    paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+1)*8;i--; // argv
+    paging[i--] = 1;                                            // argc
+    stack_ptr = ptr + i*8;
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmp2map, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    kprintf("tcb=%x\n",tcb->self);
+    kprintf("tcb=%x stack=%x %s\n",tcb->self,stack_ptr,cmdline);
 #endif
     return self/__PAGESIZE;
 }

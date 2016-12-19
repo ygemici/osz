@@ -30,65 +30,24 @@
  *  preserve RBP, RBX
  */
 
-.include "sys/core.h"
-
 .extern main
+.extern exit
 .global _start
-.global exit
-.global atexit
-.intel_syntax noprefix
+
+.section .crt0
+
+    /* initial RIP on thread execution, first byte of text segment */
+    ret
 
 .section .text
+
 _start:
-    mov     rax, 6f
-    mov     qword [5f], rax
-    xor     rax, rax
+    /* restore argc, argv as it may be ruined by shlib's _init */
+    movq    (%rsp), %rdi
+    movq    8(%rsp), %rsi
+    /* call main(argc,argv) function */
     call    main
-    mov     rcx, rax
-    jmp     1f
-exit:
-    mov     rcx, qword [rsp+8]
-1:  push    rcx
-    mov     rsi, 6f
-2:  cmp     rsi, 7f
-    je      3f
-    lodsq
-    or      rax, rax
-    jz      3f
-    push    rsi
-    call    rax
-    pop     rsi
-    jmp     2b
-3:  pop     rcx
-    mov     ebx, 60         # SYS_exit
-    mov     eax, 0x6C6C6163 # 'call'
-    syscall
+    /* exit thread */
+    movq    %rax, %rdi
+    call    exit
     ret
-atexit:
-    mov     rax, qword [rsp+8]
-    or      rax, rax
-    jz      4f
-    mov     rbx, qword [5f]
-    cmp     rbx, 7f
-    je      4f
-    cmp     rbx, qword [5f]
-    je      4f
-    mov     qword [rbx], rax
-    add     rbx, 8
-    mov     qword [5f], rbx
-4:  ret
-
-.section .data
-5:
-.quad 6f
-6:
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-.quad 0
-7:
-

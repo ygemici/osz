@@ -25,8 +25,10 @@
  * @brief Platform dependent headers
  */
 
-#include "../core.h"
-#include "tcb.h"
+#ifndef _AS
+# include "../core.h"
+# include "tcb.h"
+#endif
 
 #define PG_CORE 0b00011
 #define PG_CORE_NOCACHE 0b11011

@@ -1,4 +1,5 @@
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:36:    // TODO: debug why this isn't working. No errors, no output
-./src/core/service.c:391:    //TODO: set IOPL=3 in rFlags
-./src/core/x86_64/isrs.sh:172:		    /* TODO: map apic at pmm.bss and save pointer */
-./src/core/x86_64/isr.c:77:      // TODO: enable interrupts
+./src/core/service.c:307:    // TODO: properly pad stack
+./src/core/service.c:315:    // TODO: record stack pointer in TCB
+./src/core/service.c:412:    //TODO: set IOPL=3 in rFlags
+./src/core/x86_64/acpi.c:75:    // TODO: APCI poweroff

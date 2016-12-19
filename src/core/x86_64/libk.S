@@ -116,10 +116,14 @@ kstrcpy:
     ret
 
 kstrlen:
-    mov     %rdi, %rsi
+    movq    %rdi, %rsi
+    xor     %rcx, %rcx
+    decq    %rcx
 1:  lodsb
+    incq    %rcx
     or      %al, %al
     jnz     1b
+    movq    %rcx, %rax
     ret
 
 kstrcmp:
@@ -155,6 +159,7 @@ kmap_init:
     andl    $0x1FF, %ebx
     shlq    $3, %rbx
     movq    %cr3, %rax
+    movq    %rax, identity_mapping
     add     %rax, %rbx
     /* PDPE */
     movq    (%rbx), %rax
@@ -212,6 +217,8 @@ kmap_init:
     popq    %rbx
     ret
 
+/* IN rdi: virtual address
+ * OUT rax: address of page entry in PT */
 kmap_getpte:
     /* we have at least tmpmap, so we can map PTE */
     movq    kmap_tmp, %rbx

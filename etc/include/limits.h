@@ -31,12 +31,18 @@
 #define TMP_MAX	8
 #define FILENAME_MAX	111
 
-// (TEXT_ADDRESS-MQ_ADDRESS)/__PAGESIZE
-#define NRMQ_MAX	511
 
 #define __WORDSIZE	64
 #define __PAGESIZE	4096
 #define __SYSCALL_WORDSIZE		64
+
+// some OS/Z specific values for addresses
+#define TCB_ADDRESS 0
+#define MQ_ADDRESS __PAGESIZE
+#define TEXT_ADDRESS 0x200000
+#define BSS_ADDRESS 0x100000000
+// (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
+#define NRMQ_MAX	63
 
 #  define CHAR_BIT	8
 #  define SCHAR_MIN	(-128)

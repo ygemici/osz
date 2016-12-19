@@ -79,8 +79,9 @@ cat >isrs.S <<EOF
  *
  * @brief Low level exception and Interrupt Service Routines
  */
-#include "isr.h"
 #define _AS 1
+#include "isr.h"
+#include "platform.h"
 #include "ccb.h"
 
 .global isr_initgates
@@ -89,20 +90,43 @@ cat >isrs.S <<EOF
 .extern gdt64_tss
 .extern isr_irq
 .extern excabort
+.extern pmm
 
 .section .data
     .align	16
 idt64:
     .word	32*16-1
     .quad	0
-    .align	64
-apic:
-    .quad	0
+    .align	8
+EOF
+if [ "$1" == "pic" ]; then
+	cat >>isrs.S <<-EOF
+	timer:
+	    .asciz "PIC,PIT"
+	EOF
+else
+	if [ "$1" == "x2apic" ]; then
+		cat >>isrs.S <<-EOF
+		timer:
+		    .asciz "x2APIC"
+		EOF
+	else
+		cat >>isrs.S <<-EOF
+		apic:
+		    .quad	0
+		timer:
+		    .asciz "APIC"
+		EOF
+	fi
+fi
+cat >>isrs.S <<EOF
+    .align 8
+nopic:
+    .asciz	"%s not supported"
 .section .text
 
 /* store thread's context into Thread Control Block */
 isr_savecontext:
-    movq    %rax, tcb.gpr
     ret
 
 /* restore thread's context from Thread Control Block */
@@ -166,23 +190,18 @@ if [ "$1" == "pic" ]; then
 	    outb	%al, \$0x20
 	EOF
 else
-	if [ "$1" == "apic" ]; then
-		cat >>isrs.S <<-EOF
-		    /* APIC init */
-		    /* TODO: map apic at pmm.bss and save pointer */
-		    movl	\$0x1B, %ecx
-		    rdmsr
-		    btsl	\$11, %eax
-		    wrmsr
-		EOF
-		read -r -d '' EOI <<-EOF
-		    /* APIC EOI */
-		    movq	apic, %rax
-		    movl	\$0, 0xB0(%rax)
-		EOF
-	else
+	if [ "$1" == "x2apic" ]; then
 		cat >>isrs.S <<-EOF
 		    /* x2APIC init */
+		    xorq	%rax, %rax
+		    incb	%al
+		    cpuid
+		    btl 	\$21, %edx
+		    jc  	1f
+		    movq	\$nopic, %rdi
+		    movq	\$timer, %rsi
+		    call	kpanic
+		    1:
 		    movl	\$0x1B, %ecx
 		    rdmsr
 		    btsl	\$10, %eax
@@ -194,6 +213,40 @@ else
 		    xorl	%eax, %eax
 		    movl	\$0x80B, %ecx
 		    wrmsr
+		EOF
+	else
+		cat >>isrs.S <<-EOF
+		    /* APIC init */
+		    xorq	%rax, %rax
+		    incb	%al
+		    cpuid
+		    btl 	\$9, %edx
+		    jc  	1f
+		    movq	\$nopic, %rdi
+		    movq	\$timer, %rsi
+		    call	kpanic
+		    1:
+		    /* find apic physical address */
+		    movl	\$0x1B, %ecx
+		    rdmsr
+		    andw	\$0xF000, %ax
+		    /* map apic at pmm.bss_end and increase bss pointer */
+		    movq	pmm + 40, %rdi
+		    movq	%rdi, apic
+		    movq	%rax, %rsi
+		    movb	\$PG_CORE_NOCACHE, %dl
+		    call	kmap
+		    addq	\$4096, pmm + 40
+		    /* enable */
+		    movl	\$0x1B, %ecx
+		    rdmsr
+		    btsl	\$11, %eax
+		    wrmsr
+		EOF
+		read -r -d '' EOI <<-EOF
+		    /* APIC EOI */
+		    movq	apic, %rax
+		    movl	\$0, 0xB0(%rax)
 		EOF
 	fi
 	cat >>isrs.S <<-EOF
