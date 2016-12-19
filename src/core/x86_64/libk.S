@@ -33,6 +33,9 @@
 .global kmemvid
 .global kmap
 .global kmap_init
+.global kstrcpy
+.global kstrlen
+.global kstrcmp
 .extern kmap_tmp
 .extern tmpmap
 .extern tmp2map
@@ -104,6 +107,30 @@ kmemcmp:
     or      %al, %al
     jz      1b
 3:  ret
+
+kstrcpy:
+1:  lodsb
+    stosb
+    or      %al, %al
+    jnz     1b
+    ret
+
+kstrlen:
+    mov     %rdi, %rsi
+1:  lodsb
+    or      %al, %al
+    jnz     1b
+    ret
+
+kstrcmp:
+    xorq    %rax, %rax
+1:  lodsb
+    cmpb    %al, (%rdi)
+    jne     2f
+    incq    %rdi
+    or      %al, %al
+    jnz     1b
+2:  ret
 
 kmemvid:
     ret

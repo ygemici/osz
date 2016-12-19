@@ -51,10 +51,9 @@ pid_t thread_new()
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->state = tcb_running;
     tcb->priority = PRI_SRV;
-    self = (uint64_t)ptr+1;
-    tcb->allocmem = 7 + nrmqmax;
-    tcb->evtq_ptr = tcb->evtq_endptr = (OSZ_event*)&MQ_ADDRESS;
-    tcb->evtq_size = (nrmqmax*__PAGESIZE)/sizeof(OSZ_event);
+    self = (uint64_t)ptr;
+    tcb->allocmem = 8 + nrmqmax;
+    tcb->evtq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
     /* allocate memory mappings */
     // PML4
     ptr=pmm_alloc();
@@ -62,27 +61,35 @@ pid_t thread_new()
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDPE
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+1;
+    paging[0]=(uint64_t)ptr+PG_CORE;
     paging[511]=core_mapping;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDE
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+1;
+    paging[0]=(uint64_t)ptr+PG_CORE;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PT text
     ptr=pmm_alloc();
-    paging[0]=(uint64_t)ptr+1;
+    paging[0]=(uint64_t)ptr+PG_CORE;
     ptr2=pmm_alloc();
-    paging[1]=(uint64_t)ptr2+1;
+    paging[1]=(uint64_t)ptr2+PG_CORE;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
-    // map TCB, relies on identity mapping
+    // map TCB
     tcb->self = (uint64_t)ptr;
-    paging[0]=self;
+    paging[0]=self+PG_USER_RO;
     // allocate message queue
     for(i=0;i<nrmqmax;i++) {
         ptr=pmm_alloc();
-        paging[i+((uint64_t)&MQ_ADDRESS/__PAGESIZE)]=(uint64_t)ptr+1;
+        paging[i+((uint64_t)&MQ_ADDRESS/__PAGESIZE)]=(uint64_t)ptr+PG_USER_RW;
     }
+    // allocate stack
+    ptr=pmm_alloc();
+    paging[511]=(uint64_t)ptr+PG_USER_RW;
+    // we don't need the table any longer, so map it to message queue header
+    kmap((uint64_t)&tmp2map, (uint64_t)(paging[((uint64_t)&MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+    eventhdr_t *evthdr = (eventhdr_t *)&tmp2map;
+    evthdr->evtq_ptr = evthdr->evtq_endptr = (msg_t*)(&MQ_ADDRESS+sizeof(eventhdr_t));
+    evthdr->evtq_nextserial = 1;
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmp2map, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG

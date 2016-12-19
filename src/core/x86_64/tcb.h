@@ -31,7 +31,7 @@
 #define OSZ_tcb_gpr 48
 #define OSZ_tcb_fx 176
 
-/* WARNING: must match sizeof(OSZ_event) */
+/* WARNING: must match sizeof(msg_t) */
 #define OSZ_event_size 32
 
 #ifndef _AS
@@ -40,30 +40,26 @@
 #define OSZ_tcb_flag_needsxsave     4
 #define OSZ_tcb_flag_needxmmsave    8
 
-#define OSZ_event_sender(msg) ((pid_t)(t&(~(uint64_t)(__PAGESIZE-1))))
-#define OSZ_event_function(msg) ((uint16_t)(t&((uint64_t)(__PAGESIZE-1))))
-
+// structure at MQ_ADDRESS
 typedef struct {
-    uint64_t msg;
-    uint64_t arg0;
-    uint64_t arg1;
-    uint64_t arg2;
-} __attribute__((packed)) OSZ_event;
+    msg_t *evtq_ptr;    // event queue circular buffer start
+    msg_t *evtq_endptr;
+    uint64_t evtq_nextserial;
+    uint64_t evtq_lastserial;
+} __attribute__((packed)) eventhdr_t;
+
 
 typedef struct {
     uint32_t magic;
     uint8_t state;      // thread state
     uint8_t priority;   // thread priority
     uint16_t cpu;       // APIC ID of cpu on which this thread runs
+    // tcb+8
+    uint8_t gpr[120];   // general purpose registers save area
+    uint8_t fx[512];    // floating point and media registers save area (16 aligned)
+    // ordering does not matter
     uint32_t flags;     // thread flags
-    uint32_t evtq_cnt;  // event counter (number of items in event queue)
-    OSZ_event *evtq_ptr;// event queue
-    OSZ_event *evtq_endptr;
-    uint64_t evtq_size;
-    uint64_t evtq_nextserial;
-    uint64_t evtq_lastserial;
-    uint64_t gpr[16];   // general purpose registers save area
-    uint8_t fx[512];    // floating point registers save area (16 aligned)
+    uint32_t evtq_size; // number of pending events max
     uint64_t corersp;   // core stack pointer
     uint64_t userrip;   // user instruction pointer on syscall
     uint64_t memroot;   // memory mapping root
@@ -79,7 +75,7 @@ typedef struct {
     uint64_t billcnt;   // ticks thread spent in userspace
     uint64_t syscnt;    // ticks thread spent in kernelspace (core)
     uint64_t self;      // self pointer (physical address of TLB PT)
-    uid_t acl[128];     // access control list
+    uuid_t acl[128];     // access control list
 } __attribute__((packed)) OSZ_tcb;
 
 #include "ccb.h"        // CPU Control Block

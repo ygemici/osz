@@ -30,17 +30,7 @@
 #include "../../loader/bootboot.h"
 #include "pmm.h"
 
-// subsystems
-enum {
-    USER_PROCESS = 0,
-    SUB_INIT = 0,
-    SUB_SYSLOG = 1,
-    SUB_FS,
-    SUB_UI,
-    SUB_NET,
-    SUB_SOUND,
-    SUB_SYSTEM
-};
+#define USER_PROCESS 0
 
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;
@@ -72,6 +62,9 @@ extern void kmemcpy(char *dest, char *src, int size);
 extern void kmemset(char *dest, int c, int size);
 extern int kmemcmp(void *dest, void *src, int size);
 extern void kmemvid(char *dest, char *src, int size);
+extern void kstrcpy(char *dest, char *src);
+extern void kstrlen(char *src);
+extern int kstrcmp(void *dest, void *src);
 extern void* kalloc(int pages);
 extern void kfree(void* ptr);
 extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);

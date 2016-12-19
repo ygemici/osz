@@ -58,20 +58,20 @@ void main()
     // start "syslog" process so other subsystems can log errors
     // to solve the chicken egg scenario here, service_init()
     // does not use filesystem drivers, it has a built-in fs reader.
-    service_init(SUB_SYSLOG, "sbin/syslog");
+    service_init(SRV_syslog, "sbin/syslog");
     // initialize "fs" process
     fs_init();
 
     /* step 2: communication */
     // initialize "ui" process to handle user input / output
-    service_init(SUB_UI, "sbin/ui");
+    service_init(SRV_ui, "sbin/ui");
     if(networking) {
         // initialize "net" process for ipv4 and ipv6
-        service_init(SUB_NET, "sbin/net");
+        service_init(SRV_net, "sbin/net");
     }
     if(sound) {
         // initialize "sound" process to handle audio channels
-        service_init(SUB_SOUND, "sbin/sound");
+        service_init(SRV_net, "sbin/sound");
     }
 
     /* step 3: motoric reflexes */

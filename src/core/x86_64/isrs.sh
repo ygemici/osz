@@ -102,6 +102,7 @@ apic:
 
 /* store thread's context into Thread Control Block */
 isr_savecontext:
+    movq    %rax, tcb.gpr
     ret
 
 /* restore thread's context from Thread Control Block */

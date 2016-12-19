@@ -46,7 +46,7 @@ typedef struct {
 OSZ_rela __attribute__ ((section (".data"))) *relas;
 
 /* thread ids of system tasks. */
-pid_t  __attribute__ ((section (".data"))) subsystems[8];
+pid_t  __attribute__ ((section (".data"))) subsystems[SRV_NUM];
 
 /* load an ELF64 executable into text segment starting at 2M
  *  - tmp2map: the text segment's PT mapped,
@@ -329,7 +329,7 @@ void fs_init()
     char *drvs_end = drvs + fs_size;
     char fn[256];
     pid_t pid = thread_new();
-    subsystems[SUB_FS] = pid;
+    subsystems[SRV_fs] = pid;
     // map file system dispatcher
     service_loadelf("sbin/fs");
     // map libc
@@ -376,7 +376,7 @@ void sys_init()
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new();
-    subsystems[SUB_SYSTEM] = pid;
+    subsystems[SRV_system] = pid;
     // map device driver dispatcher
     service_loadelf("sbin/system");
     // map libc

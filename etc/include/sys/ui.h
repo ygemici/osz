@@ -1,9 +1,3 @@
-#ifndef _UI_H
-#define _UI_H 1
-
-#define SRV_UI 0x3000
-
-#define UI_opendisplay (SRV_UI | 0)
-#define UI_closedisplay (SRV_UI | 1)
-
-#endif
+#define SYS_openwin		(( SRV_ui <<8)| 2)
+#define SYS_opentty		(( SRV_ui <<8)| 10)
+#define SYS_openwrd		(( SRV_ui <<8)| 11)

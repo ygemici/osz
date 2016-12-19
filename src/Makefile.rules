@@ -22,6 +22,11 @@ all: $(OBJS) $(BINTARGET)
 $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
 	@$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+ifeq ($(LINKER),sharedlib)
+ifneq ($(TARGET),sbin/system)
+	@../../tools/genfuncmap.sh $(BINTARGET) ../../etc/include/sys
+endif
+endif
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

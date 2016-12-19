@@ -76,4 +76,23 @@ typedef uint64_t blkcnt_t;	 /* Type to count number of disk blocks.  */
 typedef uint64_t fsblkcnt_t; /* Type to count file system blocks.  */
 typedef uint64_t fpos_t;
 
+typedef struct {
+	uint32_t Data1;
+	uint16_t Data2;
+	uint16_t Data3;
+	uint8_t Data4[8];
+} __attribute__((packed)) uuid_t;
+#define UUID_ACCESS(a) (a.Data4[7])
+
+typedef struct {
+    uint64_t evt;
+    uint64_t arg0;
+    uint64_t arg1;
+    uint64_t arg2;
+} __attribute__((packed)) msg_t;
+#define MSG_SENDER(m) ((pid_t)(m.evt>>16))
+#define MSG_TYPE(m) ((uint16_t)(m.evt&0xFFFF))
+#define EVT_SENDER(e) ((pid_t)(e>>16))
+#define EVT_TYPE(e) ((uint16_t)(e&0xFFFF))
+
 #endif /* sys/types.h */
