@@ -27,7 +27,11 @@
 
 #include "env.h"
 
+/* get addresses from linker script */
 extern void* __bss_start;
+extern uint8_t pmm_entries;
+/* kernel variable */
+extern uint64_t corepde_mapping;
 
 // Main scructure
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
@@ -73,11 +77,13 @@ void pmm_init()
     // first 3 pages are for temporary mappings, tmpmap and tmp2map
     // and their pte. Let's initialize them
     kmap_tmp = kmap_init();
+    // map PDE, now we can use kmap() :-)
+    kmap((uint64_t)(&tmppde), corepde_mapping, PG_CORE_NOCACHE);
 
     // buffers
-    pmm.entries = fmem = (OSZ_pmm_entry*)((uint8_t*)&__bss_start + 4*__PAGESIZE);
+    pmm.entries = fmem = (OSZ_pmm_entry*)(&pmm_entries);
     pmm.bss     = (uint8_t*)&__bss_start;
-    pmm.bss_end = (uint8_t*)&__bss_start + (uint64_t)(__PAGESIZE * ((uint)nrphymax+4));
+    pmm.bss_end = (uint8_t*)&__bss_start + (uint64_t)(__PAGESIZE * ((uint)nrphymax+5));
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
     while(num>0) {

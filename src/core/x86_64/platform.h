@@ -36,3 +36,10 @@
 #define PG_USER_RW 0b00111
 #define PG_USER_RWNOCACHE 0b10111
 #define PG_USER_DRVMEM 0b01111
+
+// offsets in tmppde (pointing to the last 4G of memory)
+// must match linker script's addresses in supervisor.ld
+#define FBUF_PDE 0
+#define DSTMQ_PDE 509
+#define SYSMQ_PDE 510
+#define CORE_PDE 511

@@ -34,6 +34,7 @@ extern OSZ_pmm pmm;
 uint64_t __attribute__ ((section (".data"))) core_mapping;
 uint64_t __attribute__ ((section (".data"))) corepde_mapping;
 uint64_t __attribute__ ((section (".data"))) *stack_ptr;
+uint64_t __attribute__ ((section (".data"))) pt;
 
 pid_t thread_new(char *cmdline)
 {
@@ -67,7 +68,7 @@ pid_t thread_new(char *cmdline)
     // PDPE
     ptr=pmm_alloc();
     paging[0]=(uint64_t)ptr+PG_USER_RW;
-    paging[511]=core_mapping;
+    paging[511]=(core_mapping&~(__PAGESIZE-1))+PG_CORE;
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDE
     ptr=pmm_alloc();
@@ -75,6 +76,7 @@ pid_t thread_new(char *cmdline)
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PT text
     ptr=pmm_alloc();
+    pt=(uint64_t)ptr;
     paging[0]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     ptr2=pmm_alloc();
     paging[1]=(uint64_t)ptr2+PG_USER_RW;

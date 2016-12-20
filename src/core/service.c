@@ -31,6 +31,7 @@
 /* external resources */
 extern OSZ_pmm pmm;
 extern uint64_t *stack_ptr;
+extern uint64_t pt;
 
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*8))
@@ -307,8 +308,6 @@ void service_rtlink()
     // go again and save entry points onto stack
     // crt0 starts with a 'ret', so _start function address
     // will be popped up and executed.
-
-    // TODO: properly pad stack
     for(j=0; j<__PAGESIZE/8; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
@@ -403,9 +402,11 @@ void sys_init()
 {
     // this is so early, we don't have initrd in fs process' bss yet.
     // so we have to rely on identity mapping to locate the files
+    uint64_t *paging = &tmppde;
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
+
     // map device driver dispatcher
     service_loadelf("sbin/system");
     // map libc
@@ -419,6 +420,9 @@ void sys_init()
     tcb->priority = PRI_SYS;
     //set IOPL=3 in rFlags
     tcb->rflags |= (3<<12);
+    // map it's message queue PT in core memory
+    // so that ISRs can send message without a task switch
+    paging[SYSMQ_PDE] = (pt&~(__PAGESIZE-1))|PG_CORE_NOCACHE;
 
     // add to queue so that scheduler will know about this thread
     thread_add(pid);

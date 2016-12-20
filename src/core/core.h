@@ -38,6 +38,7 @@ extern unsigned char environment[__PAGESIZE];
 extern uint8_t fb;
 extern uint8_t tmpmap;
 extern uint8_t tmp2map;
+extern uint64_t tmppde;
 
 // kernel variables
 extern uint64_t fs_size;

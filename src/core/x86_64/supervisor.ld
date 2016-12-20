@@ -1,5 +1,7 @@
 /* kernel space addresses */
 FBUF_ADDRESS  = 0xffffffffe0000000;
+DSTMQ_ADDRESS = 0xffffffffffa00000;
+SYSMQ_ADDRESS = 0xffffffffffc00000;
 CORE_ADDRESS  = 0xffffffffffe00000;
 
 ENTRY(_start)
@@ -8,6 +10,12 @@ SECTIONS
 {
     . = FBUF_ADDRESS;
         fb = .;
+	/* destination thread's message queue mapped, must match isr_send() */
+	. = DSTMQ_ADDRESS;
+		dest_mq = .;
+	/* system task's message queue for ISRs. Must match sys_init() */
+	. = SYSMQ_ADDRESS;
+		sys_mq = .;
     /* make sure it starts with bootboot */
     . = CORE_ADDRESS;
         bootboot = .;
@@ -34,6 +42,8 @@ SECTIONS
         tmp2map = .;
         . += 4096;
         tmppte = .;
+        . += 4096;
+        tmppde = .;
         . += 4096;
         /* CPU Control Block. We need static address for that */
         ccb = .;
