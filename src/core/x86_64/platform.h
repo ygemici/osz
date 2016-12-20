@@ -39,7 +39,7 @@
 
 // offsets in tmppde (pointing to the last 4G of memory)
 // must match linker script's addresses in supervisor.ld
-#define FBUF_PDE 0
-#define DSTMQ_PDE 509
-#define SYSMQ_PDE 510
-#define CORE_PDE 511
+#define FBUF_PDE 0      //4G-6M
+#define DSTMQ_PDE 509   //2M, destination thread's message queue on send
+#define SYSMQ_PDE 510   //2M, system process' message queue
+#define CORE_PDE 511    //2M, supervisor core
