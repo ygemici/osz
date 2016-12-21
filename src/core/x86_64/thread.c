@@ -36,6 +36,8 @@ uint64_t __attribute__ ((section (".data"))) corepde_mapping;
 uint64_t __attribute__ ((section (".data"))) *stack_ptr;
 uint64_t __attribute__ ((section (".data"))) pt;
 
+extern uint64_t corepde_mapping;
+
 pid_t thread_new(char *cmdline)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
@@ -110,7 +112,8 @@ pid_t thread_new(char *cmdline)
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmp2map, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    kprintf("tcb=%x stack=%x %s\n",self,stack_ptr,cmdline);
+    if(debug==DBG_THREADS)
+        kprintf("tcb=%x %s\n",self,cmdline);
 #endif
     return self/__PAGESIZE;
 }

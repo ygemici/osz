@@ -19,8 +19,8 @@ System process
 
 | Virtual Address | Scope | Description |
 | --------------- | ----- | ----------- |
-| -2^56 .. -4G-1  | global  | global shared memory space (user accessible) |
-| -4G .. 0        | global  | core memory (supervisor only) |
+| -2^56 .. -1G-1  | global  | global shared memory space (user accessible) |
+| -1G .. 0        | global  | core memory (supervisor only) |
 | 0 .. 4096       | thread  | Thread Control Block |
 | 4096 .. x       | thread  | message queue |
 | x  .. 2M-1      | thread  | local stack, growing downwards |
@@ -40,14 +40,28 @@ User processes
 
 | Virtual Address | Scope | Description |
 | --------------- | ----- | ----------- |
-| -2^56 .. -4G-1  | global  | global shared memory space (user accessible) |
-| -4G .. 0        | global  | core memory (supervisor only) |
-| 0 .. 4096       | thread  | Thread Control Block |
-| 4096 .. x       | thread  | message queue |
-| x  .. 2M-1      | thread  | local stack, growing downwards |
-| 2M .. x         | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment |
-| x .. 4G-1       | process | shared libraries |
-| 4G .. 2^56      | process | dynamically allocated bss memory, growing upwards |
+| -2^56 .. -1G-1  | global  | global shared memory space (user accessible, read/write) |
+| -1G .. 0        | global  | core memory (supervisor only) |
+| 0 .. 4096       | thread  | Thread Control Block, read only |
+| 4096 .. x       | thread  | message queue, read/write |
+| x  .. 2M-1      | thread  | local stack, growing downwards, read/write |
+| 2M .. x         | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment, read only |
+| x .. 4G-1       | process | shared libraries, read only |
+| 4G .. 2^56      | process | dynamically allocated bss memory, growing upwards, read/write |
 
 Normal userspace processes do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.
+
+Core memory
+-----------
+
+The pages for the core are marked as supervisor only, meaning userspace programs cannot access it.
+
+| Virtual Address | Description |
+| --------------- | ----------- |
+| -1G .. -6M-1    | Framebuffer mapped (for kprintf) |
+| -6M .. -4M-1    | Destination's message queue. Mapped by msg_send() |
+| -4M .. -2M-1    | System process' message queue, always mapped, used by ISRs |
+| -2M .. x        | Core text segment and bss (growing upwards) |
+|   x .. 0        | Core stack (growing downwards) |
+

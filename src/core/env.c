@@ -29,16 +29,19 @@
 uint __attribute__ ((section (".data"))) nrphymax;
 uint __attribute__ ((section (".data"))) nrmqmax;
 uint8_t __attribute__ ((section (".data"))) identity;
-uint8_t __attribute__ ((section (".data"))) verbose;
+uint8_t __attribute__ ((section (".data"))) debug;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
+
+extern uint64_t ioapic_addr;
 
 void env_init()
 {
     unsigned char *env = environment;
     int i = __PAGESIZE;
     networking = sound = 1;
+    ioapic_addr = 0;
     while(i-->0 && *env!=0) {
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
@@ -62,6 +65,20 @@ void env_init()
                 env++;
             } while(*env>='0'&&*env<='9'&&nrmqmax<=NRMQ_MAX);
         }
+        // manually override IOAPIC address
+        if(!kmemcmp(env, "ioapic=", 7)) {
+            env+=7;
+            do{
+                ioapic_addr<<=4;
+                if(*env>='0'&&*env<='9')
+                    ioapic_addr+=(uint64_t)((unsigned char)(*env)-'0');
+                else if(*env>='a'&&*env<='f')
+                    ioapic_addr+=(uint64_t)((unsigned char)(*env)-'a'+10);
+                else if(*env>='A'&&*env<='F')
+                    ioapic_addr+=(uint64_t)((unsigned char)(*env)-'A'+10);
+                env++;
+            } while((*env>='0'&&*env<='9')||(*env>='a'&&*env<='f')||(*env>='A'&&*env<='F'));
+        }
         // disable networking
         if(!kmemcmp(env, "networking=", 11)) {
             env+=11;
@@ -84,9 +101,9 @@ void env_init()
         }
 #if DEBUG
         // output verbosity level
-        if(!kmemcmp(env, "verbose=", 8)) {
-            env+=8;
-            verbose = (*env>='0'&&*env<='9'?*env - '0':0);
+        if(!kmemcmp(env, "debug=", 6)) {
+            env+=6;
+            debug = (*env>='0'&&*env<='9'?*env - '0':0);
         }
 #endif
         env++;

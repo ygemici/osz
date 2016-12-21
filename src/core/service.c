@@ -84,7 +84,8 @@ void *service_loadelf(char *fn)
     }
     ret = i;
 #if DEBUG
-    kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
+    if(debug==DBG_ELF)
+        kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
 #endif
     /* map text segment */
     size=(phdr_c->p_filesz+__PAGESIZE-1)/__PAGESIZE;
@@ -114,7 +115,8 @@ void *service_loadelf(char *fn)
 void service_loadso(char *fn)
 {
 #if DEBUG
-    kprintf("  ");
+    if(debug==DBG_ELF)
+        kprintf("  ");
 #endif
     service_loadelf(fn);
 }
@@ -151,7 +153,7 @@ void service_rtlink()
                 d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr->p_offset);
                 /* dynamic table */
 #if DEBUG
-                if(verbose>1)
+                if(debug==DBG_RTIMPORT)
                     kprintf("  Import %x (%d bytes):\n",
                         phdr->p_offset + j*__PAGESIZE, (int)phdr->p_memsz
                     );
@@ -205,7 +207,7 @@ void service_rtlink()
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(verbose>1)
+                if(debug==DBG_RTIMPORT)
                     kprintf("    %x %s +%x?\n", rel->offs,
                         strtable + s->st_name, rela->r_addend
                     );
@@ -259,7 +261,7 @@ void service_rtlink()
         }
         /* dynamic symbol table */
 #if DEBUG
-        if(verbose>0)
+        if(debug==DBG_RTEXPORT)
             kprintf("  Export %x (%d bytes):\n",
                 sym, strtable-(char*)sym
             );
@@ -271,7 +273,7 @@ void service_rtlink()
             if(s->st_value) {
                 uint64_t offs = (uint64_t)s->st_value + j*__PAGESIZE+TEXT_ADDRESS;
 #if DEBUG
-                if(verbose>0)
+                if(debug==DBG_RTEXPORT)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // look up in relas array which addresses require
@@ -280,7 +282,7 @@ void service_rtlink()
                     OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
                     if(r->offs != 0 && !kstrcmp(r->sym, strtable + s->st_name)) {
 #if DEBUG
-                        if(verbose>0)
+                        if(debug==DBG_RTEXPORT)
                             kprintf(" %x", r->offs);
 #endif
                         // save virtual address
@@ -290,7 +292,7 @@ void service_rtlink()
                     }
                 }
 #if DEBUG
-                if(verbose>0)
+                if(debug==DBG_RTEXPORT)
                     kprintf("\n");
 #endif
             }

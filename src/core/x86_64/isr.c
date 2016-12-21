@@ -33,6 +33,7 @@
 extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void *isr_initgates(uint64_t *idt, OSZ_ccb *tss);
+extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
 extern pid_t subsystems[];
 
@@ -72,7 +73,7 @@ void isr_init()
         ptr+=ISR_MAX;
     }
 
-    // finally set up isr_syscall dispatcher and IDTR
+    // set up isr_syscall dispatcher and IDTR
     isr_initgates(idt, &ccb);
 }
 
@@ -87,7 +88,7 @@ msg_sendsys(5,6,7,8);
     // start interrupts, fake an interrupt
     // handler return to start multitasking
     __asm__ __volatile__ (
-        "movq %0, %%rsp; movq %1, %%rbp; iretq" :
+        "movq %0, %%rsp; movq %1, %%rbp; cli;hlt; iretq" :
         :
         "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );

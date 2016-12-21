@@ -108,12 +108,16 @@ if [ "$1" == "pic" ]; then
 else
 	if [ "$1" == "x2apic" ]; then
 		cat >>isrs.S <<-EOF
+		ioapic:
+		    .quad	0
 		timer:
 		    .asciz "x2APIC"
 		EOF
 	else
 		cat >>isrs.S <<-EOF
 		apic:
+		    .quad	0
+		ioapic:
 		    .quad	0
 		timer:
 		    .asciz "APIC"
@@ -126,7 +130,16 @@ nopic:
     .asciz	"%s not supported"
 
 .section .text
-
+EOF
+if [ "$1" == "x2apic" ]; then
+	cat >>isrs.S <<-EOF
+	ioapic_read:
+	    ret
+	ioapic_write:
+	    ret
+	EOF
+fi
+cat >>isrs.S <<EOF
 /* store thread's context into Thread Control Block */
 isr_savecontext:
     ret
@@ -185,7 +198,7 @@ if [ "$1" == "pic" ]; then
 	    movb	\$0xFF, %al
 	    outb	%al, \$0x21
 	    outb	%al, \$0xA1
-	    /* RTC init */
+	    /* PIT init */
 	EOF
 	read -r -d '' EOI <<-EOF
 	    /* PIC EOI */
@@ -254,6 +267,9 @@ else
 	fi
 	cat >>isrs.S <<-EOF
 	    /* IOAPIC init */
+	    movb	\$0xFF, %al
+	    outb	%al, \$0x21
+	    outb	%al, \$0xA1
 	    
 	EOF
 fi
@@ -298,8 +314,24 @@ do
 done
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
+.align $isrmax, 0x90
+/* preemption timer */
+isr_irq0:
+    cli
+    lock
+    btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    call	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	\$$isr, %dil
+    call	isr_irq
+    $EOI
+    call	isr_loadcontext
+    lock
+    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    sti
+    iretq
 EOF
-for isr in `seq 0 $numirq`
+for isr in `seq 1 $numirq`
 do
 	echo irq$isr
 	cat >>isrs.S <<-EOF

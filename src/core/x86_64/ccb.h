@@ -29,9 +29,8 @@
 #define OSZ_CCB_MAGIC "CPUB"
 #define OSZ_CCB_MAGICH 0x42555043
 
+/* must match with ccb struct, for asm */
 #define EXCERR_OFFS 0x4C
-
-// mutex flags
 #define MUTEX_OFFS 0x5C
 #define LOCK_TASKSWITCH 0
 

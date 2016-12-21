@@ -52,15 +52,18 @@ void main()
     env_init();
     // initialize physical memory manager, required by new thread creation
     pmm_init();
-    // interrupt service routines (idt), initialize CCB
-    isr_init();
 
-    /* step 1: historic memory */
-    service_init(0, NULL);
-    // start "syslog" process so other subsystems can log errors
+    /* step 1: motoric reflexes */
+    // this is early, we don't have "fs" subsystem yet.
     // to solve the chicken egg scenario here, service_init()
     // does not use filesystem drivers, it has a built-in fs reader.
-    service_init(SRV_syslog, "sbin/syslog");
+    service_init(0, NULL);
+    // initialize the "system" process, the first subsystem
+    // detect device drivers (parse system tables and load sharedlibs)
+    sys_init();
+    // interrupt service routines (idt), initialize CCB. Has to be done
+    // after sys_init(), as it may require addresses from parsed tables
+    isr_init();
     // initialize "fs" process
     fs_init();
 
@@ -73,13 +76,12 @@ void main()
     }
     if(sound) {
         // initialize "sound" process to handle audio channels
-        service_init(SRV_net, "sbin/sound");
+        service_init(SRV_sound, "sbin/sound");
     }
 
-    /* step 3: motoric reflexes */
-    // finally initialize the "system" process, the last subsystem
-    // detect device drivers (parse system tables and load sharedlibs)
-    sys_init();
+    /* step 3: historic memory */
+    // start "syslog" process so others can log errors
+    service_init(SRV_syslog, "sbin/syslog");
 
     /* step 4: who am I */
     if(identity) {
@@ -96,10 +98,11 @@ void main()
     kprintf_reset();
 
     // enable interrupts. After the first timer IRQ the
-    // scheduler will choose a thread to run and we'll...
+    // scheduler will choose a thread to run and we...
     isr_enable();
 
     /* step 6: go to dreamless sleep. */
-    // ...should not reach this code until shutdown process finished
+    // ...should not reach this code until shutdown process finished,
+    // and no tasks left to be scheduled.
     dev_poweroff();
 }

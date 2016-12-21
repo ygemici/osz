@@ -506,10 +506,17 @@ getmemmap:  xor         eax, eax
             cmp         dword [es:4], 'PTR '
             jne         .acpinotf
             ;ptr found
-            cmp         byte [es:15], 1
-            jne         .acpi1
-            mov         eax, dword [es:20]
-            jmp         @f
+            ; do we have XSDT?
+            cmp         dword [es:28], 0
+            jne         .acpi2
+            cmp         dword [es:24], 0
+            je          .acpi1
+.acpi2:     mov         eax, dword [es:24]
+            mov         dword [bootboot.acpi_ptr], eax
+            mov         eax, dword [es:28]
+            mov         dword [bootboot.acpi_ptr+4], eax
+            jmp         .detsmbi
+            ; no, fallback to RSDT
 .acpi1:     mov         eax, dword [es:16]
 @@:         mov         dword [bootboot.acpi_ptr], eax
             jmp         .detsmbi

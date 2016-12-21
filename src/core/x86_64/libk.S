@@ -94,6 +94,7 @@ kmemset:
 
 kmemcmp:
     xorq    %rax, %rax
+    incl    %edx
 1:  decl    %edx
     jz      3f
     lodsb
@@ -164,7 +165,7 @@ kmap_init:
     andl    $0x1FF, %ebx
     shlq    $3, %rbx
     movq    %cr3, %rax
-    andl    $0xF000, %eax
+    andw    $0xF000, %ax
     movq    %rax, identity_mapping
     add     %rax, %rbx
     /* save core mappings pointer */
@@ -172,7 +173,7 @@ kmap_init:
     movq    (%rax), %rax
     movq    %rax, core_mapping
     /* save core mappings pointer */
-    andl    $0xF000, %eax
+    andw    $0xF000, %ax
     addq    $4096-8, %rax
     movq    (%rax), %rax
     movq    %rax, corepde_mapping
@@ -205,7 +206,7 @@ kmap_init:
     mov     %rbx, %rax
     addq    $8, %rax
     movq    %rax, %rdi
-    andw    $0x0F000, %ax
+    andw    $0xF000, %ax
     incw    %ax
     mov     %rax, (%rbx)
     /* clear the rest */

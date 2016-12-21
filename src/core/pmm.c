@@ -77,7 +77,7 @@ void pmm_init()
     // first 3 pages are for temporary mappings, tmpmap and tmp2map
     // and their pte. Let's initialize them
     kmap_tmp = kmap_init();
-    // map PDE, now we can use kmap() :-)
+    // now we can use kmap() so map PDE :-)
     kmap((uint64_t)(&tmppde), corepde_mapping, PG_CORE_NOCACHE);
 
     // buffers

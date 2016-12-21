@@ -31,4 +31,11 @@ extern uint8_t networking;
 extern uint8_t sound;
 extern uint8_t rescueshell;
 extern uint8_t identity;
-extern uint8_t verbose;
+extern uint8_t debug;
+
+/* debug levels */
+#define DBG_THREADS 0
+#define DBG_ELF 1
+#define DBG_RTIMPORT 2
+#define DBG_RTEXPORT 3
+#define DBG_SYSTABLES 4

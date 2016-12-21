@@ -87,6 +87,17 @@ typedef struct _EFI_UGA_DRAW_PROTOCOL {
   EFI_UGA_DRAW_PROTOCOL_SET_MODE  SetMode;
 } EFI_UGA_DRAW_PROTOCOL;
 
+typedef struct {
+    UINT8 magic[8];
+    UINT8 chksum;
+    CHAR8 oemid[6];
+    UINT8 revision;
+    UINT32 rsdt;
+    UINT32 length;
+    UINT64 xsdt;
+    UINT32 echksum;
+} __attribute__((packed)) ACPI_RSDPTR;
+
 #define PAGESIZE 4096
 
 UINT8 *env_ptr;
@@ -402,6 +413,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     CHAR16 **argv;
     INTN argc;
     UINTN i;
+    CHAR8 *ptr;
     CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE ] ]\n\nDESCRIPTION\n  Bootstraps the OS/Z (or any other compatible) operating system via\n  the BOOTBOOT Protocol. If not given, the loader defaults to\n    FS0:\\BOOTBOOT\\INITRD  as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG  for boot environment.\n  This is a loader, it is not supposed to return control to the shell.\n\n";
 
     // Initialize UEFI Library
@@ -483,6 +495,25 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         LibGetSystemConfigurationTable(&AcpiTableGuid,(void *)&(bootboot->acpi_ptr));
         LibGetSystemConfigurationTable(&SMBIOSTableGuid,(void *)&(bootboot->smbi_ptr));
         LibGetSystemConfigurationTable(&MpsTableGuid,(void *)&(bootboot->mp_ptr));
+
+        // FIX ACPI table pointer on TianoCore...
+        ptr = (CHAR8 *)(bootboot->acpi_ptr);
+        if(CompareMem(ptr,(const CHAR8 *)"RSDT", 4) && CompareMem(ptr,(const CHAR8 *)"XSDT", 4)) {
+            // scan for the real rsd ptr, as AcpiTableGuid returns bad address
+            for(i=1;i<256;i++) {
+                if(!CompareMem(ptr+i, (const CHAR8 *)"RSD PTR ", 8)){
+                    bootboot->acpi_ptr+=i;
+                    ptr+=i;
+                    break;
+                }
+            }
+            // get ACPI system table
+            ACPI_RSDPTR *rsd = (ACPI_RSDPTR*)ptr;
+            if(rsd->xsdt!=0)
+                bootboot->acpi_ptr = rsd->xsdt;
+            else
+                bootboot->acpi_ptr = (UINT64)((UINT32)rsd->rsdt);
+        }
 
         // Date and time
         EFI_TIME t;

@@ -29,6 +29,7 @@
 #define _FS_Z_H_
 
 #include <stdint.h>
+#include <sys/types.h>
 
 #define FSZ_VERSION_MAJOR 1
 #define FSZ_VERSION_MINOR 0
@@ -52,9 +53,9 @@ typedef struct {
     uint64_t    freesec_hi;
     uint64_t    rootdirfid;         // 552 logical sector number of root directory's inode
     uint64_t    rootdirfid_hi;
-    uint64_t    freesecfid;         // 568 inode to fragmentation records (sector list)
+    uint64_t    freesecfid;         // 568 inode to fragmentation records (FSZ_SectorList)
     uint64_t    freesecfid_hi;
-    uint64_t    badsecfid;          // 584 inode to bad sectors table (sector list)
+    uint64_t    badsecfid;          // 584 inode to bad sectors table (FSZ_SectorList)
     uint64_t    badsecfid_hi;
     uint64_t    indexfid;           // 600 inode to index tables (index file)
     uint64_t    indexfid_hi;
@@ -88,29 +89,42 @@ typedef struct {
  *********************************************************/
 // fid: file id, logical sector number where the sector
 //      contains an inode.
-//sizeof = 32
+//sizeof = 16
 typedef struct {
     uint64_t    fid;
-    uint64_t    fid_hi;
-    uint64_t    size;
-    uint64_t    size_hi;
+    uint32_t    fid_hi;
+    uint32_t    numsec;
 } __attribute__((packed)) FSZ_SectorList;
 // used at several places, like free and bad block list in
 // superblock or data locators in inodes.
 
-//sizeof = 16, one Access Control Entry
+//sizeof = 16, one Access Control Entry, UUID without the last byte
 typedef struct {
-    uint8_t     type;               // access rights
-    uint8_t     uuid[15];           // owner UUID without the first byte
+    uint8_t uuid[15];
+    uint8_t access;
 } __attribute__((packed)) FSZ_Access;
 
+//access rights are stored in the last byte
 #define FSZ_READ    (1<<0)
 #define FSZ_WRITE   (1<<1)
 #define FSZ_EXEC    (1<<2)          // execute or search
 #define FSZ_APPEND  (1<<3)
 #define FSZ_DELETE  (1<<4)
 #define FSZ_SUID    (1<<6)          // Set user id on execution
-#define FSZ_SGID    (1<<7)          // Inherit ACL, no groups per se in OS/Z
+#define FSZ_SGID    (1<<7)          // Inherit ACL, no set group per se in OS/Z
+
+//file version structure. You can use this to point to version5, version4 etc.
+//sizeof = 64
+typedef struct {
+    uint64_t    sec;
+    uint64_t    sec_hi;
+    uint64_t    size;
+    uint64_t    size_hi;
+    FSZ_Access  owner;
+    uint64_t    modifydate;
+    uint32_t    filechksum;
+    uint32_t    flags;
+} __attribute__((packed)) FSZ_Version;
 
 // if inode.fid == inode.sec => inline data
 //sizeof = 4096
@@ -120,14 +134,14 @@ typedef struct {
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
     uint8_t     mimetype[48];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
     uint8_t     encrypt[20];    //  60 AES encryption key part or zero
-    uint64_t    numlinks;       //  80 number of fids to this inode
-    uint8_t     createdate[8];  //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
-    uint8_t     lastaccess[8];  //  96
+    uint64_t    numlinks;       //  80 number of references to this inode
+    uint64_t    createdate;     //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
+    uint64_t    lastaccess;     //  96
     uint8_t     reserved[24];   // 104 padding
     // FSZ_Version oldversions[5];
     uint8_t     version5[64];   // 128 previous versions if enabled
     uint8_t     version4[64];   // 192 all the same format as the current
-    uint8_t     version3[64];   // 256
+    uint8_t     version3[64];   // 256 see FSZ_Version structure above
     uint8_t     version2[64];   // 320
     uint8_t     version1[64];   // 384
     // FSZ_Version current;
@@ -167,15 +181,11 @@ typedef struct {
 // FSZ_SuperBlock if you think 11 sector reads is too much to access
 // data at any arbitrary position in a Yotta magnitude file.
 
-/*  any data size
-    FSZ_Inode.sec points to sector with FSZ_SectorList
-    entries
-    FSZ_Inode.sec -> sl -> data */
-#define FSZ_IN_FLAG_SECLIST (0xFE<<0)
+// if even that's not enough, you can use sector lists (extents)
 
 /*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
-    the data is included in the inode sector
+    the data is included in the inode sector at 1024
     FSZ_Inode.sec -> FSZ_Inode.sec  */
 #define FSZ_IN_FLAG_INLINE  (0xFF<<0)
 
@@ -225,6 +235,26 @@ typedef struct {
 /*  data size < (16 Yotta, equals 16384 Zetta) */
 #define FSZ_IN_FLAG_SD9     (9<<0)
 
+/*  any data size
+    FSZ_Inode.sec points to a sector with FSZ_SectorList entries
+    FSZ_Inode.sec -> sl -> data */
+#define FSZ_IN_FLAG_SECLIST (0x80<<0)
+
+/*  indirect sector list
+    FSZ_Inode.sec points to a sector directory with FSZ_SectorList
+    FSZ_Inode.sec -> sd-> sl -> data */
+#define FSZ_IN_FLAG_SECLIST1 (0x81<<0)
+
+/*  double-indirect sector list
+    FSZ_Inode.sec points to a sector directory pointing to
+    sector directories with FSZ_SectorList
+    FSZ_Inode.sec -> sd-> sd -> sl -> data */
+#define FSZ_IN_FLAG_SECLIST2 (0x82<<0)
+
+/*  triple-indirect sector list
+    FSZ_Inode.sec -> sd-> sd -> sd -> sl -> data */
+#define FSZ_IN_FLAG_SECLIST3 (0x83<<0)
+
 /*********************************************************
  *                      Directory                        *
  *********************************************************/
@@ -240,8 +270,8 @@ typedef struct {
 #define FSZ_DIR_MAGIC "FSDR"
 #define FSZ_DIR_FLAG_UNSORTED (1<<0)
 
-//directory entries are lexicographically ordered. It means
-//a bit slower writes, but also means incredibly faster look ups.
+//directory entries are fixed in size and lexicographically ordered.
+//this means a bit slower writes, but also incredibly faster look ups.
 
 //sizeof = 128
 typedef struct {
