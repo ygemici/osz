@@ -1,6 +1,7 @@
 #ifndef _SYS_CORE_H
 #define _SYS_CORE_H 1
 
+#define SYS_IRQ 0
 #define SYS_exit 60
 /*
 #define SYS_msgget 68

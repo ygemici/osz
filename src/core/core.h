@@ -29,8 +29,7 @@
 #include <limits.h>
 #include "../../loader/bootboot.h"
 #include "pmm.h"
-
-#define USER_PROCESS SRV_init
+#include "msg.h"
 
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;
@@ -39,8 +38,14 @@ extern uint8_t fb;
 extern uint8_t tmpmap;
 extern uint8_t tmp2map;
 extern uint64_t tmppde;
+extern msghdr_t sys_mq;
+extern msghdr_t dst_mq;
+
+#define USER_PROCESS SRV_init
+#define OFFS_system (&subsystems[SRV_system])
 
 // kernel variables
+extern pid_t subsystems[];
 extern uint64_t fs_size;
 
 // kernel function routines
@@ -114,3 +119,10 @@ extern void service_rtlink();
 extern void service_mapbss(uint64_t phys, uint64_t size);
 /** Initialize a subsystem, a system service */
 extern void service_init(int subsystem, char *fn);
+/** low level message sender */
+extern void ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+/** normal message senders */
+extern bool_t msg_sendptr(pid_t thread, uint64_t event, void *ptr, size_t size);
+extern bool_t msg_sendreg(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+/** send a message to the system process. This is unique as it has a fast method, called by ISRs */
+#define msg_sendsys(event,arg0,arg1,arg2) (ksend(&sys_mq,MSG_REGDATA|MSG_TYPE(event),arg0,arg1,arg2))

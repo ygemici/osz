@@ -94,6 +94,7 @@ void main()
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
 #endif
     kprintf_reset();
+
     // enable interrupts. After the first timer IRQ the
     // scheduler will choose a thread to run and we'll...
     isr_enable();

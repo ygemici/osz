@@ -3,7 +3,6 @@ LIBS = $(filter-out libc drv Makefile,$(wildcard lib/*))
 APPS = $(filter-out core lib Makefile,$(wildcard *))
 
 drivers: $(DRVS)
-	@make -e -C drv all | grep -v 'Nothing to be done' || true
 
 all: $(LIBS) $(APPS)
 

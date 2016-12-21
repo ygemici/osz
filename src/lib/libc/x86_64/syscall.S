@@ -26,44 +26,63 @@
  */
 
 #define _AS 1
-#include <tcb.h>
+#include <limits.h>
 
 .global clcall
 .global clsend
 .global clrecv
-.global clismg
+.global clismsg
 .global cldl
 
 .section .text
 
 /* dest: pid_t<<16 + msg type */
-/* uint64_t clcall(dest,arg0,arg1,arg2) */
-clcall:
-    # blocking, send a request and receive result
-    # rdi: destination pid + message type
-    movl     $0x6C6C6163, %eax # 'call'
-    syscall
-    ret
 
-/* void clsend(dest,arg0,arg1,arg2) */
+/* void clsend(thread,event,arg0,arg1,arg2) */
 clsend:
     # non-blocking send message
+    /* this will call msg_sendreg() or msg_sendptr() in core */
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
 
-/* uint64_t clrecv(from) */
+/* msg_t *clcall(thread,event,arg0,arg1,arg2) */
+clcall:
+    # blocking, send a request and receive result
+    # rdi: destination pid + message type
+    /* must match OSZ_tcb, tcb->recvfrom */
+    movq     %rdi, MQ_ADDRESS + 24
+    movl     $0x646E6573, %eax # 'send'
+    syscall
+    movq     $0, MQ_ADDRESS + 24
+    /* fall into to clrecv code */
+
+/* msg_t *clrecv(from) */
 clrecv:
     # blocking receive message
+    movq     $MQ_ADDRESS, %rbx
+    movq     8(%rbx), %rax
+    cmpq     (%rbx), %rax
+    jne      1f
     movl     $0x76636572, %eax # 'recv'
     syscall
     ret
+1:  /* must match sizeof(msg_t) */
+    shlq    $5, %rax
+    addq    %rbx, %rax
+    /* mqhdr->mq_end++ */
+    incq    8(%rbx)
+    movq    8(%rbx), %rcx
+    cmpq    16(%rbx), %rcx
+    jne     2f
+    movq    $1, 8(%rbx)
+2:  ret
 
-/* uint64_t clismg() */
-clismg:
+/* uint64_t clismsg() */
+clismsg:
     # non-blocking is there a message?
-    movq     OSZ_evtq_ptr, %rax
-    subq     OSZ_evtq_endptr, %rax
+    movq     MQ_ADDRESS, %rax
+    subq     MQ_ADDRESS+8, %rax
     ret
 
 /* void *cldl(&symtable,objectfile) */

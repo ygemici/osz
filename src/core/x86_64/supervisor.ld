@@ -12,9 +12,11 @@ SECTIONS
         fb = .;
 	/* destination thread's message queue mapped, must match isr_send() */
 	. = DSTMQ_ADDRESS;
-		dest_mq = .;
+        . += 4096;
+		dst_mq = .;
 	/* system task's message queue for ISRs. Must match sys_init() */
 	. = SYSMQ_ADDRESS;
+        . += 4096;
 		sys_mq = .;
     /* make sure it starts with bootboot */
     . = CORE_ADDRESS;

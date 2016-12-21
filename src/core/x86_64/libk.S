@@ -36,6 +36,7 @@
 .global kstrcpy
 .global kstrlen
 .global kstrcmp
+.global ksend
 .extern kmap_tmp
 .extern tmpmap
 .extern tmp2map
@@ -173,7 +174,6 @@ kmap_init:
     /* save core mappings pointer */
     andl    $0xF000, %eax
     addq    $4096-8, %rax
-xchg %bx, %bx
     movq    (%rax), %rax
     movq    %rax, corepde_mapping
     /* PDPE */
@@ -282,4 +282,60 @@ kmap_getpte:
     movq    %rdx, (%rbx)
     invlpg  tmpmap
     addq    $tmpmap, %rax
+    ret
+
+/* send a message to a message queue. This has to be effective
+   and I didn't like the code gcc generated, that's why it's
+   asm, otherwise this routine is not platform specific.
+    IN: rdi: mq, rsi: event, rdx: arg0, rcx: arg1, r8: arg2
+*/
+ksend:
+    /* check if message queue is full */
+    movq    (%rdi), %rax
+    /* mqhdr->mq_start+1 == mqhdr->mq_end? */
+    incq    %rax
+    cmpq    8(%rdi), %rax
+    je      1f
+    /* mqhdr->mq_start+1 == mqhdr->mq_size && mqhdr->mq_end==1? */
+    cmpq    16(%rdi), %rax
+    jne      2f
+    cmpq    $1, 8(%rdi)
+    jne     2f
+1:  /* we won't block if we're sending to system thread,
+       rather remove the last item from the message queue
+       to make space and we continue */
+    movq    %rsi, %rax
+    /* destination pid == 0? */
+    shrq    $16, %rax
+    orq     %rax, %rax
+    jne     4f
+    /* mqhdr->mq_end++ */
+    incq    8(%rdi)
+    movq    8(%rdi), %rax
+    cmpq    16(%rdi), %rax
+    jne     2f
+    movq    $1, 8(%rdi)
+2:  /* replace destination pid with sender's */
+    andq    $0xFFFF, %rsi
+    /* tcb.mypid<<16 */
+    movq    640, %rax
+    shlq    $16, %rax
+    orq     %rax, %rsi
+    /* copy message */
+    movq    (%rdi), %rax
+    shlq    $5, %rax
+    addq    %rdi, %rax
+    movq    %rsi, (%rax)
+    movq    %rdx, 8(%rax)
+    movq    %rcx, 16(%rax)
+    movq    %r8, 24(%rax)
+    /* mqhdr->mq_start++ */
+    incq    (%rdi)
+    movq    (%rdi), %rax
+    cmpq    16(%rdi), %rax
+    jne     3f
+    movq    $1, (%rdi)
+3:  ret
+4:  /* TODO: block current thread (sender) */
+    /*callq thread_block */
     ret

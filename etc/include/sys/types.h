@@ -57,6 +57,7 @@
 typedef void *va_list;
 typedef unsigned char uchar;
 typedef unsigned int uint;
+typedef uint8_t bool_t;
 typedef uint64_t size_t;
 typedef uint64_t loff_t;
 typedef uint64_t ino_t;
@@ -90,9 +91,14 @@ typedef struct {
     uint64_t arg1;
     uint64_t arg2;
 } __attribute__((packed)) msg_t;
-#define MSG_SENDER(m) ((pid_t)(m.evt>>16))
-#define MSG_TYPE(m) ((uint16_t)(m.evt&0xFFFF))
-#define EVT_SENDER(e) ((pid_t)(e>>16))
-#define EVT_TYPE(e) ((uint16_t)(e&0xFFFF))
+#define MSG_SENDER(m) ((pid_t)(m>>16))
+#define MSG_TYPE(m) ((uint16_t)(m&0x7FFF))
+#define MSG_ISREG(m) (!(m&0x8000))
+#define MSG_ISPTR(m) (m&0x8000)
+#define MSG_PTR(m) (m.arg0)
+#define MSG_SIZE(m) (m.arg1)
+#define MSG_PTRDATA (0x8000)
+#define MSG_REGDATA (0)
+#define MSG_DEST(t) (t<<16)
 
 #endif /* sys/types.h */

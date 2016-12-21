@@ -54,8 +54,8 @@ pid_t thread_new(char *cmdline)
     tcb->state = tcb_running;
     tcb->priority = PRI_SRV;
     self = (uint64_t)ptr;
+    tcb->mypid = (pid_t)(self/__PAGESIZE);
     tcb->allocmem = 8 + nrmqmax;
-    tcb->evtq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
     tcb->cs = 0x20+3; // ring 3 user code
     tcb->ss = 0x18+3; // ring 3 user data
     tcb->rflags = 2/*0x102*/; // enable interrupts and mandatory bit 1
@@ -94,9 +94,9 @@ pid_t thread_new(char *cmdline)
     paging[511]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     // we don't need the table any longer, so map it to message queue header
     kmap((uint64_t)&tmp2map, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
-    eventhdr_t *evthdr = (eventhdr_t *)&tmp2map;
-    evthdr->evtq_ptr = evthdr->evtq_endptr = (msg_t*)(MQ_ADDRESS+sizeof(eventhdr_t));
-    evthdr->evtq_nextserial = 1;
+    msghdr_t *msghdr = (msghdr_t *)&tmp2map;
+    msghdr->mq_start = msghdr->mq_end = 1;
+    msghdr->mq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
     // set up stack, watch out for alignment
     kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE);
     i = 511-((kstrlen(cmdline)+2+15)/16*2);

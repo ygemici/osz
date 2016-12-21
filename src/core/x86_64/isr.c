@@ -28,6 +28,7 @@
 
 #include "platform.h"
 #include "isr.h"
+#include "ccb.h"
 
 extern void isr_exc00divzero();
 extern void isr_irq0();
@@ -80,6 +81,9 @@ void isr_enable()
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     // map "system" process
     thread_map(subsystems[SRV_system]);
+// TODO: remove test
+msg_sendsys(SYS_IRQ,2,0,0);
+msg_sendsys(5,6,7,8);
     // start interrupts, fake an interrupt
     // handler return to start multitasking
     __asm__ __volatile__ (

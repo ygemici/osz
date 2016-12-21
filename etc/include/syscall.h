@@ -18,4 +18,9 @@
 #include <sys/ui.h>
 #include <sys/net.h>
 
+bool_t clsend(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+msg_t *clrecv();
+bool_t clismsg();
+
 #endif
