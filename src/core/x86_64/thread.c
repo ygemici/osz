@@ -60,7 +60,7 @@ pid_t thread_new(char *cmdline)
     tcb->allocmem = 8 + nrmqmax;
     tcb->cs = 0x20+3; // ring 3 user code
     tcb->ss = 0x18+3; // ring 3 user data
-    tcb->rflags = 2/*0x102*/; // enable interrupts and mandatory bit 1
+    tcb->rflags = 0x202; // enable interrupts and mandatory bit 1
 
     /* allocate memory mappings */
     // PML4

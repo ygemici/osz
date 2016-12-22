@@ -35,7 +35,7 @@ void _init(int argc, char **argv)
 {
 //  printf("Hello from userspace");
     while(1) {
-        msg_t *work = clrecv();
-        __asm__ __volatile__ ( "movq %0, %%rax; xchgw %%bx,%%bx;syscall" : : "r"(work) : );
+//        msg_t *work = clrecv();
+//        __asm__ __volatile__ ( "movq %0, %%rax; xchgw %%bx,%%bx;syscall" : : "r"(work) : );
     }
 }

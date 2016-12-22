@@ -413,7 +413,7 @@ void sys_init()
     service_loadelf("sbin/system");
     // map libc
     service_loadso("lib/libc.so");
-    // call ACPI parser to detect devices and load drivers for them
+    // detect devices and load drivers (sharedlibs) for them
     dev_init();
 
     // dynamic linker

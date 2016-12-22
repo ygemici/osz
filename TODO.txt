@@ -1,5 +1,6 @@
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:36:    // TODO: debug why this isn't working. No errors, no output
-./src/core/x86_64/acpi.c:234:    // TODO: APCI poweroff
+./src/core/x86_64/acpi.c:85:        // TODO: get values for poweroff
+./src/core/x86_64/acpi.c:235:    // TODO: APCI poweroff
 ./src/core/x86_64/libk.S:340:4:  /* TODO: block current thread (sender) */
 ./src/core/x86_64/isr.c:85:// TODO: remove test
 ./src/core/x86_64/msg.c:70:    // TODO: map or copy message to destination's address space

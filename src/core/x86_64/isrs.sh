@@ -51,6 +51,7 @@ exc18machinecheck
 exc19double
 EOF
 
+numirq=`grep "ISR_NUMIRQ" isr.h|cut -d ' ' -f 3`
 isrmax=`grep "ISR_MAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
 cat >isrs.S <<EOF
@@ -101,16 +102,17 @@ idt64:
     .align	8
 EOF
 if [ "$1" == "pic" ]; then
+	numirq=16
 	cat >>isrs.S <<-EOF
-	timer:
-	    .asciz "PIC,PIT"
+	ctrl:
+	    .asciz "PIC"
 	EOF
 else
 	if [ "$1" == "x2apic" ]; then
 		cat >>isrs.S <<-EOF
 		ioapic:
 		    .quad	0
-		timer:
+		ctrl:
 		    .asciz "x2APIC"
 		EOF
 	else
@@ -119,7 +121,7 @@ else
 		    .quad	0
 		ioapic:
 		    .quad	0
-		timer:
+		ctrl:
 		    .asciz "APIC"
 		EOF
 	fi
@@ -128,15 +130,36 @@ cat >>isrs.S <<EOF
     .align 8
 nopic:
     .asciz	"%s not supported"
+ioctrl:
+    .asciz	"IOAPIC"
 
 .section .text
 EOF
-if [ "$1" == "x2apic" ]; then
+if [ "$1" != "pic" ]; then
 	cat >>isrs.S <<-EOF
+	/* uint64_t ioapic_read(uint32_t port) */
 	ioapic_read:
+	    incl	%edi
+	    movl	%edi, ioapic
+	    movl	ioapic+16, %eax
+	    shlq	\$32, %rax
+	    decl	%edi
+	    movl	%edi, ioapic
+	    movl	ioapic+16, %eax
 	    ret
+	
+	/* void ioapic_write(uint32_t port, uint64_t value) */
 	ioapic_write:
+	    movq	%rsi, %rax
+	    shrq	\$32, %rax
+	    incl	%edi
+	    movl	%edi, ioapic
+	    movl	%eax, ioapic+16
+	    decl	%edi
+	    movl	%edi, ioapic
+	    movl	%esi, ioapic+16
 	    ret
+	
 	EOF
 fi
 cat >>isrs.S <<EOF
@@ -195,14 +218,20 @@ if [ "$1" == "pic" ]; then
 	    movb	\$0x1, %al
 	    outb	%al, \$0x21
 	    outb	%al, \$0xA1
-	    movb	\$0xFF, %al
+	    movb	\$0xFD, %al
 	    outb	%al, \$0x21
+	    movb	\$0xFF, %al
 	    outb	%al, \$0xA1
-	    /* PIT init */
 	EOF
 	read -r -d '' EOI <<-EOF
 	    /* PIC EOI */
 	    movb	\$0x20, %al
+	    outb	%al, \$0x20
+	EOF
+	read -r -d '' EOI2 <<-EOF
+	    /* PIC EOI */
+	    movb	\$0x20, %al
+	    outb	%al, \$0xA0
 	    outb	%al, \$0x20
 	EOF
 else
@@ -215,7 +244,7 @@ else
 		    btl 	\$21, %edx
 		    jc  	1f
 		    movq	\$nopic, %rdi
-		    movq	\$timer, %rsi
+		    movq	\$ctrl, %rsi
 		    call	kpanic
 		    1:
 		    movl	\$0x1B, %ecx
@@ -239,13 +268,17 @@ else
 		    btl 	\$9, %edx
 		    jc  	1f
 		    movq	\$nopic, %rdi
-		    movq	\$timer, %rsi
+		    movq	\$ctrl, %rsi
 		    call	kpanic
 		    1:
 		    /* find apic physical address */
+		    movq	lapic_addr, %rax
+		    orq		%rax, %rax
+		    jnz		1f
 		    movl	\$0x1B, %ecx
 		    rdmsr
 		    andw	\$0xF000, %ax
+		    1:
 		    /* map apic at pmm.bss_end and increase bss pointer */
 		    movq	pmm + 40, %rdi
 		    movq	%rdi, apic
@@ -267,10 +300,37 @@ else
 	fi
 	cat >>isrs.S <<-EOF
 	    /* IOAPIC init */
+	    movq	ioapic_addr, %rax
+	    orq 	%rax, %rax
+	    jnz  	1f
+	    movq	\$nopic, %rdi
+	    movq	\$ioctrl, %rsi
+	    call	kpanic
+	    1:
+	    /* disable PIC */
 	    movb	\$0xFF, %al
 	    outb	%al, \$0x21
 	    outb	%al, \$0xA1
-	    
+	    /* map ioapic at pmm.bss_end and increase bss pointer */
+	    movq	pmm + 40, %rdi
+	    movq	%rdi, ioapic
+	    movq	%rax, %rsi
+	    movb	\$PG_CORE_NOCACHE, %dl
+	    call	kmap
+	    addq	\$4096, pmm + 40
+	    movq	\$IOAPIC_ID, %rdi
+	    call	ioapic_read
+	
+	    /* setup IRQs */
+	    movq	\$IOAPIC_IRQ1, %rdi
+	    movq	\$IOAPIC_IRQMASK + 33, %rsi
+	    call	ioapic_write
+	
+	    /* enable IOAPIC */
+	    movb	\$0x70, %al
+	    outb	%al, \$0x22
+	    movb	\$1, %al
+	    outb	%al, \$0x23
 	EOF
 fi
 
@@ -306,7 +366,6 @@ do
 	    callq	isr_loadcontext
 	    lock
 	    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-	    sti
 	    iretq
 	
 	EOF
@@ -315,25 +374,28 @@ done
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
 .align $isrmax, 0x90
-/* preemption timer */
 isr_irq0:
+    /* preemption timer */
     cli
     lock
     btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     call	isr_savecontext
     xorq	%rdi, %rdi
-    movb	\$$isr, %dil
     call	isr_irq
     $EOI
     call	isr_loadcontext
     lock
     btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
+
 EOF
 for isr in `seq 1 $numirq`
 do
 	echo irq$isr
+	if [ "$EOI2" != "" -a $isr -gt 7 ]
+	then
+		EOI="$EOI2";
+	fi
 	cat >>isrs.S <<-EOF
 	.align $isrmax, 0x90
 	isr_irq$isr:
@@ -348,7 +410,6 @@ do
 	    call	isr_loadcontext
 	    lock
 	    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-	    sti
 	    iretq
 	
 	EOF

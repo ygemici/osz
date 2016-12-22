@@ -84,14 +84,16 @@ void main()
     service_init(SRV_syslog, "sbin/syslog");
 
     /* step 4: who am I */
-    if(identity) {
-        // start first time set up process
+    fs_locate("etc/hostname");
+    if(identity || fs_size==0) {
+        // start first time turn on's set up process
         service_init(USER_PROCESS, "sbin/identity");
     }
 
     /* step 5: stand up and prosper. */
     // load "init" or "sh" process
     service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
+
 #if DEBUG
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
 #endif

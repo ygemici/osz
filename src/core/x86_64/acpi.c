@@ -81,7 +81,8 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     } else
     /* Fixed ACPI Description Table */
     if(!kmemcmp("FACP", hdr->magic, 4)) {
-        ACPI_FACP *fadt = (ACPI_FACP *)hdr;
+//        ACPI_FACP *fadt = (ACPI_FACP *)hdr;
+        // TODO: get values for poweroff
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
@@ -232,5 +233,5 @@ void dev_poweroff()
 {
     isr_disable();
     // TODO: APCI poweroff
-    __asm__ __volatile__ ( "int $1;xchgw %%bx,%%bx;cli;hlt" : : : );
+    __asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
 }

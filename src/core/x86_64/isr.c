@@ -88,7 +88,7 @@ msg_sendsys(5,6,7,8);
     // start interrupts, fake an interrupt
     // handler return to start multitasking
     __asm__ __volatile__ (
-        "movq %0, %%rsp; movq %1, %%rbp; cli;hlt; iretq" :
+        "movq %0, %%rsp; movq %1, %%rbp; xchg %%bx,%%bx; iretq" :
         :
         "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );

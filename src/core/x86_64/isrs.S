@@ -43,16 +43,15 @@ idt64:
     .word	(32+16)*16-1
     .quad	0
     .align	8
-apic:
-    .quad	0
-timer:
-    .asciz "APIC"
+ctrl:
+    .asciz "PIC"
     .align 8
 nopic:
     .asciz	"%s not supported"
+ioctrl:
+    .asciz	"IOAPIC"
 
 .section .text
-
 /* store thread's context into Thread Control Block */
 isr_savecontext:
     ret
@@ -90,34 +89,25 @@ isr_initgates:
     shrq    $32, %rdx
     wrmsr
 /* enable IRQs */
-    /* APIC init */
-    xorq	%rax, %rax
-    incb	%al
-    cpuid
-    btl 	$9, %edx
-    jc  	1f
-    movq	$nopic, %rdi
-    movq	$timer, %rsi
-    call	kpanic
-    1:
-    /* find apic physical address */
-    movl	$0x1B, %ecx
-    rdmsr
-    andw	$0xF000, %ax
-    /* map apic at pmm.bss_end and increase bss pointer */
-    movq	pmm + 40, %rdi
-    movq	%rdi, apic
-    movq	%rax, %rsi
-    movb	$PG_CORE_NOCACHE, %dl
-    call	kmap
-    addq	$4096, pmm + 40
-    /* enable */
-    movl	$0x1B, %ecx
-    rdmsr
-    btsl	$11, %eax
-    wrmsr
-    /* IOAPIC init */
-    
+    /* PIC init */
+    movb	$0x11, %al
+    outb	%al, $0x20
+    outb	%al, $0xA0
+    movb	$0x20, %al
+    outb	%al, $0x21
+    movb	$0x28, %al
+    outb	%al, $0xA1
+    movb	$0x4, %al
+    outb	%al, $0x21
+    movb	$0x2, %al
+    outb	%al, $0xA1
+    movb	$0x1, %al
+    outb	%al, $0x21
+    outb	%al, $0xA1
+    movb	$0xFD, %al
+    outb	%al, $0x21
+    movb	$0xFF, %al
+    outb	%al, $0xA1
     ret
 
 /* syscall dispatcher */
@@ -139,7 +129,6 @@ isr_exc00divzero:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -154,7 +143,6 @@ isr_exc01debug:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -169,7 +157,6 @@ isr_exc02nmi:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -184,7 +171,6 @@ isr_exc03chkpoint:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -199,7 +185,6 @@ isr_exc04overflow:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -214,7 +199,6 @@ isr_exc05bound:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -229,7 +213,6 @@ isr_exc06invopcode:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -244,7 +227,6 @@ isr_exc07devunavail:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -259,7 +241,6 @@ isr_exc08dblfault:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -274,7 +255,6 @@ isr_exc09coproc:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -289,7 +269,6 @@ isr_exc10invtss:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -304,7 +283,6 @@ isr_exc11segfault:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -319,7 +297,6 @@ isr_exc12stackfault:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -334,7 +311,6 @@ isr_exc13genprot:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -349,7 +325,6 @@ isr_exc14pagefault:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -364,7 +339,6 @@ isr_exc15unknown:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -379,7 +353,6 @@ isr_exc16float:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -394,7 +367,6 @@ isr_exc17alignment:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -409,7 +381,6 @@ isr_exc18machinecheck:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -424,26 +395,24 @@ isr_exc19double:
     callq	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 /* IRQ handler ISRs */
 .align 128, 0x90
 isr_irq0:
+    /* preemption timer */
     cli
     lock
     btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     call	isr_savecontext
     xorq	%rdi, %rdi
-    movb	$0, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -455,13 +424,12 @@ isr_irq1:
     xorq	%rdi, %rdi
     movb	$1, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -473,13 +441,12 @@ isr_irq2:
     xorq	%rdi, %rdi
     movb	$2, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -491,13 +458,12 @@ isr_irq3:
     xorq	%rdi, %rdi
     movb	$3, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -509,13 +475,12 @@ isr_irq4:
     xorq	%rdi, %rdi
     movb	$4, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -527,13 +492,12 @@ isr_irq5:
     xorq	%rdi, %rdi
     movb	$5, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -545,13 +509,12 @@ isr_irq6:
     xorq	%rdi, %rdi
     movb	$6, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -563,13 +526,12 @@ isr_irq7:
     xorq	%rdi, %rdi
     movb	$7, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -581,13 +543,13 @@ isr_irq8:
     xorq	%rdi, %rdi
     movb	$8, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -599,13 +561,13 @@ isr_irq9:
     xorq	%rdi, %rdi
     movb	$9, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -617,13 +579,13 @@ isr_irq10:
     xorq	%rdi, %rdi
     movb	$10, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -635,13 +597,13 @@ isr_irq11:
     xorq	%rdi, %rdi
     movb	$11, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -653,13 +615,13 @@ isr_irq12:
     xorq	%rdi, %rdi
     movb	$12, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -671,13 +633,13 @@ isr_irq13:
     xorq	%rdi, %rdi
     movb	$13, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -689,13 +651,13 @@ isr_irq14:
     xorq	%rdi, %rdi
     movb	$14, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -707,13 +669,13 @@ isr_irq15:
     xorq	%rdi, %rdi
     movb	$15, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 
 .align 128, 0x90
@@ -725,12 +687,12 @@ isr_irq16:
     xorq	%rdi, %rdi
     movb	$16, %dil
     call	isr_irq
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $0xA0
+    outb	%al, $0x20
     call	isr_loadcontext
     lock
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    sti
     iretq
 

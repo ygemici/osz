@@ -68,6 +68,9 @@ void env_init()
         // manually override IOAPIC address
         if(!kmemcmp(env, "ioapic=", 7)) {
             env+=7;
+            // we only accept hex value for this parameter
+            if(*env=='0' && *(env+1)=='x')
+                env+=2;
             do{
                 ioapic_addr<<=4;
                 if(*env>='0'&&*env<='9')
@@ -94,7 +97,7 @@ void env_init()
             env+=12;
             rescueshell = (*env=='1'||*env=='t'||*env=='T');
         }
-        // run first time ask for identity process
+        // run first time turn on's ask for identity process
         if(!kmemcmp(env, "identity=", 9)) {
             env+=9;
             identity = (*env=='1'||*env=='t'||*env=='T');
