@@ -25,6 +25,8 @@
  * @brief Kernel entry point
  */
 
+#include "isr.h"
+
 .section .text
 .global _start
 .global cpu_init
@@ -45,6 +47,13 @@
 _start:
     cli
     cld
+/* disable PIC and NMI */
+    movb	$0xFF, %al
+    outb	%al, $PIC_MASTER_DATA
+    outb	%al, $PIC_SLAVE_DATA
+    inb		$0x70, %al
+    btsw	$8, %ax
+    outb	%al, $0x70
 /* setup segments */
     movq    $gdt64, %rax
     lgdt    (%rax)

@@ -233,25 +233,14 @@ realmode_start:
             cmp         ax, 0600h
             jb          .cpuerror
             ;look for minimum feature flags
-            ;(PAT, SSE2, CMOV, MTRR, MSR, TSC, PSE, FPU)
-            mov         esi, 4019179h
-            mov         eax, edx
-            and         eax, esi
-            cmp         eax, esi
-            jne         .cpuerror
-            bt          ecx, 0      ;SSE3
+            ;do we have SSE3?
+            bt          ecx, 0
             jnc         .cpuerror
-            ;do we have PAE?
+            ;and PAE?
             mov         eax, edx
             and         eax, 1000000b
             jz          .cpuok
-            ;FPU
-            bt          edx, 0
-            jnc         .cpuok
-            ;TSC
-            bt          edx, 4
-            jnc         .cpuok
-            ;MSR
+            ;what about MSR?
             bt          edx, 5
             jnc         .cpuok
             ;and can we use long mode?
@@ -1244,6 +1233,11 @@ protmode_start:
             stosd
             mov         eax, 00209800h
             stosd
+            ;18h mandatory tss
+            xor         eax, eax        ;required by vt-x
+            stosd
+            mov         eax, 00008900h
+            stosd
             ;patch gdtr size
             mov         eax, edi
             sub         eax, GDT_table
@@ -1254,13 +1248,20 @@ protmode_start:
             stosd
 
             ;Enter long mode
+            mov         al, 0FFh        ;disable PIC
+            out         021h, al
+            out         0A1h, al
+            in          al, 70h         ;disable NMI
+            or          al, 80h
+            out         70h, al
+
             mov         eax, 10100000b  ;Set PAE and PGE
             mov         cr4, eax
             mov         eax, 0A000h
             mov         cr3, eax
             mov         ecx, 0C0000080h ;EFER MSR
             rdmsr
-            or          eax, 901h       ;enable long mode, nx bit, syscall, fxsave
+            or          eax, 100h       ;enable long mode
             wrmsr
 
             mov         eax, cr0
@@ -1299,7 +1300,8 @@ DATA_PROT   =           $-GDT_table
 CODE_BOOT   =           $-GDT_table
             dd          0000FFFFh,00009800h ;16 bit legacy real mode cs
 CODE_PROT   =           $-GDT_table
-            dd          0000FFFFh,00CF9A00h ;32-bit prot mode ring0 cs
+            dd          0000FFFFh,00CF9A00h ;32 bit prot mode ring0 cs
+            dd          00000068h,00CF8900h ;32 bit TSS, not used but required
 GDT_value:  dw          $-GDT_table
             dd          GDT_table
             dd          0,0

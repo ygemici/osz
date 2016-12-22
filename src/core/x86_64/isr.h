@@ -26,14 +26,21 @@
  */
 
 // IDT constants
-#define IDT_EXC 0xEF010008
-#define IDT_NMI 0xEF020008
-#define IDT_INT 0xEE030008
+#define IDT_EXC 0x8F010008
+#define IDT_NMI 0x8F020008
+#define IDT_INT 0x8E010008
 #define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))
 #define IDT_GATE_HI(offset) ((uint64_t)(offset)>>32)
 #define ISR_NUMIRQ 16
 #define ISR_MAX 128
 #define ISR_STACK 64
+
+//controllers
+#define CTRL_PIC 0
+#define CTRL_APIC 1
+#define CTRL_x2APIC 2
+//if you change this, you'll have to run isrs.sh
+#define ISR_CTRL CTRL_APIC
 
 // PIC, PIT constants
 #define PIC_MASTER		0x20

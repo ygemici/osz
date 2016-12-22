@@ -63,4 +63,5 @@ testq:
 testb:
 	@echo "TEST"
 	@echo
-	bochs -f etc/bochs.rc -q
+	#bochs -f etc/bochs.rc -q
+	/usr/local/bin/bochs -f etc/bochs.rc -q

@@ -104,7 +104,8 @@ void main()
     isr_enable();
 
     /* step 6: go to dreamless sleep. */
-    // ...should not reach this code until shutdown process finished,
-    // and no tasks left to be scheduled.
-    dev_poweroff();
+    // ...should not reach this code ever. Instead scheduler will
+    // call dev_poweroff() when shotdown is finished and no tasks
+    // left to run.
+    /*dev_poweroff();*/
 }

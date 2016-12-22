@@ -481,6 +481,9 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
             "shrl $24, %%ebx;"
             "mov %%ebx,%0"
             : : "b"(bootboot->bspid) : "memory" );
+        // unlike BIOS bootboot, no need to check if we have
+        // PAE + MSR + LME, as we're already in long mode.
+
         bootboot->protocol=PROTOCOL_STATIC;
         bootboot->loader_type=LOADER_UEFI;
         bootboot->size=128;

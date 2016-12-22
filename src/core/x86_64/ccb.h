@@ -42,9 +42,9 @@ typedef struct {
     uint64_t rsp2;      // +14
     uint32_t realid;    // +1C real APIC ID
     uint32_t id;        // +20 logical APIC ID
-    uint64_t ist1;      // +24 user (exception, syscall) stack
+    uint64_t ist1;      // +24 user (exception, syscall, IRQ) stack
     uint64_t ist2;      // +2C NMI stack
-    uint64_t ist3;      // +34 IRQ stack
+    uint64_t ist3;      // +34 not used at the moment
     uint64_t ist4;      // +3C not used at the moment
     uint64_t ist5;      // +44 not used at the moment
     uint64_t excerr;    // +4C exception error code

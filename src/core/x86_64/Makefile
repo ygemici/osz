@@ -8,7 +8,10 @@ LIBS =
 
 CFLAGS = -DDEBUG=$(DEBUG) -Wall -fpic -ffreestanding
 
-all: $(OBJS) ok
+all: isrs $(OBJS) ok
+
+isrs:
+	@test isr.h -nt isrs.S -o isrs.sh -nt isrs.S && ./isrs.sh 2>/dev/null || true
 
 ok:
 	@true

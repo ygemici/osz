@@ -17,7 +17,7 @@ zlib:
 	@make -e --no-print-directory -C zlib_inflate all
 
 %.efi: %.so
-	@echo "  src		efi-x86_64"
+	@echo "  src		efi-x86_64 (UEFI)"
 	@objcopy -j .text -j .sdata -j .data -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-$(ARCH) --subsystem=13 $^ $@
 	@cp $(TARGET) ../../bin/ESP/EFI/BOOT/BOOTX64.EFI
 	@../../tools/efirom.o $(TARGET) ../bootboot.rom

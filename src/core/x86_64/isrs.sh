@@ -54,6 +54,9 @@ EOF
 numirq=`grep "ISR_NUMIRQ" isr.h|cut -d ' ' -f 3`
 isrmax=`grep "ISR_MAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
+ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
+
+echo "  src		isrs.S (${ctrl:5}, numirq $numirq)"
 cat >isrs.S <<EOF
 /*
  * core/x86_64/isrs.S - GENERATED FILE DO NOT EDIT
@@ -89,6 +92,10 @@ cat >isrs.S <<EOF
 .global isr_initgates
 .global isr_exc00divzero
 .global isr_irq0
+.global isr_initirq
+.global isr_enableirq
+.global isr_disableirq
+
 .extern gdt64_tss
 .extern isr_irq
 .extern excabort
@@ -101,14 +108,13 @@ idt64:
     .quad	0
     .align	8
 EOF
-if [ "$1" == "pic" ]; then
-	numirq=16
+if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
 	ctrl:
 	    .asciz "PIC"
 	EOF
 else
-	if [ "$1" == "x2apic" ]; then
+	if [ "$ctrl" == "CTRL_x2APIC" ]; then
 		cat >>isrs.S <<-EOF
 		ioapic:
 		    .quad	0
@@ -135,7 +141,54 @@ ioctrl:
 
 .section .text
 EOF
-if [ "$1" != "pic" ]; then
+if [ "$ctrl" == "CTRL_PIC" ]; then
+	cat >>isrs.S <<-EOF
+	/* void isr_enableirq(uint64_t irq) */
+	isr_enableirq:
+	    cmpl	\$2, %edi
+	    je		1f
+	    xorl	%edx, %edx
+	    incl	%edx
+	    movl	%edi, %ecx
+	    cmpl	\$8, %ecx
+	    jae		2f
+	    shll	%cl, %edx
+	    notl	%edx
+	    inb		\$PIC_MASTER_DATA, %al
+	    andb	%dl, %al
+	    outb	%al, \$PIC_MASTER_DATA
+	1:  ret
+	2:  subl	\$8, %edi
+	    shll	%cl, %edx
+	    notl	%edx
+	    inb		\$PIC_SLAVE_DATA, %al
+	    andb	%cl, %al
+	    outb	%al, \$PIC_SLAVE_DATA
+	    ret
+	
+	/* void isr_disableirq(uint64_t irq) */
+	isr_disableirq:
+	    cmpl	\$2, %edi
+	    je		1f
+	    xorl	%edx, %edx
+	    incl	%edx
+	    movl	%edi, %ecx
+	    cmpl	\$8, %edi
+	    jae		2f
+	    shll	%cl, %edx
+	    inb		\$PIC_MASTER_DATA, %al
+	    orb		%cl, %al
+	    outb	%al, \$PIC_MASTER_DATA
+	1:  ret
+	2:  subl	\$8, %edi
+	    shll	%cl, %edx
+	    inb		\$PIC_SLAVE_DATA, %al
+	    orb		%cl, %al
+	    outb	%al, \$PIC_SLAVE_DATA
+	    ret
+	
+	EOF
+else
 	cat >>isrs.S <<-EOF
 	/* uint64_t ioapic_read(uint32_t port) */
 	ioapic_read:
@@ -158,6 +211,48 @@ if [ "$1" != "pic" ]; then
 	    decl	%edi
 	    movl	%edi, ioapic
 	    movl	%esi, ioapic+16
+	    ret
+	
+	/* void isr_enableirq(uint64_t irq) */
+	isr_enableirq:
+	    movq	%rdi, %rax
+	    addq	\$32, %rax
+	    orq		\$IOAPIC_IRQMASK, %rax
+	    btrl	\$16, %eax
+	    movq	%rdi, %rdx
+	    shlq	\$1, %rdx
+	    addq	\$IOAPIC_IRQ0, %rdx
+	    /* write the high dword first */
+	    movq	%rax, %rcx
+	    shrq	\$32, %rcx
+	    incl	%edx
+	    movq	ioapic, %rsi
+	    movl	%edx, (%rsi)
+	    movl	%ecx, 16(%rsi)
+	    /* and then the low with unmask bit */
+	    decl	%edx
+	    movl	%edx, (%rsi)
+	    movl	%eax, 16(%rsi)
+	    ret
+	
+	/* void isr_disableirq(uint64_t irq) */
+	isr_disableirq:
+	    movq	%rdi, %rax
+	    addq	\$32, %rax
+	    orq		\$IOAPIC_IRQMASK, %rax
+	    btsl	\$16, %eax
+	    movq	%rdi, %rdx
+	    shlq	\$1, %rdx
+	    addq	\$IOAPIC_IRQ0, %rdx
+	    /* write the low dword first with mask bit */
+	    movq	ioapic, %rsi
+	    movl	%edx, (%rsi)
+	    movl	%eax, 16(%rsi)
+	    shrq	\$32, %rax
+	    /* and then the high dword */
+	    incl	%edx
+	    movl	%edx, (%rsi)
+	    movl	%eax, 16(%rsi)
 	    ret
 	
 	EOF
@@ -199,43 +294,80 @@ isr_initgates:
     movq    %rax, %rdx
     shrq    \$32, %rdx
     wrmsr
-/* enable IRQs */
+    ret
+
+isr_initirq:
+/* initialize IRQs, masking all */
+    /* remap PIC. We have to do this even when PIC is disabled. */
+    movb	\$0x11, %al
+    outb	%al, \$PIC_MASTER
+    outb	%al, \$PIC_SLAVE
+    movb	\$0x20, %al
+    outb	%al, \$PIC_MASTER_DATA
+    movb	\$0x28, %al
+    outb	%al, \$PIC_SLAVE_DATA
+    movb	\$0x4, %al
+    outb	%al, \$PIC_MASTER_DATA
+    movb	\$0x2, %al
+    outb	%al, \$PIC_SLAVE_DATA
+    movb	\$0x1, %al
+    outb	%al, \$PIC_MASTER_DATA
+    outb	%al, \$PIC_SLAVE_DATA
 EOF
-if [ "$1" == "pic" ]; then
+if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
 	    /* PIC init */
-	    movb	\$0x11, %al
-	    outb	%al, \$0x20
-	    outb	%al, \$0xA0
-	    movb	\$0x20, %al
-	    outb	%al, \$0x21
-	    movb	\$0x28, %al
-	    outb	%al, \$0xA1
-	    movb	\$0x4, %al
-	    outb	%al, \$0x21
-	    movb	\$0x2, %al
-	    outb	%al, \$0xA1
-	    movb	\$0x1, %al
-	    outb	%al, \$0x21
-	    outb	%al, \$0xA1
-	    movb	\$0xFD, %al
-	    outb	%al, \$0x21
 	    movb	\$0xFF, %al
-	    outb	%al, \$0xA1
+	    outb	%al, \$PIC_SLAVE_DATA
+	    btrw	\$2, %ax /* enable cascade irq 2 */
+	    outb	%al, \$PIC_MASTER_DATA
 	EOF
 	read -r -d '' EOI <<-EOF
 	    /* PIC EOI */
 	    movb	\$0x20, %al
-	    outb	%al, \$0x20
+	    outb	%al, \$PIC_MASTER_DATA
 	EOF
 	read -r -d '' EOI2 <<-EOF
 	    /* PIC EOI */
 	    movb	\$0x20, %al
-	    outb	%al, \$0xA0
-	    outb	%al, \$0x20
+	    outb	%al, \$PIC_SLAVE_DATA
+	    outb	%al, \$PIC_MASTER_DATA
 	EOF
 else
-	if [ "$1" == "x2apic" ]; then
+	cat >>isrs.S <<-EOF
+	    movb	\$0xFF, %al
+	    outb	%al, \$PIC_MASTER_DATA
+	    outb	%al, \$PIC_SLAVE_DATA
+	    /* IOAPIC init */
+	    movq	ioapic_addr, %rax
+	    orq 	%rax, %rax
+	    jnz  	1f
+	    movq	\$nopic, %rdi
+	    movq	\$ioctrl, %rsi
+	    call	kpanic
+	    1:
+	    /* map ioapic at pmm.bss_end and increase bss pointer */
+	    movq	pmm + 40, %rdi
+	    movq	%rdi, ioapic
+	    movq	%rax, %rsi
+	    movb	\$PG_CORE_NOCACHE, %dl
+	    call	kmap
+	    addq	\$4096, pmm + 40
+	
+	    /* setup IRQs, mask them all */
+	    xorq	%rdi, %rdi
+	1:  call	isr_disableirq
+	    incl	%edi
+	    cmpl	\$$numirq, %edi
+	    jb		1b
+	
+	    /* enable IOAPIC in IMCR */
+	    movb	\$0x70, %al
+	    outb	%al, \$0x22
+	    movb	\$1, %al
+	    outb	%al, \$0x23
+	EOF
+	if [ "$ctrl" == "CTRL_x2APIC" ]; then
 		cat >>isrs.S <<-EOF
 		    /* x2APIC init */
 		    xorq	%rax, %rax
@@ -286,11 +418,24 @@ else
 		    movb	\$PG_CORE_NOCACHE, %dl
 		    call	kmap
 		    addq	\$4096, pmm + 40
+		    /* setup */
+		    movl	\$0xFFFFFFFF, apic + APIC_DFR
+		    movl	apic + APIC_DFR, %eax
+		    andl	\$0x00FFFFFF, %eax
+		    orb		\$1, %al
+		    movl	%eax, apic + APIC_LDR
+		    movl	\$APIC_DISABLE, apic + APIC_LVT_TMR
+		    movl	\$APIC_DISABLE, apic + APIC_LVT_LINT0
+		    movl	\$APIC_DISABLE, apic + APIC_LVT_LINT1
+		    movl	\$IOAPIC_NMI, apic + APIC_LVT_PERF
+		    movl	\$0, apic + APIC_TASKPRI
 		    /* enable */
 		    movl	\$0x1B, %ecx
 		    rdmsr
 		    btsl	\$11, %eax
 		    wrmsr
+		    /* sw enable 
+		    movl	\$APIC_SW_ENABLE+39, apic + APIC_SPURIOUS */
 		EOF
 		read -r -d '' EOI <<-EOF
 		    /* APIC EOI */
@@ -298,43 +443,13 @@ else
 		    movl	\$0, 0xB0(%rax)
 		EOF
 	fi
-	cat >>isrs.S <<-EOF
-	    /* IOAPIC init */
-	    movq	ioapic_addr, %rax
-	    orq 	%rax, %rax
-	    jnz  	1f
-	    movq	\$nopic, %rdi
-	    movq	\$ioctrl, %rsi
-	    call	kpanic
-	    1:
-	    /* disable PIC */
-	    movb	\$0xFF, %al
-	    outb	%al, \$0x21
-	    outb	%al, \$0xA1
-	    /* map ioapic at pmm.bss_end and increase bss pointer */
-	    movq	pmm + 40, %rdi
-	    movq	%rdi, ioapic
-	    movq	%rax, %rsi
-	    movb	\$PG_CORE_NOCACHE, %dl
-	    call	kmap
-	    addq	\$4096, pmm + 40
-	    movq	\$IOAPIC_ID, %rdi
-	    call	ioapic_read
-	
-	    /* setup IRQs */
-	    movq	\$IOAPIC_IRQ1, %rdi
-	    movq	\$IOAPIC_IRQMASK + 33, %rsi
-	    call	ioapic_write
-	
-	    /* enable IOAPIC */
-	    movb	\$0x70, %al
-	    outb	%al, \$0x22
-	    movb	\$1, %al
-	    outb	%al, \$0x23
-	EOF
 fi
 
 cat >>isrs.S <<EOF
+    /* enable NMI */
+    inb		\$0x70, %al
+    btrw	\$8, %ax
+    outb	%al, \$0x70
     ret
 
 /* syscall dispatcher */
@@ -348,7 +463,7 @@ EOF
 i=0
 for isr in $exceptions
 do
-	echo $isr
+	echo $isr >&2
 	handler=`grep " $isr" isr.c|cut -d '(' -f 1|cut -d ' ' -f 2`
 	if [ "$handler" == "" ]; then
 		handler="excabort"
@@ -376,6 +491,7 @@ cat >>isrs.S <<EOF
 .align $isrmax, 0x90
 isr_irq0:
     /* preemption timer */
+    xchg %bx,%bx
     cli
     lock
     btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
@@ -391,7 +507,7 @@ isr_irq0:
 EOF
 for isr in `seq 1 $numirq`
 do
-	echo irq$isr
+	echo irq$isr >&2
 	if [ "$EOI2" != "" -a $isr -gt 7 ]
 	then
 		EOI="$EOI2";
@@ -399,15 +515,20 @@ do
 	cat >>isrs.S <<-EOF
 	.align $isrmax, 0x90
 	isr_irq$isr:
+	    xchg %bx,%bx
 	    cli
 	    lock
 	    btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+	    pushq	%rdi
+	    pushq	%rax
 	    call	isr_savecontext
 	    xorq	%rdi, %rdi
 	    movb	\$$isr, %dil
-	    call	isr_irq
+	    /*call	isr_irq*/
 	    $EOI
 	    call	isr_loadcontext
+	    popq	%rax
+	    popq	%rdi
 	    lock
 	    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
 	    iretq

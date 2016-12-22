@@ -33,6 +33,9 @@
 extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void *isr_initgates(uint64_t *idt, OSZ_ccb *tss);
+extern void isr_initirq();
+extern void isr_enableirq(uint64_t irq);
+
 extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
 extern pid_t subsystems[];
@@ -85,10 +88,12 @@ void isr_enable()
 // TODO: remove test
 msg_sendsys(SYS_IRQ,2,0,0);
 msg_sendsys(5,6,7,8);
-    // start interrupts, fake an interrupt
+    // start irqs, fake an interrupt
+    isr_initirq();
+    isr_enableirq(1);
     // handler return to start multitasking
     __asm__ __volatile__ (
-        "movq %0, %%rsp; movq %1, %%rbp; xchg %%bx,%%bx; iretq" :
+        "movq %0, %%rsp; movq %1, %%rbp; iretq" :
         :
         "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );

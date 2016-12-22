@@ -231,6 +231,8 @@ void dev_init()
 
 void dev_poweroff()
 {
+    // disable all interrupts and switch to identity mapping
+    // so that ACPI tables will be at expected position
     isr_disable();
     // TODO: APCI poweroff
     __asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
