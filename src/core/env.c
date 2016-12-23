@@ -28,6 +28,7 @@
 // parsed values
 uint __attribute__ ((section (".data"))) nrphymax;
 uint __attribute__ ((section (".data"))) nrmqmax;
+uint __attribute__ ((section (".data"))) nrirqmax;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) debug;
 uint8_t __attribute__ ((section (".data"))) networking;
@@ -36,89 +37,115 @@ uint8_t __attribute__ ((section (".data"))) rescueshell;
 
 extern uint64_t ioapic_addr;
 
+unsigned char *env_hex(unsigned char *s, uint *v, uint min, uint max)
+{
+    if(*s=='0' && *(s+1)=='x')
+        s+=2;
+    do{
+        *v <<= 4;
+        if(*s>='0' && *s<='9')
+            *v += (uint64_t)((unsigned char)(*s)-'0');
+        else if(*s >= 'a' && *s <= 'f')
+            *v += (uint64_t)((unsigned char)(*s)-'a'+10);
+        else if(*s >= 'A' && *s <= 'F')
+            *s += (uint64_t)((unsigned char)(*s)-'A'+10);
+        s++;
+    } while((*s>='0'&&*s<='9')||(*s>='a'&&*s<='f')||(*s>='A'&&*s<='F'));
+    if(*v < min)
+        *v = min;
+    if(max!=0 && *v > max)
+        *v = max;
+    return s;
+}
+
+unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max)
+{
+    if(*s=='0' && *(s+1)=='x')
+        return env_hex(s+2, v, min, max);
+    *v=0;
+    do{
+        *v *= 10;
+        *v += (uint64_t)((unsigned char)(*s)-'0');
+        s++;
+    } while(*s>='0'&&*s<='9');
+    if(*v < min)
+        *v = min;
+    if(max!=0 && *v > max)
+        *v = max;
+    return s;
+}
+
+unsigned char *env_boolt(unsigned char *s, uint8_t *v)
+{
+    *v = (*s=='1'||*s=='t'||*s=='T');
+    return s+1;
+}
+
+unsigned char *env_boolf(unsigned char *s, uint8_t *v)
+{
+    *v = !(*s=='0'||*s=='f'||*s=='F');
+    return s+1;
+}
+
 void env_init()
 {
     unsigned char *env = environment;
     int i = __PAGESIZE;
-    networking = sound = 1;
+    // set up defaults
+    networking = sound = true;
+    identity = false;
     ioapic_addr = 0;
+    nrirqmax = ISR_NUMHANDLER;
     while(i-->0 && *env!=0) {
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
-            env+=9;
-            // no atoi() yet
-            nrphymax=0;
-            do{
-                nrphymax*=10;
-                nrphymax+=(uint64_t)((unsigned char)(*env)-'0');
-                env++;
-            } while(*env>='0'&&*env<='9'&&nrphymax<=255);
-        }
+            env += 9;
+            env = env_dec(env, &nrphymax, 1, 255);
+        } else
         // number of message queue pages
         if(!kmemcmp(env, "nrmqmax=", 8)) {
-            env+=8;
-            // no atoi() yet
-            nrmqmax=0;
-            do{
-                nrmqmax*=10;
-                nrmqmax+=(uint64_t)((unsigned char)(*env)-'0');
-                env++;
-            } while(*env>='0'&&*env<='9'&&nrmqmax<=NRMQ_MAX);
-        }
+            env += 8;
+            env = env_dec(env, &nrmqmax, 2, NRMQ_MAX);
+        } else
+        // number of handlers per IRQ
+        if(!kmemcmp(env, "nrirqmax=", 9)) {
+            env += 9;
+            env = env_dec(env, &nrirqmax, 4, 32);
+        } else
         // manually override IOAPIC address
         if(!kmemcmp(env, "ioapic=", 7)) {
-            env+=7;
+            env += 7;
             // we only accept hex value for this parameter
-            if(*env=='0' && *(env+1)=='x')
-                env+=2;
-            do{
-                ioapic_addr<<=4;
-                if(*env>='0'&&*env<='9')
-                    ioapic_addr+=(uint64_t)((unsigned char)(*env)-'0');
-                else if(*env>='a'&&*env<='f')
-                    ioapic_addr+=(uint64_t)((unsigned char)(*env)-'a'+10);
-                else if(*env>='A'&&*env<='F')
-                    ioapic_addr+=(uint64_t)((unsigned char)(*env)-'A'+10);
-                env++;
-            } while((*env>='0'&&*env<='9')||(*env>='a'&&*env<='f')||(*env>='A'&&*env<='F'));
-        }
+            env = env_hex(env, (uint*)&ioapic_addr, 1024*1024, 0);
+        } else
         // disable networking
         if(!kmemcmp(env, "networking=", 11)) {
-            env+=11;
-            networking = !(*env=='0'||*env=='f'||*env=='F');
-        }
+            env += 11;
+            env = env_boolf(env, &networking);
+        } else
         // disable sound
         if(!kmemcmp(env, "sound=", 6)) {
-            env+=6;
-            sound = !(*env=='0'||*env=='f'||*env=='F');
-        }
+            env += 6;
+            env = env_boolf(env, &sound);
+        } else
         // rescue shell
         if(!kmemcmp(env, "rescueshell=", 12)) {
-            env+=12;
-            rescueshell = (*env=='1'||*env=='t'||*env=='T');
-        }
+            env += 12;
+            env = env_boolt(env, &rescueshell);
+        } else
         // run first time turn on's ask for identity process
         if(!kmemcmp(env, "identity=", 9)) {
-            env+=9;
-            identity = (*env=='1'||*env=='t'||*env=='T');
-        }
+            env += 9;
+            env = env_boolf(env, &identity);
+        } else
 #if DEBUG
         // output verbosity level
         if(!kmemcmp(env, "debug=", 6)) {
-            env+=6;
+            env += 6;
             debug = (*env>='0'&&*env<='9'?*env - '0':0);
-        }
+            env++;
+        } else
 #endif
-        env++;
+            env++;
     }
-    // lower bounds
-    if(nrphymax<2)
-        nrphymax=2;
-    if(nrmqmax<1)
-        nrmqmax=1;
-    // upper bounds
-    if(nrphymax>255)
-        nrphymax=255;
-    if(nrmqmax>NRMQ_MAX)
-        nrmqmax=NRMQ_MAX;
 }

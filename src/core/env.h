@@ -27,6 +27,7 @@
 
 extern uint64_t nrphymax;
 extern uint nrmqmax;
+extern uint nrirqmax;
 extern uint8_t networking;
 extern uint8_t sound;
 extern uint8_t rescueshell;
@@ -39,4 +40,6 @@ extern uint8_t debug;
 #define DBG_ELF 3
 #define DBG_RTIMPORT 4
 #define DBG_RTEXPORT 5
-#define DBG_SYSTABLES 6
+#define DBG_IRQ 6
+#define DBG_SYSTABLES 7
+

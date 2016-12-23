@@ -34,6 +34,8 @@ extern uint64_t *stack_ptr;
 extern uint64_t pt;
 extern uint64_t sys_mapping;
 
+extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
+
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*8))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
@@ -47,8 +49,20 @@ typedef struct {
 // memory allocated for relocation addresses
 OSZ_rela __attribute__ ((section (".data"))) *relas;
 
-/* thread ids of system tasks. */
+/* thread ids of system services. */
 pid_t  __attribute__ ((section (".data"))) subsystems[SRV_NUM];
+/* thread ids of user services. */
+uint64_t __attribute__ ((section (".data"))) nrservices;
+pid_t  __attribute__ ((section (".data"))) services[-SRV_usrlast - SRV_NUM];
+
+uint64_t __attribute__ ((section (".data"))) *irq_dispatch_table;
+
+/* register a user mode service for pid translation */
+uint64_t service_register(pid_t thread)
+{
+    services[nrservices++] = thread;
+    return nrservices-1;
+}
 
 /* load an ELF64 binary into text segment starting at 2M */
 void *service_loadelf(char *fn)
@@ -85,7 +99,7 @@ void *service_loadelf(char *fn)
     }
     ret = i;
 #if DEBUG
-    if(debug==DBG_ELF)
+    if(debug==DBG_ELF||(debug==DBG_IRQ&&irq_dispatch_table!=NULL))
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
 #endif
     /* map text segment */
@@ -221,7 +235,7 @@ void service_rtlink()
     }
 
     /*** resolve addresses ***/
-    for(j=0; j<__PAGESIZE/8; j++) {
+    for(j=0; j<__PAGESIZE/8 && paging[j]; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
@@ -267,6 +281,7 @@ void service_rtlink()
                 sym, strtable-(char*)sym
             );
 #endif
+        //foreach(sym)
         s=sym;
         for(i=0;i<(strtable-(char*)sym)/syment;i++) {
             if(s->st_name > strsz) break;
@@ -277,6 +292,32 @@ void service_rtlink()
                 if(debug==DBG_RTEXPORT)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
+                // parse irqX() symbols to fill up irq_dispatch_table
+                if(irq_dispatch_table != NULL && !kmemcmp(strtable + s->st_name,"irq",3) &&
+                    //at least one number
+                    *(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
+                    //strlen() = 4 | 5 | 6
+                    (*(strtable + s->st_name + 4)==0 ||
+                     *(strtable + s->st_name + 5)==0 ||
+                     *(strtable + s->st_name + 6)==0)
+                ) {
+                    env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
+                    k *= nrirqmax;
+                    // skip nrirqmax at irq_dispatch_table[0]
+                    k++;
+                    if(k<ISR_NUMIRQ*nrirqmax-1) {
+                        while(irq_dispatch_table[k]!=0&&k<ISR_NUMIRQ*nrirqmax-1) k++;
+#if DEBUG
+                        if(debug==DBG_IRQ)
+                            kprintf("IRQ %d: irq_dispatch_table[%d]=%x\n", k/nrirqmax, k, offs);
+#endif
+                        irq_dispatch_table[k] = offs;
+#if DEBUG
+                    } else if(debug==DBG_IRQ) {
+                            kprintf("warning irq_dispatch_table[%d] for %x out of range\n", k, offs);
+#endif
+                    }
+                }
                 // look up in relas array which addresses require
                 // this symbol's virtual address
                 for(k=0;k<n;k++){
@@ -297,7 +338,7 @@ void service_rtlink()
                     kprintf("\n");
 #endif
             }
-            /* move pointer to next section header */
+            /* move pointer to next symbol */
             s = (Elf64_Sym *)((uint8_t *)s + syment);
         }
     }
@@ -311,7 +352,7 @@ void service_rtlink()
     // go again and save entry points onto stack
     // crt0 starts with a 'ret', so _start function address
     // will be popped up and executed.
-    for(j=0; j<__PAGESIZE/8; j++) {
+    for(j=0; j<__PAGESIZE/8 && paging[j]; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
@@ -395,38 +436,6 @@ void fs_init()
     service_rtlink();
     // map initrd in "fs" process' memory
     service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
-
-    // add to queue so that scheduler will know about this thread
-    sched_add(pid);
-}
-
-/* Initialize the "system" process */
-void sys_init()
-{
-    // this is so early, we don't have initrd in fs process' bss yet.
-    // so we have to rely on identity mapping to locate the files
-    uint64_t *paging = &tmppde;
-    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    pid_t pid = thread_new("system");
-    subsystems[SRV_system] = pid;
-    sys_mapping = tcb->memroot;
-
-    // map device driver dispatcher
-    service_loadelf("sbin/system");
-    // map libc
-    service_loadso("lib/libc.so");
-    // detect devices and load drivers (sharedlibs) for them
-    dev_init();
-
-    // dynamic linker
-    service_rtlink();
-    // modify TCB for system task
-    tcb->priority = PRI_SYS;
-    //set IOPL=3 in rFlags
-    tcb->rflags |= (3<<12);
-    // map it's message queue PT in core memory
-    // so that ISRs can send message without a task switch
-    paging[SYSMQ_PDE] = (pt&~(__PAGESIZE-1))|PG_CORE_NOCACHE;
 
     // add to queue so that scheduler will know about this thread
     sched_add(pid);

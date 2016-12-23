@@ -36,7 +36,9 @@
 .global isr_initirq
 .global isr_enableirq
 .global isr_disableirq
-
+.global isr_gainentropy
+.extern isr_ticks
+.extern isr_entropy
 .extern gdt64_tss
 .extern isr_irq
 .extern excabort
@@ -48,6 +50,8 @@ idt64:
     .word	(32+16)*16-1
     .quad	0
     .align	8
+isr_preemptcnt:
+    .quad	0
 apic:
     .quad	0
 ioapic:
@@ -162,6 +166,23 @@ isr_loadcontext:
     movq	OSZ_tcb_gpr +  96, %r14
     movq	OSZ_tcb_gpr + 104, %r15
     movq	OSZ_tcb_gpr + 112, %rbp
+    ret
+
+isr_gainentropy:
+    /* isr_entropy[isr_ticks[0]&3] ^=
+       (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
+    movq	isr_ticks, %rax
+    movq	%rax, %rcx
+    movq	%rax, %rdx
+    incq	%rdx
+    andq	$3, %rax
+    andq	$3, %rdx
+    addq	$isr_entropy, %rax
+    addq	$isr_entropy, %rdx
+    andb	$0x3f, %cl
+    rolq	%cl, (%rax)
+    movq	(%rax), %rax
+    xorq	(%rdx), %rax
     ret
 
 isr_initgates:
@@ -294,465 +315,363 @@ isr_initirq:
 /* syscall dispatcher */
 .align	16, 0x90
 isr_syscall:
-xchg %bx, %bx
-    sysret
+    cli
+    /* tcb->rip */
+    movq	%rcx, __PAGESIZE-40
+    /* tcb->rflags */
+    pushf
+    pop     __PAGESIZE-24
+    /* tcb->gpr */
+    call	isr_savecontext
+    /* get a new thread to run */
+    call	sched_pick
+    movq	%rax, %cr3
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, 0xB0(%rax)
+    call	isr_loadcontext
+    movq    __PAGESIZE-24, %r11
+    movq    __PAGESIZE-40, %rcx
+    sysretq
 
 /* exception handler ISRs */
 .align 128, 0x90
 isr_exc00divzero:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$0, %dil
     callq	exc00divzero
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc01debug:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$1, %dil
     callq	exc01debug
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc02nmi:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$2, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc03chkpoint:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$3, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc04overflow:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$4, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc05bound:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$5, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc06invopcode:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$6, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc07devunavail:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$7, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc08dblfault:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$8, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc09coproc:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$9, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc10invtss:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$10, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc11segfault:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$11, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc12stackfault:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$12, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc13genprot:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$13, %dil
     callq	exc13genprot
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc14pagefault:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$14, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc15unknown:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$15, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc16float:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$16, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc17alignment:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$17, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc18machinecheck:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$18, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc19double:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$19, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc20:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$20, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc21:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$21, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc22:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$22, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc23:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$23, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc24:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$24, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc25:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$25, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc26:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$26, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc27:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$27, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc28:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$28, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc29:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$29, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc30:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$30, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_exc31:
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     callq	isr_savecontext
     xorq	%rdi, %rdi
     movb	$31, %dil
     callq	excabort
     callq	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 /* IRQ handler ISRs */
 .align 128, 0x90
 isr_irq0:
     /* preemption timer */
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    /* isr_ticks++ */
+    addq	$1, isr_ticks
+    adcq	$0, isr_ticks+8
+    /* tcb->billcnt++ or tcb->syscnt++? */
+    movq	56, %rbx
+    movb	%al, __PAGESIZE-32   
+    cmpb	$0x23, %al
+    je		1f
+    addq	$8, %rbx
+1:  incq	(%rbx)
+    /* switch to a new thread */
     call	sched_pick
     movq	%rax, %cr3
     /* APIC EOI */
@@ -763,14 +682,17 @@ isr_irq0:
 
 .align 128, 0x90
 isr_irq1:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -786,14 +708,17 @@ isr_irq1:
 
 .align 128, 0x90
 isr_irq2:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -809,14 +734,17 @@ isr_irq2:
 
 .align 128, 0x90
 isr_irq3:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -832,14 +760,17 @@ isr_irq3:
 
 .align 128, 0x90
 isr_irq4:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -855,14 +786,17 @@ isr_irq4:
 
 .align 128, 0x90
 isr_irq5:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -878,14 +812,17 @@ isr_irq5:
 
 .align 128, 0x90
 isr_irq6:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -901,14 +838,17 @@ isr_irq6:
 
 .align 128, 0x90
 isr_irq7:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -924,14 +864,17 @@ isr_irq7:
 
 .align 128, 0x90
 isr_irq8:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -947,14 +890,17 @@ isr_irq8:
 
 .align 128, 0x90
 isr_irq9:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -970,14 +916,17 @@ isr_irq9:
 
 .align 128, 0x90
 isr_irq10:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -993,14 +942,17 @@ isr_irq10:
 
 .align 128, 0x90
 isr_irq11:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -1016,14 +968,17 @@ isr_irq11:
 
 .align 128, 0x90
 isr_irq12:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -1039,14 +994,17 @@ isr_irq12:
 
 .align 128, 0x90
 isr_irq13:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -1062,14 +1020,17 @@ isr_irq13:
 
 .align 128, 0x90
 isr_irq14:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -1085,14 +1046,17 @@ isr_irq14:
 
 .align 128, 0x90
 isr_irq15:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
@@ -1108,14 +1072,17 @@ isr_irq15:
 
 .align 128, 0x90
 isr_irq16:
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    call	isr_gainentropy
+    /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
     je		1f
+    /* no, switch to system process */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 1:  movq	$MQ_ADDRESS, %rdi
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx

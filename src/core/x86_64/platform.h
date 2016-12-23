@@ -27,9 +27,10 @@
 
 #ifndef _AS
 # include "../core.h"
-# include "tcb.h"
-# include "ccb.h"
 #endif
+#include "tcb.h"
+#include "ccb.h"
+#include "isr.h"
 
 #define PG_CORE 0b00011
 #define PG_CORE_NOCACHE 0b11011
@@ -40,7 +41,6 @@
 
 // offsets in tmppde (pointing to the last 4G of memory)
 // must match linker script's addresses in supervisor.ld
-#define FBUF_PDE 0      //4G-6M
-#define DSTMQ_PDE 509   //2M, destination thread's message queue on send
-#define SYSMQ_PDE 510   //2M, system process' message queue
+#define FBUF_PDE 0      //4G-4M
+#define DSTMQ_PDE 510   //2M, destination thread's message queue on send
 #define CORE_PDE 511    //2M, supervisor core

@@ -33,13 +33,13 @@ extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void *isr_initgates(uint64_t *idt, OSZ_ccb *tss);
 extern void isr_initirq();
-extern void isr_enableirq(uint64_t irq);
 
 extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
 extern pid_t subsystems[];
 
-uint64_t __attribute__ ((section (".data"))) identity_mapping;
+uint64_t __attribute__ ((section (".data"))) isr_ticks[2];
+uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
 
 /* Initialize interrupts */
 void isr_init()

@@ -27,6 +27,10 @@
 #include "platform.h"
 #include "../env.h"
 #include <errno.h>
+#include <syscall.h>
+
+extern uint64_t nrservices;
+extern pid_t services[];
 
 /* send a message with a memory reference. If given, magic is a type hint for ptr */
 bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)
@@ -37,6 +41,19 @@ bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t m
     if(event==0) {
         srctcb->errno = EPERM;
         return false;
+    }
+    // do we need pid_t translation?
+    if((int64_t)thread < 0) {
+        if((int64_t)thread > SRV_usrfirst) {
+            thread = subsystems[-((int64_t)thread)];
+        } else {
+            if(-((int64_t)thread+32) < nrservices) {
+                thread = services[-((int64_t)thread+32)];
+            } else {
+                srctcb->errno = EINVAL;
+                return false;
+            }
+        }
     }
     // map thread's message queue at tmpmq
     kmap((uint64_t)&tmpmap, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
@@ -78,7 +95,7 @@ bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t m
     // send message to the mapped queue
     srctcb->errno = EBUSY;
     if(!ksend(&tmpmq,
-        MSG_DEST(thread) | (event&MSG_SRV) | MSG_PTRDATA | MSG_FUNC(event),
+        MSG_DEST(thread) | MSG_PTRDATA | MSG_FUNC(event),
         (uint64_t)ptr,
         (uint64_t)size,
         magic
@@ -98,6 +115,19 @@ bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uin
     if(event==0) {
         srctcb->errno = EPERM;
         return false;
+    }
+    // do we need pid_t translation?
+    if((int64_t)thread < 0) {
+        if((int64_t)thread > SRV_usrfirst) {
+            thread = subsystems[-((int64_t)thread)];
+        } else {
+            if(-((int64_t)thread+32) < nrservices) {
+                thread = services[-((int64_t)thread+32)];
+            } else {
+                srctcb->errno = EINVAL;
+                return false;
+            }
+        }
     }
     // map thread's message queue at tmpmq
     kmap((uint64_t)&tmpmap, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
@@ -120,26 +150,4 @@ bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uin
     else
         srctcb->errno = SUCCESS;
     return true;
-}
-
-/* send a message with a memory reference to a system service */
-bool_t msg_sendsrv(uint8_t subsystem, uint64_t event, void *ptr, size_t size, uint64_t magic)
-{
-    OSZ_tcb *tcb = (OSZ_tcb*)(0);
-    if(subsystem>=SRV_NUM) {
-        tcb->errno = EINVAL;
-        return false;
-    }
-    return msg_send(subsystems[subsystem], event, ptr, size, magic);
-}
-
-/* send a message with a memory reference to a system service */
-bool_t msg_sendssrv(uint8_t subsystem, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
-{
-    OSZ_tcb *tcb = (OSZ_tcb*)(0);
-    if(subsystem>=SRV_NUM) {
-        tcb->errno = EINVAL;
-        return false;
-    }
-    return msg_sends(subsystems[subsystem], event, arg0, arg1, arg2);
 }

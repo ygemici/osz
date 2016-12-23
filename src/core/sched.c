@@ -26,6 +26,7 @@
  */
 
 extern OSZ_ccb ccb;
+extern uint64_t isr_ticks[2];
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
@@ -37,6 +38,30 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
     }
     // current tcb
     return (OSZ_tcb*)0;
+}
+
+// hybernate a TCB
+void sched_alarm(pid_t thread, uint64_t at)
+{
+    OSZ_tcb *tcb = sched_get_tcb(thread);
+    /* TODO: ccb.hd_blocked -> swap */
+    tcb->state = tcb_state_hybernated;
+}
+
+// hybernate a TCB
+void sched_sleep(pid_t thread)
+{
+    OSZ_tcb *tcb = sched_get_tcb(thread);
+    /* TODO: ccb.hd_blocked -> swap */
+    tcb->state = tcb_state_hybernated;
+}
+
+// awake a TCB
+void sched_awake(pid_t thread)
+{
+    OSZ_tcb *tcb = sched_get_tcb(thread);
+    /* TODO: swap -> ccb.hd_active */
+    tcb->state = tcb_state_running;
 }
 
 // add a TCB to priority queue
@@ -54,13 +79,19 @@ void sched_remove(pid_t thread)
 // move a TCB from priority queue to blocked queue
 void sched_block(pid_t thread)
 {
-    // OSZ_tcb *tcb = sched_get_tcb(thread);
+    OSZ_tcb *tcb = sched_get_tcb(thread);
+    tcb->blktime = isr_ticks[0];
+    tcb->state = tcb_state_blocked;
+    /* TODO: ccb.hd_active -> ccb.hd_blocked */
 }
 
 // move a TCB from blocked queue to priority queue
 void sched_activate(pid_t thread)
 {
-    // uint64_t ptr = thread * __PAGESIZE;
+    OSZ_tcb *tcb = sched_get_tcb(thread);
+    tcb->blkcnt += tcb->blktime - isr_ticks[0];
+    tcb->state = tcb_state_running;
+    /* TODO: ccb.hd_blocked -> ccb.hd_active */
 }
 
 // pick a thread and return it's memroot

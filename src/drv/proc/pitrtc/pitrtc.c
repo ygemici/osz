@@ -1,6 +1,12 @@
 #include <osZ.h>
 
-extern void register_irq(uint8_t irq, void *handler);
+void irq0()
+{
+}
+
+void irq8()
+{
+}
 
 void _init()
 {

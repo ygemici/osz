@@ -64,11 +64,11 @@ exc31
 EOF
 
 numirq=`grep "ISR_NUMIRQ" isr.h|cut -d ' ' -f 3`
+numhnd=`grep "ISR_NUMHANDLER" isr.h|cut -d ' ' -f 3`
 isrmax=`grep "ISR_MAX" isr.h|cut -d ' ' -f 3`
-isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
 ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
-
-echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq)"
+idtsz=$[(($numirq*$numhnd*8+4095)/4096)*4096]
+echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq (x$numhnd), idtsz $idtsz)"
 cat >isrs.S <<EOF
 /*
  * core/x86_64/isrs.S - GENERATED FILE DO NOT EDIT
@@ -108,7 +108,9 @@ cat >isrs.S <<EOF
 .global isr_initirq
 .global isr_enableirq
 .global isr_disableirq
-
+.global isr_gainentropy
+.extern isr_ticks
+.extern isr_entropy
 .extern gdt64_tss
 .extern isr_irq
 .extern excabort
@@ -120,6 +122,8 @@ idt64:
     .word	(32+$numirq)*16-1
     .quad	0
     .align	8
+isr_preemptcnt:
+    .quad	0
 EOF
 if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
@@ -307,6 +311,23 @@ isr_loadcontext:
     movq	OSZ_tcb_gpr +  96, %r14
     movq	OSZ_tcb_gpr + 104, %r15
     movq	OSZ_tcb_gpr + 112, %rbp
+    ret
+
+isr_gainentropy:
+    /* isr_entropy[isr_ticks[0]&3] ^=
+       (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
+    movq	isr_ticks, %rax
+    movq	%rax, %rcx
+    movq	%rax, %rdx
+    incq	%rdx
+    andq	\$3, %rax
+    andq	\$3, %rdx
+    addq	\$isr_entropy, %rax
+    addq	\$isr_entropy, %rdx
+    andb	\$0x3f, %cl
+    rolq	%cl, (%rax)
+    movq	(%rax), %rax
+    xorq	(%rdx), %rax
     ret
 
 isr_initgates:
@@ -498,15 +519,29 @@ cat >>isrs.S <<EOF
 /* syscall dispatcher */
 .align	16, 0x90
 isr_syscall:
-xchg %bx, %bx
-    sysret
+    cli
+    /* tcb->rip */
+    movq	%rcx, __PAGESIZE-40
+    /* tcb->rflags */
+    pushf
+    pop     __PAGESIZE-24
+    /* tcb->gpr */
+    call	isr_savecontext
+    /* get a new thread to run */
+    call	sched_pick
+    movq	%rax, %cr3
+    $EOI
+    call	isr_loadcontext
+    movq    __PAGESIZE-24, %r11
+    movq    __PAGESIZE-40, %rcx
+    sysretq
 
 /* exception handler ISRs */
 EOF
 i=0
 for isr in $exceptions
 do
-	echo $isr >&2
+	echo "			$isr" >&2
 	handler=`grep " $isr" isr.c|cut -d '(' -f 1|cut -d ' ' -f 2`
 	if [ "$handler" == "" ]; then
 		handler="excabort"
@@ -515,28 +550,35 @@ do
 	.align $isrmax, 0x90
 	isr_$isr:
 	    cli
-	    lock
-	    btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
 	    callq	isr_savecontext
 	    xorq	%rdi, %rdi
 	    movb	\$$i, %dil
 	    callq	$handler
 	    callq	isr_loadcontext
-	    lock
-	    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
 	    iretq
 	
 	EOF
 	export i=$[$i+1];
 done
+echo "			irq0" >&2
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
 .align $isrmax, 0x90
 isr_irq0:
     /* preemption timer */
-    xchg %bx,%bx
     cli
     call	isr_savecontext
+    /* isr_ticks++ */
+    addq	\$1, isr_ticks
+    adcq	\$0, isr_ticks+8
+    /* tcb->billcnt++ or tcb->syscnt++? */
+    movq	$656, %rbx
+    movb	%al, __PAGESIZE-32   
+    cmpb	\$0x23, %al
+    je		1f
+    addq	\$8, %rbx
+1:  incq	(%rbx)
+    /* switch to a new thread */
     call	sched_pick
     movq	%rax, %cr3
     $EOI
@@ -546,7 +588,7 @@ isr_irq0:
 EOF
 for isr in `seq 1 $numirq`
 do
-	echo irq$isr >&2
+	echo "			irq$isr" >&2
 	if [ "$EOI2" != "" -a $isr -gt 7 ]
 	then
 		EOI="$EOI2";
@@ -554,14 +596,17 @@ do
 	cat >>isrs.S <<-EOF
 	.align $isrmax, 0x90
 	isr_irq$isr:
-	    xchg %bx,%bx
 	    cli
 	    call	isr_savecontext
+	    call	isr_gainentropy
+	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
 	    cmpq	sys_mapping, %rax
 	    je		1f
+	    /* no, switch to system process */
 	    movq	sys_mapping, %rax
 	    movq	%rax, %cr3
+	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
 	1:  movq	\$MQ_ADDRESS, %rdi
 	    xorq	%rsi, %rsi
 	    xorq	%rdx, %rdx

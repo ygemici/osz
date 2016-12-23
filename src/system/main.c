@@ -27,15 +27,28 @@
 
 #include <osZ.h>
 
-void register_irq(uint8_t irq, void *handler)
+void dump(uint64_t *a,uint64_t b,uint64_t c)
 {
+//    __asm__ __volatile__ ( "xchgw %%bx,%%bx; syscall" : : : );
 }
 
 void _init(int argc, char **argv)
 {
+    // this is ughly, but we must reference the page after our
+    // data segment as core mapped IDT there. But it's neither in
+    // our data segment nor in our bss.
+	uint64_t *irq_dispatch_table = (uint64_t*)(
+        /*TEXT_ADDRESS*/2*1024*1024 + /*_edata*/2*4096);
+	// up to ISR_NUMIRQ * irq_dispatch_table[0] + 1
+
+//	uint i;
+
 //  printf("Hello from userspace");
+    dump(irq_dispatch_table, irq_dispatch_table, irq_dispatch_table[0]);
     while(1) {
 //        msg_t *work = clrecv();
-//        __asm__ __volatile__ ( "movq %0, %%rax; xchgw %%bx,%%bx;syscall" : : "r"(work) : );
+//        __asm__ __volatile__ ( "movq %0, %%rax; xchgw %%bx,%%bx; movq %1, %%rbx" : : "r"(work->evt), "r"(work->arg1) :);
+//        if(MSG_FUNC(work->evt) == SYS_IRQ) {
+//        }
     }
 }

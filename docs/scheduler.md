@@ -67,3 +67,24 @@ All threads had the chance to run, so there was no stravation and time was split
  F: 1 time
  
 Which is pretty much the distribution one would expect for those priority levels.
+
+Thread States
+-------------
+
+There are three states. The following figure demostrates them and their transitions.
+
+```
+     { tcb_state_hybernated }
+             ^      |
+   sched_sleep()  sched_awake()
+             |      v
+      { tcb_state_blocked }
+             ^      |
+   sched_block()  sched_activate()
+             |      v
+      { tcb_state_running }
+             ^      |
+  [syscall, IRQ]  sched_pick()
+             |      v
+        (actively running)
+```

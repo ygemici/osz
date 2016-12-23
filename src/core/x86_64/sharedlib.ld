@@ -84,9 +84,11 @@ SECTIONS
   . = ALIGN(8);
   .got            : { *(.got) *(.igot) } :data
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
-  PROVIDE (_edata = .);
   _end = .;
+  . = ALIGN (4096);
   . = DATA_SEGMENT_END (.);
+  _edata = ABSOLUTE(.);
+  _shsize = (. - _code);
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

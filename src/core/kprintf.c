@@ -70,6 +70,7 @@ typedef unsigned char *valist;
 
 extern char _binary_logo_tga_start;
 extern void cpu_waitkey();
+extern uint64_t isr_entropy[4];
 
 void kprintf_reset()
 {
@@ -119,6 +120,7 @@ void kprintf_init()
                     (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
                     (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
                 );
+                isr_entropy[((uint64_t)data)%4] ^= (uint64_t)data;
             }
             data++;
             line+=4;
@@ -289,6 +291,12 @@ void kprintf(char* fmt, ...)
 // return kprintf_unicodetable();
 
     while(fmt[0]!=0) {
+        isr_entropy[fmt[0]%4] ^= (
+            fmt[0]&1?
+                (uint64_t)(((uint64_t)fmt[0]<<48) | ((uint64_t)fmt[0]<<32) | ((uint64_t)fmt[0]<<16)):
+                (uint64_t)(((uint64_t)fmt[0]<<40) | ((uint64_t)fmt[0]<<24) | ((uint64_t)fmt[0]<<8))
+        );
+        isr_entropy[(fmt[0]+1)%4] ^= isr_entropy[fmt[0]%4];
         // special characters
         if(fmt[0]==8) {
             // backspace

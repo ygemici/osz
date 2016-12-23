@@ -28,28 +28,27 @@
 #define OSZ_TCB_MAGIC "THRD"
 #define OSZ_TCB_MAGICH 0x44524854
 
-// index to hd_active and cr_active queues, priority levels
-enum {
-    PRI_SYS, // priority 0, system, non-interruptible
-    PRI_RT,  // priority 1, real time tasks queue
-    PRI_DRV, // priority 2, device drivers queue
-    PRI_SRV, // priority 3, service queue
-    PRI_APPH,// priority 4, application high priority queue
-    PRI_APP, // priority 5, application normal priority queue
-    PRI_APPL,// priority 6, application low priority queue
-    PRI_IDLE // priority 7, idle queue (defragmenter, screensaver etc.)
-};
-
+#define tcb_state_hybernated 0
+#define tcb_state_blocked 1
+#define tcb_state_alarm 2
+#define tcb_state_running 3
 #define TCB_STATE(s) ((s)&0x7)
-enum OSZ_tcb_state
-{
-    tcb_receiving,
-    tcb_sending,
-    tcb_running,
-    tcb_waiting,
-    tcb_hybernated
-};
 
-/* TCB flags in state */
-#define OSZ_tcb_dispatching    8
-#define OSZ_tcb_calling        16
+// index to hd_active and cr_active queues, priority levels
+// priority 0, system, non-interruptible
+#define PRI_SYS 0
+// priority 1, real time tasks queue
+#define PRI_RT 1
+// priority 2, device drivers queue
+#define PRI_DRV 2
+// priority 3, service queue
+#define PRI_SRV 3
+// priority 4, application high priority queue
+#define PRI_APPH 4
+// priority 5, application normal priority queue
+#define PRI_APP 5
+// priority 6, application low priority queue
+#define PRI_APPL 6
+ // priority 7, idle queue (defragmenter, screensaver etc.)
+#define PRI_IDLE 7
+

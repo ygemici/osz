@@ -38,6 +38,7 @@ uint64_t __attribute__ ((section (".data"))) *stack_ptr;
 uint64_t __attribute__ ((section (".data"))) pt;
 
 extern uint64_t corepde_mapping;
+extern uint64_t *irq_dispatch_table;
 
 pid_t thread_new(char *cmdline)
 {
@@ -54,7 +55,7 @@ pid_t thread_new(char *cmdline)
     ptr=pmm_alloc();
     kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE);
     tcb->magic = OSZ_TCB_MAGICH;
-    tcb->state = tcb_running;
+    tcb->state = tcb_state_running;
     tcb->priority = PRI_SRV;
     self = (uint64_t)ptr;
     tcb->mypid = (pid_t)(self/__PAGESIZE);
@@ -114,7 +115,7 @@ pid_t thread_new(char *cmdline)
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    if(debug==DBG_THREADS)
+    if(debug==DBG_THREADS||(debug==DBG_IRQ&&irq_dispatch_table!=NULL))
         kprintf("tcb=%x %s\n",self,cmdline);
 #endif
     return self/__PAGESIZE;

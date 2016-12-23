@@ -4,7 +4,7 @@
 
 # Header
 .section .cl, "a"
-.align 16
+.align 8
 .byte 'C','L','D','L'
 .long 116			# size
 

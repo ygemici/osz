@@ -53,10 +53,7 @@ extern OSZ_pmm pmm;
 */
 void main()
 {
-    /* step 0: open console */
-    // initialize kernel implementation of printf
-    kprintf_init();
-    kprintf("OS/Z starting...\n");
+    kprintf("OS/Z starting... %x\n", bootboot.datetime);
 
     /* step 1: motoric reflexes */
     // check processor capabilities
@@ -107,10 +104,10 @@ void main()
     // load "init" or "sh" process
     service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
 
-    // eye candy
+    // started message
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n",
         pmm.totalpages - pmm.freepages, pmm.totalpages);
-    // scroll out "OS/Z starting" message
+    // scroll out "starting" message
     kprintf_reset(); kprintf_scrollscr();
 
     // enable interrupts. After the first IRQ the

@@ -32,8 +32,8 @@
 #define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))
 #define IDT_GATE_HI(offset) ((uint64_t)(offset)>>32)
 #define ISR_NUMIRQ 16
+#define ISR_NUMHANDLER 8
 #define ISR_MAX 128
-#define ISR_STACK 64
 
 //controllers
 #define CTRL_PIC 0

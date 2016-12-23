@@ -1,17 +1,20 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H 1
 
-// subsystems
-#define SRV_core	0
-#define SRV_system  1
-#define SRV_fs		2
-#define SRV_ui		3
-#define SRV_net		4
-#define SRV_sound	5
-#define SRV_syslog	6
-#define SRV_init	7
-#define SRV_NUM     8
-
+// services
+#define SRV_core		 0
+#define SRV_system  	-1
+#define SRV_fs			-2
+#define SRV_ui			-3
+#define SRV_net			-4
+#define SRV_sound		-5
+#define SRV_syslog		-6
+#define SRV_init		-7
+#define SRV_session		-8
+#define SRV_prn			-9
+#define SRV_NUM     	10
+#define SRV_usrfirst	-SRV_NUM
+#define SRV_usrlast		-1024
 // get function indeces
 #include <sys/core.h>
 #include <sys/syslog.h>

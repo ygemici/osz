@@ -80,3 +80,26 @@ Shared among threads, just as user bss.
 |    c ..         | libc's data segment, read-write |
 |    ...          | more libraries may follow |
 
+Page Management
+---------------
+
+Message buffers are mapped read/write, so libraries can modify it's contents. No page fault occurs accessing it.
+
+On the other hand page faults can occur in the bss section quite often. Mostly because after free or realloc
+physical pages are also freed so the virtual address space is fragmented. The good side is no more physical pages
+were allocated for higher addresses, so it's RAM efficient. When either a read or write cause a page fault in
+thread local bss segment, a new physical page is allocated transparent to the instruction causing the fault.
+
+Shared pages are mapped read/write for the first time, and read only on subsequent times. When a write protection
+error in the shared address range occurs, the page will be copied to a new page and the write will affect that
+new page. So until a shared page is written, it's real-time updated. After the write it becames a thread local page.
+
+When a physical page is mapped for the second time (first time read-only), bit 9 in PT entries are set in both
+thread's page tables.
+
+When a virtual page is freed with bit 9 set, all thread's page tables searched for the same address. Would it be the
+last reference and physical page freed as well.
+
+If the system runs out of free physical pages and there's a swap disk configured then the thread with the highest
+blkcnt score will be written out to disk, and allocation will continue transparently. Swapped out threads consume
+only one page of physical RAM, their TCB. All those TCBs are in tcb_state_hybernated state.

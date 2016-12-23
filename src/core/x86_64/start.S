@@ -70,6 +70,8 @@ _start:
     movl    %eax, %gs
 /* setup stack (should be ok, but be sure) */
     xor     %rsp, %rsp
+/* initialize console */
+    callq   kprintf_init
 /* jump to C function main() in 64 bit code segment */
     pushq   $0x08
     pushq   $main
@@ -92,11 +94,17 @@ gdt64_tss:
     .quad 0x0000000000000000
 gdt64_end:
 
-/* check and enable all CPU features that this release use */
+/* check and enable all CPU features that this release use
+   and gain entropy in the meantime */
 cpu_init:
-    xorq	%rax, %rax
+    xorq    %rax, %rax
     incb    %al
     cpuid
+    /* init entropy */
+    xorq    %rax, isr_entropy
+    xorq    %rbx, isr_entropy+8
+    xorq    %rcx, isr_entropy+16
+    xorq    %rdx, isr_entropy+24
     /* minimum processor family */
     movq    $0x796C696D6166, %rsi
     cmp     $0x0600, %ax

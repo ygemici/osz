@@ -7,6 +7,6 @@ do
 	idx=`echo "$line" | cut -d ':' -f 1`
 	fnc=`echo "$line" | cut -d ':' -f 2 | cut -b 53- | cut -d ' ' -f 1 | grep -ve "^_"`
 	if [ "$fnc" != "" ]; then
-		echo "#define SYS_$fnc		(( SRV_$a <<8)| $idx)"
+		echo "#define SYS_$fnc		($idx)"
 	fi
 done >$2/${a}.h

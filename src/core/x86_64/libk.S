@@ -162,7 +162,6 @@ kmap_init:
     shlq    $3, %rbx
     movq    %cr3, %rax
     andw    $0xF000, %ax
-    movq    %rax, identity_mapping
     add     %rax, %rbx
     /* save core mappings pointer */
     addq    $4096-8, %rax

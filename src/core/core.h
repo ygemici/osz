@@ -86,6 +86,9 @@ extern void *pmm_alloc();
 
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
+extern void isr_enableirq(uint8_t irq);
+extern void isr_disableirq(uint8_t irq);
+extern void isr_gainentropy();
 
 /** Enable interrupts and start multitasking */
 extern void isr_enable();
@@ -179,8 +182,9 @@ extern void service_init(int subsystem, char *fn);
 /** normal message senders */
 extern bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic);
 extern bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
-extern bool_t msg_sendsrv(uint8_t subsystem, uint64_t event, void *ptr, size_t size, uint64_t magic);
-extern bool_t msg_sendsrvs(uint8_t subsystem, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
-/** low level message sender */
-/** send a message to the system process. This is unique as it has a fast method, called by ISRs */
+#define msg_sendsrv(service, event, ptr, size, magic) \
+    msg_send(((service)&0xfff)|(uint64_t)0xfffffffffffff000, event, ptr, size, magic)
+#define msg_sendssrv(service, event, arg0, arg1, arg2) \
+    msg_sends(((service)&0xfff)|(uint64_t)0xfffffffffffff000, event, arg0, arg1, arg2)
+/** low level message sender, called by senders above and IRQ ISRs */
 extern bool_t ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
