@@ -12,15 +12,20 @@
 #define SRV_init	7
 #define SRV_NUM     8
 
+// get function indeces
 #include <sys/core.h>
 #include <sys/syslog.h>
 #include <sys/fs.h>
 #include <sys/ui.h>
 #include <sys/net.h>
 
+/* async, send a message (non-blocking, except dest queue is full) */
 bool_t clsend(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+/* sync, send a message and receive result (blocking) */
 msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
-msg_t *clrecv();
+/* async, is there a message? (non-blocking) */
 bool_t clismsg();
+/* sync, wait until there's a message (blocking) */
+msg_t *clrecv();
 
 #endif

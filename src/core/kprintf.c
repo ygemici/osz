@@ -31,7 +31,7 @@
 char __attribute__ ((section (".data"))) reent;
 /* for temporary strings */
 char __attribute__ ((section (".data"))) tmp[33];
-/* first position in line */
+/* first position in line, used by carridge return */
 int __attribute__ ((section (".data"))) fx;
 /* current cursor position */
 int __attribute__ ((section (".data"))) kx;
@@ -39,6 +39,9 @@ int __attribute__ ((section (".data"))) ky;
 /* maximum coordinates */
 int __attribute__ ((section (".data"))) maxx;
 int __attribute__ ((section (".data"))) maxy;
+/* scrolled lines counter */
+int __attribute__ ((section (".data"))) scry;
+
 /* colors */
 uint32_t __attribute__ ((section (".data"))) fg;
 uint32_t __attribute__ ((section (".data"))) bg;
@@ -48,10 +51,11 @@ typedef unsigned char *valist;
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
 extern char _binary_logo_tga_start;
+extern void cpu_waitkey();
 
 void kprintf_reset()
 {
-    kx = ky = fx = 0;
+    kx = ky = fx = scry = 0;
     reent = 0;
     fg = 0xC0C0C0;
     bg = 0;
@@ -61,10 +65,6 @@ void kprintf_init()
 {
     int x, y, line, offs = 0;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
-    maxx = bootboot.fb_width / font->width;
-    maxy = bootboot.fb_height / font->height;
-    // default fg and bg, cursor at home
-    kprintf_reset();
     // clear screen
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
@@ -74,6 +74,12 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
+    // get console dimensions
+    maxx = bootboot.fb_width / font->width;
+    maxy = bootboot.fb_height / font->height;
+    // default fg and bg, cursor at home
+    kprintf_reset();
+    scry = maxy - 2;
     // display boot logo
     char *data = &_binary_logo_tga_start + 0x255;
     char *palette = &_binary_logo_tga_start + 0x12;
@@ -95,9 +101,6 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
-#if DEBUG
-    kprintf("OS/Z starting...\n",1,2,3);
-#endif
 }
 
 void kprintf_putlogo()
@@ -183,27 +186,84 @@ void kprintf_puthex(int64_t c)
     kprintf(&tmp[i]);
 }
 
+void kprintf_scrollscr()
+{
+    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    int offs = 0, tmp;
+    int x,y, line, shift=font->height*bootboot.fb_scanline;
+    for(y=0;y<(maxy-1)*font->height;y++){
+        line=offs;
+        for(x=0;x<maxx*(font->width+1);x++){
+            *((uint32_t*)(&fb + line)) =
+                *((uint32_t*)(&fb + line + shift));
+            line+=4;
+        }
+        offs+=bootboot.fb_scanline;
+    }
+    // clear the last row
+    tmp = offs;
+    for(y=0;y<font->height;y++){
+        line=offs;
+        for(x=0;x<maxx*(font->width+1);x++){
+            *((uint32_t*)(&fb + line)) = (uint32_t)0;
+            line+=4;
+        }
+        offs+=bootboot.fb_scanline;
+    }
+    scry++;
+    // if we've scrolled the whole screen, stop
+    if(scry>=maxy-1) {
+        uint32_t oldfg = fg;
+        fg = 0xffffff;
+        // display a message
+        char *msg = " --- Press any key to continue --- ";
+        scry = kx = 0;
+        for(;*msg!=0;msg++) {
+                kprintf_putchar((int)(*msg));
+                kx++;
+        }
+        // wait for user input
+        cpu_waitkey();
+        // clear the message
+        for(y=0;y<font->height;y++){
+            line=tmp;
+            for(x=0;x<maxx*(font->width+1);x++){
+                *((uint32_t*)(&fb + line)) = (uint32_t)0;
+                line+=4;
+            }
+            tmp+=bootboot.fb_scanline;
+        }
+        // restore color
+        fg = oldfg;
+        kx = fx;
+    }
+}
+
+// for testing purposes
+void kprintf_unicodetable()
+{
+    int x,y;
+    kprintf_reset();
+    // UNICODE table
+    for(y=0;y<33;y++){
+        kx=0;ky++;
+        for(x=0;x<64;x++){
+            kprintf_putchar(y*64+x);
+            kx++;
+        }
+    }
+}
+
 void kprintf(char* fmt, ...)
 {
     valist args;
     vastart(args, fmt);
-//  __asm__ __volatile__ ( "xchgw %%bx,%%bx" : : : );
     uint64_t arg;
     char *p;
 
-/*
-// UNICODE table
-ky=0;
-int x,y;
-for(y=0;y<33;y++){
-    kx=0;ky++;
-    for(x=0;x<64;x++){
-        kprintf_putchar(y*64+x);
-        kx++;
-    }
-}
-return;
-*/
+// print out the whole charset
+// return kprintf_unicodetable();
+
     while(fmt[0]!=0) {
         // special characters
         if(fmt[0]==8) {
@@ -220,7 +280,7 @@ return;
             goto newline;
         } else
         if(fmt[0]==13) {
-            // carrige return
+            // carridge return
             kx=fx;
         } else
         // argument access
@@ -273,8 +333,10 @@ nextchar:   kx++;
             if(kx>=maxx) {
 newline:        kx=fx;
                 ky++;
-                if(ky>=maxy)
-                    ky=0;
+                if(ky>=maxy) {
+                    ky--;
+                    kprintf_scrollscr();
+                }
             }
         }
         fmt++;

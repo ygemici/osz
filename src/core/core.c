@@ -25,13 +25,30 @@
  * @brief Core
  *
  *   Memory map
- *       -512M framebuffer                   (0xFFFFFFFFE0000000)
- *       -2M core        bootboot struct     (0xFFFFFFFFFFE00000)
- *           -2M+1page   environment         (0xFFFFFFFFFFE01000)
- *           -2M+2page.. core text segment v (0xFFFFFFFFFFE02000)
- *           -2M+Xpage.. core bss          v
- *            ..0        core stack        ^
- *       0-16G RAM identity mapped
+ *       -512M framebuffer                      (0xFFFFFFFFE0000000)
+ * 
+ *       -6M core        destination thread     (0xFFFFFFFFFFA00000)
+ *         -6M + 1page   thread control block   (0xFFFFFFFFFFA01000)
+ *         -6M + 2page   message queue[1]  v    (0xFFFFFFFFFFA02000)
+ * 
+ *       -4M core        system thread          (0xFFFFFFFFFFC00000)
+ *         -4M + 1page   thread control block   (0xFFFFFFFFFFC01000)
+ *         -4M + 2page   message queue[1]  v    (0xFFFFFFFFFFC02000)
+ * 
+ *       -2M core        bootboot[2] struct     (0xFFFFFFFFFFE00000)
+ *         -2M + 1page   environment[3]         (0xFFFFFFFFFFE01000)
+ *         -2M + 2page.. core text segment v    (0xFFFFFFFFFFE02000)
+ *         -2M + Xpage.. core bss          v    (0xFFFFFFFFFFExxxxx)
+ *         ..0           core boot stack   ^    (0x0000000000000000)
+
+ *       0-16G user      RAM identity mapped[4] (0x0000000000000000)
+ * 
+ *   [1] see msg_t in msg.h
+ *   [2] see loader/bootboot.h
+ *   [3] see etc/CONFIG. Plain ascii key=value pairs, separated by
+ *       whitespace characters. Filled up with spaces to page size.
+ *   [4] when main() calls the last function, user thread will be
+ *       mapped into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
 #include "env.h"
@@ -43,23 +60,25 @@ extern OSZ_pmm pmm;
 */
 void main()
 {
-    /* step 0: open eyes */
+    /* step 0: open console */
     // initialize kernel implementation of printf
     kprintf_init();
+    kprintf("OS/Z starting...\n");
+
+    /* step 1: motoric reflexes */
     // check processor capabilities
     cpu_init();
     // parse environment
     env_init();
     // initialize physical memory manager, required by new thread creation
     pmm_init();
-
-    /* step 1: motoric reflexes */
     // this is early, we don't have "fs" subsystem yet.
     // to solve the chicken egg scenario here, service_init()
-    // does not use filesystem drivers, it has a built-in fs reader.
+    // does not use filesystem drivers, it has a built-in fs reader
+    // that can only load files from the initrd
     service_init(0, NULL);
-    // initialize the "system" process, the first subsystem
-    // detect device drivers (parse system tables and load sharedlibs)
+    // initialize the "system" process, the first subsystem. It will
+    // detect device drivers by parsing system tables an iterating buses
     sys_init();
     // interrupt service routines (idt), initialize CCB. Has to be done
     // after sys_init(), as it may require addresses from parsed tables
@@ -94,18 +113,19 @@ void main()
     // load "init" or "sh" process
     service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
 
-#if DEBUG
+    // scroll out "OS/Z starting" message
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n", pmm.totalpages - pmm.freepages, pmm.totalpages);
-#endif
     kprintf_reset();
+    kprintf_scrollscr();
+    // no more kprintf(), maybe kpanic() on a bad day
 
-    // enable interrupts. After the first timer IRQ the
+    // enable interrupts. After the first IRQ the
     // scheduler will choose a thread to run and we...
     isr_enable();
+    // ...should not reach this code ever. Instead sched_pick() will
+    // call dev_poweroff() when shutdown is finished and no tasks
+    // left to run (not even blocked subsystems).
 
     /* step 6: go to dreamless sleep. */
-    // ...should not reach this code ever. Instead scheduler will
-    // call dev_poweroff() when shotdown is finished and no tasks
-    // left to run.
-    /*dev_poweroff();*/
+    //dev_poweroff();
 }

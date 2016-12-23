@@ -27,10 +27,13 @@ logo.o:
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
 	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
+#ifeq ($(DEBUG),1)
+	@readelf -s $(BINTARGET) | cut -b 9-25,60- | tail -n +4 >../../bin/core.sym
+#endif
 	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)
 	@#echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null
 	@#    make it look like a shared library to avoid execution
 	@echo -ne '\003' | dd conv=notrunc of=$(BINTARGET) bs=1 seek=16 1>/dev/null 2>/dev/null
 
 clean:
-	@rm *.o $(ARCH)/*.o $(BINTARGET) 2>/dev/null || true
+	@rm *.o $(ARCH)/*.o $(BINTARGET) ../../bin/*.sym 2>/dev/null || true

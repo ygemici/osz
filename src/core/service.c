@@ -32,6 +32,7 @@
 extern OSZ_pmm pmm;
 extern uint64_t *stack_ptr;
 extern uint64_t pt;
+extern uint64_t sys_mapping;
 
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*8))
@@ -349,7 +350,7 @@ void service_init(int subsystem, char *fn)
     // dynamic linker
     service_rtlink();
     // add to queue so that scheduler will know about this thread
-    thread_add(pid);
+    sched_add(pid);
 }
 
 /* Initialize the file system service, the "fs" process */
@@ -396,7 +397,7 @@ void fs_init()
     service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
     // add to queue so that scheduler will know about this thread
-    thread_add(pid);
+    sched_add(pid);
 }
 
 /* Initialize the "system" process */
@@ -408,6 +409,7 @@ void sys_init()
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
+    sys_mapping = tcb->memroot;
 
     // map device driver dispatcher
     service_loadelf("sbin/system");
@@ -427,5 +429,5 @@ void sys_init()
     paging[SYSMQ_PDE] = (pt&~(__PAGESIZE-1))|PG_CORE_NOCACHE;
 
     // add to queue so that scheduler will know about this thread
-    thread_add(pid);
+    sched_add(pid);
 }

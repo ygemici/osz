@@ -33,6 +33,16 @@ uint64_t __attribute__ ((section (".data"))) lapic_addr;
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 uint64_t __attribute__ ((section (".data"))) hpet_addr;
 
+// poweroff stuff
+uint32_t __attribute__ ((section (".data"))) SLP_EN;
+uint32_t __attribute__ ((section (".data"))) SLP_TYPa;
+uint32_t __attribute__ ((section (".data"))) PM1a_CNT;
+uint32_t __attribute__ ((section (".data"))) SLP_TYPb;
+uint32_t __attribute__ ((section (".data"))) PM1b_CNT;
+
+extern uint32_t fg;
+extern uint32_t bg;
+
 char *acpi_getdriver(char *device, char *drvs, char *drvs_end)
 {
     return NULL;
@@ -42,13 +52,14 @@ char *acpi_getdriver(char *device, char *drvs, char *drvs_end)
 void acpi_parse(ACPI_Header *hdr, uint64_t level)
 {
     char *ptr = (char*)hdr;
-    uint32_t i,len = hdr->length - sizeof(ACPI_Header);
+    uint32_t len = hdr->length - sizeof(ACPI_Header);
     uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
 
     /* maximum tree depth */
     if(level>8)
         return;
 #if DEBUG
+    uint64_t i;
     if(debug==DBG_SYSTABLES) {
         for(i=0;i<level;i++) kprintf("  ");
         kprintf("%c%c%c%c ", hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3]);
@@ -81,8 +92,10 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     } else
     /* Fixed ACPI Description Table */
     if(!kmemcmp("FACP", hdr->magic, 4)) {
-//        ACPI_FACP *fadt = (ACPI_FACP *)hdr;
+        ACPI_FACP *fadt = (ACPI_FACP *)hdr;
         // TODO: get values for poweroff
+        PM1a_CNT = fadt->PM1a_cnt_blk;
+        PM1b_CNT = fadt->PM1b_cnt_blk;
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
@@ -181,8 +194,10 @@ void dev_init()
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
-    hpet_addr=0;
 
+    hpet_addr = 0;
+    SLP_EN = PM1a_CNT = 0;
+    
     if(drvs==NULL ||
         bootboot.acpi_ptr==0 ||
         ((char)(*((uint64_t*)bootboot.acpi_ptr))!='R' &&
@@ -231,9 +246,21 @@ void dev_init()
 
 void dev_poweroff()
 {
-    // disable all interrupts and switch to identity mapping
-    // so that ACPI tables will be at expected position
-    isr_disable();
-    // TODO: APCI poweroff
-    __asm__ __volatile__ ( "xchgw %%bx,%%bx;cli;hlt" : : : );
+    // APCI poweroff
+/*
+    if(PM1a_CNT!=0) {
+        //acpi_enable();
+        __asm__ __volatile__ (
+            "mov %0, %%rax; mov %1, %%rdx; outw %%ax, %%dx" : :
+            "a"(SLP_TYPa | SLP_EN), "Nd"(PM1a_CNT) );
+        if ( PM1b_CNT != 0 )
+            __asm__ __volatile__ (
+                "mov %0, %%rax; mov %1, %%rdx; outw %%ax, %%dx" : :
+                "a"(SLP_TYPb | SLP_EN), "Nd"(PM1b_CNT) );
+    }
+*/
+    // if it didn't work, show a message and freeze.
+    kprintf_init();
+    kprintf("OS/Z shutdown finished. Turn off computer.");
+    __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }

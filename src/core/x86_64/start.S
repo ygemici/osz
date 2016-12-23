@@ -30,6 +30,7 @@
 .section .text
 .global _start
 .global cpu_init
+.global cpu_waitkey
 .global gdt64_tss
 .extern main
 .extern core_mapping
@@ -69,7 +70,7 @@ _start:
     movl    %eax, %gs
 /* setup stack (should be ok, but be sure) */
     xor     %rsp, %rsp
-/* jump to 64 bit code segment */
+/* jump to C function main() in 64 bit code segment */
     pushq   $0x08
     pushq   $main
     lretq
@@ -79,7 +80,7 @@ gdt64:
     .word   gdt64_end-gdt64_start-1
     .quad   gdt64_start
     .align  64
-
+/* placed in text intentionally, it's rodata */
 gdt64_start:
     .quad 0x0000000000000000    /* always empty */
     .quad 0x002098000000ffff    /* 08 core CS */
@@ -91,6 +92,7 @@ gdt64_tss:
     .quad 0x0000000000000000
 gdt64_end:
 
+/* check and enable all CPU features that this release use */
 cpu_init:
     xorq	%rax, %rax
     incb    %al
@@ -147,5 +149,18 @@ cpu_init:
     /* feature not supported */
 1:  movq    $nocpu, %rdi
     call    kpanic
+/* rodata */
 nocpu:
 .asciz "CPU feature %a not supported"
+
+/* an early implementation, called by kprintf */
+cpu_waitkey:
+1:  inb     $0x60, %al
+    andb    $0x80, %al
+    orb     %al, %al
+    jnz     1b
+1:  inb     $0x60, %al
+    andb    $0x80, %al
+    orb     %al, %al
+    jz      1b
+    ret

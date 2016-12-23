@@ -85,20 +85,34 @@ typedef struct {
 } __attribute__((packed)) uuid_t;
 #define UUID_ACCESS(a) (a.Data4[7])
 
+// type returned by syscalls clcall() and clrecv()
 typedef struct {
     uint64_t evt;
     uint64_t arg0;
     uint64_t arg1;
     uint64_t arg2;
 } __attribute__((packed)) msg_t;
-#define MSG_SENDER(m) ((pid_t)(m>>16))
-#define MSG_TYPE(m) ((uint16_t)(m&0x7FFF))
-#define MSG_ISREG(m) (!(m&0x8000))
-#define MSG_ISPTR(m) (m&0x8000)
+// bits in evt: 63TTT..TTTPSFFFFFFFFFFFFFF0
+//  where T is a thread id or subsystem id, P true if message has a
+//  pointer, S true if T is a subsystem number, F is a function
+//  number from 1 to 16383. Function number 0 is reserved.
+#define MSG_SENDER(m) ((pid_t)((m)>>16))
+#define MSG_FUNC(m) ((uint16_t)((m)&0x3FFF))
+#define MSG_REGDATA (0)
+#define MSG_PTRDATA (0x8000)
 #define MSG_PTR(m) (m.arg0)
 #define MSG_SIZE(m) (m.arg1)
-#define MSG_PTRDATA (0x8000)
-#define MSG_REGDATA (0)
-#define MSG_DEST(t) (t<<16)
+#define MSG_ISREG(m) (!((m)&MSG_PTRDATA))
+#define MSG_ISPTR(m) ((m)&MSG_PTRDATA)
+// set destination in evt
+#define MSG_SRV (0x4000)
+#define MSG_DEST(t) ((uint64_t)(t)<<16)
+#define MSG_DESTSRV(s) (((uint64_t)(s)<<16)|MSG_SRV)
+//eg.:
+//msg_t *msg;
+//msg->evt = MSG_DESTSRV(SRV_fs) | MSG_FUNC(SYS_write) | MSG_PTRDATA
+// or
+//pid_t child = fork();
+//msg->evt = MSG_DEST(child) | MSG_FUNC(anynumber) | MSG_PTRDATA
 
 #endif /* sys/types.h */

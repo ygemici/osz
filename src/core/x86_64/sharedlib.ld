@@ -66,7 +66,6 @@ SECTIONS
   .plt.got        : { *(.plt.got) }
   .plt.bnd        : { *(.plt.bnd) }
   PROVIDE (_etext = .);
-  .cl             : { *(.cl) } :text
   .buildid        : { *(.buildid) *(.note.gnu.build-id) }
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
@@ -80,6 +79,7 @@ SECTIONS
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
+  .cl             : { . = ALIGN(16); *(.cl) }
   .dynamic        : { *(.dynamic) } :data :dynamic
   . = ALIGN(8);
   .got            : { *(.got) *(.igot) } :data

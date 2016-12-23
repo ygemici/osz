@@ -28,7 +28,6 @@
 
 #include "platform.h"
 #include "isr.h"
-#include "ccb.h"
 
 extern void isr_exc00divzero();
 extern void isr_irq0();
@@ -84,32 +83,18 @@ void isr_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     // map "system" process
-    thread_map(subsystems[SRV_system]);
-// TODO: remove test
-msg_sendsys(SYS_IRQ,2,0,0);
-msg_sendsys(5,6,7,8);
-    // start irqs, fake an interrupt
+    OSZ_tcb *systcb = (OSZ_tcb*)(&tmp2map);
+    kmap((uint64_t)&tmp2map, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
+    __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(systcb->memroot) : "%rax" );
+    // start irqs
     isr_initirq();
     isr_enableirq(1);
-    // handler return to start multitasking
+    // fake an interrupt handler return to start multitasking
     __asm__ __volatile__ (
-        "movq %0, %%rsp; movq %1, %%rbp; iretq" :
+        "movq %0, %%rsp; movq %1, %%rbp; int $31; iretq" :
         :
         "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
-}
-
-void isr_disable()
-{
-      // clear interrupts and identity map memory
-      // (required by ACPI parser to power off machine)
-      __asm__ __volatile__ ( "cli; mov %0, %%rax; mov %%rax, %%cr3" : : "r"(identity_mapping) : "%rax" );
-}
-
-/* common IRQ handler */
-void isr_irq(uint64_t irq)
-{
-    kprintf("---- interrupt %d -----\n",irq);
 }
 
 /* fallback exception handler */

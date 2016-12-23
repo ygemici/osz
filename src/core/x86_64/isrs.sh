@@ -49,6 +49,18 @@ exc16float
 exc17alignment
 exc18machinecheck
 exc19double
+exc20
+exc21
+exc22
+exc23
+exc24
+exc25
+exc26
+exc27
+exc28
+exc29
+exc30
+exc31
 EOF
 
 numirq=`grep "ISR_NUMIRQ" isr.h|cut -d ' ' -f 3`
@@ -56,7 +68,7 @@ isrmax=`grep "ISR_MAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
 ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
 
-echo "  src		isrs.S (${ctrl:5}, numirq $numirq)"
+echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq)"
 cat >isrs.S <<EOF
 /*
  * core/x86_64/isrs.S - GENERATED FILE DO NOT EDIT
@@ -88,6 +100,7 @@ cat >isrs.S <<EOF
 #include "isr.h"
 #include "platform.h"
 #include "ccb.h"
+#include "tcb.h"
 
 .global isr_initgates
 .global isr_exc00divzero
@@ -260,10 +273,40 @@ fi
 cat >>isrs.S <<EOF
 /* store thread's context into Thread Control Block */
 isr_savecontext:
+    movq	%rax, OSZ_tcb_gpr +   0
+    movq	%rbx, OSZ_tcb_gpr +   8
+    movq	%rcx, OSZ_tcb_gpr +  16
+    movq	%rdx, OSZ_tcb_gpr +  24
+    movq	%rsi, OSZ_tcb_gpr +  32
+    movq	%rdi, OSZ_tcb_gpr +  40
+    movq	%r8,  OSZ_tcb_gpr +  48
+    movq	%r9,  OSZ_tcb_gpr +  56
+    movq	%r10, OSZ_tcb_gpr +  64
+    movq	%r11, OSZ_tcb_gpr +  72
+    movq	%r12, OSZ_tcb_gpr +  80
+    movq	%r13, OSZ_tcb_gpr +  88
+    movq	%r14, OSZ_tcb_gpr +  96
+    movq	%r15, OSZ_tcb_gpr + 104
+    movq	%rbp, OSZ_tcb_gpr + 112
     ret
 
 /* restore thread's context from Thread Control Block */
 isr_loadcontext:
+    movq	OSZ_tcb_gpr +   0, %rax
+    movq	OSZ_tcb_gpr +   8, %rbx
+    movq	OSZ_tcb_gpr +  16, %rcx
+    movq	OSZ_tcb_gpr +  24, %rdx
+    movq	OSZ_tcb_gpr +  32, %rsi
+    movq	OSZ_tcb_gpr +  40, %rdi
+    movq	OSZ_tcb_gpr +  48, %r8
+    movq	OSZ_tcb_gpr +  56, %r9
+    movq	OSZ_tcb_gpr +  64, %r10
+    movq	OSZ_tcb_gpr +  72, %r11
+    movq	OSZ_tcb_gpr +  80, %r12
+    movq	OSZ_tcb_gpr +  88, %r13
+    movq	OSZ_tcb_gpr +  96, %r14
+    movq	OSZ_tcb_gpr + 104, %r15
+    movq	OSZ_tcb_gpr + 112, %rbp
     ret
 
 isr_initgates:
@@ -493,15 +536,11 @@ isr_irq0:
     /* preemption timer */
     xchg %bx,%bx
     cli
-    lock
-    btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    call	isr_irq
+    call	sched_pick
+    movq	%rax, %cr3
     $EOI
     call	isr_loadcontext
-    lock
-    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 EOF
@@ -517,20 +556,21 @@ do
 	isr_irq$isr:
 	    xchg %bx,%bx
 	    cli
-	    lock
-	    btsq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-	    pushq	%rdi
-	    pushq	%rax
 	    call	isr_savecontext
-	    xorq	%rdi, %rdi
-	    movb	\$$isr, %dil
+	    movq	%cr3, %rax
+	    cmpq	sys_mapping, %rax
+	    je		1f
+	    movq	sys_mapping, %rax
+	    movq	%rax, %cr3
+	1:  movq	\$MQ_ADDRESS, %rdi
+	    xorq	%rsi, %rsi
+	    xorq	%rdx, %rdx
+	    movb	\$$isr, %dl
+	    xorq	%rcx, %rcx
+	    callq	ksend
 	    /*call	isr_irq*/
 	    $EOI
 	    call	isr_loadcontext
-	    popq	%rax
-	    popq	%rdi
-	    lock
-	    btrq	\$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
 	    iretq
 	
 	EOF

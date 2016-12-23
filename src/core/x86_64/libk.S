@@ -24,6 +24,8 @@
  *
  * @brief low level kernel routines for the core
  */
+#define _AS 1
+#include "tcb.h"
 
 .section .text
 .global kpanic
@@ -319,7 +321,7 @@ ksend:
 2:  /* replace destination pid with sender's */
     andq    $0xFFFF, %rsi
     /* tcb.mypid<<16 */
-    movq    640, %rax
+    movq    $OSZ_tcb_mypid, %rax
     shlq    $16, %rax
     orq     %rax, %rsi
     /* copy message */
@@ -337,6 +339,7 @@ ksend:
     jne     3f
     movq    $1, (%rdi)
 3:  ret
-4:  /* TODO: block current thread (sender) */
-    /*callq thread_block */
+4:  /* block current thread (sender) */
+    xorq    %rdi, %rdi
+    callq sched_block
     ret

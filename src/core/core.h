@@ -32,17 +32,19 @@
 #include "msg.h"
 
 // import virtual addresses from linker
-extern BOOTBOOT bootboot;
-extern unsigned char environment[__PAGESIZE];
-extern uint8_t fb;
-extern uint8_t tmpmap;
-extern uint8_t tmp2map;
-extern uint64_t tmppde;
-extern msghdr_t sys_mq;
-extern msghdr_t dst_mq;
+extern BOOTBOOT bootboot;                     //boot structure
+extern unsigned char environment[__PAGESIZE]; //configuration
+extern uint8_t fb;                            //framebuffer
+extern uint8_t tmpmap;                        //temp mapped page
+extern uint8_t tmp2map;                       //another temp page
+extern uint64_t tmppde;                       //core's pde ptr in pdpe
+extern msghdr_t sys_mq;                       //system message queue
+extern msghdr_t dst_mq;                       //destination message queue
 
 #define USER_PROCESS SRV_init
 #define OFFS_system (&subsystems[SRV_system])
+
+#define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
 
 // kernel variables
 extern pid_t subsystems[];
@@ -53,6 +55,8 @@ extern uint64_t fs_size;
 extern void kprintf_init();
 /** Set default colors and move cursor home */
 extern void kprintf_reset();
+/** Scroll the screen */
+extern void kprintf_scrollscr();
 /** Print a formatted string to console */
 extern void kprintf(char* fmt, ...);
 /** Display a reason and die */
@@ -103,12 +107,16 @@ extern void kfree(void* ptr);
 extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
-/** Map a thread's address space */
-extern void thread_map(pid_t thread);
 /** Add thread to scheduling */
-extern void thread_add(pid_t thread);
+extern void sched_add(pid_t thread);
 /** Remove thread from scheduling */
-extern void thread_remove(pid_t thread);
+extern void sched_remove(pid_t thread);
+/** Block a thread */
+extern void sched_block(pid_t thread);
+/** Unblock a thread */
+extern void sched_activate(pid_t thread);
+/** Return next thread's memroot */
+extern uint64_t sched_pick();
 /** Load an ELF binary into address space, return physical address */
 extern void *service_loadelf(char *fn);
 /** Load a shared library into address space */
@@ -125,4 +133,4 @@ extern void ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1,
 extern bool_t msg_sendptr(pid_t thread, uint64_t event, void *ptr, size_t size);
 extern bool_t msg_sendreg(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
 /** send a message to the system process. This is unique as it has a fast method, called by ISRs */
-#define msg_sendsys(event,arg0,arg1,arg2) (ksend(&sys_mq,MSG_REGDATA|MSG_TYPE(event),arg0,arg1,arg2))
+#define msg_sendsys(event,arg0,arg1,arg2) (ksend(&sys_mq,MSG_REGDATA|MSG_FUNC(event),arg0,arg1,arg2))

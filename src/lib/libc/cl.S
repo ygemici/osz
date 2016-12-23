@@ -3,7 +3,8 @@
 .extern printf
 
 # Header
-.section .cl
+.section .cl, "a"
+.align 16
 .byte 'C','L','D','L'
 .long 116			# size
 

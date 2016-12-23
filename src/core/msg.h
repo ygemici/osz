@@ -28,11 +28,11 @@
 #include <limits.h>
 
 /* WARNING: must match msghdr_t, for asm */
-//#define OSZ_mq_start (MQ_ADDRESS)
-//#define OSZ_mq_end (MQ_ADDRESS + 8)
+#define local_mq_start (MQ_ADDRESS)
+#define local_mq_end (MQ_ADDRESS + 8)
 
 /* WARNING: must match sizeof(msg_t), for asm */
-#define OSZ_msg_size 32
+#define msg_t_size 32
 
 #ifndef _AS
 
@@ -40,8 +40,11 @@
 typedef struct {
     uint64_t mq_start;    // event queue circular buffer start
     uint64_t mq_end;
-    uint64_t mq_size;
+    uint64_t mq_size;     // maximum number of pending events + 1
     uint64_t mq_recvfrom;
 } __attribute__((packed)) msghdr_t;
+
+// first item in the array is the queue header
+#define MSG_QUEUE(mq) ((msghdr_t*)mq[0])
 
 #endif

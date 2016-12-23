@@ -28,6 +28,7 @@
 #define _OS_Z_ 1
 
 #include <features.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <sys/types.h>

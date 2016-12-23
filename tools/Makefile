@@ -24,10 +24,10 @@ clean:
 	@rm *.o 2>/dev/null || true
 
 imgclean:
-	@rm -rf ../bin/*.part ../bin/*.vdi ../bin/*.vdmk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
+	@rm -rf ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vdmk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
 
 esp: initrd
-	@echo "  mkfs		ESP partition"
+	@echo "  mkfs		ESP"
 	@#cp ../bin/initrd.gz ../bin/ESP/BOOTBOOT/INITRD || true
 	@cp -f ../etc/CONFIG ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.efi)","")
@@ -49,16 +49,16 @@ initrd:
 	@./mkfs.o create $(INITRD) ../bin/root
 
 usr:
-	@echo "  mkfs		usr partition"
+	@echo "  mkfs		usr"
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
 	@./mkfs.o create $(USRFILE) ../bin/usr
 
 var:
-	@echo "  mkfs		var partition"
+	@echo "  mkfs		var"
 	@dd if=/dev/zero of=$(VARFILE) bs=1024 count=$(VARSIZE) >/dev/null 2>/dev/null
 
 home:
-	@echo "  mkfs		home partition"
+	@echo "  mkfs		home"
 	@dd if=/dev/zero of=$(HOMEFILE) bs=1024 count=$(HOMESIZE) >/dev/null 2>/dev/null
 
 images: initrd esp usr var home

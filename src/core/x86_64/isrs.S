@@ -28,6 +28,7 @@
 #include "isr.h"
 #include "platform.h"
 #include "ccb.h"
+#include "tcb.h"
 
 .global isr_initgates
 .global isr_exc00divzero
@@ -127,10 +128,40 @@ isr_disableirq:
 
 /* store thread's context into Thread Control Block */
 isr_savecontext:
+    movq	%rax, OSZ_tcb_gpr +   0
+    movq	%rbx, OSZ_tcb_gpr +   8
+    movq	%rcx, OSZ_tcb_gpr +  16
+    movq	%rdx, OSZ_tcb_gpr +  24
+    movq	%rsi, OSZ_tcb_gpr +  32
+    movq	%rdi, OSZ_tcb_gpr +  40
+    movq	%r8,  OSZ_tcb_gpr +  48
+    movq	%r9,  OSZ_tcb_gpr +  56
+    movq	%r10, OSZ_tcb_gpr +  64
+    movq	%r11, OSZ_tcb_gpr +  72
+    movq	%r12, OSZ_tcb_gpr +  80
+    movq	%r13, OSZ_tcb_gpr +  88
+    movq	%r14, OSZ_tcb_gpr +  96
+    movq	%r15, OSZ_tcb_gpr + 104
+    movq	%rbp, OSZ_tcb_gpr + 112
     ret
 
 /* restore thread's context from Thread Control Block */
 isr_loadcontext:
+    movq	OSZ_tcb_gpr +   0, %rax
+    movq	OSZ_tcb_gpr +   8, %rbx
+    movq	OSZ_tcb_gpr +  16, %rcx
+    movq	OSZ_tcb_gpr +  24, %rdx
+    movq	OSZ_tcb_gpr +  32, %rsi
+    movq	OSZ_tcb_gpr +  40, %rdi
+    movq	OSZ_tcb_gpr +  48, %r8
+    movq	OSZ_tcb_gpr +  56, %r9
+    movq	OSZ_tcb_gpr +  64, %r10
+    movq	OSZ_tcb_gpr +  72, %r11
+    movq	OSZ_tcb_gpr +  80, %r12
+    movq	OSZ_tcb_gpr +  88, %r13
+    movq	OSZ_tcb_gpr +  96, %r14
+    movq	OSZ_tcb_gpr + 104, %r15
+    movq	OSZ_tcb_gpr + 112, %rbp
     ret
 
 isr_initgates:
@@ -547,374 +578,554 @@ isr_exc19double:
     btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
+.align 128, 0x90
+isr_exc20:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$20, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc21:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$21, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc22:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$22, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc23:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$23, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc24:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$24, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc25:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$25, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc26:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$26, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc27:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$27, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc28:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$28, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc29:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$29, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc30:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$30, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
+.align 128, 0x90
+isr_exc31:
+    cli
+    lock
+    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movb	$31, %dil
+    callq	excabort
+    callq	isr_loadcontext
+    lock
+    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
+    iretq
+
 /* IRQ handler ISRs */
 .align 128, 0x90
 isr_irq0:
     /* preemption timer */
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    call	isr_irq
+    call	sched_pick
+    movq	%rax, %cr3
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq1:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$1, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$1, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq2:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$2, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$2, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq3:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$3, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$3, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq4:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$4, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$4, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq5:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$5, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$5, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq6:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$6, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$6, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq7:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$7, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$7, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq8:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$8, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$8, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq9:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$9, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$9, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq10:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$10, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$10, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq11:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$11, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$11, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq12:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$12, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$12, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq13:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$13, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$13, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq14:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$14, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$14, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq15:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$15, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$15, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 
 .align 128, 0x90
 isr_irq16:
     xchg %bx,%bx
     cli
-    lock
-    btsq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
-    pushq	%rdi
-    pushq	%rax
     call	isr_savecontext
-    xorq	%rdi, %rdi
-    movb	$16, %dil
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$16, %dl
+    xorq	%rcx, %rcx
+    callq	ksend
     /*call	isr_irq*/
     /* APIC EOI */
     movq	apic, %rax
     movl	$0, 0xB0(%rax)
     call	isr_loadcontext
-    popq	%rax
-    popq	%rdi
-    lock
-    btrq	$LOCK_TASKSWITCH, ccb + MUTEX_OFFS
     iretq
 

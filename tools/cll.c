@@ -331,7 +331,7 @@ int main(int argc, char**argv)
                 fprintf(f,".extern %s\n", methods[i].functionname);
         }
         j+=offs;
-        fprintf(f,"\n# Header\n.section .cl\n.byte 'C','L','D','L'\n.long %d\t\t\t# size\n",j);
+        fprintf(f,"\n# Header\n.section .cl, \"a\"\n.align 16\n.byte 'C','L','D','L'\n.long %d\t\t\t# size\n",j);
         for(i=0;i<num_method;i++){
             if(!methods[i].flags&1&&(methods[i].functionname==NULL||methods[i].functionname[0]==0)) {
                 fprintf(stderr,"CLL-ERROR: %s.%s does not have entry point\n",

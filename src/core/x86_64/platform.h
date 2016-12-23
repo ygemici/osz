@@ -28,6 +28,7 @@
 #ifndef _AS
 # include "../core.h"
 # include "tcb.h"
+# include "ccb.h"
 #endif
 
 #define PG_CORE 0b00011

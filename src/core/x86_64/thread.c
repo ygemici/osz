@@ -31,6 +31,7 @@
 /* external resources */
 extern OSZ_pmm pmm;
 
+uint64_t __attribute__ ((section (".data"))) sys_mapping;
 uint64_t __attribute__ ((section (".data"))) core_mapping;
 uint64_t __attribute__ ((section (".data"))) corepde_mapping;
 uint64_t __attribute__ ((section (".data"))) *stack_ptr;
@@ -94,7 +95,8 @@ pid_t thread_new(char *cmdline)
     // allocate stack
     ptr=pmm_alloc();
     paging[511]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
-    // we don't need the table any longer, so map it to message queue header
+    // we don't need the table any longer, so we can use it to map the
+    // message queue header for initialization
     kmap((uint64_t)&tmp2map, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
     msghdr_t *msghdr = (msghdr_t *)&tmp2map;
     msghdr->mq_start = msghdr->mq_end = 1;
@@ -116,24 +118,4 @@ pid_t thread_new(char *cmdline)
         kprintf("tcb=%x %s\n",self,cmdline);
 #endif
     return self/__PAGESIZE;
-}
-
-// map a thread
-void thread_map(pid_t thread)
-{
-    OSZ_tcb *tcb = (OSZ_tcb*)(&tmp2map);
-    kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
-    __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(tcb->memroot) : "%rax" );
-}
-
-// add a TCB to priority queue
-void thread_add(pid_t thread)
-{
-    // uint64_t ptr = thread * __PAGESIZE;
-}
-
-// remove a TCB from priority queue
-void thread_remove(pid_t thread)
-{
-    // uint64_t ptr = thread * __PAGESIZE;
 }
