@@ -83,15 +83,15 @@ void isr_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     // map "system" process
-    OSZ_tcb *systcb = (OSZ_tcb*)(&tmp2map);
-    kmap((uint64_t)&tmp2map, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
+    OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
+    kmap((uint64_t)&tmpmap, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
     __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(systcb->memroot) : "%rax" );
     // start irqs
     isr_initirq();
     isr_enableirq(1);
     // fake an interrupt handler return to start multitasking
     __asm__ __volatile__ (
-        "movq %0, %%rsp; movq %1, %%rbp; int $31; iretq" :
+        "movq %0, %%rsp; movq %1, %%rbp; iretq" :
         :
         "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );

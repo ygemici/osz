@@ -46,6 +46,24 @@ int __attribute__ ((section (".data"))) scry;
 uint32_t __attribute__ ((section (".data"))) fg;
 uint32_t __attribute__ ((section (".data"))) bg;
 
+/* ascii arts */
+char __attribute__ ((section (".data"))) kpanicprefix[] =
+    "OS/Z core panic: ";
+char __attribute__ ((section (".data"))) kpanicsuffix[] =
+    "                                                      \n"
+    "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
+    "  (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
+    " \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n";
+char __attribute__ ((section (".data"))) kpanicsuffix2[] =
+    "                                                      \n"
+    "                       KEEP CALM                      \n"
+    "               AND RESTART YOUR COMPUTER              \n"
+    "                                                      ";
+char __attribute__ ((section (".data"))) poweroffprefix[] =
+    "OS/Z shutdown finished.\n";
+char __attribute__ ((section (".data"))) poweroffsuffix[] =
+    "TURN OFF YOUR COMPUTER";
+
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
@@ -59,6 +77,12 @@ void kprintf_reset()
     reent = 0;
     fg = 0xC0C0C0;
     bg = 0;
+}
+
+void kprintf_center(int w, int h)
+{
+    kx = fx = (maxx-w)/2;
+    ky = (maxy-h)/2;
 }
 
 void kprintf_init()
@@ -75,7 +99,7 @@ void kprintf_init()
         offs+=bootboot.fb_scanline;
     }
     // get console dimensions
-    maxx = bootboot.fb_width / font->width;
+    maxx = bootboot.fb_width / (font->width+1);
     maxy = bootboot.fb_height / font->height;
     // default fg and bg, cursor at home
     kprintf_reset();

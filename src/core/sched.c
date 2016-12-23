@@ -25,32 +25,36 @@
  * @brief Thread scheduler
  */
 
+extern OSZ_ccb ccb;
+
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
     // uint64_t ptr = thread * __PAGESIZE;
     if(thread!=0) {
-        //TODO: map
-        //kmap();
-        return (OSZ_tcb*)(&tmp2map);
+        // map tcb
+        kmap((uint64_t)&tmpmap, (uint64_t)(thread * __PAGESIZE), PG_CORE_NOCACHE);
+        return (OSZ_tcb*)(&tmpmap);
     }
+    // current tcb
     return (OSZ_tcb*)0;
 }
 
 // add a TCB to priority queue
 void sched_add(pid_t thread)
 {
-    // uint64_t ptr = thread * __PAGESIZE;
+    // OSZ_tcb *tcb = sched_get_tcb(thread);
 }
 
 // remove a TCB from priority queue
 void sched_remove(pid_t thread)
 {
-    // uint64_t ptr = thread * __PAGESIZE;
+    // OSZ_tcb *tcb = sched_get_tcb(thread);
 }
 
 // move a TCB from priority queue to blocked queue
 void sched_block(pid_t thread)
 {
+    // OSZ_tcb *tcb = sched_get_tcb(thread);
 }
 
 // move a TCB from blocked queue to priority queue

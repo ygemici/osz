@@ -28,53 +28,22 @@
 #include "../env.h"
 #include <errno.h>
 
-/* send a message with registers */
-bool_t msg_sendreg(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
+/* send a message with a memory reference. If given, magic is a type hint for ptr */
+bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)
 {
     OSZ_tcb *srctcb = (OSZ_tcb*)(0);
-    OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmp2map);
+    OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmpmap);
     uint64_t *pde = (uint64_t*)(&tmppde);
     if(event==0) {
         srctcb->errno = EPERM;
         return false;
     }
-    // map thread's message queue at dst_mq
-    kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
+    // map thread's message queue at tmpmq
+    kmap((uint64_t)&tmpmap, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
     pde[DSTMQ_PDE] = dsttcb->self;
-    __asm__ __volatile__ ( "invlpg dst_mq" : : :);
+    __asm__ __volatile__ ( "invlpg tmpmq" : : :);
     // check if the dest is receiving from ANY (0) or from our pid
-    if(dst_mq.mq_recvfrom!=0 && dst_mq.mq_recvfrom!=srctcb->mypid) {
-        srctcb->errno = EAGAIN;
-        return false;
-    }
-    // send message to the mapped queue
-    srctcb->errno = EBUSY;
-    ksend(&dst_mq,
-        MSG_DEST(thread) | MSG_REGDATA | MSG_FUNC(event),
-        arg0,
-        arg1,
-        arg2
-    );
-    srctcb->errno = SUCCESS;
-    return true;
-}
-
-/* send a message with a memory reference */
-bool_t msg_sendptr(pid_t thread, uint64_t event, void *ptr, size_t size)
-{
-    OSZ_tcb *srctcb = (OSZ_tcb*)(0);
-    OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmp2map);
-    uint64_t *pde = (uint64_t*)(&tmppde);
-    if(event==0) {
-        srctcb->errno = EPERM;
-        return false;
-    }
-    // map thread's message queue at dst_mq
-    kmap((uint64_t)&tmp2map, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
-    pde[DSTMQ_PDE] = dsttcb->self;
-    __asm__ __volatile__ ( "invlpg dst_mq" : : :);
-    // check if the dest is receiving from ANY (0) or from our pid
-    if(dst_mq.mq_recvfrom!=0 && dst_mq.mq_recvfrom!=srctcb->mypid) {
+    if(tmpmq.mq_recvfrom != 0 && tmpmq.mq_recvfrom != srctcb->mypid) {
         srctcb->errno = EAGAIN;
         return false;
     }
@@ -94,9 +63,11 @@ bool_t msg_sendptr(pid_t thread, uint64_t event, void *ptr, size_t size)
             return false;
         }
         // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination
-        // thread's memory, that would be &dst_mq[dst_mq[0].mq_size]
+        // thread's memory, that would be &tmpmq[tmpmq[0].mq_size]
         for(s = size; s > 0; s -= __PAGESIZE) {
             /* uint64_t src=*(kmap_getpte(p)) */
+/*    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE); */
+
             p += __PAGESIZE;
         }
         // modify pointer to point into the newly mapped area
@@ -106,12 +77,69 @@ bool_t msg_sendptr(pid_t thread, uint64_t event, void *ptr, size_t size)
 
     // send message to the mapped queue
     srctcb->errno = EBUSY;
-    ksend(&dst_mq,
+    if(!ksend(&tmpmq,
         MSG_DEST(thread) | (event&MSG_SRV) | MSG_PTRDATA | MSG_FUNC(event),
         (uint64_t)ptr,
         (uint64_t)size,
-        0
-    );
-    srctcb->errno = SUCCESS;
+        magic
+    ))
+        sched_block(0);
+    else
+        srctcb->errno = SUCCESS;
     return true;
+}
+
+/* send a message with scalar values */
+bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
+{
+    OSZ_tcb *srctcb = (OSZ_tcb*)(0);
+    OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmpmap);
+    uint64_t *pde = (uint64_t*)(&tmppde);
+    if(event==0) {
+        srctcb->errno = EPERM;
+        return false;
+    }
+    // map thread's message queue at tmpmq
+    kmap((uint64_t)&tmpmap, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
+    pde[DSTMQ_PDE] = dsttcb->self;
+    __asm__ __volatile__ ( "invlpg tmpmq" : : :);
+    // check if the dest is receiving from ANY (0) or from our pid
+    if(tmpmq.mq_recvfrom!=0 && tmpmq.mq_recvfrom!=srctcb->mypid) {
+        srctcb->errno = EAGAIN;
+        return false;
+    }
+    // send message to the mapped queue
+    srctcb->errno = EBUSY;
+    if(!ksend(&tmpmq,
+        MSG_DEST(thread) | MSG_REGDATA | MSG_FUNC(event),
+        arg0,
+        arg1,
+        arg2
+    ))
+        sched_block(0);
+    else
+        srctcb->errno = SUCCESS;
+    return true;
+}
+
+/* send a message with a memory reference to a system service */
+bool_t msg_sendsrv(uint8_t subsystem, uint64_t event, void *ptr, size_t size, uint64_t magic)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)(0);
+    if(subsystem>=SRV_NUM) {
+        tcb->errno = EINVAL;
+        return false;
+    }
+    return msg_send(subsystems[subsystem], event, ptr, size, magic);
+}
+
+/* send a message with a memory reference to a system service */
+bool_t msg_sendssrv(uint8_t subsystem, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)(0);
+    if(subsystem>=SRV_NUM) {
+        tcb->errno = EINVAL;
+        return false;
+    }
+    return msg_sends(subsystems[subsystem], event, arg0, arg1, arg2);
 }

@@ -56,7 +56,7 @@ void *service_loadelf(char *fn)
     // this is so early, we don't have initrd in fs process' bss yet.
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    uint64_t *paging = (uint64_t *)&tmp2map;
+    uint64_t *paging = (uint64_t *)&tmpmap;
     /* locate elf on initrd */
     Elf64_Ehdr *elf=(Elf64_Ehdr *)fs_locate(fn);
     /* get program headers */
@@ -78,7 +78,7 @@ void *service_loadelf(char *fn)
         ) {
             kpanic("Corrupt ELF binary: %s", fn);
     }
-    // PT at tmp2map
+    // PT at tmpmap
     while((paging[i]&1)!=0 && i<1024-size) i++;
     if((paging[i]&1)!=0) {
         kpanic("Out of memory, text segment too big: %s", fn);
@@ -123,7 +123,7 @@ void service_loadso(char *fn)
 }
 
 /* Fill in GOT entries. Relies on identity mapping
- *  - tmp2map: the text segment's PT mapped,
+ *  - tmpmap: the text segment's PT mapped,
  *  - pmm.bss_end: current thread's TCB mapped,
  *  - relas: array of OSZ_rela items alloceted with kalloc()
  *  - stack_ptr: physical address of thread's stack */
@@ -132,7 +132,7 @@ void service_rtlink()
     int i, j, k, n = 0;
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     OSZ_rela *rel = relas;
-    uint64_t *paging = (uint64_t *)&tmp2map;
+    uint64_t *paging = (uint64_t *)&tmpmap;
 
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {

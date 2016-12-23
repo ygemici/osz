@@ -108,7 +108,19 @@ void pmm_init()
     num = (bootboot.size-128)/16;
     entry = (MMapEnt*)&bootboot.mmap;
     pmm.totalpages = 0;
+#if DEBUG
+    if(debug==DBG_MEMMAP)
+        kprintf("Memory Map (%d entries)\n", num);
+    char *types[] = { "????", "free", "resv", "ACPI", "ACPI", "used", "MMIO" };
+#endif
     while(num>0) {
+#if DEBUG
+        if(debug==DBG_MEMMAP)
+            kprintf("  %s %x (%d)\n",
+                MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
+                MMapEnt_Ptr(entry), MMapEnt_Size(entry)
+            );
+#endif
         if(MMapEnt_IsFree(entry)) {
             fmem->base = MMapEnt_Ptr(entry);
             fmem->size = MMapEnt_Size(entry)/__PAGESIZE;

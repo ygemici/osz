@@ -1,4 +1,3 @@
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:36:    // TODO: debug why this isn't working. No errors, no output
-./src/core/sched.c:32:        //TODO: map
-./src/core/x86_64/acpi.c:96:        // TODO: get values for poweroff
-./src/core/x86_64/msg.c:96:        // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination
+./src/core/x86_64/acpi.c:98:        // TODO: get values for poweroff
+./src/core/x86_64/msg.c:65:        // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination

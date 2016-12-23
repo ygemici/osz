@@ -1,7 +1,6 @@
 /* kernel space addresses */
 FBUF_ADDRESS  = 0xffffffffe0000000;
-DSTMQ_ADDRESS = 0xffffffffffa00000;
-SYSMQ_ADDRESS = 0xffffffffffc00000;
+DSTMQ_ADDRESS = 0xffffffffffc00000;
 CORE_ADDRESS  = 0xffffffffffe00000;
 
 ENTRY(_start)
@@ -10,14 +9,10 @@ SECTIONS
 {
     . = FBUF_ADDRESS;
         fb = .;
-	/* destination thread's message queue mapped, must match isr_send() */
+	/* destination thread's message queue mapped, must match ksend() */
 	. = DSTMQ_ADDRESS;
         . += 4096;
-		dst_mq = .;
-	/* system task's message queue for ISRs. Must match sys_init() */
-	. = SYSMQ_ADDRESS;
-        . += 4096;
-		sys_mq = .;
+		tmpmq = .;
     /* make sure it starts with bootboot */
     . = CORE_ADDRESS;
         bootboot = .;
@@ -39,9 +34,9 @@ SECTIONS
         /* uninitialized data */
         PROVIDE(__bss_start = .);
         /* mappings hack */
-        tmpmap = .;
+        tmpctrl = .;
         . += 4096;
-        tmp2map = .;
+        tmpmap = .;
         . += 4096;
         tmppte = .;
         . += 4096;

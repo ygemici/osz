@@ -40,47 +40,41 @@
 .global kstrcmp
 .global ksend
 .extern kmap_tmp
-.extern tmpmap
-.extern tmp2map
+.extern tmpctrl
 .extern tmppte
+.extern tmppde
+.extern kpanicprefix
+.extern kpanicsuffix
+.extern kpanicsuffix2
 
 /* kernel panic */
 kpanic:
-    movl    $0xFFDD33, fg
-    movl    $0x000000, bg
     pushq   %rdi
+    call    kprintf_reset
+    movl    $0xFFDD33, fg
+    movl    $0, bg
     movq    $kpanicprefix, %rdi
     call    kprintf
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
+    movq    $54, %rdi
+    movq    $5, %rsi
+    call    kprintf_center
+    push    kx
     movl    $0x8c2c0b, fg
     movl    $0x100000, bg
     movq    $kpanicsuffix, %rdi
-    cmpl    $0, kx
-    jne     1f
-    incq    %rdi
-1:  call    kprintf
+    call    kprintf
     movl    $0x500000, fg
     movq    $kpanicsuffix2, %rdi
     call    kprintf
-    movl    $46, kx
-    subl    $6, ky
+    pop     kx
+    addl    $46, kx
+    addl    $1, ky
     call    kprintf_putlogo
     cli
     hlt
-kpanicprefix:
-.asciz "OS/Z core panic: "
-kpanicsuffix:
-.ascii "\n                                                      \n"
-.ascii "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
-.ascii "  (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
-.asciz " \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n"
-kpanicsuffix2:
-.ascii "                                                      \n"
-.ascii "                       KEEP CALM                      \n"
-.ascii "               AND RESTART YOUR COMPUTER              \n"
-.asciz "                                                      "
 
 /* misc memory functions */
 kmemcpy:
@@ -159,7 +153,7 @@ kmap_init:
     push    %rbx
     push    %rcx
     /* this is called very early. Relies on identity mapping
-       to find the physical address of tmpmap pointer in PTE */
+       to find the physical address of tmppte pointer in PTE */
     movq    $tmppte, %rcx
     /* PML4 */
     movq    %rcx, %rbx
@@ -238,7 +232,7 @@ kmap_init:
 /* IN rdi: virtual address
  * OUT rax: address of page entry in PT */
 kmap_getpte:
-    /* we have at least tmpmap, so we can map PTE */
+    /* we have tmpctrl, so we can map PTE */
     movq    kmap_tmp, %rbx
     /* PML4 */
     movq    %rdi, %rax
@@ -249,8 +243,8 @@ kmap_getpte:
     andw    $0xF000, %dx
     incw    %dx
     movq    %rdx, (%rbx)
-    invlpg  tmpmap
-    addq    $tmpmap, %rax
+    invlpg  tmpctrl
+    addq    $tmpctrl, %rax
     /* PDPE */
     mov     (%rax), %rdx
     movq    %rdi, %rax
@@ -260,8 +254,8 @@ kmap_getpte:
     andw    $0xF000, %dx
     incw    %dx
     movq    %rdx, (%rbx)
-    invlpg  tmpmap
-    addq    $tmpmap, %rax
+    invlpg  tmpctrl
+    addq    $tmpctrl, %rax
     /* PDE */
     mov     (%rax), %rdx
     movq    %rdi, %rax
@@ -272,8 +266,8 @@ kmap_getpte:
     incw    %dx
     movq    %rdx, (%rbx)
     invlpg  (%rbx)
-    invlpg  tmpmap
-    addq    $tmpmap, %rax
+    invlpg  tmpctrl
+    addq    $tmpctrl, %rax
     /* PTE */
     mov     (%rax), %rdx
     movq    %rdi, %rax
@@ -283,8 +277,8 @@ kmap_getpte:
     andw    $0xF000, %dx
     incw    %dx
     movq    %rdx, (%rbx)
-    invlpg  tmpmap
-    addq    $tmpmap, %rax
+    invlpg  tmpctrl
+    addq    $tmpctrl, %rax
     ret
 
 /* send a message to a message queue. This has to be effective
@@ -338,8 +332,8 @@ ksend:
     cmpq    16(%rdi), %rax
     jne     3f
     movq    $1, (%rdi)
-3:  ret
-4:  /* block current thread (sender) */
-    xorq    %rdi, %rdi
-    callq sched_block
+3:  xorq    %rax, %rax
+    incb    %al
+    ret
+4:  xorq    %rax, %rax
     ret

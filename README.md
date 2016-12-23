@@ -35,25 +35,28 @@ Requirements
 Testing
 -------
 
-I always push a source to git that known to compile by a simple `make clean all`.
+I always push the source to git in a state that's known to compile without errors by a `make clean all` command.
 
-The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines.
+The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example
 
-You can boot OS/Z in a virtual machine right from your `bin` directory
-(not using bin/disk.dd) with TianoCore EFI. For that, type
+```shell
+qemu-system-x86_64 -name OS/Z -sdl -m 256 -hda bin/disk.dd
+```
+
+But for your convience I've added make commands. For example if you clone the repo you can boot OS/Z right from your `bin/ESP` directory
+with TianoCore EFI. For that one should type
 
 ```shell
 make testefi
 ```
 
-That will start qemu using `bin/ESP` as your EFI Boot Partition. To run
-the resulting image in qemu with BIOS, type
+To run the resulting image in qemu with BIOS
 
 ```shell
 make testq
 ```
 
-To run the result with BIOS in bochs,
+To run the result with BIOS in bochs
 
 ```shell
 make testb
@@ -73,15 +76,15 @@ Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions whic
 I've added the BIOS images to the source, and you should be able to compile efi loader with GNU toolchain only.
 
 The `bootboot.bin` can be booted via 
- - `mbr.bin`
+ - `mbr.bin` in MBR or VBR
  - BIOS extension ROM (tested with bochs at 0D0000h)
  - GRUB using the MultiBoot protocol (not tested).
 
 License
 -------
 
-The boot loader and the whole BOOBOOT Protocol is licensed under GPLv3.
-Other parts of OS/Z like FS/Z filesystem licensed under CC-by-nc-sa-4.0.
+The boot loader and the BOOTBOOT Protocol are licensed under GPLv3.
+All the other parts of OS/Z (like FS/Z filesystem) licensed under CC-by-nc-sa-4.0.
 
  Copyright 2016 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
  

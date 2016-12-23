@@ -35,9 +35,9 @@ SECTIONS
         /* uninitialized data */
         PROVIDE(__bss_start = .);
         /* mappings hack */
-        tmpmap = .;
+        tmpctrl = .;
         . += 4096;
-        tmp2map = .;
+        tmpmap = .;
         . += 4096;
         tmppte = .;
         . += 4096;

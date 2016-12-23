@@ -41,7 +41,9 @@ uint32_t __attribute__ ((section (".data"))) SLP_TYPb;
 uint32_t __attribute__ ((section (".data"))) PM1b_CNT;
 
 extern uint32_t fg;
-extern uint32_t bg;
+extern char poweroffprefix[];
+extern char poweroffsuffix[];
+extern void kprintf_center(int w, int h);
 
 char *acpi_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -261,6 +263,9 @@ void dev_poweroff()
 */
     // if it didn't work, show a message and freeze.
     kprintf_init();
-    kprintf("OS/Z shutdown finished. Turn off computer.");
+    kprintf(poweroffprefix);
+    fg = 0x29283f;
+    kprintf_center(20, -8);
+    kprintf(poweroffsuffix);
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
