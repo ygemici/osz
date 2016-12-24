@@ -44,10 +44,10 @@ void _init(int argc, char **argv)
 //	uint i;
 
 //  printf("Hello from userspace");
-    dump(irq_dispatch_table, irq_dispatch_table, irq_dispatch_table[0]);
+//    dump(irq_dispatch_table, irq_dispatch_table, irq_dispatch_table[0]);
     while(1) {
-//        msg_t *work = clrecv();
-//        __asm__ __volatile__ ( "movq %0, %%rax; xchgw %%bx,%%bx; movq %1, %%rbx" : : "r"(work->evt), "r"(work->arg1) :);
+        msg_t *work = clrecv();
+        __asm__ __volatile__ ( "movq %0, %%rax; xchgw %%bx,%%bx; movq %1, %%rbx" : : "r"(work->evt), "r"(work->arg1) :);
 //        if(MSG_FUNC(work->evt) == SYS_IRQ) {
 //        }
     }

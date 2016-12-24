@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief System process
+ * @brief System Task, IRQ event dispatcher
  */
 
 #include "platform.h"
@@ -33,20 +33,25 @@ extern uint64_t pt;
 extern uint64_t *irq_dispatch_table;
 extern uint64_t sys_mapping;
 
-/* Initialize the "system" process */
+/* this code should go in service.c, but has platform dependent parts */
+extern OSZ_rela *relas;
+
+/* Initialize the "system" task */
 void sys_init()
 {
-    // this is so early, we don't have initrd in fs process' bss yet.
-    // so we have to rely on identity mapping to locate the files
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i=0, s;
+    // before we call loadelf for the first time and map tcb at bss_end
+    // allocate space for dynamic linking
+    relas = (OSZ_rela*)kalloc(2);
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
-    sys_mapping = tcb->memroot;
+    sys_mapping = tcb->memroot & ~(__PAGESIZE-1);
 
     // map device driver dispatcher
-    service_loadelf("sbin/system");
+    if(service_loadelf("sbin/system") == (void*)(-1))
+        kpanic("unable to load ELF from /sbin/system");
     // allocate and map irq dispatcher table
     for(i=0;paging[i]!=0;i++);
     irq_dispatch_table = NULL;
@@ -56,12 +61,15 @@ void sys_init()
         s=1;
 #if DEBUG
     if(s>1)
-        kprintf("core warning: irq_dispatch_table bigger than a page\n");
+        kprintf("WARNING irq_dispatch_table bigger than a page\n");
 #endif
+    // add extra space to allow expansion
+    s++;
     // allocate IRQ Dispatch Table
     while(s--) {
         uint64_t t = (uint64_t)pmm_alloc();
         if(irq_dispatch_table == NULL) {
+            // initialize IRQ Dispatch Table
             irq_dispatch_table = (uint64_t*)t;
             irq_dispatch_table[0] = nrirqmax;
         }
@@ -74,6 +82,7 @@ void sys_init()
 
     // dynamic linker
     service_rtlink();
+    // don't link other elf's against irq_dispatch_table
     irq_dispatch_table = NULL;
     // modify TCB for system task, platform specific part
     tcb->priority = PRI_SYS;

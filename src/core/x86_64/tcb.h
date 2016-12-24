@@ -39,6 +39,8 @@
 #ifndef _AS
 #include "../tcb.h"
 
+#define TCB_IRQHANDLERSTACK 1024
+
 // must be __PAGESIZE long
 typedef struct {
     uint32_t magic;
@@ -51,6 +53,7 @@ typedef struct {
     uint64_t memroot;   // memory mapping root at            tcb+ 648
     uint64_t billcnt;   // ticks thread spent in ring 3      tcb+ 656
     uint64_t syscnt;    // ticks thread spent in ring 0      tcb+ 664
+    uint64_t errno;     // thread safe libc errno            tcb+ 672
     // ordering does not matter from here, fields below not referenced in asm
     pid_t sendto;
     pid_t blksend;      // head of blocked threads chain (sending to this thread)
@@ -61,20 +64,26 @@ typedef struct {
     uint64_t linkmem;   // number of linked memory pages
     uint64_t allocmem;  // number of allocated memory pages
     uint64_t self;      // self pointer (physical address of TLB PT)
-    uint64_t errno;     // thread safe libc errno
     uint64_t blktime;   // time when thread was blocked
     uint64_t blkcnt;    // ticks thread spent blocked
 	uint64_t swapminor;	// only used when thread is hybernated
     uuid_t acl[128];    // access control list
 
-    uint8_t padding[__PAGESIZE-2824-256-40];
-    uint8_t irqhandlerstack[256];
+    uint8_t padding[__PAGESIZE-2824-TCB_IRQHANDLERSTACK-40];
+    uint8_t irqhandlerstack[TCB_IRQHANDLERSTACK];
 
-    uint64_t rip;       // at the end of ist_usr stack an extra 40 bytes
-    uint64_t cs;        // this structure is used to initialize thread
+    // the last 40 bytes of stack is referenced directly from asm
+    uint64_t rip;       // at the end of ist_usr stack an iretq
+    uint64_t cs;        // structure, initialized by thread_new()
     uint64_t rflags;
     uint64_t rsp;
     uint64_t ss;
 } __attribute__((packed)) OSZ_tcb;
+
+// relocation records
+typedef struct {
+    uint64_t offs;
+    char *sym;
+} OSZ_rela;
 
 #endif

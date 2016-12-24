@@ -97,6 +97,7 @@ cat >isrs.S <<EOF
  * @brief Low level exception and Interrupt Service Routines
  */
 #define _AS 1
+#include <errno.h>
 #include "isr.h"
 #include "platform.h"
 #include "ccb.h"
@@ -112,7 +113,6 @@ cat >isrs.S <<EOF
 .extern isr_ticks
 .extern isr_entropy
 .extern gdt64_tss
-.extern isr_irq
 .extern excabort
 .extern pmm
 
@@ -317,20 +317,59 @@ isr_gainentropy:
     /* isr_entropy[isr_ticks[0]&3] ^=
        (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
     movq	isr_ticks, %rax
-    movq	%rax, %rcx
     movq	%rax, %rdx
     incq	%rdx
+    movq	%rdx, %rcx
+    shlq	\$3, %rdx
     andq	\$3, %rax
-    andq	\$3, %rdx
     addq	\$isr_entropy, %rax
     addq	\$isr_entropy, %rdx
     andb	\$0x3f, %cl
     rolq	%cl, (%rax)
     movq	(%rax), %rax
-    xorq	(%rdx), %rax
+    xorq	%rax, (%rdx)
     ret
 
-isr_initgates:
+/* syscall dispatcher */
+.align	16, 0x90
+isr_syscall0:
+    cli
+xchg %bx,%bx
+    /* tcb->rip */
+    movq	%rcx, __PAGESIZE-40
+    /* tcb->rflags */
+    pushf
+    pop     __PAGESIZE-24
+    /* tcb->gpr */
+    call	isr_savecontext
+    /* 'send' */
+    cmpl    \$0x646E6573, %eax
+    jne     2f
+    /* if destionation is SRV_core */
+    orq     %rdi, %rdi
+    jnz     1f
+    call	isr_syscall
+    jmp     5f
+1:  call    ksend
+    jmp     5f
+    /* 'recv' */
+2:  cmpl    \$0x76636572, %eax
+    jne     3f
+    call    sched_block
+    jmp     4f
+
+3:  /* tcb->errno = EINVAL */
+    movl    \$EINVAL, 672
+    /* get a new thread to run */
+4:  call	sched_pick
+    movq	%rax, %cr3
+    call	isr_loadcontext
+5:  movq    __PAGESIZE-24, %r11
+    movq    __PAGESIZE-40, %rcx
+    sysretq
+
+
+isr_initirq:
 /* TSS64 descriptor in GDT */
     movq	\$gdt64_tss, %rbx
     movl	%esi, %eax
@@ -354,13 +393,11 @@ isr_initgates:
     wrmsr
     /* LSTAR */
     incl	%ecx
-    movq	\$isr_syscall, %rax
+    movq	\$isr_syscall0, %rax
     movq    %rax, %rdx
     shrq    \$32, %rdx
     wrmsr
     ret
-
-isr_initirq:
 /* initialize IRQs, masking all */
     /* remap PIC. We have to do this even when PIC is disabled. */
     movb	\$0x11, %al
@@ -516,26 +553,6 @@ cat >>isrs.S <<EOF
     outb	%al, \$0x70
     ret
 
-/* syscall dispatcher */
-.align	16, 0x90
-isr_syscall:
-    cli
-    /* tcb->rip */
-    movq	%rcx, __PAGESIZE-40
-    /* tcb->rflags */
-    pushf
-    pop     __PAGESIZE-24
-    /* tcb->gpr */
-    call	isr_savecontext
-    /* get a new thread to run */
-    call	sched_pick
-    movq	%rax, %cr3
-    $EOI
-    call	isr_loadcontext
-    movq    __PAGESIZE-24, %r11
-    movq    __PAGESIZE-40, %rcx
-    sysretq
-
 /* exception handler ISRs */
 EOF
 i=0
@@ -549,6 +566,7 @@ do
 	cat >>isrs.S <<-EOF
 	.align $isrmax, 0x90
 	isr_$isr:
+xchg %bx,%bx
 	    cli
 	    callq	isr_savecontext
 	    xorq	%rdi, %rdi
@@ -598,12 +616,13 @@ do
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
-	    call	isr_gainentropy
+	    /*call	isr_gainentropy*/
 	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
+	    andw	\$0xF000, %ax
 	    cmpq	sys_mapping, %rax
 	    je		1f
-	    /* no, switch to system process */
+	    /* no, switch to system task */
 	    movq	sys_mapping, %rax
 	    movq	%rax, %cr3
 	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */

@@ -11,11 +11,11 @@ Memory Mapping
 --------------
 
 All processes have their own memory mappings. Some pages are different,
-some are shared. There's a special process, called "system" which has
-a slightly different mapping than normal processes.
+some are shared. There's a special task, called "system" which has
+a slightly different mapping than normal user tasks.
 
-System process
---------------
+System Task
+-----------
 
 | Virtual Address | Scope | Description |
 | --------------- | ----- | ----------- |
@@ -25,8 +25,9 @@ System process
 |  4096 .. 1M-1   | thread  | Message Queue |
 |    1M .. x      | thread  | temporarily mapped message buffer (growing upwards) |
 |     x .. 2M-1   | thread  | local stack (growing downwards) |
-|    2M .. x      | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
-|     x .. 4G-1   | process | device drivers (shared objects) |
+|    2M .. 2M+2-1 | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
+| 2M+2p .. 2M+3-1 | process | IRQ Dispatch Table |
+| 2M+3p .. 4G-1   | process | device drivers (shared objects) |
 |    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
 
 The system process is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
@@ -34,10 +35,15 @@ pages in it's bss segment. Each device in the system should have a device driver
 When an IRQ occurs, the Core sends a message to the system process and it's dispatcher calls the irq handler in the
 appropriate shared library.
 
-Also the system process is counted for the idle task.
+Also the system task is accounted for the idle task.
 
-User processes
---------------
+IRQ Dispatch Table is an array of (void*)() entry points, save the first item, which is the maximum number of handlers
+per IRQ (idt[0]). The list of functions to call on IRQ x is at idt[x*idt[0]+1] and idt[(x+1)*idt[0]] inclusive. The table
+is filled up at boot time when the device [drivers](https://github.com/bztsrc/osz/tree/master/docs/drivers.md) are detected.
+The variable idt[0] can be set in `etc/CONFIG` with "nrirqmax" variable.
+
+User Tasks
+----------
 
 | Virtual Address | Scope | Description |
 | --------------- | ----- | ----------- |
@@ -54,7 +60,10 @@ User processes
 Normal userspace processes do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.
 
-Core memory
+The maximum number of pending events in a queue is a boot time parameter and can be set in `etc/CONFIG` with "nrmqmax". It's given
+in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/32 = up to 128 pending events.
+
+Core Memory
 -----------
 
 The pages for the core are marked as supervisor only, meaning userspace programs cannot access it.
@@ -66,8 +75,7 @@ The pages for the core are marked as supervisor only, meaning userspace programs
 |   -2M .. x      | Core text segment and bss (growing upwards) |
 |     x .. 0      | Core stack (growing downwards) |
 
-
-Process memory
+Process Memory
 --------------
 
 Shared among threads, just as user bss.

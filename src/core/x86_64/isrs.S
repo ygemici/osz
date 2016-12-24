@@ -25,6 +25,7 @@
  * @brief Low level exception and Interrupt Service Routines
  */
 #define _AS 1
+#include <errno.h>
 #include "isr.h"
 #include "platform.h"
 #include "ccb.h"
@@ -40,7 +41,6 @@
 .extern isr_ticks
 .extern isr_entropy
 .extern gdt64_tss
-.extern isr_irq
 .extern excabort
 .extern pmm
 
@@ -172,20 +172,59 @@ isr_gainentropy:
     /* isr_entropy[isr_ticks[0]&3] ^=
        (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
     movq	isr_ticks, %rax
-    movq	%rax, %rcx
     movq	%rax, %rdx
     incq	%rdx
+    movq	%rdx, %rcx
+    shlq	$3, %rdx
     andq	$3, %rax
-    andq	$3, %rdx
     addq	$isr_entropy, %rax
     addq	$isr_entropy, %rdx
     andb	$0x3f, %cl
     rolq	%cl, (%rax)
     movq	(%rax), %rax
-    xorq	(%rdx), %rax
+    xorq	%rax, (%rdx)
     ret
 
-isr_initgates:
+/* syscall dispatcher */
+.align	16, 0x90
+isr_syscall0:
+    cli
+xchg %bx,%bx
+    /* tcb->rip */
+    movq	%rcx, __PAGESIZE-40
+    /* tcb->rflags */
+    pushf
+    pop     __PAGESIZE-24
+    /* tcb->gpr */
+    call	isr_savecontext
+    /* 'send' */
+    cmpl    $0x646E6573, %eax
+    jne     2f
+    /* if destionation is SRV_core */
+    orq     %rdi, %rdi
+    jnz     1f
+    call	isr_syscall
+    jmp     5f
+1:  call    ksend
+    jmp     5f
+    /* 'recv' */
+2:  cmpl    $0x76636572, %eax
+    jne     3f
+    call    sched_block
+    jmp     4f
+
+3:  /* tcb->errno = EINVAL */
+    movl    $EINVAL, 672
+    /* get a new thread to run */
+4:  call	sched_pick
+    movq	%rax, %cr3
+    call	isr_loadcontext
+5:  movq    __PAGESIZE-24, %r11
+    movq    __PAGESIZE-40, %rcx
+    sysretq
+
+
+isr_initirq:
 /* TSS64 descriptor in GDT */
     movq	$gdt64_tss, %rbx
     movl	%esi, %eax
@@ -209,13 +248,11 @@ isr_initgates:
     wrmsr
     /* LSTAR */
     incl	%ecx
-    movq	$isr_syscall, %rax
+    movq	$isr_syscall0, %rax
     movq    %rax, %rdx
     shrq    $32, %rdx
     wrmsr
     ret
-
-isr_initirq:
 /* initialize IRQs, masking all */
     /* remap PIC. We have to do this even when PIC is disabled. */
     movb	$0x11, %al
@@ -312,31 +349,10 @@ isr_initirq:
     outb	%al, $0x70
     ret
 
-/* syscall dispatcher */
-.align	16, 0x90
-isr_syscall:
-    cli
-    /* tcb->rip */
-    movq	%rcx, __PAGESIZE-40
-    /* tcb->rflags */
-    pushf
-    pop     __PAGESIZE-24
-    /* tcb->gpr */
-    call	isr_savecontext
-    /* get a new thread to run */
-    call	sched_pick
-    movq	%rax, %cr3
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
-    call	isr_loadcontext
-    movq    __PAGESIZE-24, %r11
-    movq    __PAGESIZE-40, %rcx
-    sysretq
-
 /* exception handler ISRs */
 .align 128, 0x90
 isr_exc00divzero:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -347,6 +363,7 @@ isr_exc00divzero:
 
 .align 128, 0x90
 isr_exc01debug:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -357,6 +374,7 @@ isr_exc01debug:
 
 .align 128, 0x90
 isr_exc02nmi:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -367,6 +385,7 @@ isr_exc02nmi:
 
 .align 128, 0x90
 isr_exc03chkpoint:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -377,6 +396,7 @@ isr_exc03chkpoint:
 
 .align 128, 0x90
 isr_exc04overflow:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -387,6 +407,7 @@ isr_exc04overflow:
 
 .align 128, 0x90
 isr_exc05bound:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -397,6 +418,7 @@ isr_exc05bound:
 
 .align 128, 0x90
 isr_exc06invopcode:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -407,6 +429,7 @@ isr_exc06invopcode:
 
 .align 128, 0x90
 isr_exc07devunavail:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -417,6 +440,7 @@ isr_exc07devunavail:
 
 .align 128, 0x90
 isr_exc08dblfault:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -427,6 +451,7 @@ isr_exc08dblfault:
 
 .align 128, 0x90
 isr_exc09coproc:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -437,6 +462,7 @@ isr_exc09coproc:
 
 .align 128, 0x90
 isr_exc10invtss:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -447,6 +473,7 @@ isr_exc10invtss:
 
 .align 128, 0x90
 isr_exc11segfault:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -457,6 +484,7 @@ isr_exc11segfault:
 
 .align 128, 0x90
 isr_exc12stackfault:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -467,6 +495,7 @@ isr_exc12stackfault:
 
 .align 128, 0x90
 isr_exc13genprot:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -477,6 +506,7 @@ isr_exc13genprot:
 
 .align 128, 0x90
 isr_exc14pagefault:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -487,6 +517,7 @@ isr_exc14pagefault:
 
 .align 128, 0x90
 isr_exc15unknown:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -497,6 +528,7 @@ isr_exc15unknown:
 
 .align 128, 0x90
 isr_exc16float:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -507,6 +539,7 @@ isr_exc16float:
 
 .align 128, 0x90
 isr_exc17alignment:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -517,6 +550,7 @@ isr_exc17alignment:
 
 .align 128, 0x90
 isr_exc18machinecheck:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -527,6 +561,7 @@ isr_exc18machinecheck:
 
 .align 128, 0x90
 isr_exc19double:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -537,6 +572,7 @@ isr_exc19double:
 
 .align 128, 0x90
 isr_exc20:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -547,6 +583,7 @@ isr_exc20:
 
 .align 128, 0x90
 isr_exc21:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -557,6 +594,7 @@ isr_exc21:
 
 .align 128, 0x90
 isr_exc22:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -567,6 +605,7 @@ isr_exc22:
 
 .align 128, 0x90
 isr_exc23:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -577,6 +616,7 @@ isr_exc23:
 
 .align 128, 0x90
 isr_exc24:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -587,6 +627,7 @@ isr_exc24:
 
 .align 128, 0x90
 isr_exc25:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -597,6 +638,7 @@ isr_exc25:
 
 .align 128, 0x90
 isr_exc26:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -607,6 +649,7 @@ isr_exc26:
 
 .align 128, 0x90
 isr_exc27:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -617,6 +660,7 @@ isr_exc27:
 
 .align 128, 0x90
 isr_exc28:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -627,6 +671,7 @@ isr_exc28:
 
 .align 128, 0x90
 isr_exc29:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -637,6 +682,7 @@ isr_exc29:
 
 .align 128, 0x90
 isr_exc30:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -647,6 +693,7 @@ isr_exc30:
 
 .align 128, 0x90
 isr_exc31:
+xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -684,12 +731,13 @@ isr_irq0:
 isr_irq1:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -710,12 +758,13 @@ isr_irq1:
 isr_irq2:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -736,12 +785,13 @@ isr_irq2:
 isr_irq3:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -762,12 +812,13 @@ isr_irq3:
 isr_irq4:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -788,12 +839,13 @@ isr_irq4:
 isr_irq5:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -814,12 +866,13 @@ isr_irq5:
 isr_irq6:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -840,12 +893,13 @@ isr_irq6:
 isr_irq7:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -866,12 +920,13 @@ isr_irq7:
 isr_irq8:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -892,12 +947,13 @@ isr_irq8:
 isr_irq9:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -918,12 +974,13 @@ isr_irq9:
 isr_irq10:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -944,12 +1001,13 @@ isr_irq10:
 isr_irq11:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -970,12 +1028,13 @@ isr_irq11:
 isr_irq12:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -996,12 +1055,13 @@ isr_irq12:
 isr_irq13:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -1022,12 +1082,13 @@ isr_irq13:
 isr_irq14:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -1048,12 +1109,13 @@ isr_irq14:
 isr_irq15:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
@@ -1074,12 +1136,13 @@ isr_irq15:
 isr_irq16:
     cli
     call	isr_savecontext
-    call	isr_gainentropy
+    /*call	isr_gainentropy*/
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
+    andw	$0xF000, %ax
     cmpq	sys_mapping, %rax
     je		1f
-    /* no, switch to system process */
+    /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
     /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */

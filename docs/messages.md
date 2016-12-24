@@ -57,6 +57,7 @@ Supervisor Mode
 ---------------
 
 Core can't use libc, it has it's own message queue implementation. Also four functions in `src/core/msg.c`, but different ones:
+
 ```c
 bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic);
 bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
@@ -82,3 +83,12 @@ void ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64
 
 It's an effective assembly implementation on copying 32 bytes into the queue and handle start / end indeces.
 
+Syscall ABI
+-----------
+
+There're only two functions, and their code is passed in %eax to syscall instruction. It can be
+
+ - 'send' for sending a message, see isr_syscall() and ksend().
+ - 'recv' is called when the queue is empty and receiving is not possible.
+
+The arguments are stored in System V ABI way: %rdi=pid_t thread, %rsi=event, %rdx=arg0/ptr, %rcx=arg1/size, %r8=arg2/magic.

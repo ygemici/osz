@@ -142,7 +142,7 @@ extern void kfree(void* ptr);
 /** Map a physical page at a virtual address */
 extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);
 
-// ----- Threads and Processes -----
+// ----- Threads -----
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
 

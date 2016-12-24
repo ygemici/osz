@@ -31,8 +31,7 @@
 
 extern void isr_exc00divzero();
 extern void isr_irq0();
-extern void *isr_initgates(uint64_t *idt, OSZ_ccb *tss);
-extern void isr_initirq();
+extern void isr_initirq(uint64_t *idt, OSZ_ccb *tss);
 
 extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
@@ -40,6 +39,21 @@ extern pid_t subsystems[];
 
 uint64_t __attribute__ ((section (".data"))) isr_ticks[2];
 uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
+
+/* System call dispatcher for messages sent to SRV_core */
+bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    switch(MSG_FUNC(event)) {
+        case SYS_exit:
+            break;
+        default:
+            tcb->errno = EINVAL;
+            return false;
+    }
+    return true;
+}
+
 
 /* Initialize interrupts */
 void isr_init()
@@ -76,21 +90,23 @@ void isr_init()
     }
 
     // set up isr_syscall dispatcher and IDTR
-    isr_initgates(idt, &ccb);
+    isr_initirq(idt, &ccb);
 }
 
 void isr_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    // map "system" process
+    // map "system" task
     OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
     kmap((uint64_t)&tmpmap, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
     __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(systcb->memroot) : "%rax" );
     // start irqs
-    isr_initirq();
     isr_enableirq(1);
     // fake an interrupt handler return to start multitasking
     __asm__ __volatile__ (
+        // clear ABI arguments
+        "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
+        // "return" to the thread
         "movq %0, %%rsp; movq %1, %%rbp; iretq" :
         :
         "b"(&tcb->rip), "i"(TEXT_ADDRESS) :

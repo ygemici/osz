@@ -35,6 +35,8 @@ uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
 
+// for overriding default or autodetected values
+extern uint64_t lapic_addr;
 extern uint64_t ioapic_addr;
 
 unsigned char *env_hex(unsigned char *s, uint *v, uint min, uint max)
@@ -100,17 +102,23 @@ void env_init()
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
             env += 9;
-            env = env_dec(env, &nrphymax, 1, 255);
+            env = env_dec(env, &nrphymax, 1, 32);
         } else
         // number of message queue pages
         if(!kmemcmp(env, "nrmqmax=", 8)) {
             env += 8;
-            env = env_dec(env, &nrmqmax, 2, NRMQ_MAX);
+            env = env_dec(env, &nrmqmax, 1, NRMQ_MAX);
         } else
-        // number of handlers per IRQ
+        // maximum number of handlers per IRQ
         if(!kmemcmp(env, "nrirqmax=", 9)) {
             env += 9;
             env = env_dec(env, &nrirqmax, 4, 32);
+        } else
+        // manually override APIC address
+        if(!kmemcmp(env, "apic=", 5)) {
+            env += 5;
+            // we only accept hex value for this parameter
+            env = env_hex(env, (uint*)&lapic_addr, 1024*1024, 0);
         } else
         // manually override IOAPIC address
         if(!kmemcmp(env, "ioapic=", 7)) {
@@ -133,7 +141,7 @@ void env_init()
             env += 12;
             env = env_boolt(env, &rescueshell);
         } else
-        // run first time turn on's ask for identity process
+        // run first time turn on's ask for identity task
         if(!kmemcmp(env, "identity=", 9)) {
             env += 9;
             env = env_boolf(env, &identity);

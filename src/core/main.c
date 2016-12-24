@@ -64,39 +64,36 @@ void main()
     pmm_init();
 
     // this is early, we don't have "fs" subsystem yet.
-    // to solve the chicken egg scenario here, service_init()
-    // does not use filesystem drivers, it has a built-in fs reader
-    // that can only load files from the initrd
-    service_init(0, NULL);
-    // initialize the "system" process, the first subsystem. It will
-    // detect device drivers by parsing system tables an iterating buses
+
+    // initialize the "system" task, service_init(SRV_system, "sbin/system")
+    // In addition this will detect device drivers
     sys_init();
     // interrupt service routines (idt), initialize CCB. Has to be done
     // after sys_init(), as it may require addresses from parsed tables
     isr_init();
-    // initialize "fs" process
+    // initialize "fs" task, special service_init(SRV_fs, "sbin/fs")
     fs_init();
 
     /* step 2: communication */
-    // initialize "ui" process to handle user input / output
+    // initialize "ui" task to handle user input / output
     service_init(SRV_ui, "sbin/ui");
     if(networking) {
-        // initialize "net" process for ipv4 and ipv6
+        // initialize "net" task for ipv4 and ipv6 routing
         service_init(SRV_net, "sbin/net");
     }
     if(sound) {
-        // initialize "sound" process to handle audio channels
+        // initialize "sound" task to handle audio channels
         service_init(SRV_sound, "sbin/sound");
     }
 
     /* step 3: historic memory */
-    // start "syslog" process so others can log errors
+    // start "syslog" task so others can log errors
     service_init(SRV_syslog, "sbin/syslog");
 
     /* step 4: who am I */
     fs_locate("etc/hostname");
     if(identity || fs_size==0) {
-        // start first time turn on's set up process
+        // start first time turn on's set up task
         service_init(USER_PROCESS, "sbin/identity");
     }
 

@@ -65,8 +65,9 @@ clrecv:
     cmpq     (%rbx), %rax
     jne      1f
     movl     $0x76636572, %eax # 'recv'
+    /* only returns from syscall when
+       there's a message waiting. */
     syscall
-    ret
 1:  /* must match sizeof(msg_t) */
     shlq    $5, %rax
     addq    %rbx, %rax
@@ -76,7 +77,11 @@ clrecv:
     cmpq    16(%rbx), %rcx
     jne     2f
     movq    $1, 8(%rbx)
-2:  ret
+2:  movq    (%rax), %rdi
+    movq    8(%rax), %rsi
+    movq    16(%rax), %rdx
+    movq    24(%rax), %rcx
+    ret
 
 /* uint64_t clismsg() */
 clismsg:

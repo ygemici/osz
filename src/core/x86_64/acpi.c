@@ -189,10 +189,9 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     }
 }
 
+/* Load device drivers into "system" task's address space */
 void dev_init()
 {
-    // this is so early, we don't have initrd in fs process' bss yet.
-    // so we have to rely on identity mapping to locate the files
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];

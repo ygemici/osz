@@ -22,6 +22,9 @@ all: $(OBJS) $(BINTARGET)
 $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
 	@$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+ifneq ($(SYM),)
+	@readelf -s $(BINTARGET) | cut -b 9-25,60- | tail -n +4 | grep -e '^0' >../../bin/$(SYM).sym
+endif
 ifeq ($(LINKER),sharedlib)
 ifneq ($(TARGET),sbin/system)
 	@../../tools/genfuncmap.sh $(BINTARGET) ../../etc/include/sys

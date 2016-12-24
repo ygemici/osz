@@ -152,6 +152,8 @@ cpu_init:
     orl     $0x200, %eax
     andb    $0xFB, %al
     movq    %rax, %cr4
+
+	call	isr_gainentropy
     ret
 
     /* feature not supported */

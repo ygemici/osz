@@ -42,10 +42,7 @@ typedef unsigned char *valist;
 
 /* we define the addresses as 32 bit, as code segment cannot grow
    above 4G. This way we can have 512 relocation records in a page */
-typedef struct {
-    uint64_t offs;
-    char *sym;
-} OSZ_rela;
+
 // memory allocated for relocation addresses
 OSZ_rela __attribute__ ((section (".data"))) *relas;
 
@@ -67,7 +64,10 @@ uint64_t service_register(pid_t thread)
 /* load an ELF64 binary into text segment starting at 2M */
 void *service_loadelf(char *fn)
 {
-    // this is so early, we don't have initrd in fs process' bss yet.
+    // failsafe
+    if(fn==NULL)
+        return NULL;
+    // this is so early, we don't have initrd in fs task' bss yet.
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
@@ -78,11 +78,21 @@ void *service_loadelf(char *fn)
     Elf64_Phdr *phdr_d=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff+elf->e_phentsize);
     Elf64_Phdr *phdr_l=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff+2*elf->e_phentsize);
     int i=0,ret,size=(fs_size+__PAGESIZE-1)/__PAGESIZE;
+    // PT at tmpmap
+    while((paging[i]&1)!=0 && i<1024-size) i++;
+    if((paging[i]&1)!=0) {
+        kpanic("out of memory, text segment too big: %s", fn);
+    }
+    ret = i;
+#if DEBUG
+    if(debug==DBG_ELF)
+        kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
+#endif
     // valid elf for this platform?
     if(elf==NULL || kmemcmp(elf->e_ident,ELFMAG,SELFMAG) ||
         elf->e_ident[EI_CLASS]!=ELFCLASS64 ||
         elf->e_ident[EI_DATA]!=ELFDATA2LSB ||
-        elf->e_phnum<2 ||
+        elf->e_phnum<3 ||
         // code segment, page aligned, readable, executable, but not writable
         phdr_c->p_type!=PT_LOAD || (phdr_c->p_vaddr&(__PAGESIZE-1))!=0 || (phdr_c->p_flags&PF_W)!=0 ||
         // data segment, page aligned, readable, writeable, but not executable
@@ -90,18 +100,11 @@ void *service_loadelf(char *fn)
         // linkage information
         phdr_l->p_type!=PT_DYNAMIC
         ) {
-            kpanic("Corrupt ELF binary: %s", fn);
-    }
-    // PT at tmpmap
-    while((paging[i]&1)!=0 && i<1024-size) i++;
-    if((paging[i]&1)!=0) {
-        kpanic("Out of memory, text segment too big: %s", fn);
-    }
-    ret = i;
 #if DEBUG
-    if(debug==DBG_ELF||(debug==DBG_IRQ&&irq_dispatch_table!=NULL))
-        kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
+            kprintf("WARNING corrupt ELF binary: %s", fn);
 #endif
+            return (void*)(-1);
+    }
     /* map text segment */
     size=(phdr_c->p_filesz+__PAGESIZE-1)/__PAGESIZE;
     while(size--) {
@@ -136,6 +139,27 @@ void service_loadso(char *fn)
     service_loadelf(fn);
 }
 
+void service_installirq(uint8_t irq, uint64_t offs)
+{
+    uint k=(irq*nrirqmax)+1;
+    uint last=(irq+1)*nrirqmax;
+    if(irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
+        // find next free slot
+        while(irq_dispatch_table[k]!=0&&k<last) k++;
+#if DEBUG
+        if(debug==DBG_IRQ)
+            kprintf("  IRQ #%d: irq_dispatch_table[%d]=%x\n", k/nrirqmax, k, offs);
+        if(irq_dispatch_table[k]!=0)
+            kprintf("WARNING too many IRQ handlers for %d", irq);
+#endif
+        irq_dispatch_table[k] = offs;
+#if DEBUG
+    } else if(debug==DBG_IRQ) {
+            kprintf("WARNING irq_dispatch_table[%d] for %x out of range\n", k, offs);
+#endif
+    }
+}
+
 /* Fill in GOT entries. Relies on identity mapping
  *  - tmpmap: the text segment's PT mapped,
  *  - pmm.bss_end: current thread's TCB mapped,
@@ -162,6 +186,11 @@ void service_rtlink()
         char *strtable;
         int syment, relasz, relaent=24;
     
+        if(j==0) {
+            // record crt0 entry point at the begining of segment
+            tcb->rip = (uint64_t)(TEXT_ADDRESS + ehdr->e_ehsize+ehdr->e_phnum*ehdr->e_phentsize);
+        }
+
         /* Program header */
         for(i = 0; i < ehdr->e_phnum; i++){
             if(phdr->p_type==PT_DYNAMIC) {
@@ -234,8 +263,13 @@ void service_rtlink()
         }
     }
 
+#if DEBUG
+    if(debug==DBG_IRQ && irq_dispatch_table!=NULL)
+        kprintf("IRQ Dispatch Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
+#endif
+
     /*** resolve addresses ***/
-    for(j=0; j<__PAGESIZE/8 && paging[j]; j++) {
+    for(j=0; j<__PAGESIZE/8; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
@@ -302,21 +336,7 @@ void service_rtlink()
                      *(strtable + s->st_name + 6)==0)
                 ) {
                     env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
-                    k *= nrirqmax;
-                    // skip nrirqmax at irq_dispatch_table[0]
-                    k++;
-                    if(k<ISR_NUMIRQ*nrirqmax-1) {
-                        while(irq_dispatch_table[k]!=0&&k<ISR_NUMIRQ*nrirqmax-1) k++;
-#if DEBUG
-                        if(debug==DBG_IRQ)
-                            kprintf("IRQ %d: irq_dispatch_table[%d]=%x\n", k/nrirqmax, k, offs);
-#endif
-                        irq_dispatch_table[k] = offs;
-#if DEBUG
-                    } else if(debug==DBG_IRQ) {
-                            kprintf("warning irq_dispatch_table[%d] for %x out of range\n", k, offs);
-#endif
-                    }
+                    service_installirq(k, offs);
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address
@@ -359,10 +379,6 @@ void service_rtlink()
         *stack_ptr = ehdr->e_entry + TEXT_ADDRESS + j*__PAGESIZE;
         stack_ptr--;
         tcb->rsp -= 8;
-        if(j==0) {
-            // record crt0 entry point at begining of text section
-            tcb->rip = (uint64_t)(TEXT_ADDRESS + ehdr->e_ehsize+ehdr->e_phnum*ehdr->e_phentsize);
-        }
     }
 }
 
@@ -374,18 +390,20 @@ void service_mapbss(uint64_t phys, uint64_t size)
 void service_init(int subsystem, char *fn)
 {
     char *cmd = fn;
-    if(fn==NULL) {
-        // allocate space for dynamic linking
-        relas = (OSZ_rela*)kalloc(2);
-        return;
-    }
     while(cmd[0]!='/')
         cmd++;
     cmd++;
     pid_t pid = thread_new(cmd);
     subsystems[subsystem] = pid;
     // map executable
-    service_loadelf(fn);
+    if(service_loadelf(fn) == (void*)(-1)) {
+        if(subsystem==SRV_ui)
+            kpanic("unable to load ELF from %s\n", fn);
+#if DEBUG
+        kprintf("WARNING unable to load ELF from %s\n", fn);
+#endif
+        return;
+    }
     // map libc
     service_loadso("lib/libc.so");
     // dynamic linker
@@ -394,7 +412,7 @@ void service_init(int subsystem, char *fn)
     sched_add(pid);
 }
 
-/* Initialize the file system service, the "fs" process */
+/* Initialize the file system service, the "fs" task */
 void fs_init()
 {
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
@@ -403,7 +421,11 @@ void fs_init()
     pid_t pid = thread_new("fs");
     subsystems[SRV_fs] = pid;
     // map file system dispatcher
-    service_loadelf("sbin/fs");
+    if(service_loadelf("sbin/fs") == (void*)(-1)) {
+#if DEBUG
+        kpanic("unable to load ELF from /sbin/fs");
+#endif
+    }
     // map libc
     service_loadso("lib/libc.so");
     // load file system drivers
@@ -434,7 +456,7 @@ void fs_init()
 
     // dynamic linker
     service_rtlink();
-    // map initrd in "fs" process' memory
+    // map initrd in "fs" task's memory
     service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
     // add to queue so that scheduler will know about this thread
