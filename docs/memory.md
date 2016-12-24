@@ -25,9 +25,9 @@ System Task
 |  4096 .. 1M-1   | thread  | Message Queue |
 |    1M .. x      | thread  | temporarily mapped message buffer (growing upwards) |
 |     x .. 2M-1   | thread  | local stack (growing downwards) |
-|    2M .. 2M+2-1 | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher |
-| 2M+2p .. 2M+3-1 | process | IRQ Dispatch Table |
-| 2M+3p .. 4G-1   | process | device drivers (shared objects) |
+|    2M .. 2M+1p-1| [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher, loaded from .text.user section |
+| 2M+1p .. 2M+1p-1| process | IRQ Dispatch Table |
+| 2M+2p .. 4G-1   | process | device drivers (shared objects) |
 |    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
 
 The system task is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
