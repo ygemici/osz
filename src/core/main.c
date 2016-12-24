@@ -68,15 +68,12 @@ void main()
     // initialize the "system" task, service_init(SRV_system, "sbin/system")
     // In addition this will detect device drivers
     sys_init();
-    // interrupt service routines (idt), initialize CCB. Has to be done
-    // after sys_init(), as it may require addresses from parsed tables
-    isr_init();
     // initialize "fs" task, special service_init(SRV_fs, "sbin/fs")
     fs_init();
 
     /* step 2: communication */
     // initialize "ui" task to handle user input / output
-    service_init(SRV_ui, "sbin/ui");
+    ui_init();
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
         service_init(SRV_net, "sbin/net");
@@ -111,8 +108,8 @@ void main()
     // scheduler will choose a thread to run and we...
     isr_enable();
     // ...should not reach this code ever. Instead sched_pick() will
-    // call dev_poweroff() when no tasks left after shutdown.
+    // call sys_poweroff() when no tasks left after shutdown.
 
     /* step 6: go to dreamless sleep. */
-    //dev_poweroff();
+    //sys_poweroff();
 }

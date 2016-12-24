@@ -29,9 +29,10 @@
 #include "platform.h"
 #include "isr.h"
 
+/* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
-extern void isr_initgates(uint64_t *idt, OSZ_ccb *tss);
+extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 
 extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
@@ -79,7 +80,7 @@ void isr_init()
     }
 
     // set up isr_syscall dispatcher and IDTR
-    isr_initgates(idt, &ccb);
+    isr_inithw(idt, &ccb);
 }
 
 void isr_enable()

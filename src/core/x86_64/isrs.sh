@@ -103,10 +103,9 @@ cat >isrs.S <<EOF
 #include "ccb.h"
 #include "tcb.h"
 
-.global isr_initgates
+.global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
-.global isr_initirq
 .global isr_enableirq
 .global isr_disableirq
 .global isr_gainentropy
@@ -371,8 +370,7 @@ isr_syscall0:
     movq	__PAGESIZE-40, %rcx
     sysretq
 
-
-isr_initgates:
+isr_inithw:
 /* TSS64 descriptor in GDT */
     movq	\$gdt64_tss, %rbx
     movl	%esi, %eax
@@ -401,10 +399,7 @@ isr_initgates:
     movq    %rax, %rdx
     shrq    \$32, %rdx
     wrmsr
-    ret
-
 /* initialize IRQs, masking all */
-isr_initirq:
     /* remap PIC. We have to do this even when PIC is disabled. */
     movb	\$0x11, %al
     outb	%al, \$PIC_MASTER
@@ -420,7 +415,6 @@ isr_initirq:
     movb	\$0x1, %al
     outb	%al, \$PIC_MASTER_DATA
     outb	%al, \$PIC_SLAVE_DATA
-
 EOF
 if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
@@ -573,7 +567,6 @@ do
 	cat >>isrs.S <<-EOF
 	.align $isrmax, 0x90
 	isr_$isr:
-xchg %bx,%bx
 	    cli
 	    callq	isr_savecontext
 	    xorq	%rdi, %rdi
@@ -630,7 +623,6 @@ do
 	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
 	    andw	\$0xF000, %ax
-xchg %bx, %bx
 	    cmpq	sys_mapping, %rax
 	    je		1f
 	    /* no, switch to system task */

@@ -97,6 +97,14 @@ extern void isr_gainentropy();
 /** Enable interrupts and start multitasking */
 extern void isr_enable();
 
+// ----- System -----
+/** Initialize system thread */
+extern void sys_init();
+
+/** Turn the computer off */
+extern void sys_poweroff();
+
+
 // ----- File System -----
 /** Initialize file system thread */
 extern void fs_init();
@@ -105,15 +113,9 @@ extern void fs_init();
     NOTE: returned file's size is in fs_size */
 extern void *fs_locate(char *fn);
 
-// ----- Devices -----
-/** Initialize system thread */
-extern void sys_init();
-
-/** Initialize devices, parse system tables */
-extern void dev_init();
-
-/** Turn the computer off */
-extern void dev_poweroff();
+// ----- User interface -----
+/** Initialize user interface thread */
+extern void ui_init();
 
 // ----- Memory Management -----
 /** Initialize kernel memory mapping */

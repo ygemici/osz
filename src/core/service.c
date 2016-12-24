@@ -162,9 +162,9 @@ void service_installirq(uint8_t irq, uint64_t offs)
 #endif
         irq_dispatch_table[k] = offs;
         // first of it's kind?
-        // we won't enable IRQ3 (COM2) for real. We'll use it as
-        // a video card irq to blit composed buffer to framebuffer.
-        if (l == k && irq!=3) {
+        // we won't enable IRQ2 (cascade) for real. We'll use it as
+        // a video card fake irq to blit composed buffer to framebuffer.
+        if (l == k && irq!=2) {
 #if DEBUG
             if(debug==DBG_IRQ)
                 kprintf("           unmask IRQ #%d\n", irq);
@@ -487,4 +487,10 @@ void fs_init()
 
     // add to queue so that scheduler will know about this thread
     sched_add(pid);
+}
+
+/* Initialize the user interface service, the "ui" task */
+void ui_init()
+{
+    service_init(SRV_ui, "sbin/ui");
 }

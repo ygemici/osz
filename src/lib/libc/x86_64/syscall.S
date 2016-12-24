@@ -70,6 +70,7 @@ clrecv:
     /* failsafe, repeat if there's no message */
     jmp      1b
 2:  /* must match sizeof(msg_t) */
+xchg %bx, %bx
     shlq    $5, %rax
     addq    %rbx, %rax
     /* mqhdr->mq_end++ */

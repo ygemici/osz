@@ -27,24 +27,59 @@
 
 #include "platform.h"
 #include "../env.h"
+#include "acpi.h"
 
+/* external resources */
+extern uint32_t fg;
+extern char poweroffprefix[];
+extern char poweroffsuffix[];
 extern OSZ_ccb ccb;
 extern OSZ_pmm pmm;
 extern uint64_t pt;
 extern uint64_t *irq_dispatch_table;
 extern uint64_t sys_mapping;
 extern OSZ_rela *relas;
-extern drv_t *drivers;
-extern drv_t *drvptr;
 
-/* this code should go in service.c, but has platform dependent parts */
+extern void kprintf_center(int w, int h);
+extern void isr_initirq();
+extern void acpi_init();
+extern void acpi_early(ACPI_Header *hdr);
+extern void acpi_poweroff();
+extern void pci_init();
+
+/* device drivers loaded into "system" address space */
+drv_t __attribute__ ((section (".data"))) *drivers;
+drv_t __attribute__ ((section (".data"))) *drvptr;
+
+char *sys_getdriver(char *device, char *drvs, char *drvs_end)
+{
+    return NULL;
+}
+
+/* turn off computer */
+void sys_poweroff()
+{
+    // APCI poweroff
+    acpi_poweroff();
+    // if it didn't work, show a message and freeze.
+    kprintf_init();
+    kprintf(poweroffprefix);
+    fg = 0x29283f;
+    kprintf_center(20, -8);
+    kprintf(poweroffsuffix);
+    __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
+}
 
 /* Initialize the "system" task */
 void sys_init()
 {
+    /* this code should go in service.c, but has platform dependent parts */
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i=0, s;
     uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
+    char *c, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
+    char *drvs_end = drvs + fs_size;
+    char fn[256];
 
     // CPU Control Block (TSS64 in kernel bss)
     kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
@@ -53,6 +88,11 @@ void sys_init()
     ccb.ist1 = __PAGESIZE;
     //nmi stack (separate page)
     ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
+
+    // parse MADT to get IOAPIC address
+    acpi_early(NULL);
+    // interrupt service routines (idt)
+    isr_init();
 
     // before we call loadelf for the first time and map tcb at bss_end
     // allocate space for dynamic linking
@@ -95,7 +135,40 @@ void sys_init()
     service_loadso("lib/libc.so");
     // detect devices and load drivers (sharedlibs) for them
     drvptr = drivers;
-    dev_init();
+    if(drvs==NULL) {
+        // should never happen!
+#if DEBUG
+        kprintf("WARNING missing /etc/sys/drivers\n");
+#endif
+        // hardcoded legacy devices if driver list not found
+        service_loadso("lib/sys/input/ps2.so");
+        service_loadso("lib/sys/display/fb.so");
+        service_loadso("lib/sys/proc/pitrtc.so");
+    } else {
+        // load devices which don't have entry in any ACPI tables
+        for(c=drvs;c<drvs_end;) {
+            f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
+            // skip filesystem drivers
+            if(f[0]=='*' && f[1]==9 && (f[2]!='f' || f[3]!='s')) {
+                f+=2;
+                if(c-f<255-8) {
+                    kmemcpy(&fn[0], "lib/sys/", 8);
+                    kmemcpy(&fn[8], f, c-f);
+                    fn[c-f+8]=0;
+                    service_loadso(fn);
+                }
+                continue;
+            }
+            // failsafe
+            if(c>=drvs_end || *c==0) break;
+            if(*c=='\n') c++;
+        }
+        // parse ACPI
+        acpi_init();
+        // enumerate PCI BUS
+        pci_init();
+// TODO:  service_installirq(irq, ehdr->e_shoff);
+    }
     drvptr = NULL;
 
     // dynamic linker

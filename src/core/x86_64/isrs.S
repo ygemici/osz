@@ -31,10 +31,9 @@
 #include "ccb.h"
 #include "tcb.h"
 
-.global isr_initgates
+.global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
-.global isr_initirq
 .global isr_enableirq
 .global isr_disableirq
 .global isr_gainentropy
@@ -201,8 +200,7 @@ isr_syscall0:
     movq	__PAGESIZE-40, %rcx
     sysretq
 
-
-isr_initgates:
+isr_inithw:
 /* TSS64 descriptor in GDT */
     movq	$gdt64_tss, %rbx
     movl	%esi, %eax
@@ -231,10 +229,7 @@ isr_initgates:
     movq    %rax, %rdx
     shrq    $32, %rdx
     wrmsr
-    ret
-
 /* initialize IRQs, masking all */
-isr_initirq:
     /* remap PIC. We have to do this even when PIC is disabled. */
     movb	$0x11, %al
     outb	%al, $PIC_MASTER
@@ -250,7 +245,6 @@ isr_initirq:
     movb	$0x1, %al
     outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
-
     /* PIC init */
     movb	$0xFF, %al
     outb	%al, $PIC_SLAVE_DATA
@@ -265,7 +259,6 @@ isr_initirq:
 /* exception handler ISRs */
 .align 128, 0x90
 isr_exc00divzero:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -276,7 +269,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc01debug:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -287,7 +279,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc02nmi:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -298,7 +289,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc03chkpoint:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -309,7 +299,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc04overflow:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -320,7 +309,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc05bound:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -331,7 +319,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc06invopcode:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -342,7 +329,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc07devunavail:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -353,7 +339,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc08dblfault:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -364,7 +349,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc09coproc:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -375,7 +359,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc10invtss:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -386,7 +369,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc11segfault:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -397,7 +379,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc12stackfault:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -408,7 +389,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc13genprot:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -419,7 +399,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc14pagefault:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -430,7 +409,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc15unknown:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -441,7 +419,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc16float:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -452,7 +429,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc17alignment:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -463,7 +439,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc18machinecheck:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -474,7 +449,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc19double:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -485,7 +459,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc20:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -496,7 +469,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc21:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -507,7 +479,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc22:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -518,7 +489,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc23:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -529,7 +499,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc24:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -540,7 +509,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc25:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -551,7 +519,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc26:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -562,7 +529,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc27:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -573,7 +539,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc28:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -584,7 +549,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc29:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -595,7 +559,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc30:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -606,7 +569,6 @@ xchg %bx,%bx
 
 .align 128, 0x90
 isr_exc31:
-xchg %bx,%bx
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
@@ -651,7 +613,6 @@ isr_irq1:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -679,7 +640,6 @@ isr_irq2:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -707,7 +667,6 @@ isr_irq3:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -735,7 +694,6 @@ isr_irq4:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -763,7 +721,6 @@ isr_irq5:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -791,7 +748,6 @@ isr_irq6:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -819,7 +775,6 @@ isr_irq7:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -847,7 +802,6 @@ isr_irq8:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -876,7 +830,6 @@ isr_irq9:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -905,7 +858,6 @@ isr_irq10:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -934,7 +886,6 @@ isr_irq11:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -963,7 +914,6 @@ isr_irq12:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -992,7 +942,6 @@ isr_irq13:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -1021,7 +970,6 @@ isr_irq14:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -1050,7 +998,6 @@ isr_irq15:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -1079,7 +1026,6 @@ isr_irq16:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
-xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
