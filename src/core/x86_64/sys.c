@@ -106,6 +106,9 @@ void sys_init()
     tcb->priority = PRI_SYS;
     //set IOPL=3 in rFlags
     tcb->rflags |= (3<<12);
+    //clear IF flag. interrupts will be enabled after system task
+    //first times blocks
+    tcb->rflags &= ~(0x200);
 
     // add to queue so that scheduler will know about this thread
     sched_add(pid);

@@ -169,6 +169,8 @@ isr_syscall0:
     /* tcb->rflags */
     pushf
     pop     __PAGESIZE-24
+    /* enable interrupts flag in rflags */
+    orw		$0x200, __PAGESIZE-24
     /* tcb->gpr */
     call	isr_savecontext
     /* 'send' */
@@ -200,7 +202,7 @@ isr_syscall0:
     sysretq
 
 
-isr_initirq:
+isr_initgates:
 /* TSS64 descriptor in GDT */
     movq	$gdt64_tss, %rbx
     movl	%esi, %eax
@@ -220,7 +222,8 @@ isr_initirq:
     /* STAR */
     xorq	%rcx, %rcx
     movl	$0xC0000081, %ecx
-    movq	$0x0023000800000000, %rax
+    xorl	%eax, %eax
+    movl	$0x00130008, %edx
     wrmsr
     /* LSTAR */
     incl	%ecx
@@ -229,7 +232,9 @@ isr_initirq:
     shrq    $32, %rdx
     wrmsr
     ret
+
 /* initialize IRQs, masking all */
+isr_initirq:
     /* remap PIC. We have to do this even when PIC is disabled. */
     movb	$0x11, %al
     outb	%al, $PIC_MASTER
@@ -245,6 +250,7 @@ isr_initirq:
     movb	$0x1, %al
     outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
+
     /* PIC init */
     movb	$0xFF, %al
     outb	%al, $PIC_SLAVE_DATA
@@ -613,6 +619,7 @@ xchg %bx,%bx
 .align 128, 0x90
 isr_irq0:
     /* preemption timer */
+iretq
     cli
     call	isr_savecontext
     /* isr_ticks++ */
@@ -644,6 +651,7 @@ isr_irq1:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -671,6 +679,7 @@ isr_irq2:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -698,6 +707,7 @@ isr_irq3:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -725,6 +735,7 @@ isr_irq4:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -752,6 +763,7 @@ isr_irq5:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -779,6 +791,7 @@ isr_irq6:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -806,6 +819,7 @@ isr_irq7:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -833,6 +847,7 @@ isr_irq8:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -861,6 +876,7 @@ isr_irq9:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -889,6 +905,7 @@ isr_irq10:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -917,6 +934,7 @@ isr_irq11:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -945,6 +963,7 @@ isr_irq12:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -973,6 +992,7 @@ isr_irq13:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -1001,6 +1021,7 @@ isr_irq14:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -1029,6 +1050,7 @@ isr_irq15:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */
@@ -1057,6 +1079,7 @@ isr_irq16:
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     andw	$0xF000, %ax
+xchg %bx, %bx
     cmpq	sys_mapping, %rax
     je		1f
     /* no, switch to system task */

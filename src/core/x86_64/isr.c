@@ -31,7 +31,7 @@
 
 extern void isr_exc00divzero();
 extern void isr_irq0();
-extern void isr_initirq(uint64_t *idt, OSZ_ccb *tss);
+extern void isr_initgates(uint64_t *idt, OSZ_ccb *tss);
 
 extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
@@ -79,7 +79,7 @@ void isr_init()
     }
 
     // set up isr_syscall dispatcher and IDTR
-    isr_initirq(idt, &ccb);
+    isr_initgates(idt, &ccb);
 }
 
 void isr_enable()

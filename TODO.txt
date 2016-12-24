@@ -5,8 +5,8 @@
 ./src/core/sched.c:125:    /* TODO: ccb.hd_blocked -> ccb.hd_active */
 ./src/core/x86_64/sys.c:68:    /* TODO: map page at _usercode instead of sbin/system */
 ./src/core/x86_64/pci.c:33:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/dev.c:86:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/acpi.c:94:        // TODO: get values for poweroff
-./src/core/x86_64/acpi.c:216:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/dev.c:95:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/acpi.c:137:        // TODO: get values for poweroff
+./src/core/x86_64/acpi.c:259:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/user.S:33:/* TODO: load this page instead of /sbin/system in sys_init() */
 ./src/core/x86_64/msg.c:82:        // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination

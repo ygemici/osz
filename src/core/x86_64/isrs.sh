@@ -339,6 +339,8 @@ isr_syscall0:
     /* tcb->rflags */
     pushf
     pop     __PAGESIZE-24
+    /* enable interrupts flag in rflags */
+    orw		\$0x200, __PAGESIZE-24
     /* tcb->gpr */
     call	isr_savecontext
     /* 'send' */
@@ -370,7 +372,7 @@ isr_syscall0:
     sysretq
 
 
-isr_initirq:
+isr_initgates:
 /* TSS64 descriptor in GDT */
     movq	\$gdt64_tss, %rbx
     movl	%esi, %eax
@@ -390,7 +392,8 @@ isr_initirq:
     /* STAR */
     xorq	%rcx, %rcx
     movl	\$0xC0000081, %ecx
-    movq	\$0x0023000800000000, %rax
+    xorl	%eax, %eax
+    movl	\$0x00130008, %edx
     wrmsr
     /* LSTAR */
     incl	%ecx
@@ -399,7 +402,9 @@ isr_initirq:
     shrq    \$32, %rdx
     wrmsr
     ret
+
 /* initialize IRQs, masking all */
+isr_initirq:
     /* remap PIC. We have to do this even when PIC is disabled. */
     movb	\$0x11, %al
     outb	%al, \$PIC_MASTER
@@ -415,6 +420,7 @@ isr_initirq:
     movb	\$0x1, %al
     outb	%al, \$PIC_MASTER_DATA
     outb	%al, \$PIC_SLAVE_DATA
+
 EOF
 if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
@@ -585,6 +591,7 @@ cat >>isrs.S <<EOF
 .align $isrmax, 0x90
 isr_irq0:
     /* preemption timer */
+iretq
     cli
     call	isr_savecontext
     /* isr_ticks++ */
@@ -623,6 +630,7 @@ do
 	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
 	    andw	\$0xF000, %ax
+xchg %bx, %bx
 	    cmpq	sys_mapping, %rax
 	    je		1f
 	    /* no, switch to system task */

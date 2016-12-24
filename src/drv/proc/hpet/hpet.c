@@ -1,10 +1,10 @@
 #include <osZ.h>
 
-void irq0()
+void irsq0()
 {
 }
 
-void irq8()
+void irsq8()
 {
 }
 

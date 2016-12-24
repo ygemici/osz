@@ -27,12 +27,15 @@
 
 #include "../core.h"
 #include "../env.h"
+#include "acpi.h"
 
 extern uint32_t fg;
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern void kprintf_center(int w, int h);
+extern void isr_initirq();
 extern void acpi_init();
+extern void acpi_early(ACPI_Header *hdr);
 extern void acpi_poweroff();
 extern void pci_init();
 
@@ -50,6 +53,12 @@ void dev_init()
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
+
+    // get MADT
+    acpi_early(NULL);
+    // ok, we have IOAPIC address
+kprintf("isr_initirq\n");
+    isr_initirq();
 
     if(drvs==NULL) {
         // should never happen!
@@ -85,7 +94,6 @@ void dev_init()
         pci_init();
 // TODO:  service_installirq(irq, ehdr->e_shoff);
     }
-
 }
 
 void dev_poweroff()

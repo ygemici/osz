@@ -46,6 +46,49 @@ extern char poweroffsuffix[];
 extern void kprintf_center(int w, int h);
 extern void pci_init();
 
+/* pre-parse ACPI tables for IOAPIC address */
+void acpi_early(ACPI_Header *hdr)
+{
+    /* get root pointer */
+    if(hdr==NULL)
+        hdr = (ACPI_Header*)bootboot.acpi_ptr;
+    char *ptr = (char*)hdr;
+    uint32_t len = hdr->length - sizeof(ACPI_Header);
+    uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
+    /* System tables */
+    if(!kmemcmp("RSDT", hdr->magic, 4) || !kmemcmp("XSDT", hdr->magic, 4)) {
+        ptr = 0;
+        while(len>0) {
+            if(hdr->magic[0]=='X') {
+                ptr = (char*)(*((uint64_t*)data));
+                data += 8;
+                len -= 8;
+            } else {
+                ptr = (char*)((uint64_t)(*((uint32_t*)data)));
+                data += 4;
+                len -= 4;
+            }
+            acpi_early((ACPI_Header*)ptr);
+        }
+    } else
+    /* Multiple APIC Description Table */
+    if(!kmemcmp("APIC", hdr->magic, 4)) {
+        ACPI_APIC *madt = (ACPI_APIC *)hdr;
+        lapic_addr = madt->localApic;
+        // This header is 8 bytes longer than normal header
+        len -= 8; ptr = (char*)(data+8);
+        while(len>0) {
+            if(ptr[0]==ACPI_APIC_IOAPIC_MAGIC) {
+                ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
+                ioapic_addr = rec->address;
+                return;
+            }
+            len-=ptr[1];
+            ptr+=ptr[1];
+        }
+    }
+}
+
 /* reentrant acpi table parser */
 void acpi_parse(ACPI_Header *hdr, uint64_t level)
 {
