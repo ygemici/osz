@@ -56,7 +56,7 @@ void main()
     /* initialize console so that we can report errors and stats */
     kprintf_init();
     /* important to print out date it helps gaining more entropy */
-    kprintf("OS/Z starting... %x\n", bootboot.datetime);
+    kprintf("OS/Z starting...\n");
 
     /* step 1: motoric reflexes */
     // check processor capabilities

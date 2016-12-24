@@ -30,7 +30,14 @@
 .section .text.user0
 .global _init
 
-/* TODO: load this page instead of /sbin/system in sys_init() */
+/* load this page instead of /sbin/system in sys_init() */
+
+/* fake crt0 to initialize shared libraries, must be at +0 */
 _init:
-	call	clrecv
-    jmp		_init
+    ret
+
+/* normal entry point, must be at position +1 */
+_getwork:
+    call	clrecv
+xchg %bx, %bx
+    jmp		_getwork

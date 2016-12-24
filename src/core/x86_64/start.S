@@ -98,12 +98,6 @@ cpu_init:
     xorq    %rax, %rax
     incb    %al
     cpuid
-    /* init entropy */
-    xorq    %rax, isr_entropy
-    xorq    %rbx, isr_entropy+8
-    xorq    %rcx, isr_entropy+16
-    xorq    %rdx, isr_entropy+24
-    call   isr_gainentropy
     /* minimum processor family */
     movq    $0x796C696D6166, %rsi
     cmp     $0x0600, %ax
@@ -152,11 +146,32 @@ cpu_init:
     andb    $0xFB, %al
     movq    %rax, %cr4
 
-	call	isr_gainentropy
+    /* init entropy */
+    /* add cpu feature bits */
+    xorq    %rax, isr_entropy
+    xorq    %rbx, isr_entropy+8
+    xorq    %rcx, isr_entropy+16
+    xorq    %rdx, isr_entropy+24
+    call    isr_gainentropy
+    /* add bootboot structure, environment and core segments */
+    mov     $bootboot, %rsi
+2:  lodsq
+    xorq    %rax, isr_entropy
+    lodsq
+    xorq    %rax, isr_entropy+8
+    lodsq
+    xorq    %rax, isr_entropy+16
+    lodsq
+    xorq    %rax, isr_entropy+24
+    cmp     $__bss_start, %rsi
+    jb      2b
+    call    isr_gainentropy
     ret
 
     /* feature not supported */
 1:  movq    $nocpu, %rdi
+    push    %rsi
+    push    %rdi
     call    kpanic
 /* rodata */
 nocpu:

@@ -35,6 +35,7 @@
 .global kmemvid
 .global kmap
 .global kmap_init
+.global kmap_getpte
 .global kstrcpy
 .global kstrlen
 .global kstrcmp
@@ -51,12 +52,15 @@
 kpanic:
     pushq   %rdi
     call    kprintf_reset
+    /* clear the first line */
     movl    $0xFFDD33, fg
     movl    $0, bg
     movq    $kpanicprefix, %rdi
     call    kprintf
     popq    %rdi
     addq    $8, %rsp
+    call    kprintf
+    movq    $kpanicclr, %rdi
     call    kprintf
     movq    $54, %rdi
     movq    $5, %rsi
@@ -133,9 +137,6 @@ kstrcmp:
     or      %al, %al
     jnz     1b
 2:  ret
-
-kmemvid:
-    ret
 
 kmap:
     call    kmap_getpte

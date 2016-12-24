@@ -39,8 +39,10 @@ extern uint64_t pt;
 extern uint64_t *irq_dispatch_table;
 extern uint64_t sys_mapping;
 extern OSZ_rela *relas;
+extern uint8_t _usercode;
 
 extern void kprintf_center(int w, int h);
+extern uint64_t *kmap_getpte(uint64_t virt);
 extern void isr_initirq();
 extern void acpi_init();
 extern void acpi_early(ACPI_Header *hdr);
@@ -81,12 +83,12 @@ void sys_enable()
 
     // fake an interrupt handler return to start multitasking
     __asm__ __volatile__ (
-        // switch task's address space
+        // switch to system task's address space
         "mov %0, %%rax; mov %%rax, %%cr3;"
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
-        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp; iretq" :
         :
         "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
@@ -99,6 +101,8 @@ void sys_init()
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i=0, s;
     uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
+    // get the physical page of _usercode segment
+    uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
     char *c, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
@@ -126,12 +130,22 @@ void sys_init()
     subsystems[SRV_system] = pid;
     sys_mapping = tcb->memroot & ~(__PAGESIZE-1);
 
+
     // map device driver dispatcher
-    /* TODO: map page at _usercode instead of sbin/system */
-    if(service_loadelf("sbin/system") == (void*)(-1))
-        kpanic("unable to load ELF from /sbin/system");
-    // allocate and map irq dispatcher table
-    for(i=0;paging[i]!=0;i++);
+
+//    if(service_loadelf("sbin/system") == (void*)(-1))
+//        kpanic("unable to load ELF from /sbin/system");
+//    for(i=0;paging[i]!=0;i++);
+
+    /* map _usercode segment as the first page in text segment */
+    paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
+#if DEBUG
+    if(debug==DBG_ELF)
+        kprintf("  maptext sbin/system %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
+#endif
+
+    // allocate and map irq dispatcher table in user mode right after
+    // the user mode dispatcher code
     irq_dispatch_table = NULL;
     s = ((ISR_NUMIRQ * nrirqmax * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
     // failsafe
@@ -189,13 +203,15 @@ void sys_init()
         acpi_init();
         // enumerate PCI BUS
         pci_init();
-// TODO:  service_installirq(irq, ehdr->e_shoff);
     }
     drvptr = NULL;
 
     // dynamic linker
     service_rtlink();
-    // don't link other elf's against irq_dispatch_table
+
+// TODO:  service_installirq(irq, ehdr->e_shoff);
+
+    // don't link other elfs against irq_dispatch_table
     irq_dispatch_table = NULL;
     // modify TCB for system task, platform specific part
     tcb->priority = PRI_SYS;
@@ -205,6 +221,8 @@ void sys_init()
     //after system task blocked for the first time. It is important
     //to initialize device driver with IRQs masked.
     tcb->rflags &= ~(0x200);
+    //start executing at the begining of the text segment
+    tcb->rip = TEXT_ADDRESS;
 
     // add to queue so that scheduler will know about this thread
     sched_add(pid);

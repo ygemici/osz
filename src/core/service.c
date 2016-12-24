@@ -395,10 +395,30 @@ void service_rtlink()
             kpanic("shared library missing for %s()\n", r->sym);
         }
     }
-    // go again and save entry points onto stack
+
+    // push entry point as the last callback
     // crt0 starts with a 'ret', so _start function address
     // will be popped up and executed.
-    for(j=0; j<__PAGESIZE/8 && paging[j]; j++) {
+
+    // if we're linking system task, save it's entry point (no ELF header)
+    if(irq_dispatch_table!=NULL) {
+        // at TEXT_ADDRESS is a 'ret', so main() comes after that
+        *stack_ptr = TEXT_ADDRESS + 1;
+        stack_ptr--;
+        tcb->rsp -= 8;
+    } else {
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
+        if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+            kpanic("no executor?");
+        *stack_ptr = ehdr->e_entry + TEXT_ADDRESS;
+        stack_ptr--;
+        tcb->rsp -= 8;
+    }
+
+    // go again (other way around) and save entry points onto stack,
+    // but skip the first ELF as executor's entry point is already
+    // on the stack
+    for(j=__PAGESIZE/8-1; j>1; j--) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
@@ -423,8 +443,6 @@ void service_init(int subsystem, char *fn)
     subsystems[subsystem] = pid;
     // map executable
     if(service_loadelf(fn) == (void*)(-1)) {
-        if(subsystem==SRV_ui)
-            kpanic("unable to load ELF from %s\n", fn);
 #if DEBUG
         kprintf("WARNING unable to load ELF from %s\n", fn);
 #endif

@@ -49,7 +49,7 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
 void sched_alarm(pid_t thread, uint64_t at)
 {
     OSZ_tcb *tcb = sched_get_tcb(thread);
-    /* TODO: ccb.hd_blocked -> swap */
+    /* TODO: ccb.hd_active -> ccb.hd_alarm */
     tcb->state = tcb_state_hybernated;
 }
 

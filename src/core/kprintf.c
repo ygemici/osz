@@ -49,6 +49,8 @@ uint32_t __attribute__ ((section (".data"))) bg;
 /* ascii arts */
 char __attribute__ ((section (".data"))) kpanicprefix[] =
     "OS/Z core panic: ";
+char __attribute__ ((section (".data"))) kpanicclr[] =
+    "        ";
 char __attribute__ ((section (".data"))) kpanicsuffix[] =
     "                                                      \n"
     "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
@@ -291,13 +293,6 @@ void kprintf(char* fmt, ...)
 // return kprintf_unicodetable();
 
     while(fmt[0]!=0) {
-        isr_entropy[fmt[0]%4] ^= (
-            fmt[0]&1?
-                (uint64_t)(((uint64_t)fmt[0]<<48) | ((uint64_t)fmt[0]<<32) | ((uint64_t)fmt[0]<<16)):
-                (uint64_t)(((uint64_t)fmt[0]<<40) | ((uint64_t)fmt[0]<<24) | ((uint64_t)fmt[0]<<8))
-        );
-        isr_entropy[(fmt[0]+1)%4] ^= isr_entropy[fmt[0]%4];
-        isr_gainentropy();
         // special characters
         if(fmt[0]==8) {
             // backspace

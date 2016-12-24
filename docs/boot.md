@@ -43,7 +43,7 @@ After that it initializes system services (subsystems):
  5. as a last thing, switch to userland by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 That `sys_enable()` function switches to system task, and starts executing it. Because `sys_init()` has cleared Interrupt Flag,
-system task can freely call all device driver's initialization code without intertuption.
+system task can freely call all device driver's initialization code without interruption.
 
 After all driver init codes executed, the system task begun to anwser to events. As there are no messages in the queue, it blocks. By doing so, the true multitasking began, and `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) chooses a thread to run.
 
