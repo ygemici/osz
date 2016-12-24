@@ -70,6 +70,28 @@ void sys_poweroff()
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
 
+/* switch to system task and start executing it */
+void sys_enable()
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
+
+    // map "system" task's TCB
+    kmap((uint64_t)&tmpmap, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
+
+    // fake an interrupt handler return to start multitasking
+    __asm__ __volatile__ (
+        // switch task's address space
+        "mov %0, %%rax; mov %%rax, %%cr3;"
+        // clear ABI arguments
+        "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
+        // "return" to the thread
+        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
+        :
+        "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
+        "%rsp" );
+}
+
 /* Initialize the "system" task */
 void sys_init()
 {
@@ -179,8 +201,9 @@ void sys_init()
     tcb->priority = PRI_SYS;
     //set IOPL=3 in rFlags
     tcb->rflags |= (3<<12);
-    //clear IF flag. interrupts will be enabled after system task
-    //first times blocks
+    //clear IF flag so that interrupts will be enabled only
+    //after system task blocked for the first time. It is important
+    //to initialize device driver with IRQs masked.
     tcb->rflags &= ~(0x200);
 
     // add to queue so that scheduler will know about this thread

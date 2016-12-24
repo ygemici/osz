@@ -53,6 +53,9 @@ extern OSZ_pmm pmm;
 */
 void main()
 {
+    /* initialize console so that we can report errors and stats */
+    kprintf_init();
+    /* important to print out date it helps gaining more entropy */
     kprintf("OS/Z starting... %x\n", bootboot.datetime);
 
     /* step 1: motoric reflexes */
@@ -73,7 +76,9 @@ void main()
 
     /* step 2: communication */
     // initialize "ui" task to handle user input / output
+    // special service_init(SRV_ui, "sbin/ui")
     ui_init();
+    // other means of communication
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
         service_init(SRV_net, "sbin/net");
@@ -104,12 +109,13 @@ void main()
     // scroll out "starting" message
     kprintf_reset(); kprintf_scrollscr();
 
-    // enable interrupts. After the first IRQ the
-    // scheduler will choose a thread to run and we...
-    isr_enable();
-    // ...should not reach this code ever. Instead sched_pick() will
-    // call sys_poweroff() when no tasks left after shutdown.
+    // enable system task. That will initialize devices and then blocks.
+    // When that happens, scheduler will choose a task to run and...
+    sys_enable();
+    // ...we should never return here. Instead sched_pick() will
+    // call sys_poweroff() when no tasks left in shutdown procedure.
+    // But just in case of unwanted return, we call poweroff anyway.
 
     /* step 6: go to dreamless sleep. */
-    //sys_poweroff();
+    sys_poweroff();
 }

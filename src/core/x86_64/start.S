@@ -70,8 +70,6 @@ _start:
     movl    %eax, %gs
 /* setup stack (should be ok, but be sure) */
     xor     %rsp, %rsp
-/* initialize console */
-    callq   kprintf_init
 /* jump to C function main() in 64 bit code segment */
     pushq   $0x08
     pushq   $main
@@ -105,6 +103,7 @@ cpu_init:
     xorq    %rbx, isr_entropy+8
     xorq    %rcx, isr_entropy+16
     xorq    %rdx, isr_entropy+24
+    call   isr_gainentropy
     /* minimum processor family */
     movq    $0x796C696D6166, %rsi
     cmp     $0x0600, %ax

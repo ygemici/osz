@@ -79,29 +79,8 @@ void isr_init()
         ptr+=ISR_MAX;
     }
 
-    // set up isr_syscall dispatcher and IDTR
+    // set up isr_syscall dispatcher and IDTR, also enable IRQs
     isr_inithw(idt, &ccb);
-}
-
-void isr_enable()
-{
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
-
-    // map "system" task's TCB
-    kmap((uint64_t)&tmpmap, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
-
-    // fake an interrupt handler return to start multitasking
-    __asm__ __volatile__ (
-        // switch task's address space
-        "mov %0, %%rax; mov %%rax, %%cr3;"
-        // clear ABI arguments
-        "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
-        // "return" to the thread
-        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
-        :
-        "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
-        "%rsp" );
 }
 
 /* fallback exception handler */

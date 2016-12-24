@@ -94,12 +94,12 @@ extern void isr_enableirq(uint8_t irq);
 extern void isr_disableirq(uint8_t irq);
 extern void isr_gainentropy();
 
-/** Enable interrupts and start multitasking */
-extern void isr_enable();
-
 // ----- System -----
 /** Initialize system thread */
 extern void sys_init();
+
+/** Switch to system task and start executing user space code */
+extern void sys_enable();
 
 /** Turn the computer off */
 extern void sys_poweroff();
