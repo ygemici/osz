@@ -44,11 +44,7 @@ extern uint32_t fg;
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern void kprintf_center(int w, int h);
-
-char *acpi_getdriver(char *device, char *drvs, char *drvs_end)
-{
-    return NULL;
-}
+extern void pci_init();
 
 /* reentrant acpi table parser */
 void acpi_parse(ACPI_Header *hdr, uint64_t level)
@@ -190,45 +186,20 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
 }
 
 /* Load device drivers into "system" task's address space */
-void dev_init()
+void acpi_init()
 {
-    char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
-    char *drvs_end = drvs + fs_size;
-    char fn[256];
-
     hpet_addr = 0;
     SLP_EN = PM1a_CNT = 0;
     
-    if(drvs==NULL ||
-        bootboot.acpi_ptr==0 ||
+    if(bootboot.acpi_ptr==0 ||
         ((char)(*((uint64_t*)bootboot.acpi_ptr))!='R' &&
         (char)(*((uint64_t*)bootboot.acpi_ptr))!='X')
     ) {
         // should never happen!
-        kprintf("core - W - missing %s\n", drvs==NULL?"/etc/sys/drivers":"ACPI tables");
-        // hardcoded legacy devices if driver list not found
-        service_loadso("lib/sys/input/ps2.so");
-        service_loadso("lib/sys/display/fb.so");
-        service_loadso("lib/sys/proc/pitrtc.so");
+#if DEBUG
+        kprintf("WARNING no ACPI tables found\n");
+#endif
     } else {
-        // load devices which don't have entry in any ACPI tables
-        for(s=drvs;s<drvs_end;) {
-            f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
-            // skip filesystem drivers
-            if(f[0]=='*' && f[1]==9 && (f[2]!='f' || f[3]!='s')) {
-                f+=2;
-                if(s-f<255-8) {
-                    kmemcpy(&fn[0], "lib/sys/", 8);
-                    kmemcpy(&fn[8], f, s-f);
-                    fn[s-f+8]=0;
-                    service_loadso(fn);
-                }
-                continue;
-            }
-            // failsafe
-            if(s>=drvs_end || *s==0) break;
-            if(*s=='\n') s++;
-        }
         // recursively parse ACPI tables to detect devices
 #if DEBUG
         if(debug==DBG_SYSTABLES)
@@ -242,10 +213,12 @@ void dev_init()
         service_loadso(hpet_addr==0?
             "lib/sys/proc/pitrtc.so":
             "lib/sys/proc/hpet.so");
+// TODO:  service_installirq(irq, ehdr->e_shoff);
     }
+
 }
 
-void dev_poweroff()
+void acpi_poweroff()
 {
     // APCI poweroff
 /*
@@ -260,11 +233,4 @@ void dev_poweroff()
                 "a"(SLP_TYPb | SLP_EN), "Nd"(PM1b_CNT) );
     }
 */
-    // if it didn't work, show a message and freeze.
-    kprintf_init();
-    kprintf(poweroffprefix);
-    fg = 0x29283f;
-    kprintf_center(20, -8);
-    kprintf(poweroffsuffix);
-    __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }

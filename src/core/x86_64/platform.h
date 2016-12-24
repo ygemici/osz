@@ -32,6 +32,8 @@
 #include "ccb.h"
 #include "isr.h"
 
+#define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
+
 #define PG_CORE 0b00011
 #define PG_CORE_NOCACHE 0b11011
 #define PG_USER_RO 0b00101

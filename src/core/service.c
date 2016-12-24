@@ -33,6 +33,7 @@ extern OSZ_pmm pmm;
 extern uint64_t *stack_ptr;
 extern uint64_t pt;
 extern uint64_t sys_mapping;
+extern drv_t *drvptr;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -136,14 +137,21 @@ void service_loadso(char *fn)
     if(debug==DBG_ELF)
         kprintf("  ");
 #endif
-    service_loadelf(fn);
+    void *ptr = service_loadelf(fn);
+    // record device driver name and elf position
+    if(drvptr!=NULL && ptr!=NULL) {
+        drvptr->fn = fn;
+        drvptr->elf = ptr;
+        drvptr++;
+    }
 }
 
 void service_installirq(uint8_t irq, uint64_t offs)
 {
-    uint k=(irq*nrirqmax)+1;
+    uint l,k=(irq*nrirqmax)+1;
     uint last=(irq+1)*nrirqmax;
     if(irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
+        l = k;
         // find next free slot
         while(irq_dispatch_table[k]!=0&&k<last) k++;
 #if DEBUG
@@ -153,6 +161,16 @@ void service_installirq(uint8_t irq, uint64_t offs)
             kprintf("WARNING too many IRQ handlers for %d", irq);
 #endif
         irq_dispatch_table[k] = offs;
+        // first of it's kind?
+        // we won't enable IRQ3 (COM2) for real. We'll use it as
+        // a video card irq to blit composed buffer to framebuffer.
+        if (l == k && irq!=3) {
+#if DEBUG
+            if(debug==DBG_IRQ)
+                kprintf("           unmask IRQ #%d\n", irq);
+#endif
+            isr_enableirq(irq);
+        }
 #if DEBUG
     } else if(debug==DBG_IRQ) {
             kprintf("WARNING irq_dispatch_table[%d] for %x out of range\n", k, offs);
@@ -279,6 +297,9 @@ void service_rtlink()
         // the string table
         char *strtable;
         int strsz, syment;
+        // clear session header offset, we don't need it, so we can reuse it
+        // to store irq handler's address
+        ehdr->e_shoff = 0;
     
         for(i = 0; i < ehdr->e_phnum; i++){
             if(phdr->p_type==PT_DYNAMIC) {
@@ -327,16 +348,21 @@ void service_rtlink()
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_dispatch_table
-                if(irq_dispatch_table != NULL && !kmemcmp(strtable + s->st_name,"irq",3) &&
+                if(irq_dispatch_table != NULL && !kmemcmp(strtable + s->st_name,"irq",3)) {
                     //at least one number
-                    *(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
-                    //strlen() = 4 | 5 | 6
-                    (*(strtable + s->st_name + 4)==0 ||
-                     *(strtable + s->st_name + 5)==0 ||
-                     *(strtable + s->st_name + 6)==0)
-                ) {
-                    env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
-                    service_installirq(k, offs);
+                    if(*(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
+                        //strlen() = 4 | 5 | 6
+                        (*(strtable + s->st_name + 4)==0 ||
+                        *(strtable + s->st_name + 5)==0 ||
+                        *(strtable + s->st_name + 6)==0)
+                    ) {
+                        env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
+                        service_installirq(k, offs);
+                    } else {
+                        // record the irq handler's offset for later, we cannot
+                        // install it. We'll have to autodetect the irq
+                        ehdr->e_shoff = offs;
+                    }
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address

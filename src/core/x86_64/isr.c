@@ -59,19 +59,8 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
 void isr_init()
 {
     uint64_t *idt = kalloc(1);      //allocate Interrupt Descriptor Table
-    uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
     void *ptr;
     int i;
-
-    // CPU Control Block (TSS64 in kernel bss)
-    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
-    ccb.magic = OSZ_CCB_MAGICH;
-    //usr stack (userspace, first page)
-    ccb.ist1 = __PAGESIZE;
-    //nmi stack (kernel, top 256 bytes of a page)
-    ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
-    //irq stack (kernel, rest of that page)
-    ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE-256;
 
     // generate IDT
     ptr = &isr_exc00divzero;
@@ -96,20 +85,21 @@ void isr_init()
 void isr_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    // map "system" task
     OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
+
+    // map "system" task's TCB
     kmap((uint64_t)&tmpmap, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
-    __asm__ __volatile__ ( "mov %0, %%rax; mov %%rax, %%cr3" : : "r"(systcb->memroot) : "%rax" );
-    // start irqs
-    isr_enableirq(1);
+
     // fake an interrupt handler return to start multitasking
     __asm__ __volatile__ (
+        // switch task's address space
+        "mov %0, %%rax; mov %%rax, %%cr3;"
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
-        "movq %0, %%rsp; movq %1, %%rbp; iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
         :
-        "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
+        "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
 }
 

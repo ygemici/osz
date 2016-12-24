@@ -31,6 +31,12 @@
 #include "pmm.h"
 #include "msg.h"
 
+// device drivers
+typedef struct {
+    char *fn;
+    void *elf;
+} drv_t;
+
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;             // boot structure
 extern uchar environment[__PAGESIZE]; // configuration
@@ -42,8 +48,6 @@ extern msghdr_t tmpmq;                // destination message queue
 
 #define USER_PROCESS SRV_init
 #define OFFS_system (&subsystems[SRV_system])
-
-#define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
 
 // kernel variables
 

@@ -330,11 +330,10 @@ isr_gainentropy:
     xorq	%rax, (%rdx)
     ret
 
-/* syscall dispatcher */
+/* syscall dispatcher, platform dependent wrapper */
 .align	16, 0x90
 isr_syscall0:
     cli
-xchg %bx,%bx
     /* tcb->rip */
     movq	%rcx, __PAGESIZE-40
     /* tcb->rflags */
@@ -343,29 +342,31 @@ xchg %bx,%bx
     /* tcb->gpr */
     call	isr_savecontext
     /* 'send' */
-    cmpl    \$0x646E6573, %eax
-    jne     2f
+    cmpl	\$0x646E6573, %eax
+    jne		2f
     /* if destionation is SRV_core */
-    orq     %rdi, %rdi
-    jnz     1f
+    orq		%rdi, %rdi
+    jnz		1f
     call	isr_syscall
-    jmp     5f
-1:  call    ksend
-    jmp     5f
+    jmp		6f
+1:  call	ksend
+    jmp		6f
     /* 'recv' */
-2:  cmpl    \$0x76636572, %eax
-    jne     3f
-    call    sched_block
-    jmp     4f
+2:  cmpl	\$0x76636572, %eax
+    jne		3f
+    call	sched_block
+    jmp		4f
 
 3:  /* tcb->errno = EINVAL */
-    movl    \$EINVAL, 672
+    movl	\$EINVAL, 672
     /* get a new thread to run */
 4:  call	sched_pick
+    orq		%rax, %rax
+    jz		5f
     movq	%rax, %cr3
-    call	isr_loadcontext
-5:  movq    __PAGESIZE-24, %r11
-    movq    __PAGESIZE-40, %rcx
+5:  call	isr_loadcontext
+6:  movq	__PAGESIZE-24, %r11
+    movq	__PAGESIZE-40, %rcx
     sysretq
 
 
@@ -596,11 +597,13 @@ isr_irq0:
     je		1f
     addq	\$8, %rbx
 1:  incq	(%rbx)
-    /* switch to a new thread */
+    /* switch to a new thread if any */
     call	sched_pick
+    orq     %rax, %rax
+    jz      2f
     movq	%rax, %cr3
     $EOI
-    call	isr_loadcontext
+2:  call	isr_loadcontext
     iretq
 
 EOF

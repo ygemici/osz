@@ -31,6 +31,11 @@ SECTIONS
         *(.rodata)
         *(.data)
         . = ALIGN(4096);
+        /* user mode code */
+        PROVIDE(_usercode = .);
+        *(.text.user0)
+        *(.text.user)
+        . = ALIGN(4096);
         /* uninitialized data */
         PROVIDE(__bss_start = .);
         /* mappings hack */

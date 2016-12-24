@@ -34,7 +34,7 @@
 .global clismsg
 .global cldl
 
-.section .text
+.section .text.user
 
 /* dest: pid_t<<16 + msg type */
 
@@ -60,24 +60,25 @@ clcall:
 /* msg_t *clrecv(from) */
 clrecv:
     # blocking receive message
-    movq     $MQ_ADDRESS, %rbx
+1:  movq     $MQ_ADDRESS, %rbx
     movq     8(%rbx), %rax
     cmpq     (%rbx), %rax
-    jne      1f
+    jne      2f
     movl     $0x76636572, %eax # 'recv'
-    /* only returns from syscall when
-       there's a message waiting. */
+    /* block until we receive something */
     syscall
-1:  /* must match sizeof(msg_t) */
+    /* failsafe, repeat if there's no message */
+    jmp      1b
+2:  /* must match sizeof(msg_t) */
     shlq    $5, %rax
     addq    %rbx, %rax
     /* mqhdr->mq_end++ */
     incq    8(%rbx)
     movq    8(%rbx), %rcx
     cmpq    16(%rbx), %rcx
-    jne     2f
+    jne     3f
     movq    $1, 8(%rbx)
-2:  movq    (%rax), %rdi
+3:  movq    (%rax), %rdi
     movq    8(%rax), %rsi
     movq    16(%rax), %rdx
     movq    24(%rax), %rcx

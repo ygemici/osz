@@ -34,6 +34,7 @@
 #define MUTEX_OFFS 0x5C
 #define LOCK_TASKSWITCH 0
 
+/* for priority levels see src/core/tcb.h */
 #ifndef _AS
 typedef struct {
     uint32_t magic;     // +00 (TSS64 offset)
@@ -48,13 +49,13 @@ typedef struct {
     uint64_t ist4;      // +3C not used at the moment
     uint64_t ist5;      // +44 not used at the moment
     uint64_t excerr;    // +4C exception error code
-    OSZ_tcb *lastxreg;  // +54 thread that last used extra registers
+    pid_t    lastxreg;  // +54 thread that last used media registers
     uint32_t mutex[3];  // +5C
     uint16_t iomapbase; // +66 IO permission map base, not used
     uint16_t dummy0;
-    OSZ_tcb *hd_timerq; // +6A timer queue head (alarm)
-    OSZ_tcb *hd_blocked;// blocked queue head
-    OSZ_tcb *hd_active[8];  // priority queues (heads of active threads)
-    OSZ_tcb *cr_active[8];  // priority queues (current threads)
+    pid_t hd_timerq;    // +6A timer queue head (alarm)
+    pid_t hd_blocked;   // blocked queue head
+    pid_t hd_active[8]; // priority queues (heads of active threads)
+    pid_t cr_active[8]; // priority queues (current threads)
 } __attribute__((packed)) OSZ_ccb;
 #endif

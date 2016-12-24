@@ -28,28 +28,44 @@
 #include "platform.h"
 #include "../env.h"
 
+extern OSZ_ccb ccb;
 extern OSZ_pmm pmm;
 extern uint64_t pt;
 extern uint64_t *irq_dispatch_table;
 extern uint64_t sys_mapping;
+extern OSZ_rela *relas;
+extern drv_t *drivers;
+extern drv_t *drvptr;
 
 /* this code should go in service.c, but has platform dependent parts */
-extern OSZ_rela *relas;
 
 /* Initialize the "system" task */
 void sys_init()
 {
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i=0, s;
+    uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
+
+    // CPU Control Block (TSS64 in kernel bss)
+    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
+    ccb.magic = OSZ_CCB_MAGICH;
+    //usr stack (userspace, first page)
+    ccb.ist1 = __PAGESIZE;
+    //nmi stack (separate page)
+    ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
+
     // before we call loadelf for the first time and map tcb at bss_end
     // allocate space for dynamic linking
     relas = (OSZ_rela*)kalloc(2);
+    drivers = (drv_t*)kalloc(2);
+
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
     sys_mapping = tcb->memroot & ~(__PAGESIZE-1);
 
     // map device driver dispatcher
+    /* TODO: map page at _usercode instead of sbin/system */
     if(service_loadelf("sbin/system") == (void*)(-1))
         kpanic("unable to load ELF from /sbin/system");
     // allocate and map irq dispatcher table
@@ -78,7 +94,9 @@ void sys_init()
     // map libc
     service_loadso("lib/libc.so");
     // detect devices and load drivers (sharedlibs) for them
+    drvptr = drivers;
     dev_init();
+    drvptr = NULL;
 
     // dynamic linker
     service_rtlink();

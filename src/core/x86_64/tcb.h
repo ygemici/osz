@@ -39,7 +39,8 @@
 #ifndef _AS
 #include "../tcb.h"
 
-#define TCB_IRQHANDLERSTACK 1024
+// maximum size of IRQ handler routine's stack
+#define TCB_ISRSTACK 1024
 
 // must be __PAGESIZE long
 typedef struct {
@@ -69,8 +70,8 @@ typedef struct {
 	uint64_t swapminor;	// only used when thread is hybernated
     uuid_t acl[128];    // access control list
 
-    uint8_t padding[__PAGESIZE-2824-TCB_IRQHANDLERSTACK-40];
-    uint8_t irqhandlerstack[TCB_IRQHANDLERSTACK];
+    uint8_t padding[__PAGESIZE-2824-TCB_ISRSTACK-40];
+    uint8_t irqhandlerstack[TCB_ISRSTACK];
 
     // the last 40 bytes of stack is referenced directly from asm
     uint64_t rip;       // at the end of ist_usr stack an iretq
@@ -80,7 +81,7 @@ typedef struct {
     uint64_t ss;
 } __attribute__((packed)) OSZ_tcb;
 
-// relocation records
+// relocation records for runtime linker
 typedef struct {
     uint64_t offs;
     char *sym;

@@ -1,8 +1,12 @@
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:36:    // TODO: debug why this isn't working. No errors, no output
-./src/core/sched.c:47:    /* TODO: ccb.hd_blocked -> swap */
-./src/core/sched.c:55:    /* TODO: ccb.hd_blocked -> swap */
-./src/core/sched.c:63:    /* TODO: swap -> ccb.hd_active */
-./src/core/sched.c:85:    /* TODO: ccb.hd_active -> ccb.hd_blocked */
-./src/core/sched.c:94:    /* TODO: ccb.hd_blocked -> ccb.hd_active */
-./src/core/x86_64/acpi.c:98:        // TODO: get values for poweroff
+./src/core/sched.c:52:    /* TODO: ccb.hd_blocked -> swap */
+./src/core/sched.c:60:    /* TODO: ccb.hd_blocked -> swap */
+./src/core/sched.c:68:    /* TODO: swap -> ccb.hd_active */
+./src/core/sched.c:125:    /* TODO: ccb.hd_blocked -> ccb.hd_active */
+./src/core/x86_64/sys.c:68:    /* TODO: map page at _usercode instead of sbin/system */
+./src/core/x86_64/pci.c:33:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/dev.c:86:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/acpi.c:94:        // TODO: get values for poweroff
+./src/core/x86_64/acpi.c:216:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/user.S:33:/* TODO: load this page instead of /sbin/system in sys_init() */
 ./src/core/x86_64/msg.c:82:        // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination

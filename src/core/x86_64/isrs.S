@@ -52,12 +52,8 @@ idt64:
     .align	8
 isr_preemptcnt:
     .quad	0
-apic:
-    .quad	0
-ioapic:
-    .quad	0
 ctrl:
-    .asciz "APIC"
+    .asciz "PIC"
     .align 8
 nopic:
     .asciz	"%s not supported"
@@ -65,69 +61,48 @@ ioctrl:
     .asciz	"IOAPIC"
 
 .section .text
-/* uint64_t ioapic_read(uint32_t port) */
-ioapic_read:
-    incl	%edi
-    movl	%edi, ioapic
-    movl	ioapic+16, %eax
-    shlq	$32, %rax
-    decl	%edi
-    movl	%edi, ioapic
-    movl	ioapic+16, %eax
-    ret
-
-/* void ioapic_write(uint32_t port, uint64_t value) */
-ioapic_write:
-    movq	%rsi, %rax
-    shrq	$32, %rax
-    incl	%edi
-    movl	%edi, ioapic
-    movl	%eax, ioapic+16
-    decl	%edi
-    movl	%edi, ioapic
-    movl	%esi, ioapic+16
-    ret
-
 /* void isr_enableirq(uint64_t irq) */
 isr_enableirq:
-    movq	%rdi, %rax
-    addq	$32, %rax
-    orq		$IOAPIC_IRQMASK, %rax
-    btrl	$16, %eax
-    movq	%rdi, %rdx
-    shlq	$1, %rdx
-    addq	$IOAPIC_IRQ0, %rdx
-    /* write the high dword first */
-    movq	%rax, %rcx
-    shrq	$32, %rcx
+    cmpl	$2, %edi
+    je		1f
+    xorl	%edx, %edx
     incl	%edx
-    movq	ioapic, %rsi
-    movl	%edx, (%rsi)
-    movl	%ecx, 16(%rsi)
-    /* and then the low with unmask bit */
-    decl	%edx
-    movl	%edx, (%rsi)
-    movl	%eax, 16(%rsi)
+    movl	%edi, %ecx
+    cmpl	$8, %ecx
+    jae		2f
+    shll	%cl, %edx
+    notl	%edx
+    inb		$PIC_MASTER_DATA, %al
+    andb	%dl, %al
+    outb	%al, $PIC_MASTER_DATA
+1:  ret
+2:  subl	$8, %edi
+    shll	%cl, %edx
+    notl	%edx
+    inb		$PIC_SLAVE_DATA, %al
+    andb	%cl, %al
+    outb	%al, $PIC_SLAVE_DATA
     ret
 
 /* void isr_disableirq(uint64_t irq) */
 isr_disableirq:
-    movq	%rdi, %rax
-    addq	$32, %rax
-    orq		$IOAPIC_IRQMASK, %rax
-    btsl	$16, %eax
-    movq	%rdi, %rdx
-    shlq	$1, %rdx
-    addq	$IOAPIC_IRQ0, %rdx
-    /* write the low dword first with mask bit */
-    movq	ioapic, %rsi
-    movl	%edx, (%rsi)
-    movl	%eax, 16(%rsi)
-    shrq	$32, %rax
-    /* and then the high dword */
+    cmpl	$2, %edi
+    je		1f
+    xorl	%edx, %edx
     incl	%edx
-    movl	%edx, (%rsi)
-    movl	%eax, 16(%rsi)
+    movl	%edi, %ecx
+    cmpl	$8, %edi
+    jae		2f
+    shll	%cl, %edx
+    inb		$PIC_MASTER_DATA, %al
+    orb		%cl, %al
+    outb	%al, $PIC_MASTER_DATA
+1:  ret
+2:  subl	$8, %edi
+    shll	%cl, %edx
+    inb		$PIC_SLAVE_DATA, %al
+    orb		%cl, %al
+    outb	%al, $PIC_SLAVE_DATA
     ret
 
 /* store thread's context into Thread Control Block */
@@ -185,11 +160,10 @@ isr_gainentropy:
     xorq	%rax, (%rdx)
     ret
 
-/* syscall dispatcher */
+/* syscall dispatcher, platform dependent wrapper */
 .align	16, 0x90
 isr_syscall0:
     cli
-xchg %bx,%bx
     /* tcb->rip */
     movq	%rcx, __PAGESIZE-40
     /* tcb->rflags */
@@ -198,29 +172,31 @@ xchg %bx,%bx
     /* tcb->gpr */
     call	isr_savecontext
     /* 'send' */
-    cmpl    $0x646E6573, %eax
-    jne     2f
+    cmpl	$0x646E6573, %eax
+    jne		2f
     /* if destionation is SRV_core */
-    orq     %rdi, %rdi
-    jnz     1f
+    orq		%rdi, %rdi
+    jnz		1f
     call	isr_syscall
-    jmp     5f
-1:  call    ksend
-    jmp     5f
+    jmp		6f
+1:  call	ksend
+    jmp		6f
     /* 'recv' */
-2:  cmpl    $0x76636572, %eax
-    jne     3f
-    call    sched_block
-    jmp     4f
+2:  cmpl	$0x76636572, %eax
+    jne		3f
+    call	sched_block
+    jmp		4f
 
 3:  /* tcb->errno = EINVAL */
-    movl    $EINVAL, 672
+    movl	$EINVAL, 672
     /* get a new thread to run */
 4:  call	sched_pick
+    orq		%rax, %rax
+    jz		5f
     movq	%rax, %cr3
-    call	isr_loadcontext
-5:  movq    __PAGESIZE-24, %r11
-    movq    __PAGESIZE-40, %rcx
+5:  call	isr_loadcontext
+6:  movq	__PAGESIZE-24, %r11
+    movq	__PAGESIZE-40, %rcx
     sysretq
 
 
@@ -269,80 +245,11 @@ isr_initirq:
     movb	$0x1, %al
     outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
+    /* PIC init */
     movb	$0xFF, %al
-    outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
-    /* IOAPIC init */
-    movq	ioapic_addr, %rax
-    orq 	%rax, %rax
-    jnz  	1f
-    movq	$nopic, %rdi
-    movq	$ioctrl, %rsi
-    call	kpanic
-    1:
-    /* map ioapic at pmm.bss_end and increase bss pointer */
-    movq	pmm + 40, %rdi
-    movq	%rdi, ioapic
-    movq	%rax, %rsi
-    movb	$PG_CORE_NOCACHE, %dl
-    call	kmap
-    addq	$4096, pmm + 40
-
-    /* setup IRQs, mask them all */
-    xorq	%rdi, %rdi
-1:  call	isr_disableirq
-    incl	%edi
-    cmpl	$16, %edi
-    jb		1b
-
-    /* enable IOAPIC in IMCR */
-    movb	$0x70, %al
-    outb	%al, $0x22
-    movb	$1, %al
-    outb	%al, $0x23
-    /* APIC init */
-    xorq	%rax, %rax
-    incb	%al
-    cpuid
-    btl 	$9, %edx
-    jc  	1f
-    movq	$nopic, %rdi
-    movq	$ctrl, %rsi
-    call	kpanic
-    1:
-    /* find apic physical address */
-    movq	lapic_addr, %rax
-    orq		%rax, %rax
-    jnz		1f
-    movl	$0x1B, %ecx
-    rdmsr
-    andw	$0xF000, %ax
-    1:
-    /* map apic at pmm.bss_end and increase bss pointer */
-    movq	pmm + 40, %rdi
-    movq	%rdi, apic
-    movq	%rax, %rsi
-    movb	$PG_CORE_NOCACHE, %dl
-    call	kmap
-    addq	$4096, pmm + 40
-    /* setup */
-    movl	$0xFFFFFFFF, apic + APIC_DFR
-    movl	apic + APIC_DFR, %eax
-    andl	$0x00FFFFFF, %eax
-    orb		$1, %al
-    movl	%eax, apic + APIC_LDR
-    movl	$APIC_DISABLE, apic + APIC_LVT_TMR
-    movl	$APIC_DISABLE, apic + APIC_LVT_LINT0
-    movl	$APIC_DISABLE, apic + APIC_LVT_LINT1
-    movl	$IOAPIC_NMI, apic + APIC_LVT_PERF
-    movl	$0, apic + APIC_TASKPRI
-    /* enable */
-    movl	$0x1B, %ecx
-    rdmsr
-    btsl	$11, %eax
-    wrmsr
-    /* sw enable 
-    movl	$APIC_SW_ENABLE+39, apic + APIC_SPURIOUS */
+    btrw	$2, %ax /* enable cascade irq 2 */
+    outb	%al, $PIC_MASTER_DATA
     /* enable NMI */
     inb		$0x70, %al
     btrw	$8, %ax
@@ -718,13 +625,15 @@ isr_irq0:
     je		1f
     addq	$8, %rbx
 1:  incq	(%rbx)
-    /* switch to a new thread */
+    /* switch to a new thread if any */
     call	sched_pick
+    orq     %rax, %rax
+    jz      2f
     movq	%rax, %cr3
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
-    call	isr_loadcontext
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
+2:  call	isr_loadcontext
     iretq
 
 .align 128, 0x90
@@ -748,9 +657,9 @@ isr_irq1:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -775,9 +684,9 @@ isr_irq2:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -802,9 +711,9 @@ isr_irq3:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -829,9 +738,9 @@ isr_irq4:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -856,9 +765,9 @@ isr_irq5:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -883,9 +792,9 @@ isr_irq6:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -910,9 +819,9 @@ isr_irq7:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -937,9 +846,10 @@ isr_irq8:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -964,9 +874,10 @@ isr_irq9:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -991,9 +902,10 @@ isr_irq10:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -1018,9 +930,10 @@ isr_irq11:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -1045,9 +958,10 @@ isr_irq12:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -1072,9 +986,10 @@ isr_irq13:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -1099,9 +1014,10 @@ isr_irq14:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -1126,9 +1042,10 @@ isr_irq15:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 
@@ -1153,9 +1070,10 @@ isr_irq16:
     xorq	%rcx, %rcx
     callq	ksend
     /*call	isr_irq*/
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, 0xB0(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $PIC_MASTER_DATA
     call	isr_loadcontext
     iretq
 

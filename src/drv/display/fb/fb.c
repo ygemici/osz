@@ -1,6 +1,10 @@
 #include <osZ.h>
 
-extern void register_irq(uint8_t irq, void *handler);
+// blit event
+void irq3()
+{
+	// copy composed buffer (swapped with ui) to framebuffer
+}
 
 void _init()
 {

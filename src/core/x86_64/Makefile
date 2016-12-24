@@ -8,7 +8,10 @@ LIBS =
 
 CFLAGS = -DDEBUG=$(DEBUG) -Wall -fpic -ffreestanding
 
-all: isrs $(OBJS) ok
+all: isrs syscall.o $(OBJS) ok
+
+syscall.o:
+	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c ../../lib/libc/$(ARCH)/syscall.S -o syscall.o
 
 isrs:
 	@test isr.h -nt isrs.S -o isrs.sh -nt isrs.S && ./isrs.sh $(ARCH) 2>/dev/null || true
