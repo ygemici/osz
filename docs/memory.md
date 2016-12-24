@@ -30,9 +30,9 @@ System Task
 | 2M+3p .. 4G-1   | process | device drivers (shared objects) |
 |    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
 
-The system process is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
+The system task is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
 pages in it's bss segment. Each device in the system should have a device driver loaded in the system process.
-When an IRQ occurs, the Core sends a message to the system process and it's dispatcher calls the irq handler in the
+When an IRQ occurs, the Core sends a message to the system task and it's dispatcher calls the irq handler in the
 appropriate shared library.
 
 Also the system task is accounted for the idle task.
