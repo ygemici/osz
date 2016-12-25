@@ -1,3 +1,5 @@
 #define SYS_openwin		(2)
-#define SYS_opentty		(13)
-#define SYS_openwrd		(14)
+#define SYS_keypress		(7)
+#define SYS_keyrelease		(11)
+#define SYS_opentty		(12)
+#define SYS_openwrd		(13)

@@ -75,6 +75,7 @@ SECTIONS
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
+    *(.bss .bss.* .gnu.linkonce.b.*)
     SORT(CONSTRUCTORS)
   } :data
   .data1          : { *(.data1) }
@@ -88,7 +89,6 @@ SECTIONS
   . = ALIGN (4096);
   . = DATA_SEGMENT_END (.);
   _edata = ABSOLUTE(.);
-  _shsize = (. - _code);
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

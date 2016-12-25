@@ -1,10 +1,6 @@
 #include <osZ.h>
 
-void irsq0()
-{
-}
-
-void irqs8()
+/*public*/ void irq8()
 {
 }
 

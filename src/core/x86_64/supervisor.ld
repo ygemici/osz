@@ -30,6 +30,7 @@ SECTIONS
         PROVIDE(_data = .);
         *(.rodata)
         *(.data)
+        *(.bss)
         . = ALIGN(4096);
         /* user mode code */
         PROVIDE(_usercode = .);

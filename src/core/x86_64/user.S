@@ -61,8 +61,7 @@ _getwork:
     shlq    $3, %rax
     addq    %rsi, %rax
     /* now call the irq handlers (*rax)(irq); */
-xchg %bx, %bx
-1:  cmp     $TEXT_ADDRESS, (%rax)
+1:  cmpq    $TEXT_ADDRESS, (%rax)
     jbe     _getwork
     pushq   %rax
     pushq   %rcx

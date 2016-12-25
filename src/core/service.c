@@ -33,7 +33,10 @@ extern OSZ_pmm pmm;
 extern uint64_t *stack_ptr;
 extern uint64_t pt;
 extern uint64_t sys_mapping;
-extern drv_t *drvptr;
+extern char *drvnames;
+extern uint64_t *drivers;
+extern uint64_t *drvptr;
+extern uint8_t __bss_start;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -72,6 +75,12 @@ void *service_loadelf(char *fn)
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
+    char *name = fn;
+    // if it's in core stack, we have to copy it to a permanent store
+    if(drvptr!=NULL && drvnames!=NULL && (uint64_t)fn > (uint64_t)&__bss_start) {
+        name = drvnames;
+        drvnames = kstrcpy(drvnames, fn);
+    }
     /* locate elf on initrd */
     Elf64_Ehdr *elf=(Elf64_Ehdr *)fs_locate(fn);
     /* get program headers */
@@ -102,7 +111,7 @@ void *service_loadelf(char *fn)
         phdr_l->p_type!=PT_DYNAMIC
         ) {
 #if DEBUG
-            kprintf("WARNING corrupt ELF binary: %s", fn);
+            kprintf("WARNING corrupt ELF binary: %s\n", fn);
 #endif
             return (void*)(-1);
     }
@@ -112,6 +121,8 @@ void *service_loadelf(char *fn)
         paging[i]=(uint64_t)((char*)elf + (i-ret)*__PAGESIZE + PG_USER_RO);
         fs_size -= __PAGESIZE;
         tcb->linkmem++;
+        if(drvptr!=NULL)
+            drvptr[i] = (uint64_t)name;
         i++;
     }
     // failsafe
@@ -124,6 +135,8 @@ void *service_loadelf(char *fn)
         kmemcpy(pm,(char *)elf + (i-ret)*__PAGESIZE,__PAGESIZE);
         paging[i]=((uint64_t)(pm) + PG_USER_RW)|((uint64_t)1<<63);
         tcb->allocmem++;
+        if(drvptr!=NULL)
+            drvptr[i] = (uint64_t)name;
         i++;
     }
     /* return start offset within text segment */
@@ -131,19 +144,13 @@ void *service_loadelf(char *fn)
 }
 
 /* load an ELF64 shared library */
-void service_loadso(char *fn)
+__inline__ void service_loadso(char *fn)
 {
 #if DEBUG
     if(debug==DBG_ELF)
         kprintf("  ");
 #endif
-    void *ptr = service_loadelf(fn);
-    // record device driver name and elf position
-    if(drvptr!=NULL && ptr!=NULL) {
-        drvptr->fn = fn;
-        drvptr->elf = ptr;
-        drvptr++;
-    }
+    service_loadelf(fn);
 }
 
 void service_installirq(uint8_t irq, uint64_t offs)
@@ -156,9 +163,10 @@ void service_installirq(uint8_t irq, uint64_t offs)
         while(irq_dispatch_table[k]!=0&&k<last) k++;
 #if DEBUG
         if(debug==DBG_IRQ)
-            kprintf("  IRQ #%d: irq_dispatch_table[%d]=%x\n", k/nrirqmax, k, offs);
+            kprintf("  IRQ #%d: irq_dispatch_table[%d]=%x %s\n",
+                irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
         if(irq_dispatch_table[k]!=0)
-            kprintf("WARNING too many IRQ handlers for %d", irq);
+            kprintf("WARNING too many IRQ handlers for %d\n", irq);
 #endif
         irq_dispatch_table[k] = offs;
         // first of it's kind?

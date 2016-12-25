@@ -30,7 +30,7 @@
 /* get addresses from linker script */
 extern void* __bss_start;
 extern uint8_t pmm_entries;
-/* kernel variable */
+/* kernel variables */
 extern uint64_t corepde_mapping;
 
 // Main scructure

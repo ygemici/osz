@@ -67,7 +67,7 @@ testq:
 testb:
 	@echo "TEST"
 	@echo
-ifeq (,$(wildcard /usr/loca/bin/bochs))
+ifneq ($(wildcard /usr/local/bin/bochs),)
 	/usr/local/bin/bochs -f etc/bochs.rc -q
 else
 	bochs -f etc/bochs.rc -q

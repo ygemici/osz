@@ -1,13 +1,19 @@
 include ../../../../Config
+
 BINTARGET = ../../../../bin/root/lib/sys/$(TARGET)
 SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
+SRCS += $(wildcard *.S)
+TMP = $(SRCS:.c=.o)
+OBJS = $(TMP:.S=.o)
 LIBS += -lc
 
-CFLAGS += -Wall -fpic -fPIC -ffreestanding
+CFLAGS += -Wall -fPIC -ffreestanding -fvisibility=hidden
 LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -fPIC -L../../../../bin/root/lib
 
 all: $(OBJS) $(BINTARGET)
+
+%.o: %.S
+	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
 	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@

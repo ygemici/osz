@@ -51,10 +51,8 @@ clcall:
     # blocking, send a request and receive result
     # rdi: destination pid + message type
     /* must match OSZ_tcb, tcb->recvfrom */
-    movq     %rdi, MQ_ADDRESS + 24
     movl     $0x646E6573, %eax # 'send'
     syscall
-    movq     $0, MQ_ADDRESS + 24
     /* fall into to clrecv code */
 
 /* msg_t *clrecv(from) */

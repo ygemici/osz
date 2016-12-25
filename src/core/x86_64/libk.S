@@ -116,6 +116,7 @@ kstrcpy:
     stosb
     or      %al, %al
     jnz     1b
+    movq    %rdi, %rax
     ret
 
 kstrlen:

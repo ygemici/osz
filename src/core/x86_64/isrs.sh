@@ -529,28 +529,29 @@ else
 		    call	kmap
 		    addq	\$__PAGESIZE, pmm + 40
 		    /* setup */
-		    movl	\$0xFFFFFFFF, apic + APIC_DFR
-		    movl	apic + APIC_DFR, %eax
+		    mov		apic, %rbx
+		    movl	\$0xFFFFFFFF, APIC_DFR(%rbx)
+		    movl	APIC_DFR(%rbx), %eax
 		    andl	\$0x00FFFFFF, %eax
 		    orb		\$1, %al
-		    movl	%eax, apic + APIC_LDR
-		    movl	\$APIC_DISABLE, apic + APIC_LVT_TMR
-		    movl	\$APIC_DISABLE, apic + APIC_LVT_LINT0
-		    movl	\$APIC_DISABLE, apic + APIC_LVT_LINT1
-		    movl	\$IOAPIC_NMI, apic + APIC_LVT_PERF
-		    movl	\$0, apic + APIC_TASKPRI
+		    movl	%eax, APIC_LDR(%rbx)
+		    movl	\$APIC_DISABLE, APIC_LVT_TMR(%rbx)
+		    movl	\$APIC_DISABLE, APIC_LVT_LINT0(%rbx)
+		    movl	\$APIC_DISABLE, APIC_LVT_LINT1(%rbx)
+		    movl	\$IOAPIC_NMI, APIC_LVT_PERF(%rbx)
+		    movl	\$0, APIC_TASKPRI(%rbx)
 		    /* enable */
 		    movl	\$0x1B, %ecx
 		    rdmsr
 		    btsl	\$11, %eax
 		    wrmsr
 		    /* sw enable 
-		    movl	\$APIC_SW_ENABLE+39, apic + APIC_SPURIOUS */
+		    movl	\$APIC_SW_ENABLE+39, APIC_SPURIOUS(%rbx) */
 		EOF
 		read -r -d '' EOI <<-EOF
 		    /* APIC EOI */
 		    movq	apic, %rax
-		    movl	\$0, 0xB0(%rax)
+		    movl	\$0, APIC_EOI(%rax)
 		EOF
 	fi
 fi
@@ -592,7 +593,6 @@ cat >>isrs.S <<EOF
 .align $isrmax, 0x90
 isr_irq0:
     /* preemption timer */
-xchg %bx,%bx
 iretq
     cli
     call	isr_savecontext
@@ -643,7 +643,8 @@ do
 	    movb	\$$isr, %dl
 	    xorq	%rcx, %rcx
 	    call	ksend
-	    /*call	isr_gainentropy*/
+xchg %bx, %bx
+	    call	isr_gainentropy
 	    $EOI
 	    call	isr_loadcontext
 	    iretq

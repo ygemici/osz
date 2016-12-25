@@ -31,12 +31,6 @@
 #include "pmm.h"
 #include "msg.h"
 
-// device drivers
-typedef struct {
-    char *fn;
-    void *elf;
-} drv_t;
-
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;             // boot structure
 extern uchar environment[__PAGESIZE]; // configuration
@@ -131,7 +125,7 @@ extern void kmemset(char *dest, int c, int size);
 extern int kmemcmp(void *dest, void *src, int size);
 
 /** Copy a zero terminated string */
-extern void kstrcpy(char *dest, char *src);
+extern char *kstrcpy(char *dest, char *src);
 
 /** Return string length */
 extern int kstrlen(char *src);

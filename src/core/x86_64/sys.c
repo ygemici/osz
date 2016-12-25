@@ -50,8 +50,9 @@ extern void acpi_poweroff();
 extern void pci_init();
 
 /* device drivers loaded into "system" address space */
-drv_t __attribute__ ((section (".data"))) *drivers;
-drv_t __attribute__ ((section (".data"))) *drvptr;
+uint64_t __attribute__ ((section (".data"))) *drivers;
+uint64_t __attribute__ ((section (".data"))) *drvptr;
+char __attribute__ ((section (".data"))) *drvnames;
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -73,7 +74,7 @@ void sys_poweroff()
 }
 
 /* switch to system task and start executing it */
-void sys_enable()
+__inline__ void sys_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
@@ -88,7 +89,7 @@ void sys_enable()
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
-        "movq %1, %%rsp; movq %2, %%rbp; iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx,%%bx; iretq" :
         :
         "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
@@ -121,15 +122,16 @@ void sys_init()
     isr_init();
 
     // before we call loadelf for the first time and map tcb at bss_end
-    // allocate space for dynamic linking
+    // allocate space for dynamic linking. These are compile time
+    // configurable, but that's ok, as size only depends on source
     relas = (OSZ_rela*)kalloc(2);
-    drivers = (drv_t*)kalloc(2);
+    drivers = (uint64_t*)kalloc(1);
+    drvnames = (char*)kalloc(2);
 
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
     sys_mapping = tcb->memroot;
-
 
     // map device driver dispatcher
 
@@ -167,6 +169,7 @@ void sys_init()
         }
         paging[i++] = t + PG_USER_RO;
     }
+
     // map libc
     service_loadso("lib/libc.so");
     // detect devices and load drivers (sharedlibs) for them

@@ -1,9 +1,7 @@
 #include <osZ.h>
 
-// blit event
-void irq3()
+public void irq2()
 {
-	// copy composed buffer (swapped with ui) to framebuffer
 }
 
 void _init()

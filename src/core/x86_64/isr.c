@@ -34,6 +34,8 @@ extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 
+extern uint64_t core_mapping;
+
 extern uint64_t ioapic_addr;
 extern OSZ_ccb ccb;
 extern pid_t subsystems[];
