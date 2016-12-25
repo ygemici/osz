@@ -1,5 +1,5 @@
 /*
- * tools/dumpelf.c
+ * tools/genfuncmap.c
  * 
  * Copyright 2016 Public Domain bztsrc@github
  *
