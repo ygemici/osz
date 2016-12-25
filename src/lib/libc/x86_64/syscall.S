@@ -41,7 +41,7 @@
 /* void clsend(thread,event,arg0,arg1,arg2) */
 clsend:
     # non-blocking send message
-    /* this will call msg_sendreg() or msg_sendptr() in core */
+    /* this will call msg_send() or msg_sends() in core */
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
@@ -78,11 +78,7 @@ clrecv:
     cmpq    16(%rbx), %rcx
     jne     3f
     movq    $1, 8(%rbx)
-3:  movq    (%rax), %rdi
-    movq    8(%rax), %rsi
-    movq    16(%rax), %rdx
-    movq    24(%rax), %rcx
-    ret
+3:  ret
 
 /* uint64_t clismsg() */
 clismsg:

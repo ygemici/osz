@@ -100,6 +100,7 @@ cat >isrs.S <<EOF
  */
 #define _AS 1
 #include <errno.h>
+#include <limits.h>
 #include "isr.h"
 #include "platform.h"
 #include "ccb.h"
@@ -357,9 +358,14 @@ isr_syscall0:
     /* 'recv' */
 2:  cmpl	\$0x76636572, %eax
     jne		3f
+    /* never block system thread */
+    movq	sys_mapping, %rax
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rax, 648
+    je		4f
+    xorq	%rdi, %rdi
     call	sched_block
     jmp		4f
-
 3:  /* tcb->errno = EINVAL */
     movl	\$EINVAL, 672
     /* get a new thread to run */
@@ -456,7 +462,7 @@ else
 	    movq	%rax, %rsi
 	    movb	\$PG_CORE_NOCACHE, %dl
 	    call	kmap
-	    addq	\$4096, pmm + 40
+	    addq	\$__PAGESIZE, pmm + 40
 	
 	    /* setup IRQs, mask them all */
 	    xorq	%rdi, %rdi
@@ -521,7 +527,7 @@ else
 		    movq	%rax, %rsi
 		    movb	\$PG_CORE_NOCACHE, %dl
 		    call	kmap
-		    addq	\$4096, pmm + 40
+		    addq	\$__PAGESIZE, pmm + 40
 		    /* setup */
 		    movl	\$0xFFFFFFFF, apic + APIC_DFR
 		    movl	apic + APIC_DFR, %eax
@@ -600,10 +606,11 @@ iretq
     je		1f
     addq	\$8, %rbx
 1:  incq	(%rbx)
+/* TODO: don't preempt if system task and ismsg() */
     /* switch to a new thread if any */
     call	sched_pick
-    orq     %rax, %rax
-    jz      2f
+    orq		%rax, %rax
+    jz		2f
     movq	%rax, %cr3
     $EOI
 2:  call	isr_loadcontext
@@ -635,7 +642,7 @@ do
 	    xorq	%rdx, %rdx
 	    movb	\$$isr, %dl
 	    xorq	%rcx, %rcx
-	    callq	ksend
+	    call	ksend
 	    /*call	isr_gainentropy*/
 	    $EOI
 	    call	isr_loadcontext

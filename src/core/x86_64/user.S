@@ -25,6 +25,9 @@
  * @brief User mode IRQ dispatcher
  */
 
+#define _AS 1
+#include <limits.h>
+#include <syscall.h>
 #include "isr.h"
 
 .section .text.user0
@@ -38,6 +41,38 @@ _init:
 
 /* normal entry point, must be at position +1 */
 _getwork:
-    call	clrecv
+    call    clrecv
+    /* MSG_FUNC(msg.evt) != SYS_IRQ? */
+    cmpw    $SYS_IRQ, (%rax)
+    jne     _getwork
+    /* get IRQ Dispatch Table */
+    movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
+    /* rax = &idt[(irq-1)*idt[0]+1] */
+    xorq    %rcx, %rcx
+    movb    (%rsi), %cl
+    movq    %rax, %rbx
+    xorq    %rax, %rax
+    xorq    %rdx, %rdx
+    movb    8(%rbx), %al
+    movq    %rax, %rdi
+    decb    %al
+    mulq    %rcx
+    incq    %rax
+    shlq    $3, %rax
+    addq    %rsi, %rax
+    /* now call the irq handlers (*rax)(irq); */
 xchg %bx, %bx
-    jmp		_getwork
+1:  cmp     $TEXT_ADDRESS, (%rax)
+    jbe     _getwork
+    pushq   %rax
+    pushq   %rcx
+    pushq   %rdi
+    call    *(%rax)
+    popq    %rdi
+    popq    %rcx
+    popq    %rax
+    addq    $8, %rax
+    decb    %cl
+    orb     %cl, %cl
+    jnz     1b
+    jmp     _getwork

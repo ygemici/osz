@@ -25,6 +25,7 @@
  * @brief low level kernel routines for the core
  */
 #define _AS 1
+#include <limits.h>
 #include "tcb.h"
 
 .section .text
@@ -165,12 +166,12 @@ kmap_init:
     andw    $0xF000, %ax
     add     %rax, %rbx
     /* save core mappings pointer */
-    addq    $4096-8, %rax
+    addq    $__PAGESIZE-8, %rax
     movq    (%rax), %rax
     movq    %rax, core_mapping
     /* save core mappings pointer */
     andw    $0xF000, %ax
-    addq    $4096-8, %rax
+    addq    $__PAGESIZE-8, %rax
     movq    (%rax), %rax
     movq    %rax, corepde_mapping
     /* PDPE */
@@ -315,7 +316,7 @@ ksend:
 2:  /* replace destination pid with sender's */
     andq    $0xFFFF, %rsi
     /* tcb.mypid<<16 */
-    movq    $OSZ_tcb_mypid, %rax
+    movq    OSZ_tcb_mypid, %rax
     shlq    $16, %rax
     orq     %rax, %rsi
     /* copy message */

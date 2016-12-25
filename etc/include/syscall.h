@@ -22,6 +22,7 @@
 #include <sys/ui.h>
 #include <sys/net.h>
 
+#ifndef _AS
 /* async, send a message (non-blocking, except dest queue is full) */
 bool_t clsend(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
 /* sync, send a message and receive result (blocking) */
@@ -30,5 +31,6 @@ msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t a
 bool_t clismsg();
 /* sync, wait until there's a message (blocking) */
 msg_t *clrecv();
+#endif
 
 #endif

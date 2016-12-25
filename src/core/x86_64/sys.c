@@ -128,7 +128,7 @@ void sys_init()
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
     subsystems[SRV_system] = pid;
-    sys_mapping = tcb->memroot & ~(__PAGESIZE-1);
+    sys_mapping = tcb->memroot;
 
 
     // map device driver dispatcher
@@ -141,7 +141,7 @@ void sys_init()
     paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
 #if DEBUG
     if(debug==DBG_ELF)
-        kprintf("  maptext sbin/system %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
+        kprintf("  map .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
 #endif
 
     // allocate and map irq dispatcher table in user mode right after

@@ -148,9 +148,9 @@ void service_loadso(char *fn)
 
 void service_installirq(uint8_t irq, uint64_t offs)
 {
-    uint l,k=(irq*nrirqmax)+1;
-    uint last=(irq+1)*nrirqmax;
-    if(irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
+    uint l,k=((irq-1)*nrirqmax)+1;
+    uint last=irq*nrirqmax;
+    if(irq>0 && irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
         l = k;
         // find next free slot
         while(irq_dispatch_table[k]!=0&&k<last) k++;

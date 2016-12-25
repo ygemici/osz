@@ -38,7 +38,8 @@ appropriate shared library.
 Also the system task is accounted for the idle task.
 
 IRQ Dispatch Table is an array of entry points, save the first item, which is the maximum number of handlers
-per IRQ (`idt[0]`). The list of functions to call on IRQ x is at `idt[x * idt[0] + 1]` and `idt[(x+1) * idt[0]]` inclusive.
+per IRQ (`idt[0]`). The list of functions to call on IRQ x is at `idt[(x-1) * idt[0] + 1]` and `idt[x * idt[0]]` inclusive.
+There's no dispatch for IRQ0, as it's the preemption routine.
 The table is filled up at boot time when the device [drivers](https://github.com/bztsrc/osz/tree/master/docs/drivers.md) are detected.
 The variable `idt[0]` can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrirqmax" variable.
 

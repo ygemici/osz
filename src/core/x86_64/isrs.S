@@ -26,6 +26,7 @@
  */
 #define _AS 1
 #include <errno.h>
+#include <limits.h>
 #include "isr.h"
 #include "platform.h"
 #include "ccb.h"
@@ -185,9 +186,14 @@ isr_syscall0:
     /* 'recv' */
 2:  cmpl	$0x76636572, %eax
     jne		3f
+    /* never block system thread */
+    movq	sys_mapping, %rax
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rax, 648
+    je		4f
+    xorq	%rdi, %rdi
     call	sched_block
     jmp		4f
-
 3:  /* tcb->errno = EINVAL */
     movl	$EINVAL, 672
     /* get a new thread to run */
@@ -595,10 +601,11 @@ iretq
     je		1f
     addq	$8, %rbx
 1:  incq	(%rbx)
+/* TODO: don't preempt if system task and ismsg() */
     /* switch to a new thread if any */
     call	sched_pick
-    orq     %rax, %rax
-    jz      2f
+    orq		%rax, %rax
+    jz		2f
     movq	%rax, %cr3
     /* PIC EOI */
     movb	$0x20, %al
@@ -623,7 +630,7 @@ isr_irq1:
     xorq	%rdx, %rdx
     movb	$1, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -648,7 +655,7 @@ isr_irq2:
     xorq	%rdx, %rdx
     movb	$2, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -673,7 +680,7 @@ isr_irq3:
     xorq	%rdx, %rdx
     movb	$3, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -698,7 +705,7 @@ isr_irq4:
     xorq	%rdx, %rdx
     movb	$4, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -723,7 +730,7 @@ isr_irq5:
     xorq	%rdx, %rdx
     movb	$5, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -748,7 +755,7 @@ isr_irq6:
     xorq	%rdx, %rdx
     movb	$6, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -773,7 +780,7 @@ isr_irq7:
     xorq	%rdx, %rdx
     movb	$7, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -798,7 +805,7 @@ isr_irq8:
     xorq	%rdx, %rdx
     movb	$8, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -824,7 +831,7 @@ isr_irq9:
     xorq	%rdx, %rdx
     movb	$9, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -850,7 +857,7 @@ isr_irq10:
     xorq	%rdx, %rdx
     movb	$10, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -876,7 +883,7 @@ isr_irq11:
     xorq	%rdx, %rdx
     movb	$11, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -902,7 +909,7 @@ isr_irq12:
     xorq	%rdx, %rdx
     movb	$12, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -928,7 +935,7 @@ isr_irq13:
     xorq	%rdx, %rdx
     movb	$13, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -954,7 +961,7 @@ isr_irq14:
     xorq	%rdx, %rdx
     movb	$14, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -980,7 +987,7 @@ isr_irq15:
     xorq	%rdx, %rdx
     movb	$15, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al
@@ -1006,7 +1013,7 @@ isr_irq16:
     xorq	%rdx, %rdx
     movb	$16, %dl
     xorq	%rcx, %rcx
-    callq	ksend
+    call	ksend
     /*call	isr_gainentropy*/
     /* PIC EOI */
     movb	$0x20, %al

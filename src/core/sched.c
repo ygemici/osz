@@ -25,29 +25,34 @@
  * @brief Thread scheduler
  */
 
-extern OSZ_pmm pmm;
-extern OSZ_ccb ccb;
-extern uint64_t isr_ticks[2];
+#include "env.h"
+
+extern OSZ_pmm pmm;             //Physical Memory Manager (get bss)
+extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
+extern uint64_t isr_ticks[2];   //ticks counter (128 bit)
+extern uint64_t sys_mapping;    //memroot of system task
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
+    // active tcb
+    if(thread==0)
+        return (OSZ_tcb*)0;
     // last mapped or last used tcb
     if((uint64_t)thread==(uint64_t)(&tmpmap) ||
        (uint64_t)thread==(uint64_t)pmm.bss_end)
         return (OSZ_tcb*)(thread);
-    // a new tcb
-    if(thread!=0) {
-        // map tcb
-        kmap((uint64_t)&tmpmap, (uint64_t)(thread * __PAGESIZE), PG_CORE_NOCACHE);
-        return (OSZ_tcb*)(&tmpmap);
-    }
-    // active tcb
-    return (OSZ_tcb*)0;
+    // map a new tcb
+    kmap((uint64_t)&tmpmap, (uint64_t)(thread * __PAGESIZE), PG_CORE_NOCACHE);
+    return (OSZ_tcb*)(&tmpmap);
 }
 
 // block until alarm
 void sched_alarm(pid_t thread, uint64_t at)
 {
+#if DEBUG
+    if(debug==DBG_SCHED)
+        kprintf("sched_alarm(%x, %d)\n", thread, at);
+#endif
     OSZ_tcb *tcb = sched_get_tcb(thread);
     /* TODO: ccb.hd_active -> ccb.hd_alarm */
     tcb->state = tcb_state_hybernated;
@@ -56,16 +61,30 @@ void sched_alarm(pid_t thread, uint64_t at)
 // hybernate a thread
 void sched_sleep(pid_t thread)
 {
+#if DEBUG
+    if(debug==DBG_SCHED)
+        kprintf("sched_sleep(%x)\n", thread);
+#endif
     OSZ_tcb *tcb = sched_get_tcb(thread);
     /* TODO: ccb.hd_blocked -> swap */
     tcb->state = tcb_state_hybernated;
 }
 
-// awake a hybernated thread
+// awake a hybernated or blocked thread
 void sched_awake(pid_t thread)
 {
+#if DEBUG
+    if(debug==DBG_SCHED)
+        kprintf("sched_awake(%x)\n", thread);
+#endif
     OSZ_tcb *tcb = sched_get_tcb(thread);
-    /* TODO: swap -> ccb.hd_active */
+    if(tcb->state == tcb_state_hybernated) {
+        /* TODO: swap -> ccb.hd_active */
+    } else
+    if(tcb->state == tcb_state_blocked) {
+        /* TODO: ccb.hd_blocked -> ccb.hd_active */
+        tcb->blkcnt += tcb->blktime - isr_ticks[0];
+    }
     tcb->state = tcb_state_running;
 }
 
@@ -73,6 +92,10 @@ void sched_awake(pid_t thread)
 void sched_add(pid_t thread)
 {
     OSZ_tcb *tcb = sched_get_tcb(thread);
+#if DEBUG
+    if(debug==DBG_SCHED)
+        kprintf("sched_add(%x) pri %d\n", thread, tcb->priority);
+#endif
     pid_t pid = tcb->mypid;
     tcb->prev = 0;
     tcb->next = ccb.hd_active[tcb->priority];
@@ -88,6 +111,10 @@ void sched_remove(pid_t thread)
 {
     OSZ_tcb *tcb = sched_get_tcb(thread);
     pid_t next = tcb->next, prev = tcb->prev;
+#if DEBUG
+    if(debug==DBG_SCHED)
+        kprintf("sched_remove(%x) pri %d\n", thread, tcb->priority);
+#endif
     if(ccb.hd_active[tcb->priority] == tcb->mypid) {
         ccb.hd_active[tcb->priority] = next;
     }
@@ -101,10 +128,20 @@ void sched_remove(pid_t thread)
     }
 }
 
-// move a TCB from priority queue to blocked queue
+// move a thread from priority queue to blocked queue
 void sched_block(pid_t thread)
 {
+#if DEBUG
+    if(debug==DBG_SCHED)
+        kprintf("sched_block(%x)\n", thread);
+#endif
+    /* never block the system task */
+    if(thread == subsystems[SRV_system])
+        return;
     OSZ_tcb *tcb = sched_get_tcb(thread);
+    /* failsafe check */
+    if(tcb->memroot == sys_mapping)
+        return;
     tcb->blktime = isr_ticks[0];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
@@ -114,15 +151,6 @@ void sched_block(pid_t thread)
     tcb->next = ccb.hd_blocked;
     tcb->prev = 0;
     ccb.hd_blocked = thread;
-}
-
-// move a TCB from blocked queue to priority queue
-void sched_activate(pid_t thread)
-{
-    OSZ_tcb *tcb = sched_get_tcb(thread);
-    tcb->blkcnt += tcb->blktime - isr_ticks[0];
-    tcb->state = tcb_state_running;
-    /* TODO: ccb.hd_blocked -> ccb.hd_active */
 }
 
 // pick a thread and return it's memroot

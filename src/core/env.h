@@ -41,5 +41,5 @@ extern uint8_t debug;
 #define DBG_RTIMPORT 4
 #define DBG_RTEXPORT 5
 #define DBG_IRQ 6
-#define DBG_SYSTABLES 7
-
+#define DBG_DEVICES 7
+#define DBG_SCHED 8
