@@ -29,16 +29,11 @@
 #include "env.h"
 
 /* external resources */
-extern OSZ_pmm pmm;
 extern uint64_t *stack_ptr;
-extern uint64_t pt;
-extern uint64_t sys_mapping;
 extern char *drvnames;
 extern uint64_t *drivers;
 extern uint64_t *drvptr;
-extern uint8_t __bss_start;
-extern uint8_t _usercode;
-extern uint8_t _getwork;
+extern uint64_t isr_entropy[4];
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -96,6 +91,10 @@ void *service_loadelf(char *fn)
         kpanic("out of memory, text segment too big: %s", fn);
     }
     ret = i;
+    isr_entropy[(i+1)%4] ^= (uint64_t)elf;
+    isr_entropy[(i+3)%4] ^= (uint64_t)elf;
+    isr_gainentropy();
+
 #if DEBUG
     if(debug==DBG_ELF)
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);

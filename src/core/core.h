@@ -39,11 +39,18 @@ extern uint8_t tmpmap;                // tempprarily mapped page
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint64_t tmppde;               // core's pde ptr in pdpe
 extern msghdr_t tmpmq;                // destination message queue
+extern uint8_t _usercode;             // user mode text start
+extern uint8_t _init;                 // user mode initialization code
+extern uint8_t _getwork;              // user mode "main"
+extern uint8_t __bss_start;           // start of bss segment
 
 #define USER_PROCESS SRV_init
 #define OFFS_system (&subsystems[SRV_system])
 
 // kernel variables
+extern uint64_t *irq_dispatch_table;  // IRQ Dispatch Table
+extern uint64_t sys_mapping;          // paging tables for "system" task
+extern OSZ_pmm pmm;                   // Physical Memory Manager data
 
 /* see etc/include/syscall.h */
 extern pid_t subsystems[];

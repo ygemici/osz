@@ -45,7 +45,6 @@
  */
 
 #include "env.h"
-extern OSZ_pmm pmm;
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
@@ -103,11 +102,10 @@ void main()
     // load "init" or "sh" process
     service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
 
-    // started message
+    // started message, cover out "starting" message
+    kprintf_reset();
     kprintf("OS/Z ready. Allocated %d pages out of %d.\n",
         pmm.totalpages - pmm.freepages, pmm.totalpages);
-    // scroll out "starting" message
-    kprintf_reset(); kprintf_scrollscr();
 
     // enable system task. That will initialize devices and then blocks.
     // When that happens, scheduler will choose a task to run and...

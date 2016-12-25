@@ -27,10 +27,8 @@
 
 #include "env.h"
 
-extern OSZ_pmm pmm;             //Physical Memory Manager (get bss)
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
 extern uint64_t isr_ticks[2];   //ticks counter (128 bit)
-extern uint64_t sys_mapping;    //memroot of system task
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {

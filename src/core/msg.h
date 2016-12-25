@@ -33,6 +33,8 @@
 
 /* WARNING: must match sizeof(msg_t), for asm */
 #define msg_t_size 32
+/* WARNING: must match sizeof(msg_t)=2^x, for asm */
+#define msg_t_size_bits 5
 
 #ifndef _AS
 

@@ -29,6 +29,9 @@
 #include "platform.h"
 #include "isr.h"
 
+/* external resources */
+extern OSZ_ccb ccb;                   // CPU Control Block
+
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
@@ -37,10 +40,10 @@ extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 extern uint64_t core_mapping;
 
 extern uint64_t ioapic_addr;
-extern OSZ_ccb ccb;
-extern pid_t subsystems[];
 
+/* preemption counter */
 uint64_t __attribute__ ((section (".data"))) isr_ticks[2];
+/* 256 bit random seed */
 uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
 
 /* System call dispatcher for messages sent to SRV_core */

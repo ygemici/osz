@@ -40,6 +40,7 @@ uint32_t __attribute__ ((section (".data"))) PM1a_CNT;
 uint32_t __attribute__ ((section (".data"))) SLP_TYPb;
 uint32_t __attribute__ ((section (".data"))) PM1b_CNT;
 
+extern uint64_t isr_entropy[4];
 extern uint32_t fg;
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
@@ -95,6 +96,13 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     char *ptr = (char*)hdr;
     uint32_t len = hdr->length - sizeof(ACPI_Header);
     uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
+
+    /* add entropy */
+    isr_entropy[(len+0)%4] ^= (uint64_t)hdr;
+    isr_entropy[(len+1)%4] ^= (uint64_t)((uint64_t*)hdr);
+    isr_entropy[(len+2)%4] ^= ((uint64_t)hdr<<1);
+    isr_entropy[(len+4)%4] ^= (uint64_t)((uint64_t*)hdr);
+    isr_gainentropy();
 
     /* maximum tree depth */
     if(level>8)

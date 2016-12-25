@@ -28,14 +28,14 @@
 #include "env.h"
 
 /* get addresses from linker script */
-extern void* __bss_start;
 extern uint8_t pmm_entries;
 /* kernel variables */
 extern uint64_t corepde_mapping;
+extern uint64_t isr_entropy[4];
 
-// Main scructure
+/* Main scructure */
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
-// pointer to tmpmap
+/* pointer to tmpmap in PT */
 void __attribute__ ((section (".data"))) *kmap_tmp;
 
 // allocate a physical page
@@ -47,6 +47,11 @@ void* pmm_alloc()
     while(i-->0 && fmem->size==0)
         fmem++;
     if(i) {
+        /* add entropy */
+        isr_entropy[(i+0)%4] ^= fmem->base;
+        isr_entropy[(i+2)%4] ^= fmem->base;
+        isr_gainentropy();
+        /* allocate page */
         kmemset((char *)fmem->base, 0, __PAGESIZE);
         fmem->base+=__PAGESIZE;
         fmem->size--;

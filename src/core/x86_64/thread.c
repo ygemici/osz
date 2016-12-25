@@ -28,9 +28,6 @@
 #include "platform.h"
 #include "../env.h"
 
-/* external resources */
-extern OSZ_pmm pmm;
-
 uint64_t __attribute__ ((section (".data"))) sys_mapping;
 uint64_t __attribute__ ((section (".data"))) core_mapping;
 uint64_t __attribute__ ((section (".data"))) corepde_mapping;
@@ -38,7 +35,6 @@ uint64_t __attribute__ ((section (".data"))) *stack_ptr;
 uint64_t __attribute__ ((section (".data"))) pt;
 
 extern uint64_t corepde_mapping;
-extern uint64_t *irq_dispatch_table;
 
 pid_t thread_new(char *cmdline)
 {

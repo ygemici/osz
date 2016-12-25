@@ -30,17 +30,12 @@
 #include "acpi.h"
 
 /* external resources */
+extern OSZ_ccb ccb;                   // CPU Control Block
 extern uint32_t fg;
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
-extern OSZ_ccb ccb;
-extern OSZ_pmm pmm;
 extern uint64_t pt;
-extern uint64_t *irq_dispatch_table;
-extern uint64_t sys_mapping;
 extern OSZ_rela *relas;
-extern uint8_t _usercode;
-extern uint8_t _init;
 
 extern void kprintf_center(int w, int h);
 extern uint64_t *kmap_getpte(uint64_t virt);

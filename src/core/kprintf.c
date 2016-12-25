@@ -180,6 +180,8 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
+    isr_entropy[offs%4] ^= (uint64_t)c;
+    isr_entropy[(offs+1)%4] ^= (uint64_t)glyph;
 }
 
 void kprintf_putascii(int64_t c)
