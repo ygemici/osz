@@ -30,6 +30,10 @@
 
 #include <stdint.h>
 
+#define public __attribute__ ((__visibility__("default")))
+#define private __attribute__ ((__visibility__("hidden")))
+#define c_assert(c) extern char [(c) ? 1 : -1]
+
 #ifndef NULL
 #define NULL ((void *)0)
 #endif

@@ -1,20 +1,20 @@
 #include <osZ.h>
 
-void socket(){}
-void connect(){}
-void accept(){}
-void sendto(){}
-void recvfrom(){}
-void sendmsg(){}
-void recvmsg(){}
-void shutdown(){}
-void bind(){}
-void listen(){}
-void getsockname(){}
-void getpeername(){}
-void socketpair(){}
-void getsockopt(){}
-void setsockopt(){}
+public void socket(){}
+public void connect(){}
+public void accept(){}
+public void sendto(){}
+public void recvfrom(){}
+public void sendmsg(){}
+public void recvmsg(){}
+public void shutdown(){}
+public void bind(){}
+public void listen(){}
+public void getsockname(){}
+public void getpeername(){}
+public void socketpair(){}
+public void getsockopt(){}
+public void setsockopt(){}
 
 void _init(int argc, char **argv)
 {

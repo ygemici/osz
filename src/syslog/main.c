@@ -1,9 +1,9 @@
 #include <osZ.h>
 
-void openlog() {}
-void closelog() {}
-void syslog() {}
-void vsyslog() {}
+public void openlog() {}
+public void closelog() {}
+public void syslog() {}
+public void vsyslog() {}
 
 void _init(int argc, char**argv)
 {
