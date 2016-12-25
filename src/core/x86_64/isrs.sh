@@ -348,12 +348,13 @@ isr_syscall0:
     /* 'send' */
     cmpl	\$0x646E6573, %eax
     jne		2f
+xchg %bx, %bx
     /* if destionation is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
     call	isr_syscall
     jmp		6f
-1:  call	ksend
+1:  call	msg_send
     jmp		6f
     /* 'recv' */
 2:  cmpl	\$0x76636572, %eax
@@ -643,7 +644,6 @@ do
 	    movb	\$$isr, %dl
 	    xorq	%rcx, %rcx
 	    call	ksend
-xchg %bx, %bx
 	    call	isr_gainentropy
 	    $EOI
 	    call	isr_loadcontext

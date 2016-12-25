@@ -3,10 +3,10 @@
 ./src/core/sched.c:69:    /* TODO: ccb.hd_blocked -> swap */
 ./src/core/sched.c:82:        /* TODO: swap -> ccb.hd_active */
 ./src/core/sched.c:85:        /* TODO: ccb.hd_blocked -> ccb.hd_active */
-./src/core/x86_64/sys.c:215:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/sys.c:216:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/pci.c:33:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/acpi.c:137:        // TODO: get values for poweroff
 ./src/core/x86_64/acpi.c:259:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/isrs.sh:609:/* TODO: don't preempt if system task and ismsg() */
-./src/core/x86_64/isrs.S:698:/* TODO: don't preempt if system task and ismsg() */
-./src/core/x86_64/msg.c:82:        // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination
+./src/core/x86_64/isrs.sh:610:/* TODO: don't preempt if system task and ismsg() */
+./src/core/x86_64/isrs.S:699:/* TODO: don't preempt if system task and ismsg() */
+./src/core/x86_64/msg.c:90:            // TODO: map ptr after mq (tcb + nrmqmax*__PAGESIZE) in destination

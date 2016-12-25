@@ -37,6 +37,8 @@ extern char *drvnames;
 extern uint64_t *drivers;
 extern uint64_t *drvptr;
 extern uint8_t __bss_start;
+extern uint8_t _usercode;
+extern uint8_t _getwork;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -410,8 +412,9 @@ void service_rtlink()
 
     // if we're linking system task, save it's entry point (no ELF header)
     if(irq_dispatch_table!=NULL) {
-        // at TEXT_ADDRESS is a 'ret', so main() comes after that
-        *stack_ptr = TEXT_ADDRESS + 1;
+        // at TEXT_ADDRESS (_usercode) is a 'ret',
+        // so main() (_getwork) comes after that
+        *stack_ptr = TEXT_ADDRESS + (&_getwork - &_usercode);
         stack_ptr--;
         tcb->rsp -= 8;
     } else {

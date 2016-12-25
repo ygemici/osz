@@ -201,12 +201,13 @@ isr_syscall0:
     /* 'send' */
     cmpl	$0x646E6573, %eax
     jne		2f
+xchg %bx, %bx
     /* if destionation is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
     call	isr_syscall
     jmp		6f
-1:  call	ksend
+1:  call	msg_send
     jmp		6f
     /* 'recv' */
 2:  cmpl	$0x76636572, %eax
@@ -725,7 +726,6 @@ isr_irq1:
     movb	$1, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -751,7 +751,6 @@ isr_irq2:
     movb	$2, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -777,7 +776,6 @@ isr_irq3:
     movb	$3, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -803,7 +801,6 @@ isr_irq4:
     movb	$4, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -829,7 +826,6 @@ isr_irq5:
     movb	$5, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -855,7 +851,6 @@ isr_irq6:
     movb	$6, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -881,7 +876,6 @@ isr_irq7:
     movb	$7, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -907,7 +901,6 @@ isr_irq8:
     movb	$8, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -933,7 +926,6 @@ isr_irq9:
     movb	$9, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -959,7 +951,6 @@ isr_irq10:
     movb	$10, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -985,7 +976,6 @@ isr_irq11:
     movb	$11, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -1011,7 +1001,6 @@ isr_irq12:
     movb	$12, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -1037,7 +1026,6 @@ isr_irq13:
     movb	$13, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -1063,7 +1051,6 @@ isr_irq14:
     movb	$14, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -1089,7 +1076,6 @@ isr_irq15:
     movb	$15, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax
@@ -1115,7 +1101,6 @@ isr_irq16:
     movb	$16, %dl
     xorq	%rcx, %rcx
     call	ksend
-xchg %bx, %bx
     call	isr_gainentropy
     /* APIC EOI */
     movq	apic, %rax

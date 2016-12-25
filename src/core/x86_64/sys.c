@@ -40,6 +40,7 @@ extern uint64_t *irq_dispatch_table;
 extern uint64_t sys_mapping;
 extern OSZ_rela *relas;
 extern uint8_t _usercode;
+extern uint8_t _init;
 
 extern void kprintf_center(int w, int h);
 extern uint64_t *kmap_getpte(uint64_t virt);
@@ -89,7 +90,7 @@ __inline__ void sys_enable()
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
-        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx,%%bx; iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp; iretq" :
         :
         "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
@@ -225,7 +226,7 @@ void sys_init()
     //to initialize device driver with IRQs masked.
     tcb->rflags &= ~(0x200);
     //start executing at the begining of the text segment
-    tcb->rip = TEXT_ADDRESS;
+    tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
 
     // add to queue so that scheduler will know about this thread
     sched_add(pid);

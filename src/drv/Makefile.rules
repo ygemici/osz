@@ -8,7 +8,7 @@ OBJS = $(TMP:.S=.o)
 LIBS += -lc
 
 CFLAGS += -Wall -fPIC -ffreestanding -fvisibility=hidden
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -fPIC -L../../../../bin/root/lib
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/root/lib
 
 all: $(OBJS) $(BINTARGET)
 

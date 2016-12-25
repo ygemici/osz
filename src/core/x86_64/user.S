@@ -32,14 +32,15 @@
 
 .section .text.user0
 .global _init
+.global _getwork
 
 /* load this page instead of /sbin/system in sys_init() */
 
-/* fake crt0 to initialize shared libraries, must be at +0 */
+/* fake crt0 to initialize shared libraries, must be at seg:0 */
 _init:
     ret
 
-/* normal entry point, must be at position +1 */
+/* normal entry point, so called main() */
 _getwork:
     call    clrecv
     /* MSG_FUNC(msg.evt) != SYS_IRQ? */

@@ -43,3 +43,4 @@ extern uint8_t debug;
 #define DBG_IRQ 6
 #define DBG_DEVICES 7
 #define DBG_SCHED 8
+#define DBG_MSG 9
