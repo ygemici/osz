@@ -1,19 +1,20 @@
 # note that /dev paths are parsed as /dev/(major)/(minor)
+# or for block devices /dev/(major)/(minor)/(path)
 
 # auto detected values at boot time
 /dev/(initrd) 	/        	fsz 	rw,memory	0 1
 /dev/(initrd) 	/dev/initrd	fsz 	ro			0 1
-/dev/(boot)   	/boot    	vfat	ro,wheel:rw	0 2
-/dev/(home)   	/home    	auto	users:rw	0 2
-/dev/(usr)    	/usr     	auto	ro,wheel:rw	0 2
-/dev/(var)    	/var     	auto	rw			0 2
+/dev/vol/0    	/boot    	vfat	ro,wheel:rw	0 2
+/dev/vol/home 	/home    	auto	users:rw	0 2
+/dev/vol/usr  	/usr     	auto	ro,wheel:rw	0 2
+/dev/vol/var  	/var     	auto	rw			0 2
 /dev/spare/tmp	/tmp     	tmpfs	rw			0 2
-/dev/(swap)   	/dev/swap	swapfs	ro,fs:rw	0 2
+/dev/vol/swap 	/dev/swap	swapfs	ro,fs:rw	0 2
 
 # auto mount (not mounted on boot)
 /dev/disk/1   	/mnt     	auto	rw			0 0
 /dev/disk/2   	/mnt     	auto	rw			0 0
-/dev/cdrom/0   	/mnt     	auto	rw			0 0
-/dev/cdrom/1   	/mnt     	auto	rw			0 0
-/dev/usbdisk/0 	/mnt     	auto	rw			0 0
-/dev/usbdisk/1 	/mnt     	auto	rw			0 0
+/dev/cdrom/0  	/mnt     	auto	rw			0 0
+/dev/usbdisk/0	/mnt     	auto	rw			0 0
+/dev/usbdisk/1	/mnt     	auto	rw			0 0
+/dev/usbdisk/2	/mnt     	auto	rw			0 0

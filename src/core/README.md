@@ -49,3 +49,15 @@ displaying windows.
 `(platform)/sahredlib.ld` - linker script for shared libraries and services.
 
 `(platform)/executable.ld` - linker script for normal applications.
+
+Platform
+--------
+
+Mostly for effectiveness it's partially compile time configurable. Platform dependent part is responsible for:
+
+ - interrupt controllers and IRQ messages
+ - preemption (counting isr_ticks)
+ - random seed generation
+ - virtual memory mapping
+ - address space switching
+ - system bus enumeration

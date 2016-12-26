@@ -12,7 +12,7 @@ OPT  = -g
 LIBS =
 OBJS = $(SRCS:.c=.o)
 
-CFLAGS = -Wall -fshort-wchar
+CFLAGS = -g -Wall -fshort-wchar
 
 all: selfcheck $(OBJS)
 
@@ -63,7 +63,7 @@ home:
 
 images: initrd esp usr var home
 	@echo "  mkfs		bin/disk.dd"
-	@./mkfs.o disk
+	./mkfs.o disk
 
 vdi: $(DDIMAGE)
 	@echo "  mkfs		bin/disk.vdi"

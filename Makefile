@@ -38,7 +38,7 @@ apps: src
 
 images: tools
 	@echo "IMAGES"
-	@make -e --no-print-directory -C tools images 2>&1 | grep -v 'Nothing to be done' | grep -v 'lowercase' || true
+	@make -e --no-print-directory -C tools images | grep -v 'Nothing to be done' | grep -v 'lowercase' || true
 
 vdi: images
 	@make -e --no-print-directory -C tools vdi | grep -v 'Nothing to be done' || true

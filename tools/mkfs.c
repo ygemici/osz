@@ -28,6 +28,10 @@
  *  Usage:
  *  ./mkfs create (file) (dir) - creates a new FS/Z image file
  *  ./mkfs disk - assembles partition images into one GPT disk
+ *
+ * It's a minimal implementation, has several limitations compared to
+ * the FS/Z spec. For example it supports only 24 directory entries
+ * per directories (entries are inlined in inode).
  */
 
 #include <stdio.h>
@@ -54,6 +58,8 @@ int size;
 long int li=0,read_size=0;
 
 //-------------CODE-----------
+
+/* Misc functions */
 //reads a file into memory
 char* readfileall(char *file)
 {
@@ -284,6 +290,63 @@ void add_dirs(char *dirname,int parent,int level)
     }
 }
 
+FSZ_Inode *locate(char *data, int inode, char *path)
+{
+    int ns=0,cnt=0;
+    FSZ_DirEntHeader *hdr;
+    FSZ_DirEnt *ent;
+    hdr=(FSZ_DirEntHeader *)(data+(inode?inode:((FSZ_SuperBlock *)data)->rootdirfid)*secsize+1024);
+    ent=(FSZ_DirEnt *)hdr; ent++;
+    if(path==NULL || path[0]==0)
+        return (FSZ_Inode *)(data + inode*secsize);
+    if(path[0]=='/') {
+        path++;
+        if(path[0]==0)
+            return (FSZ_Inode *)(data + (((FSZ_SuperBlock *)data)->rootdirfid)*secsize);
+    }
+    while(path[ns]!='/'&&path[ns]!=0) ns++;
+    while(ent->fid!=0 && cnt<((secsize-1024)/128-1)) {
+        if(!strncmp((char *)(ent->name),path,ns+1)) {
+            if(path[ns]==0)
+                return (FSZ_Inode *)(data + ent->fid*secsize);
+            else
+                return locate(data,ent->fid,path+ns+1);
+        }
+        if(!strncmp((char *)(ent->name),path,ns)&&path[ns]==0&&ent->name[ns]=='/') {
+            return (FSZ_Inode *)(data + ent->fid*secsize);
+        }
+        ent++; cnt++;
+    }
+    return NULL;
+}
+
+//packed check
+void checkcompilation()
+{
+    //Self tests.
+    FSZ_SuperBlock sb;
+    FSZ_Inode in;
+    FSZ_DirEntHeader hdr;
+    FSZ_DirEnt ent;
+
+    // ********* WARNING *********
+    // These numbers MUST match the ones in: etc/include/fsZ.h
+    if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 520 ||
+        (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 552 ||
+        (uint64_t)(&in.filetype) - (uint64_t)(&in) != 8 ||
+        (uint64_t)(&in.version5) - (uint64_t)(&in) != 128 ||
+        (uint64_t)(&in.sec) - (uint64_t)(&in) != 448 ||
+        (uint64_t)(&in.size) - (uint64_t)(&in) != 464 ||
+        (uint64_t)(&in.groups) - (uint64_t)(&in) != 512 ||
+        (uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 1024 ||
+        (uint64_t)(&hdr.numentries) - (uint64_t)(&hdr) != 8 ||
+        (uint64_t)(&ent.name) - (uint64_t)(&ent) != 17) {
+        fprintf(stderr,"mkfs: your compiler rearranged stucture members. Recompile me with packed struct.\n");
+        exit(1);
+    }
+}
+
+/* command line interface routines */
 //Assemble all together. Get the partition images and write out as a whole disk
 int createdisk()
 {
@@ -479,33 +542,50 @@ int createimage(char *image,char *dir)
     return 1;
 }
 
-//packed check
-void checkcompilation()
+void ls(int argc, char **argv)
 {
-    //Self tests.
-    FSZ_SuperBlock sb;
-    FSZ_Inode in;
-    FSZ_DirEntHeader hdr;
-    FSZ_DirEnt ent;
+    char *data=readfileall(argv[1]);
+    FSZ_Inode *dir;
+    if(argc<4) {
+        dir=(FSZ_Inode*)(data+(((FSZ_SuperBlock *)data)->rootdirfid)*secsize);
+    } else
+        dir = locate(data,0,argv[3]);
 
-    // ********* WARNING *********
-    // These numbers MUST match the ones in: etc/include/fsZ.h
-    if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 520 ||
-        (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 552 ||
-        (uint64_t)(&in.filetype) - (uint64_t)(&in) != 8 ||
-        (uint64_t)(&in.version5) - (uint64_t)(&in) != 128 ||
-        (uint64_t)(&in.sec) - (uint64_t)(&in) != 448 ||
-        (uint64_t)(&in.size) - (uint64_t)(&in) != 464 ||
-        (uint64_t)(&in.groups) - (uint64_t)(&in) != 512 ||
-        (uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 1024 ||
-        (uint64_t)(&hdr.numentries) - (uint64_t)(&hdr) != 8 ||
-        (uint64_t)(&ent.name) - (uint64_t)(&ent) != 17) {
-        fprintf(stderr,"mkfs: your compiler rearranged stucture members. Recompile me with packed struct.\n");
-        exit(1);
+    if(dir==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
+    int cnt=0;
+    FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)((char*)dir+1024);
+    FSZ_DirEnt *ent;
+    ent=(FSZ_DirEnt *)hdr; ent++;
+    while(ent->fid!=0 && cnt<((secsize-1024)/128-1)) {
+        FSZ_Inode *in = (FSZ_Inode *)((char*)data+ent->fid*secsize);
+        printf("%c%c%c%c %6ld %6ld %s\n",
+            in->filetype[0],in->filetype[1],in->filetype[2],in->filetype[3],
+            in->sec, in->size, ent->name);
+        ent++; cnt++;
     }
 }
 
-int main(int argc, char* argv[])
+void cat(int argc, char **argv)
+{
+    char *data=readfileall(argv[1]);
+    FSZ_Inode *file = locate(data,0,argv[3]);
+    if(file==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
+    if(size<secsize-1024) {
+        fwrite((char*)file + 1024,file->size,1,stdout);
+    } else
+    if(size<secsize) {
+        fwrite(data + file->sec*secsize,file->size,1,stdout);
+    } else {
+        int i, s=file->size;
+        for(i=0;i<file->size/secsize && s>=0;i++) {
+            unsigned char *sd = (unsigned char*)(data + file->sec*secsize);
+            fwrite(data + ((unsigned int)(*sd))*secsize, s>secsize?secsize:s,1,stdout);
+            s-=secsize; sd+=16;
+        }
+    }
+}
+
+int main(int argc, char **argv)
 {
     char *path=strdup(argv[0]);
     int i;
@@ -524,14 +604,27 @@ int main(int argc, char* argv[])
 
     //parse arguments
     if(argv[1]==NULL||!strcmp(argv[1],"help")) {
-        printf("FS/Z mkfs utility\n./%s (imagetocreate) (createfromdir)\n./%s disk\n",argv[0],argv[0]);
+        printf("FS/Z mkfs utility\n"
+            "./mkfs (imagetoread) cat (path)\n"
+            "./mkfs (imagetoread) ls (path)\n"
+            "./mkfs (imagetocreate) (createfromdir)\n"
+            "./mkfs disk\n");
         exit(0);
     }
-    if(argc>0){
-        if(strcmp(argv[1],"disk")==0) {
+    if(argc>1 && argv[2]!=NULL){
+        if(!strcmp(argv[2],"cat")) {
+            cat(argc,argv);
+        } else
+        if(!strcmp(argv[2],"ls")) {
+            ls(argc,argv);
+        } else
+        if(!strcmp(argv[2],"disk")) {
             createdisk();
-        } else {
+        } else
+        if(argc>2) {
             createimage(argv[2],argv[3]);
+        } else {
+            printf("mkfs: unknown command.\n");
         }
     }
     return 0;
