@@ -4,7 +4,8 @@ OS/Z Compile
 Requirements
 ------------
 
-- gcc
+- GNU toolchain (make, gcc, gas, ld, objcopy, strip)
+- bash (shell script are used to generate different files during compilation)
 - optionally fasm (for recompiling non-UEFI booting)
 
 Compilation

@@ -195,7 +195,7 @@ extern void service_loadso(char *fn);
 extern bool_t service_rtlink();
 
 /** Map a specific memory area into user bss */
-extern void service_mapbss(uint64_t phys, uint64_t size);
+extern void service_mapbss(phy_t phys, size_t size);
 
 /** Initialize a subsystem, a system service */
 extern void service_init(int subsystem, char *fn);

@@ -201,23 +201,30 @@ void sys_init()
     drvptr = NULL;
 
     // dynamic linker
-    service_rtlink();
+    if(service_rtlink()) {
+    
+        // TODO: allocate and map screen buffer
 
-// TODO:  service_installirq(irq, ehdr->e_shoff);
+        // map framebuffer
+        thread_mapbss((phy_t)bootboot.fb_ptr, bootboot.fb_size);
+    
+        // don't link other elfs against irq_routing_table
+        irq_routing_table = NULL;
+        // modify TCB for system task, platform specific part
+        tcb->priority = PRI_SYS;
+        //set IOPL=3 in rFlags
+        tcb->rflags |= (3<<12);
+        //clear IF flag so that interrupts will be enabled only
+        //after system task blocked for the first time. It is important
+        //to initialize device driver with IRQs masked.
+        tcb->rflags &= ~(0x200);
+        //start executing at the begining of the text segment
+        tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
+    
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
 
-    // don't link other elfs against irq_routing_table
-    irq_routing_table = NULL;
-    // modify TCB for system task, platform specific part
-    tcb->priority = PRI_SYS;
-    //set IOPL=3 in rFlags
-    tcb->rflags |= (3<<12);
-    //clear IF flag so that interrupts will be enabled only
-    //after system task blocked for the first time. It is important
-    //to initialize device driver with IRQs masked.
-    tcb->rflags &= ~(0x200);
-    //start executing at the begining of the text segment
-    tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
-
-    // add to queue so that scheduler will know about this thread
-    sched_add((OSZ_tcb*)(pmm.bss_end));
+    } else {
+        kpanic("unable to start system task");
+    }
 }

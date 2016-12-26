@@ -28,9 +28,13 @@
 #define _AS 1
 #include <syscall.h>
 
+.global _init
 .global irq12
 
 .section .text
+
+_init:
+    ret
 
 irq12:
     ret

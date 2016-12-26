@@ -118,3 +118,7 @@ bool_t thread_check(OSZ_tcb *tcb, phy_t *paging)
 {
     return true;
 }
+
+void thread_mapbss(phy_t phys, size_t size)
+{
+}

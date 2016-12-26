@@ -438,10 +438,6 @@ bool_t service_rtlink()
     return thread_check(tcb, (phy_t*)paging);
 }
 
-void service_mapbss(uint64_t phys, uint64_t size)
-{
-}
-
 /* Initialize a system service, save "fs" and "system" */
 void service_init(int subsystem, char *fn)
 {
@@ -481,9 +477,7 @@ void fs_init()
     services[-SRV_fs] = pid;
     // map file system dispatcher
     if(service_loadelf("sbin/fs") == (void*)(-1)) {
-#if DEBUG
         kpanic("unable to load ELF from /sbin/fs");
-#endif
     }
     // map libc
     service_loadso("lib/libc.so");
@@ -516,7 +510,7 @@ void fs_init()
     // dynamic linker
     if(service_rtlink()) {
         // map initrd in "fs" task's memory
-        service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
+        thread_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
@@ -528,5 +522,22 @@ void fs_init()
 /* Initialize the user interface service, the "ui" task */
 void ui_init()
 {
-    service_init(SRV_ui, "sbin/ui");
+    pid_t pid = thread_new("ui");
+    services[-SRV_ui] = pid;
+    // map file system dispatcher
+    if(service_loadelf("sbin/ui") == (void*)(-1)) {
+        kpanic("unable to load ELF from /sbin/ui");
+    }
+    // map libc
+    service_loadso("lib/libc.so");
+    // dynamic linker
+    if(service_rtlink()) {
+        // map screen buffer. Allocated by system task
+        // TODO: screen buffer
+
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+    } else {
+        kpanic("thread check failed for /sbin/fs");
+    }
 }
