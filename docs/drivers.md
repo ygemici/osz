@@ -62,7 +62,7 @@ has special entries:
 
 | Entry | Description |
 | ----- | ----------- |
-| *     | Any, means the driver should be loaded. Such as ISA devices, like PS2 and file system drivers, like [vfat](https://github.com/bztsrc/osz/blob/master/src/drv/vfat) |
+| *     | Any, means the driver should be loaded. Such as ISA devices, like PS2 and file system drivers, like [vfat](https://github.com/bztsrc/osz/blob/master/src/drv/fs/vfat) |
 | pciXXX:XXX | A PCI vendor and device id pair |
 | (etc) |  |
 
