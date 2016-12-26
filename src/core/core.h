@@ -165,6 +165,9 @@ extern pid_t thread_new(char *cmdline);
 /** Sanity check thread data */
 extern bool_t thread_check(OSZ_tcb *tcb, phy_t *paging);
 
+/** Map a specific memory area into user bss */
+extern void thread_mapbss(phy_t phys, size_t size);
+
 // ----- Scheduler -----
 /** Add thread to scheduling */
 extern void sched_add(OSZ_tcb *tcb);
@@ -193,9 +196,6 @@ extern void service_loadso(char *fn);
 
 /** Run-time link ELF binaries in address space */
 extern bool_t service_rtlink();
-
-/** Map a specific memory area into user bss */
-extern void service_mapbss(phy_t phys, size_t size);
 
 /** Initialize a subsystem, a system service */
 extern void service_init(int subsystem, char *fn);

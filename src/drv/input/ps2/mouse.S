@@ -34,7 +34,63 @@
 .section .text
 
 _init:
+    /* initialize legacy ps2 user input */
+    xorq    %rax, %rax
+    movb    $2, %dl
+    call    ps2wait
+    movb    $0xA8, %al
+    outb    %al, $0x64
+    /* get ack */
+    call    ps2rd
+    /* some voodoo magic to enable irq12 */
+    movb    $2, %dl
+    call    ps2wait
+    movb    $0x20, %al
+    outb    %al, $0x64
+    movb    $1, %dl
+    call    ps2wait
+    inb     $0x60, %al
+    bts     $1, %ax
+    btr     $5, %ax
+    movb    %al, %bl
+    movb    $2, %dl
+    call    ps2wait
+    movb    $0x60, %al
+    outb    %al, $0x64
+    call    ps2wait
+    movb    %bl, %al
+    outb    %al, $0x60
+    /* get optional ack */
+    movb    $1, %dl
+    call    ps2wait
     ret
 
 irq12:
+    ret
+
+    /* dl=1 read, dl=2 write */
+ps2wait:
+    /* is there an input waiting? */
+    movw    $512, %cx
+1:  inb     $0x64, %al
+    andb    %dl, %al
+    jnz     1f
+    decw    %cx
+    jnz     1b
+1:  ret
+
+ps2wr:
+    movb    %al, %dh
+    movb    $2, %dl
+    call    ps2wait
+    movb    $0xD4, %al
+    outb    %al, $0x64
+    call    ps2wait
+    movb    %dh, %al
+    outb    %al, $0x60
+    /*no ret, fall into read code to read ack */
+ps2rd:
+    mov     $1, %dl
+    call    ps2wait
+    inb     $0x60, %al
     ret

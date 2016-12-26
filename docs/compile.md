@@ -27,9 +27,9 @@ You should see something similar to this:
 ```
 $ make clean all testq
 TOOLS
-  src		cll.c
   src		mkfs.c
   src		efirom.c
+  src		genfuncmap.c
 LOADER
   src		efi/inffast.c
   src		efi/inflate.c

@@ -34,7 +34,7 @@
 
 irq1:
     /* is there a key waiting? */
-    movw    $2, %cx
+    movw    $512, %cx
     xorq    %rax, %rax
     xorq    %rdx, %rdx
 1:  inb     $0x64, %al

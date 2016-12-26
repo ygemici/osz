@@ -3,9 +3,8 @@
 ./src/core/sched.c:65:    /* TODO: ccb.hd_blocked -> swap */
 ./src/core/sched.c:77:        /* TODO: swap -> ccb.hd_active */
 ./src/core/sched.c:80:        /* TODO: ccb.hd_blocked -> ccb.hd_active */
-./src/core/service.c:540:        // TODO: screen buffer
-./src/core/x86_64/sys.c:206:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/sys.c:208:        // TODO: allocate and map screen buffer
+./src/core/service.c:536:        // TODO: screen buffer
+./src/core/x86_64/sys.c:206:        // TODO: allocate and map screen buffer
 ./src/core/x86_64/pci.c:33:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/acpi.c:145:        // TODO: get values for poweroff
 ./src/core/x86_64/acpi.c:267:// TODO:  service_installirq(irq, ehdr->e_shoff);
