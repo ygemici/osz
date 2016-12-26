@@ -71,9 +71,8 @@ The pages for the core are marked as supervisor only, meaning userspace programs
 
 | Virtual Address | Description |
 | --------------- | ----------- |
-|   -1G .. -4M-1  | Framebuffer mapped (for kprintf and kpanic) |
-|   -4M .. -2M-1  | Destination's message queue. Mapped by msg_send() |
-|   -2M .. x      | Core text segment and bss (growing upwards) |
+| -512M .. -2M-1  | Framebuffer mapped (for kprintf and kpanic) |
+|   -2M .. x      | [Core text segment](https://github.com/bztsrc/osz/tree/master/src/core/main.c) and bss (growing upwards) |
 |     x .. 0      | Core stack (growing downwards) |
 
 Process Memory
