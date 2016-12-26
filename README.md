@@ -1,11 +1,9 @@
 OS/Z - an operating system for hackers
 ======================================
 
-[Download latest live image, osZ-x86_64-latest.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true)
+[Download latest live image, osZ-x86_64-latest.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) - [Documentation](https://github.com/bztsrc/osz/tree/master/docs) - [Support](http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383)
 
-[Documentation](https://github.com/bztsrc/osz/tree/master/docs)
-
-[Support](http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383)
+![OS/Z](http://forum.osdev.org/download/file.php?avatar=17273_1482039401.png)
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
@@ -15,17 +13,19 @@ a user friendly way. To achieve that goal, I've eliminated
 as many limits as possible by design.
 For example only storage capacity limits the number of inodes
 on a disk. And only RAM limits the number of concurent tasks
-at any given time.
+at any given time. If I couldn't eliminate a hard limit, I've
+created a [boot option](https://github.com/bztsrc/osz/tree/master/docs/bootopts.md) for it so that you
+can tweek without recompilation. This makes OS/Z a very scalable system.
 
 Features
 --------
 
- - GNU toolchain without cross-compiler
- - Single disk image for booting from MBR, VBR, ROM BIOS, GRUB or UEFI.
- - ELF64 object format
- - Higher half kernel mapping, full 64 bit support
- - Microkernel architecture
- - It's filesystem can handle YotaBytes of data (unimagineable as of writing)
+ - [GNU toolchain](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without cross-compiler
+ - Microkernel architecture with an effective [messaging system](https://github.com/bztsrc/osz/tree/master/docs/messages.md)
+ - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from MBR, VBR, ROM BIOS, GRUB or UEFI.
+ - [Higher half kernel](https://github.com/bztsrc/osz/tree/master/docs/memory.md) mapping, full 64 bit support
+ - It's [filesystem](https://github.com/bztsrc/osz/tree/master/docs/fs.md) can handle YotaBytes of data (unimagineable as of writing)
+ - ELF64 object format support
  - UNICODE support with UTF-8
 
 Requirements
@@ -39,7 +39,8 @@ Requirements
 Testing
 -------
 
-I always push the source to git in a state that's known to compile without errors by a `make clean all` command.
+I always push the source to git in a state that's known to [compile](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without errors by a `make clean all` command.
+Although I did my best, it doesn't mean it won't crash under unforseen circumstances :-)
 
 The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example
 
@@ -47,7 +48,7 @@ The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd
 qemu-system-x86_64 -name OS/Z -sdl -m 256 -hda bin/disk.dd
 ```
 
-But for your convience I've added make commands. For example if you clone the repo you can boot OS/Z right from your `bin/ESP` directory
+But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/src/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory
 with TianoCore EFI. For that one should type
 
 ```shell
@@ -72,23 +73,11 @@ To convert the raw disk image to something that VirtualBox can be fed with:
 make vdi
 ```
 
-Non-EFI booting
----------------
-
-If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
-Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting. So
-I've added the BIOS images to the source, and you should be able to compile efi loader with GNU toolchain only.
-
-The `bootboot.bin` can be booted via 
- - `mbr.bin` in MBR or VBR
- - BIOS extension ROM (tested with bochs at 0D0000h)
- - GRUB using the MultiBoot protocol (not tested).
-
 License
 -------
 
-The boot loader and the BOOTBOOT Protocol are licensed under GPLv3.
-All the other parts of OS/Z (like FS/Z filesystem) licensed under CC-by-nc-sa-4.0.
+The boot loader and the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol are licensed under GPLv3.
+All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) filesystem) licensed under CC-by-nc-sa-4.0.
 
  Copyright 2016 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
  

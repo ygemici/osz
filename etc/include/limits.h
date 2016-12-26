@@ -34,6 +34,7 @@
 
 #define __WORDSIZE	64
 #define __PAGESIZE	4096
+#define __SLOTSIZE	(4096*512)
 #define __SYSCALL_WORDSIZE		64
 
 // some OS/Z specific values for addresses
@@ -43,6 +44,7 @@
 #define BSS_ADDRESS (0x100000000)
 // (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
 #define NRMQ_MAX	63
+#define NRSRV_MAX	64
 
 #  define CHAR_BIT	8
 #  define SCHAR_MIN	(-128)

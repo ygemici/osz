@@ -74,17 +74,17 @@ Thread States
 There are three states. The following figure demostrates them and their transitions.
 
 ```
-     { tcb_state_hybernated }
-             ^      |
-   sched_sleep()  sched_awake()
-             |      v
-      { tcb_state_blocked }
-             ^      |
-   sched_block()  sched_activate()
+        { tcb_state_hybernated }
+             ^              |
+   sched_sleep()            |
+             |              |
+    { tcb_state_blocked }   |
+             ^      |       |
+   sched_block()  sched_awake()
              |      v
       { tcb_state_running }
              ^      |
   [syscall, IRQ]  sched_pick()
              |      v
-        (actively running)
+        (CPU resource allocated)
 ```

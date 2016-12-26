@@ -25,7 +25,7 @@
  * @brief PCI functions and enumeration
  */
 
-#include "../core.h"
+#include "platform.h"
 #include "../env.h"
 
 void pci_init()

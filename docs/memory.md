@@ -22,13 +22,13 @@ System Task
 | -2^56 .. -1G-1  | global  | global shared memory space (user accessible, read/write) |
 |   -1G .. 0      | global  | core memory (supervisor only) |
 |     0 .. 4096   | thread  | Thread Control Block |
-|  4096 .. 1M-1   | thread  | Message Queue |
+|  4096 .. 1M-1   | thread  | [Message Queue](https://github.com/bztsrc/osz/tree/master/docs/messages.md) |
 |    1M .. x      | thread  | temporarily mapped message buffer (growing upwards) |
 |     x .. 2M-1   | thread  | local stack (growing downwards) |
-|    2M .. 2M+1p-1| [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | message queue dispatcher, loaded from .text.user section |
-| 2M+1p .. 2M+1p-1| process | IRQ Dispatch Table |
+|    2M .. 2M+1p-1| [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | [message queue dispatcher](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S), loaded from .text.user section |
+| 2M+1p .. 2M+1p-1| process | IRQ Routing Table |
 | 2M+2p .. 4G-1   | process | device drivers (shared objects) |
-|    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings, growing upwards |
+|    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings |
 
 The system task is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
 pages in it's bss segment. Each device in the system should have a device driver loaded in the system process.
@@ -37,11 +37,11 @@ appropriate shared library.
 
 Also the system task is accounted for the idle task.
 
-IRQ Dispatch Table is an array of entry points, save the first item, which is the maximum number of handlers
-per IRQ (`idt[0]`). The list of functions to call on IRQ x is at `idt[(x-1) * idt[0] + 1]` and `idt[x * idt[0]]` inclusive.
+IRQ Routing Table is an array of entry points, save the first item, which is the maximum number of handlers
+per IRQ (`irt[0]`). The list of functions to call on IRQ x is at `irt[(x-1) * irt[0] + 1]` and `irt[x * irt[0]]` inclusive.
 There's no dispatch for IRQ0, as it's the preemption routine.
 The table is filled up at boot time when the device [drivers](https://github.com/bztsrc/osz/tree/master/docs/drivers.md) are detected.
-The variable `idt[0]` can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrirqmax" variable.
+The variable `irt[0]` can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrirqmax" [boot option](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 
 User Tasks
 ----------

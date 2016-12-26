@@ -221,12 +221,14 @@ void kprintf_scrollscr()
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     int offs = 0, tmp;
     int x,y, line, shift=font->height*bootboot.fb_scanline;
+    int w = maxx*(font->width+1)/2;
+    // scroll the screen, two pixels at once
     for(y=0;y<(maxy-1)*font->height;y++){
         line=offs;
-        for(x=0;x<maxx*(font->width+1);x++){
-            *((uint32_t*)(&fb + line)) =
-                *((uint32_t*)(&fb + line + shift));
-            line+=4;
+        for(x=0;x<w;x++){
+            *((uint64_t*)(&fb + line)) =
+                *((uint64_t*)(&fb + line + shift));
+            line+=8;
         }
         offs+=bootboot.fb_scanline;
     }
@@ -234,9 +236,9 @@ void kprintf_scrollscr()
     tmp = offs;
     for(y=0;y<font->height;y++){
         line=offs;
-        for(x=0;x<maxx*(font->width+1);x++){
-            *((uint32_t*)(&fb + line)) = (uint32_t)0;
-            line+=4;
+        for(x=0;x<w;x++){
+            *((uint64_t*)(&fb + line)) = (uint64_t)0;
+            line+=8;
         }
         offs+=bootboot.fb_scanline;
     }
@@ -257,9 +259,9 @@ void kprintf_scrollscr()
         // clear the message
         for(y=0;y<font->height;y++){
             line=tmp;
-            for(x=0;x<maxx*(font->width+1);x++){
-                *((uint32_t*)(&fb + line)) = (uint32_t)0;
-                line+=4;
+            for(x=0;x<w;x++){
+                *((uint64_t*)(&fb + line)) = (uint64_t)0;
+                line+=8;
             }
             tmp+=bootboot.fb_scanline;
         }

@@ -25,7 +25,7 @@
  * @brief ACPI table parser
  */
 
-#include "../core.h"
+#include "platform.h"
 #include "../env.h"
 #include "acpi.h"
 

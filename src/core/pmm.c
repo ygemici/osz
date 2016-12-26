@@ -30,8 +30,14 @@
 /* get addresses from linker script */
 extern uint8_t pmm_entries;
 /* kernel variables */
-extern uint64_t corepde_mapping;
 extern uint64_t isr_entropy[4];
+/* memory pointers to allocate */
+extern OSZ_rela *relas;
+extern char *drvnames;
+extern uint64_t *drivers;
+extern uint64_t *drvptr;
+extern uint64_t *msgbuff;
+extern uint64_t *safestack;
 
 /* Main scructure */
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
@@ -82,8 +88,6 @@ void pmm_init()
     // first 3 pages are for temporary mappings, tmpmap and tmp2map
     // and their pte. Let's initialize them
     kmap_tmp = kmap_init();
-    // now we can use kmap() so map PDE :-)
-    kmap((uint64_t)(&tmppde), corepde_mapping, PG_CORE_NOCACHE);
 
     // buffers
     pmm.entries = fmem = (OSZ_pmm_entry*)(&pmm_entries);
@@ -141,6 +145,17 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
+
+    // ok, now we can allocate bss memory for core
+
+    // These are compile time configurable buffer sizes,
+    // but that's ok, sized to the needs of this source
+    relas = (OSZ_rela*)kalloc(2);
+    drivers = (uint64_t*)kalloc(1);
+    drvnames = (char*)kalloc(2);
+    msgbuff = (uint64_t*)kalloc(1);
+    //allocate stack for ISRs and syscall
+    safestack = kalloc(1);
 }
 
 // allocate kernel bss

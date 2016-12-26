@@ -26,14 +26,16 @@
  */
 
 // IDT constants
-#define IDT_EXC 0x8F010008
+#define IDT_EXC 0x8F030008
 #define IDT_NMI 0x8F020008
 #define IDT_INT 0x8E010008
 #define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))
 #define IDT_GATE_HI(offset) ((uint64_t)(offset)>>32)
 #define ISR_NUMIRQ 16
 #define ISR_NUMHANDLER 8
-#define ISR_MAX 128
+#define ISR_EXCMAX 64
+#define ISR_IRQMAX 128
+#define ISR_STACK 128
 
 //controllers
 #define CTRL_PIC 0

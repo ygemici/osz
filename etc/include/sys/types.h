@@ -32,7 +32,7 @@
 
 #define public __attribute__ ((__visibility__("default")))
 #define private __attribute__ ((__visibility__("hidden")))
-#define c_assert(c) extern char [(c) ? 1 : -1]
+#define c_assert(c) extern char cassert[(c)?0:-1]
 
 #ifndef NULL
 #define NULL ((void *)0)

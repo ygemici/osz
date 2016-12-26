@@ -10,8 +10,3 @@ public void pipe(){}
 public void dup(){}
 public void dup2(){}
 public void ioctl(){}
-
-void _init(int argc, char**argv)
-{
-	while(1);
-}

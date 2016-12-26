@@ -38,7 +38,6 @@ extern uint64_t pt;
 extern OSZ_rela *relas;
 
 extern void kprintf_center(int w, int h);
-extern uint64_t *kmap_getpte(uint64_t virt);
 extern void isr_initirq();
 extern void acpi_init();
 extern void acpi_early(ACPI_Header *hdr);
@@ -49,6 +48,7 @@ extern void pci_init();
 uint64_t __attribute__ ((section (".data"))) *drivers;
 uint64_t __attribute__ ((section (".data"))) *drvptr;
 char __attribute__ ((section (".data"))) *drvnames;
+uint64_t __attribute__ ((section (".data"))) *safestack;
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -76,7 +76,7 @@ __inline__ void sys_enable()
     OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
 
     // map "system" task's TCB
-    kmap((uint64_t)&tmpmap, (uint64_t)(subsystems[SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to start multitasking
     __asm__ __volatile__ (
@@ -85,7 +85,7 @@ __inline__ void sys_enable()
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
-        "movq %1, %%rsp; movq %2, %%rbp; iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
         :
         "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
@@ -109,24 +109,19 @@ void sys_init()
     ccb.magic = OSZ_CCB_MAGICH;
     //usr stack (userspace, first page)
     ccb.ist1 = __PAGESIZE;
-    //nmi stack (separate page)
+    //nmi stack (separate page in kernel space)
     ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
+    //exception stack (separate page in kernel space)
+    ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE-256;
 
     // parse MADT to get IOAPIC address
     acpi_early(NULL);
     // interrupt service routines (idt)
     isr_init();
 
-    // before we call loadelf for the first time and map tcb at bss_end
-    // allocate space for dynamic linking. These are compile time
-    // configurable, but that's ok, as size only depends on source
-    relas = (OSZ_rela*)kalloc(2);
-    drivers = (uint64_t*)kalloc(1);
-    drvnames = (char*)kalloc(2);
-
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     pid_t pid = thread_new("system");
-    subsystems[SRV_system] = pid;
+    services[-SRV_system] = pid;
     sys_mapping = tcb->memroot;
 
     // map device driver dispatcher
@@ -144,24 +139,24 @@ void sys_init()
 
     // allocate and map irq dispatcher table in user mode right after
     // the user mode dispatcher code
-    irq_dispatch_table = NULL;
+    irq_routing_table = NULL;
     s = ((ISR_NUMIRQ * nrirqmax * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
     // failsafe
     if(s<1)
         s=1;
 #if DEBUG
     if(s>1)
-        kprintf("WARNING irq_dispatch_table bigger than a page\n");
+        kprintf("WARNING irq_routing_table bigger than a page\n");
 #endif
     // add extra space to allow expansion
     s++;
-    // allocate IRQ Dispatch Table
+    // allocate IRQ Routing Table
     while(s--) {
         uint64_t t = (uint64_t)pmm_alloc();
-        if(irq_dispatch_table == NULL) {
-            // initialize IRQ Dispatch Table
-            irq_dispatch_table = (uint64_t*)t;
-            irq_dispatch_table[0] = nrirqmax;
+        if(irq_routing_table == NULL) {
+            // initialize IRT
+            irq_routing_table = (uint64_t*)t;
+            irq_routing_table[0] = nrirqmax;
         }
         paging[i++] = t + PG_USER_RO;
     }
@@ -210,8 +205,8 @@ void sys_init()
 
 // TODO:  service_installirq(irq, ehdr->e_shoff);
 
-    // don't link other elfs against irq_dispatch_table
-    irq_dispatch_table = NULL;
+    // don't link other elfs against irq_routing_table
+    irq_routing_table = NULL;
     // modify TCB for system task, platform specific part
     tcb->priority = PRI_SYS;
     //set IOPL=3 in rFlags
@@ -224,5 +219,5 @@ void sys_init()
     tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
 
     // add to queue so that scheduler will know about this thread
-    sched_add(pid);
+    sched_add((OSZ_tcb*)(pmm.bss_end));
 }

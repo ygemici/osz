@@ -1,4 +1,4 @@
-FS/Z file system
+FS/Z File System
 ================
 
 It was designed to store unimagineable amounts of data. It's a classic UNIX type filesystem with inodes and superblock.
@@ -7,41 +7,6 @@ Block size can be 2048, 4096, 8192... etc. The suggested sector size is 4096 whi
 ease the loading of sectors to memory.
 
 For detailed specification, see [fsZ.h](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h).
-
-Super Block
------------
-
-The super block is the first sector of the media and repeated in the last sector. If the superblocks differ, they have
-checksums to decide which sector is correct.
-
-File ID
--------
-
-The file id (fid in short) is a logical sector number that holds an inode structure. It can go up to 2^128.
-
-Inode
------
-
-The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's important
-that it can hold pointers to the old versions of a file thus making per file versioning possible just like in FILES11.
-
-Sector List
------------
-
-All list have 32 bytes entries with a starting logical sector number and a number of sectors. Both can go up to 2^128.
-
-Sector Directory
-----------------
-
-A sector that has 16 bytes long logical sector addresses.
-
-Directory
----------
-
-Every directory has 128 bytes long entries. The first entry is the directory header, the others are normal entries.
-
-16 bytes go for the fid, 1 more byte for the number of characters in the filename. That makes filename up to 111 bytes long
-(maybe less characters as UTF-8 is a variable length encoding).
 
 File paths
 ----------
@@ -79,6 +44,7 @@ and readdir(), which would return the root directory of the filesystem stored on
 
 Examples, all pointing to the same directory, as boot device (the first bootable partition of the first bootable disk, FS0 in EFI)
 is mounted on the root volume at /boot:
+
 ```
  /boot/EFI/
  root:/boot/EFI/
@@ -88,4 +54,41 @@ is mounted on the root volume at /boot:
  /dev/boot       // sees as a block device, you can use fread() and fwrite()
  /dev/boot/      // root directory of the filesystem on the device, use with opendir(), readdir()
 ```
+
 It worth mentioning that this ability of FS/Z allows to take a look what's on a device without the need of mounting it.
+
+Super Block
+-----------
+
+The super block is the first sector of the media and repeated in the last sector. If the superblocks differ, they have
+checksums to decide which sector is correct.
+
+File ID
+-------
+
+The file id (fid in short) is a logical sector number that holds an inode structure. It can go up to 2^128.
+
+Inode
+-----
+
+The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's important
+that it can hold pointers to the old versions of a file thus making per file versioning possible just like in FILES11.
+
+Sector List
+-----------
+
+All list have 32 bytes entries with a starting logical sector number and a number of sectors. Both can go up to 2^128.
+
+Sector Directory
+----------------
+
+A sector that has 16 bytes long logical sector addresses.
+
+Directory
+---------
+
+Every directory has 128 bytes long entries. The first entry is the directory header, the others are normal entries.
+
+16 bytes go for the fid, 1 more byte for the number of characters in the filename. That makes filename up to 111 bytes long
+(maybe less characters as UTF-8 is a variable length encoding).
+

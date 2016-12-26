@@ -30,11 +30,8 @@
 
 uint64_t __attribute__ ((section (".data"))) sys_mapping;
 uint64_t __attribute__ ((section (".data"))) core_mapping;
-uint64_t __attribute__ ((section (".data"))) corepde_mapping;
 uint64_t __attribute__ ((section (".data"))) *stack_ptr;
 uint64_t __attribute__ ((section (".data"))) pt;
-
-extern uint64_t corepde_mapping;
 
 pid_t thread_new(char *cmdline)
 {
@@ -107,12 +104,17 @@ pid_t thread_new(char *cmdline)
     paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+1)*8;i--; // argv
     paging[i--] = 1;                                 // argc
     stack_ptr = ptr + i*8;
-    tcb->rsp = TEXT_ADDRESS - __PAGESIZE + (i+1)*8;
+    tcb->rsp = tcb->cmdline = TEXT_ADDRESS - __PAGESIZE + (i+1)*8;
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    if(debug==DBG_THREADS||debug==DBG_ELF||(debug==DBG_IRQ&&irq_dispatch_table!=NULL))
+    if(debug==DBG_THREADS||debug==DBG_ELF)
         kprintf("tcb=%x %s\n",self,cmdline);
 #endif
     return self/__PAGESIZE;
+}
+
+bool_t thread_check(OSZ_tcb *tcb, phy_t *paging)
+{
+    return true;
 }

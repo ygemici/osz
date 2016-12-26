@@ -23,7 +23,7 @@ Core
 
 The core consist of two different parts: one is platform independent, and sources for that located in [src/core](https://github.com/bztsrc/osz/blob/master/src/core), the other part which holds the platform dependent code can be found in [src/core/(platform)](https://github.com/bztsrc/osz/blob/master/src/core/x86_64). The first part is written entirely in C, the other has mixed C and assembly sources.
 
-During boot, the loader locates `lib/src/core` in initrd and maps it at -2M. After that the loader passes control to the entry point of the ELF, and the loader will never used again.
+During boot, the loader locates the `lib/sys/core` in initrd and maps it at -2M. After that the loader passes control to the entry point of the ELF, and the loader will never used again.
 
 That entry point is at the label `_start`, which can be found in  [src/core/(platform)/start.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). It disables interrupts, sets up segments registers, stack, and finally jumps to the C startup code `main()` in [src/core/main.c](https://github.com/bztsrc/osz/blob/master/src/core/main.c) which is a platform independent code.
 

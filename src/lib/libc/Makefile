@@ -2,10 +2,9 @@ include ../../../Config
 TARGET = lib/libc.so
 
 BINTARGET = ../../../bin/root/$(TARGET)
-SRCS = $(wildcard *.c)
+SRCS = $(filter-out service.c,$(wildcard *.c))
 OBJS = $(SRCS:.c=.o)
 LIBS =
-CLL  = ../../../tools/cll.o
 
 CFLAGS = -Wall -fpic -fPIC -ffreestanding
 
@@ -16,10 +15,10 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET): $(SRCS)
 	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c $(ARCH)/crt0.S -o ../../../bin/root/lib/crt0.o
+	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c service.c -o ../../../bin/service.o
 	@echo "  src		$(TARGET) ($(ARCH))"
-	make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
-	@$(CLL) *.c
-	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic -Bshareable -L../../../bin/root/lib *.o -Xlinker --build-id=sha1 -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
+	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic -Bshareable -L../../../bin/root/lib *.o $(ARCH)/*.o -Xlinker --build-id=sha1 -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
-	@rm cl.S *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt0.o 2>/dev/null || true
+	@rm cl.S *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt0.o ../../../bin/service.o 2>/dev/null || true

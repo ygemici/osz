@@ -45,37 +45,34 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
 }
 
 // block until alarm
-void sched_alarm(pid_t thread, uint64_t at)
+void sched_alarm(OSZ_tcb *tcb, uint64_t at)
 {
 #if DEBUG
     if(debug==DBG_SCHED)
-        kprintf("sched_alarm(%x, %d)\n", thread, at);
+        kprintf("sched_alarm(%x, %d)\n", tcb->mypid, at);
 #endif
-    OSZ_tcb *tcb = sched_get_tcb(thread);
     /* TODO: ccb.hd_active -> ccb.hd_alarm */
     tcb->state = tcb_state_hybernated;
 }
 
 // hybernate a thread
-void sched_sleep(pid_t thread)
+void sched_sleep(OSZ_tcb *tcb)
 {
 #if DEBUG
     if(debug==DBG_SCHED)
-        kprintf("sched_sleep(%x)\n", thread);
+        kprintf("sched_sleep(%x)\n", tcb->mypid);
 #endif
-    OSZ_tcb *tcb = sched_get_tcb(thread);
     /* TODO: ccb.hd_blocked -> swap */
     tcb->state = tcb_state_hybernated;
 }
 
 // awake a hybernated or blocked thread
-void sched_awake(pid_t thread)
+void sched_awake(OSZ_tcb *tcb)
 {
 #if DEBUG
     if(debug==DBG_SCHED)
-        kprintf("sched_awake(%x)\n", thread);
+        kprintf("sched_awake(%x)\n", tcb->mypid);
 #endif
-    OSZ_tcb *tcb = sched_get_tcb(thread);
     if(tcb->state == tcb_state_hybernated) {
         /* TODO: swap -> ccb.hd_active */
     } else
@@ -87,17 +84,16 @@ void sched_awake(pid_t thread)
 }
 
 // add a thread to priority queue
-void sched_add(pid_t thread)
+void sched_add(OSZ_tcb *tcb)
 {
-    OSZ_tcb *tcb = sched_get_tcb(thread);
+    pid_t pid = tcb->mypid;
 #if DEBUG
     if(debug==DBG_SCHED)
-        kprintf("sched_add(%x) pri %d\n", thread, tcb->priority);
+        kprintf("sched_add(%x) pri %d\n", pid, tcb->priority);
 #endif
-    pid_t pid = tcb->mypid;
     tcb->prev = 0;
     tcb->next = ccb.hd_active[tcb->priority];
-    ccb.hd_active[tcb->priority] = thread;
+    ccb.hd_active[tcb->priority] = pid;
     if(tcb->next != 0) {
         tcb = sched_get_tcb(tcb->next);
         tcb->prev = pid;
@@ -105,13 +101,12 @@ void sched_add(pid_t thread)
 }
 
 // remove a thread from priority queue
-void sched_remove(pid_t thread)
+void sched_remove(OSZ_tcb *tcb)
 {
-    OSZ_tcb *tcb = sched_get_tcb(thread);
     pid_t next = tcb->next, prev = tcb->prev;
 #if DEBUG
     if(debug==DBG_SCHED)
-        kprintf("sched_remove(%x) pri %d\n", thread, tcb->priority);
+        kprintf("sched_remove(%x) pri %d\n", tcb->mypid, tcb->priority);
 #endif
     if(ccb.hd_active[tcb->priority] == tcb->mypid) {
         ccb.hd_active[tcb->priority] = next;
@@ -126,29 +121,28 @@ void sched_remove(pid_t thread)
     }
 }
 
-// move a thread from priority queue to blocked queue
-void sched_block(pid_t thread)
+// move a TCB from priority queue to blocked queue
+void sched_block(OSZ_tcb *tcb)
 {
 #if DEBUG
     if(debug==DBG_SCHED)
-        kprintf("sched_block(%x)\n", thread);
+        kprintf("sched_block(%x)\n", tcb);
 #endif
     /* never block the system task */
-    if(thread == subsystems[SRV_system])
-        return;
-    OSZ_tcb *tcb = sched_get_tcb(thread);
-    /* failsafe check */
-    if(tcb->memroot == sys_mapping)
+    if(tcb->mypid == services[-SRV_system] ||
+       tcb->memroot == sys_mapping)
         return;
     tcb->blktime = isr_ticks[0];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
-    sched_remove((pid_t)tcb);
+    pid_t pid = tcb->mypid;
+    sched_remove(tcb);
     // restore mapping
-    sched_get_tcb(thread);
+    sched_get_tcb(pid);
+    // link as the first item in chain
     tcb->next = ccb.hd_blocked;
     tcb->prev = 0;
-    ccb.hd_blocked = thread;
+    ccb.hd_blocked = pid;
 }
 
 // pick a thread and return it's memroot

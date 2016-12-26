@@ -52,12 +52,16 @@
 /* kernel panic */
 kpanic:
     pushq   %rdi
+    pushq   %rsi
+    pushq   %rdx
     call    kprintf_reset
     /* clear the first line */
     movl    $0xFFDD33, fg
     movl    $0, bg
     movq    $kpanicprefix, %rdi
     call    kprintf
+    popq    %rdx
+    popq    %rsi
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
@@ -170,11 +174,6 @@ kmap_init:
     addq    $__PAGESIZE-8, %rax
     movq    (%rax), %rax
     movq    %rax, core_mapping
-    /* save core mappings pointer */
-    andw    $0xF000, %ax
-    addq    $__PAGESIZE-8, %rax
-    movq    (%rax), %rax
-    movq    %rax, corepde_mapping
     /* PDPE */
     movq    (%rbx), %rax
     xorb    %al, %al

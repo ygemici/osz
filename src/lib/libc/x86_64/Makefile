@@ -13,7 +13,7 @@ ok:
 	@true
 
 %.o: %.S
-	@$(CC) -I../../../../etc/include -I../../../core/$(ARCH) $(OPT) $(CFLAGS) -c $< -o ../$@
+	@$(CC) -I../../../../etc/include -I../../../core/$(ARCH) $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
 	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o ../$@

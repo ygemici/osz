@@ -68,7 +68,7 @@ QEMU 2.7.0 monitor - type 'help' for more information
 (qemu)
 ```
 
-The live disk image is generated to `bin/disk.dd`. Use the
+The live disk image is generated to [bin/disk.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true). Use the
 `dd` command to write it on a USB stick or boot it with qemu,
 bochs or VirtualBox.
 
@@ -78,3 +78,15 @@ $ make testq
 $ make testb
 $ make vdi
 ```
+
+Non-EFI loader
+--------------
+
+If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
+Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting. So
+I've added the BIOS images to the source, and you should be able to compile OS/Z with GNU toolchain only.
+
+The `bootboot.bin` can be booted via 
+ - `mbr.bin` in MBR or VBR
+ - BIOS extension ROM (tested with bochs at 0D0000h)
+ - GRUB using the MultiBoot protocol (not tested).

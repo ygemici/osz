@@ -2,7 +2,9 @@
 #define _SYS_CORE_H 1
 
 #define SYS_IRQ 0
-#define SYS_exit 60
+#define SYS_exit 1
+#define SYS_regsrv 2
+
 /*
 #define SYS_msgget 68
 #define SYS_msgsnd 69

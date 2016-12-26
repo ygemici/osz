@@ -44,22 +44,20 @@ typedef unsigned char *valist;
 /* we define the addresses as 32 bit, as code segment cannot grow
    above 4G. This way we can have 512 relocation records in a page */
 
-// memory allocated for relocation addresses
+/* memory allocated for relocation addresses */
 OSZ_rela __attribute__ ((section (".data"))) *relas;
 
-/* thread ids of system services. */
-pid_t  __attribute__ ((section (".data"))) subsystems[SRV_NUM];
-/* thread ids of user services. */
-uint64_t __attribute__ ((section (".data"))) nrservices;
-pid_t  __attribute__ ((section (".data"))) services[-SRV_usrlast - SRV_NUM];
+/* pids of services. Negative pids are service ids and looked up in this */
+pid_t  __attribute__ ((section (".data"))) services[NRSRV_MAX];
+uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_usrfirst;
 
-uint64_t __attribute__ ((section (".data"))) *irq_dispatch_table;
+uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
 
 /* register a user mode service for pid translation */
 uint64_t service_register(pid_t thread)
 {
     services[nrservices++] = thread;
-    return nrservices-1;
+    return -(nrservices-1);
 }
 
 /* load an ELF64 binary into text segment starting at 2M */
@@ -161,15 +159,15 @@ void service_installirq(uint8_t irq, uint64_t offs)
     if(irq>0 && irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
         l = k;
         // find next free slot
-        while(irq_dispatch_table[k]!=0&&k<last) k++;
+        while(irq_routing_table[k]!=0&&k<last) k++;
 #if DEBUG
         if(debug==DBG_IRQ)
-            kprintf("  IRQ #%d: irq_dispatch_table[%d]=%x %s\n",
+            kprintf("  IRQ #%d: irt[%d]=%x %s\n",
                 irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
-        if(irq_dispatch_table[k]!=0)
+        if(irq_routing_table[k]!=0)
             kprintf("WARNING too many IRQ handlers for %d\n", irq);
 #endif
-        irq_dispatch_table[k] = offs;
+        irq_routing_table[k] = offs;
         // first of it's kind?
         // we won't enable IRQ2 (cascade) for real. We'll use it as
         // a video card fake irq to blit composed buffer to framebuffer.
@@ -182,7 +180,7 @@ void service_installirq(uint8_t irq, uint64_t offs)
         }
 #if DEBUG
     } else if(debug==DBG_IRQ) {
-            kprintf("WARNING irq_dispatch_table[%d] for %x out of range\n", k, offs);
+            kprintf("WARNING irq_routing_table[%d] for %x out of range\n", k, offs);
 #endif
     }
 }
@@ -192,7 +190,7 @@ void service_installirq(uint8_t irq, uint64_t offs)
  *  - pmm.bss_end: current thread's TCB mapped,
  *  - relas: array of OSZ_rela items alloceted with kalloc()
  *  - stack_ptr: physical address of thread's stack */
-void service_rtlink()
+bool_t service_rtlink()
 {
     int i, j, k, n = 0;
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
@@ -291,8 +289,8 @@ void service_rtlink()
     }
 
 #if DEBUG
-    if(debug==DBG_IRQ && irq_dispatch_table!=NULL)
-        kprintf("IRQ Dispatch Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
+    if(debug==DBG_IRQ && irq_routing_table!=NULL)
+        kprintf("IRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
 #endif
 
     /*** resolve addresses ***/
@@ -356,8 +354,8 @@ void service_rtlink()
                 if(debug==DBG_RTEXPORT)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
-                // parse irqX() symbols to fill up irq_dispatch_table
-                if(irq_dispatch_table != NULL && !kmemcmp(strtable + s->st_name,"irq",3)) {
+                // parse irqX() symbols to fill up irq_routing_table
+                if(irq_routing_table != NULL && !kmemcmp(strtable + s->st_name,"irq",3)) {
                     //at least one number
                     if(*(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
                         //strlen() = 4 | 5 | 6
@@ -410,15 +408,15 @@ void service_rtlink()
     // will be popped up and executed.
 
     // if we're linking system task, save it's entry point (no ELF header)
-    if(irq_dispatch_table!=NULL) {
+    if(irq_routing_table!=NULL) {
         // at TEXT_ADDRESS (_usercode) is a 'ret',
-        // so main() (_getwork) comes after that
-        *stack_ptr = TEXT_ADDRESS + (&_getwork - &_usercode);
+        // so main() comes after that
+        *stack_ptr = TEXT_ADDRESS + (&_main - &_usercode);
         stack_ptr--;
         tcb->rsp -= 8;
     } else {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
-        if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+        if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG) || ehdr->e_phoff==ehdr->e_entry)
             kpanic("no executor?");
         *stack_ptr = ehdr->e_entry + TEXT_ADDRESS;
         stack_ptr--;
@@ -436,6 +434,8 @@ void service_rtlink()
         stack_ptr--;
         tcb->rsp -= 8;
     }
+    // sanity check thread
+    return thread_check(tcb, (phy_t*)paging);
 }
 
 void service_mapbss(uint64_t phys, uint64_t size)
@@ -450,7 +450,7 @@ void service_init(int subsystem, char *fn)
         cmd++;
     cmd++;
     pid_t pid = thread_new(cmd);
-    subsystems[subsystem] = pid;
+    services[-subsystem] = pid;
     // map executable
     if(service_loadelf(fn) == (void*)(-1)) {
 #if DEBUG
@@ -461,9 +461,14 @@ void service_init(int subsystem, char *fn)
     // map libc
     service_loadso("lib/libc.so");
     // dynamic linker
-    service_rtlink();
-    // add to queue so that scheduler will know about this thread
-    sched_add(pid);
+    if(service_rtlink()) {
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+    } else {
+#if DEBUG
+        kprintf("WARNING thread check failed for %s\n", fn);
+#endif
+    }
 }
 
 /* Initialize the file system service, the "fs" task */
@@ -473,7 +478,7 @@ void fs_init()
     char *drvs_end = drvs + fs_size;
     char fn[256];
     pid_t pid = thread_new("fs");
-    subsystems[SRV_fs] = pid;
+    services[-SRV_fs] = pid;
     // map file system dispatcher
     if(service_loadelf("sbin/fs") == (void*)(-1)) {
 #if DEBUG
@@ -509,12 +514,15 @@ void fs_init()
     }
 
     // dynamic linker
-    service_rtlink();
-    // map initrd in "fs" task's memory
-    service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
+    if(service_rtlink()) {
+        // map initrd in "fs" task's memory
+        service_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
 
-    // add to queue so that scheduler will know about this thread
-    sched_add(pid);
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+    } else {
+        kpanic("thread check failed for /sbin/fs");
+    }
 }
 
 /* Initialize the user interface service, the "ui" task */

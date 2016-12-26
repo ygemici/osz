@@ -11,7 +11,7 @@ Core
 
 Special service which runs in supervisor mode. It's always mapped in all memory map.
 The lowest level code of OS/Z like ISRs, physical memory allocation, task switch, timers and such
-are implemented here. All the other services (including system service) are running in non-privileged
+are implemented here. All the other services (including the "system" task) are running in non-privileged
 user mode (ring 3).
 
 Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve().
@@ -21,6 +21,8 @@ System
 
 A process that has all the device drivers mapped as shared libraries. Whenever an IRQ occurs, the core
 switches to this process. It's also the idle thread.
+
+Functions: only one, SYS_IRQ event handler.
 
 Syslog
 ------

@@ -28,6 +28,7 @@
 
 #include "platform.h"
 #include "isr.h"
+#include "../env.h"
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
@@ -74,16 +75,19 @@ void isr_init()
     for(i=0;i<32;i++) {
         idt[i*2+0] = IDT_GATE_LO(i==2||i==8?IDT_NMI:IDT_EXC, ptr);
         idt[i*2+1] = IDT_GATE_HI(ptr);
-        ptr+=ISR_MAX;
+        ptr+=ISR_EXCMAX;
     }
     // 32-255 irq handlers
     ptr = &isr_irq0;
     for(i=32;i<64;i++) {
         idt[i*2+0] = IDT_GATE_LO(IDT_INT, ptr);
         idt[i*2+1] = IDT_GATE_HI(ptr);
-        ptr+=ISR_MAX;
+        ptr+=ISR_IRQMAX;
     }
-
+#if DEBUG
+    if(debug==DBG_IRQ)
+        kprintf("IDT %x\n", idt);
+#endif
     // set up isr_syscall dispatcher and IDTR, also enable IRQs
     isr_inithw(idt, &ccb);
 }

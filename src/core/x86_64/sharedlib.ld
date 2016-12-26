@@ -10,7 +10,7 @@ SEARCH_DIR("../bin/root/lib");
 SEARCH_DIR("../lib");
 SEARCH_DIR("../../lib");
 SEARCH_DIR("../../../lib");
-STARTUP("libc/init.o");
+STARTUP("libc/x86_64/init.o");
 
 PHDRS
 {

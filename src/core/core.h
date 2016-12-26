@@ -25,38 +25,44 @@
  * @brief Core functions (ring 0)
  */
 
-#include <osZ.h>
-#include <limits.h>
+#ifndef _OSZ_CORE_H
+#define _OSZ_CORE_H
+
+#include "../../etc/include/osZ.h"
 #include "../../loader/bootboot.h"
 #include "pmm.h"
 #include "msg.h"
 
+#define USER_PROCESS SRV_init
+
+#ifndef _AS
 // import virtual addresses from linker
 extern BOOTBOOT bootboot;             // boot structure
-extern uchar environment[__PAGESIZE]; // configuration
+extern unsigned char environment[__PAGESIZE]; // configuration
 extern uint8_t fb;                    // framebuffer
 extern uint8_t tmpmap;                // tempprarily mapped page
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
-extern uint64_t tmppde;               // core's pde ptr in pdpe
-extern msghdr_t tmpmq;                // destination message queue
 extern uint8_t _usercode;             // user mode text start
 extern uint8_t _init;                 // user mode initialization code
-extern uint8_t _getwork;              // user mode "main"
+extern uint8_t _main;                 // user mode "main", irq dispatcher
 extern uint8_t __bss_start;           // start of bss segment
 
-#define USER_PROCESS SRV_init
-#define OFFS_system (&subsystems[SRV_system])
-
 // kernel variables
-extern uint64_t *irq_dispatch_table;  // IRQ Dispatch Table
+extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern uint64_t sys_mapping;          // paging tables for "system" task
 extern OSZ_pmm pmm;                   // Physical Memory Manager data
 
 /* see etc/include/syscall.h */
-extern pid_t subsystems[];
+extern pid_t services[];
 
 /* size of the file returned by fs_locate() */
 extern uint64_t fs_size;
+
+// relocation records for runtime linker
+typedef struct {
+    uint64_t offs;
+    char *sym;
+} OSZ_rela;
 
 // kernel function routines
 
@@ -122,6 +128,9 @@ extern void ui_init();
 /** Initialize kernel memory mapping */
 extern void *kmap_init();
 
+/** return a pointer to PTE for virtual address */
+extern uint64_t *kmap_getpte(uint64_t virt);
+
 /** Copy n bytes from src to desc */
 extern void kmemcpy(char *dest, char *src, int size);
 
@@ -147,27 +156,33 @@ extern void* kalloc(int pages);
 extern void kfree(void* ptr);
 
 /** Map a physical page at a virtual address */
-extern void kmap(uint64_t virt, uint64_t phys, uint8_t access);
+extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
 // ----- Threads -----
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
 
+/** Sanity check thread data */
+extern bool_t thread_check(OSZ_tcb *tcb, phy_t *paging);
+
 // ----- Scheduler -----
 /** Add thread to scheduling */
-extern void sched_add(pid_t thread);
+extern void sched_add(OSZ_tcb *tcb);
 
 /** Remove thread from scheduling */
-extern void sched_remove(pid_t thread);
+extern void sched_remove(OSZ_tcb *tcb);
 
 /** Block a thread */
-extern void sched_block(pid_t thread);
+extern void sched_block(OSZ_tcb *tcb);
+
+/** Hybernate a thread */
+extern void sched_sleep(OSZ_tcb *tcb);
 
 /** Unblock a thread */
-extern void sched_activate(pid_t thread);
+extern void sched_awake(OSZ_tcb *tcb);
 
-/** Return next thread's memroot */
-extern uint64_t sched_pick();
+/** Return next thread's memroot phy address */
+extern phy_t sched_pick();
 
 // ----- Sybsystem Management -----
 /** Load an ELF binary into address space, return physical address */
@@ -177,7 +192,7 @@ extern void *service_loadelf(char *fn);
 extern void service_loadso(char *fn);
 
 /** Run-time link ELF binaries in address space */
-extern void service_rtlink();
+extern bool_t service_rtlink();
 
 /** Map a specific memory area into user bss */
 extern void service_mapbss(uint64_t phys, uint64_t size);
@@ -195,3 +210,7 @@ extern bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t ar
     msg_sends(((service)&0xfff)|(uint64_t)0xfffffffffffff000, event, arg0, arg1, arg2)
 /** low level message sender, called by senders above and IRQ ISRs */
 extern bool_t ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+
+#endif
+
+#endif /* _OSZ_CORE_H */

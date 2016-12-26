@@ -9,7 +9,7 @@ public void opentty(){}
 public void openwin(){}
 public void openwrd(){}
 
-void _init(int argc, char **argv)
+void _init()
 {
-	while(1);
+	cldispatch();
 }

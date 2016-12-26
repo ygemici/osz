@@ -26,12 +26,19 @@
  */
 
 #ifndef _AS
-# include "../core.h"
+#include "../../etc/include/osZ.h"
 #endif
+#include "../../etc/include/limits.h"
 #include "tcb.h"
 #include "ccb.h"
 #include "isr.h"
+#ifndef _AS
+typedef uint64_t phy_t;
+typedef uint64_t virt_t;
+# include "../core.h"
+#endif
 
+#define thread_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
 #define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
 
 #define PG_CORE 0b00011
@@ -40,9 +47,3 @@
 #define PG_USER_RW 0b00111
 #define PG_USER_RWNOCACHE 0b10111
 #define PG_USER_DRVMEM 0b01111
-
-// offsets in tmppde (pointing to the last 4G of memory)
-// must match linker script's addresses in supervisor.ld
-#define FBUF_PDE 0      //4G-4M
-#define DSTMQ_PDE 510   //2M, destination thread's message queue on send
-#define CORE_PDE 511    //2M, supervisor core

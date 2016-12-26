@@ -32,7 +32,7 @@
 
 .section .text.user0
 .global _init
-.global _getwork
+.global _main
 
 /* load this page instead of /sbin/system in sys_init() */
 
@@ -41,14 +41,15 @@ _init:
     ret
 
 /* normal entry point, so called main() */
-_getwork:
+_main:
+    /* get work to do */
     call    clrecv
     /* MSG_FUNC(msg.evt) != SYS_IRQ? */
     cmpw    $SYS_IRQ, (%rax)
-    jne     _getwork
-    /* get IRQ Dispatch Table */
+    jne     _main
+    /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
-    /* rax = &idt[(irq-1)*idt[0]+1] */
+    /* rax = &irt[(irq-1)*irt[0]+1] */
     xorq    %rcx, %rcx
     movb    (%rsi), %cl
     movq    %rax, %rbx
@@ -63,7 +64,7 @@ _getwork:
     addq    %rsi, %rax
     /* now call the irq handlers (*rax)(irq); */
 1:  cmpq    $TEXT_ADDRESS, (%rax)
-    jbe     _getwork
+    jbe     _main
     pushq   %rax
     pushq   %rcx
     pushq   %rdi
@@ -75,4 +76,4 @@ _getwork:
     decb    %cl
     orb     %cl, %cl
     jnz     1b
-    jmp     _getwork
+    jmp     _main

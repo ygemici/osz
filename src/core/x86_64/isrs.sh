@@ -66,7 +66,9 @@ EOF
 
 numirq=`grep "ISR_NUMIRQ" isr.h|cut -d ' ' -f 3`
 numhnd=`grep "ISR_NUMHANDLER" isr.h|cut -d ' ' -f 3`
-isrmax=`grep "ISR_MAX" isr.h|cut -d ' ' -f 3`
+isrexcmax=`grep "ISR_EXCMAX" isr.h|cut -d ' ' -f 3`
+isrirqmax=`grep "ISR_IRQMAX" isr.h|cut -d ' ' -f 3`
+isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
 ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
 idtsz=$[(($numirq*$numhnd*8+4095)/4096)*4096]
 echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq (x$numhnd), idtsz $idtsz)"
@@ -338,6 +340,9 @@ isr_syscall0:
     cli
     /* tcb->rip */
     movq	%rcx, __PAGESIZE-40
+    /* tcp->rsp, save stack pointer and switch to core stack */
+    movq	%rsp, __PAGESIZE-16
+    movq    \$safestack+1024, %rsp
     /* tcb->rflags */
     pushf
     pop     __PAGESIZE-24
@@ -348,7 +353,6 @@ isr_syscall0:
     /* 'send' */
     cmpl	\$0x646E6573, %eax
     jne		2f
-xchg %bx, %bx
     /* if destionation is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
@@ -377,6 +381,7 @@ xchg %bx, %bx
 5:  call	isr_loadcontext
 6:  movq	__PAGESIZE-24, %r11
     movq	__PAGESIZE-40, %rcx
+    movq	__PAGESIZE-16, %rsp
     sysretq
 
 isr_inithw:
@@ -565,6 +570,7 @@ cat >>isrs.S <<EOF
     ret
 
 /* exception handler ISRs */
+	.align $isrexcmax, 0x90
 EOF
 i=0
 for isr in $exceptions
@@ -575,7 +581,6 @@ do
 		handler="excabort"
 	fi
 	cat >>isrs.S <<-EOF
-	.align $isrmax, 0x90
 	isr_$isr:
 	    cli
 	    callq	isr_savecontext
@@ -584,6 +589,7 @@ do
 	    callq	$handler
 	    callq	isr_loadcontext
 	    iretq
+	.align $isrirqmax, 0x90
 	
 	EOF
 	export i=$[$i+1];
@@ -591,7 +597,6 @@ done
 echo "			irq0" >&2
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
-.align $isrmax, 0x90
 isr_irq0:
     /* preemption timer */
 iretq
@@ -616,6 +621,7 @@ iretq
     $EOI
 2:  call	isr_loadcontext
     iretq
+.align $isrirqmax, 0x90
 
 EOF
 for isr in `seq 1 $numirq`
@@ -626,7 +632,6 @@ do
 		EOI="$EOI2";
 	fi
 	cat >>isrs.S <<-EOF
-	.align $isrmax, 0x90
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
@@ -648,6 +653,7 @@ do
 	    $EOI
 	    call	isr_loadcontext
 	    iretq
+	.align $isrirqmax, 0x90
 	
 	EOF
 done

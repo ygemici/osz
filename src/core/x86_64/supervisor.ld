@@ -1,6 +1,5 @@
 /* kernel space addresses */
 FBUF_ADDRESS  = 0xffffffffe0000000;
-DSTMQ_ADDRESS = 0xffffffffffc00000;
 CORE_ADDRESS  = 0xffffffffffe00000;
 
 ENTRY(_start)
@@ -9,10 +8,6 @@ SECTIONS
 {
     . = FBUF_ADDRESS;
         fb = .;
-	/* destination thread's message queue mapped, must match ksend() */
-	. = DSTMQ_ADDRESS;
-        . += 4096;
-		tmpmq = .;
     /* make sure it starts with bootboot */
     . = CORE_ADDRESS;
         bootboot = .;
@@ -45,8 +40,6 @@ SECTIONS
         tmpmap = .;
         . += 4096;
         tmppte = .;
-        . += 4096;
-        tmppde = .;
         . += 4096;
         /* CPU Control Block. We need static address for that */
         ccb = .;

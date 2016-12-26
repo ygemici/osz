@@ -84,6 +84,8 @@ irq1:
     movw    $SYS_keypress, %si
 3:  /* send a key event to UI task */
     movq    $SRV_ui, %rdi
+    xorq	%rdx, %rdx
+    xorq	%rcx, %rcx
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret

@@ -191,6 +191,9 @@ isr_syscall0:
     cli
     /* tcb->rip */
     movq	%rcx, __PAGESIZE-40
+    /* tcp->rsp, save stack pointer and switch to core stack */
+    movq	%rsp, __PAGESIZE-16
+    movq    $safestack+1024, %rsp
     /* tcb->rflags */
     pushf
     pop     __PAGESIZE-24
@@ -201,7 +204,6 @@ isr_syscall0:
     /* 'send' */
     cmpl	$0x646E6573, %eax
     jne		2f
-xchg %bx, %bx
     /* if destionation is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
@@ -230,6 +232,7 @@ xchg %bx, %bx
 5:  call	isr_loadcontext
 6:  movq	__PAGESIZE-24, %r11
     movq	__PAGESIZE-40, %rcx
+    movq	__PAGESIZE-16, %rsp
     sysretq
 
 isr_inithw:
@@ -359,7 +362,7 @@ isr_inithw:
     ret
 
 /* exception handler ISRs */
-.align 128, 0x90
+	.align 64, 0x90
 isr_exc00divzero:
     cli
     callq	isr_savecontext
@@ -368,8 +371,8 @@ isr_exc00divzero:
     callq	exc00divzero
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc01debug:
     cli
     callq	isr_savecontext
@@ -378,8 +381,8 @@ isr_exc01debug:
     callq	exc01debug
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc02nmi:
     cli
     callq	isr_savecontext
@@ -388,8 +391,8 @@ isr_exc02nmi:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc03chkpoint:
     cli
     callq	isr_savecontext
@@ -398,8 +401,8 @@ isr_exc03chkpoint:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc04overflow:
     cli
     callq	isr_savecontext
@@ -408,8 +411,8 @@ isr_exc04overflow:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc05bound:
     cli
     callq	isr_savecontext
@@ -418,8 +421,8 @@ isr_exc05bound:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc06invopcode:
     cli
     callq	isr_savecontext
@@ -428,8 +431,8 @@ isr_exc06invopcode:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc07devunavail:
     cli
     callq	isr_savecontext
@@ -438,8 +441,8 @@ isr_exc07devunavail:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc08dblfault:
     cli
     callq	isr_savecontext
@@ -448,8 +451,8 @@ isr_exc08dblfault:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc09coproc:
     cli
     callq	isr_savecontext
@@ -458,8 +461,8 @@ isr_exc09coproc:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc10invtss:
     cli
     callq	isr_savecontext
@@ -468,8 +471,8 @@ isr_exc10invtss:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc11segfault:
     cli
     callq	isr_savecontext
@@ -478,8 +481,8 @@ isr_exc11segfault:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc12stackfault:
     cli
     callq	isr_savecontext
@@ -488,8 +491,8 @@ isr_exc12stackfault:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc13genprot:
     cli
     callq	isr_savecontext
@@ -498,8 +501,8 @@ isr_exc13genprot:
     callq	exc13genprot
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc14pagefault:
     cli
     callq	isr_savecontext
@@ -508,8 +511,8 @@ isr_exc14pagefault:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc15unknown:
     cli
     callq	isr_savecontext
@@ -518,8 +521,8 @@ isr_exc15unknown:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc16float:
     cli
     callq	isr_savecontext
@@ -528,8 +531,8 @@ isr_exc16float:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc17alignment:
     cli
     callq	isr_savecontext
@@ -538,8 +541,8 @@ isr_exc17alignment:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc18machinecheck:
     cli
     callq	isr_savecontext
@@ -548,8 +551,8 @@ isr_exc18machinecheck:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc19double:
     cli
     callq	isr_savecontext
@@ -558,8 +561,8 @@ isr_exc19double:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc20:
     cli
     callq	isr_savecontext
@@ -568,8 +571,8 @@ isr_exc20:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc21:
     cli
     callq	isr_savecontext
@@ -578,8 +581,8 @@ isr_exc21:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc22:
     cli
     callq	isr_savecontext
@@ -588,8 +591,8 @@ isr_exc22:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc23:
     cli
     callq	isr_savecontext
@@ -598,8 +601,8 @@ isr_exc23:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc24:
     cli
     callq	isr_savecontext
@@ -608,8 +611,8 @@ isr_exc24:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc25:
     cli
     callq	isr_savecontext
@@ -618,8 +621,8 @@ isr_exc25:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc26:
     cli
     callq	isr_savecontext
@@ -628,8 +631,8 @@ isr_exc26:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc27:
     cli
     callq	isr_savecontext
@@ -638,8 +641,8 @@ isr_exc27:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc28:
     cli
     callq	isr_savecontext
@@ -648,8 +651,8 @@ isr_exc28:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc29:
     cli
     callq	isr_savecontext
@@ -658,8 +661,8 @@ isr_exc29:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc30:
     cli
     callq	isr_savecontext
@@ -668,8 +671,8 @@ isr_exc30:
     callq	excabort
     callq	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_exc31:
     cli
     callq	isr_savecontext
@@ -678,9 +681,9 @@ isr_exc31:
     callq	excabort
     callq	isr_loadcontext
     iretq
+.align 128, 0x90
 
 /* IRQ handler ISRs */
-.align 128, 0x90
 isr_irq0:
     /* preemption timer */
 iretq
@@ -707,8 +710,8 @@ iretq
     movl	$0, APIC_EOI(%rax)
 2:  call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq1:
     cli
     call	isr_savecontext
@@ -732,8 +735,8 @@ isr_irq1:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq2:
     cli
     call	isr_savecontext
@@ -757,8 +760,8 @@ isr_irq2:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq3:
     cli
     call	isr_savecontext
@@ -782,8 +785,8 @@ isr_irq3:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq4:
     cli
     call	isr_savecontext
@@ -807,8 +810,8 @@ isr_irq4:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq5:
     cli
     call	isr_savecontext
@@ -832,8 +835,8 @@ isr_irq5:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq6:
     cli
     call	isr_savecontext
@@ -857,8 +860,8 @@ isr_irq6:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq7:
     cli
     call	isr_savecontext
@@ -882,8 +885,8 @@ isr_irq7:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq8:
     cli
     call	isr_savecontext
@@ -907,8 +910,8 @@ isr_irq8:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq9:
     cli
     call	isr_savecontext
@@ -932,8 +935,8 @@ isr_irq9:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq10:
     cli
     call	isr_savecontext
@@ -957,8 +960,8 @@ isr_irq10:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq11:
     cli
     call	isr_savecontext
@@ -982,8 +985,8 @@ isr_irq11:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq12:
     cli
     call	isr_savecontext
@@ -1007,8 +1010,8 @@ isr_irq12:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq13:
     cli
     call	isr_savecontext
@@ -1032,8 +1035,8 @@ isr_irq13:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq14:
     cli
     call	isr_savecontext
@@ -1057,8 +1060,8 @@ isr_irq14:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq15:
     cli
     call	isr_savecontext
@@ -1082,8 +1085,8 @@ isr_irq15:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
-
 .align 128, 0x90
+
 isr_irq16:
     cli
     call	isr_savecontext
@@ -1107,4 +1110,5 @@ isr_irq16:
     movl	$0, APIC_EOI(%rax)
     call	isr_loadcontext
     iretq
+.align 128, 0x90
 

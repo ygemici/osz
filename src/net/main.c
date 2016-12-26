@@ -16,7 +16,3 @@ public void socketpair(){}
 public void getsockopt(){}
 public void setsockopt(){}
 
-void _init(int argc, char **argv)
-{
-	while(1);
-}

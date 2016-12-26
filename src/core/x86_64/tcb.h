@@ -40,7 +40,7 @@
 #include "../tcb.h"
 
 // maximum size of IRQ handler routine's stack
-#define TCB_ISRSTACK 1024
+#define TCB_ISRSTACK 512
 
 // must be __PAGESIZE long
 typedef struct {
@@ -67,10 +67,11 @@ typedef struct {
     uint64_t self;      // self pointer (physical address of TLB PT)
     uint64_t blktime;   // time when thread was blocked
     uint64_t blkcnt;    // ticks thread spent blocked
-	uint64_t swapminor;	// only used when thread is hybernated
+    uint64_t swapminor; // only used when thread is hybernated
+    uint64_t cmdline;   // pointer to argc in stack
     uuid_t acl[128];    // access control list
 
-    uint8_t padding[__PAGESIZE-2824-TCB_ISRSTACK-40];
+    uint8_t padding[__PAGESIZE-2832-TCB_ISRSTACK-40];
     uint8_t irqhandlerstack[TCB_ISRSTACK];
 
     // the last 40 bytes of stack is referenced directly from asm
@@ -81,10 +82,6 @@ typedef struct {
     uint64_t ss;
 } __attribute__((packed)) OSZ_tcb;
 
-// relocation records for runtime linker
-typedef struct {
-    uint64_t offs;
-    char *sym;
-} OSZ_rela;
+c_assert(sizeof(OSZ_tcb) == __PAGESIZE);
 
 #endif

@@ -73,7 +73,7 @@ Boot process
 4. iterates on filesystem drivers, and loads kernel from initrd.
 5. parses ELF program header and symbols to get link addresses.
 6. maps framebuffer, environment and bootboot structure accordingly.
-7. sets up stack, registers and jumps to ELF's entry point.
+7. sets up stack, registers and jumps to [ELF's entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S).
 
 Machine state
 -------------
@@ -143,7 +143,7 @@ gcc -nostdlib -nodefaultlibs -nostartfiles -Xlinker --nmagic -T link.ld -o kerne
 strip -s -K fb -K bootboot -K environment kernel
 ```
 
-Linker script link.ld goes like:
+[Linker script](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld) link.ld goes like:
 
 ```c
 FBUF_ADDRESS = 0xffffffffe0000000;
@@ -184,8 +184,9 @@ Installation
 
 ```shell
 mkdir -r tmp/lib/sys
-cp kernel lib/sys/core
+cp kernel tmp/lib/sys/core
 # copy more files
+# create ramdisk image
 cd tmp
 find . | cpio -H hpodc -o ../INITRD
 ```
@@ -196,8 +197,10 @@ Or the last line could be:
 tar -cf ../INITRD *
 ```
 
+if you'd prefer Star format. Don't use comperssion, it's not supported (yet).
+
 2. Create FS0:\BOOTBOOT directory, and copy the archive you've created as
-            INITRD into it. If you want, create a text file named CONFIG
+            INITRD into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/src/etc/CONFIG)
             there too, and put your environment variables there. Start it
             with a comment "// BOOTBOOT" and fill up with spaces so that
             the file became exactly 4096 bytes (1 page) long.
@@ -259,7 +262,12 @@ the rest of the loader in source. This is so because it was designed to
 help the needs of hobby OS developers, specially those who want to write
 their own filesystem.
 
-The reference implementations support cpio, tar and FS/Z as initrd.
+If all filesystem drivers failed, BOOTBOOT compliant loader will brute-force
+look for the first ELF image in the first initrd image on the first partition,
+which is quite comfortable specially when you boot it from ROM. You just copy
+your initrd on the EFI System Partition, and there you go!
+
+The reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/src/docs/fs.md) as initrd.
 Gzip uncompressor coming soon in EFI version.
 
 Troubleshooting
