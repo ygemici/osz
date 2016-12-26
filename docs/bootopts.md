@@ -12,7 +12,7 @@ The file has to be one page long (4096 bytes on x86_64), and filled up with spac
 
 Keys are ASCII names without spaces, values can be decimal and hexadecimal numbers, booleans or strings.
 
-Boot parameters
+Boot Parameters
 ---------------
 
 | Parameter | Default | Type | Parsed by | Description |
@@ -29,7 +29,7 @@ Boot parameters
 | identity  | false  | boolean | core | force running first time setup to get machine's identity, such as hostname |
 | networking | true | boolean | core | disable networking [system service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
 | sound | true | boolean | core | disable sound service |
-| rescueshell | false | boolean | if true, starts `/bin/sh` instead of `/sbin/init` |
+| rescueshell | false | boolean | core | if true, starts `/bin/sh` instead of `/sbin/init` |
 
 Debugging
 ---------

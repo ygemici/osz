@@ -36,7 +36,7 @@ That platform independent code does the following:
 
 After that it initializes system services (subsystems):
 
- 1. first of all, the user space counterpart of core, "system" task by calling `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
+ 1. first of all, the user space counterpart of core, "system" task by calling `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal service, save it has the initrd mapped in it's bss segment.
  3. on order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike networking and sound services which are optional.
  4. the call `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) is used to load several other parts.
