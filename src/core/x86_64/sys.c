@@ -133,7 +133,7 @@ void sys_init()
     /* map _usercode segment as the first page in text segment */
     paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
 #if DEBUG
-    if(debug==DBG_ELF)
+    if(debug&DBG_ELF)
         kprintf("  map .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
 #endif
 

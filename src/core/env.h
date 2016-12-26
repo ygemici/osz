@@ -35,12 +35,13 @@ extern uint8_t identity;
 extern uint8_t debug;
 
 /* debug levels */
+#define DBG_NONE 0
 #define DBG_MEMMAP 1
 #define DBG_THREADS 2
-#define DBG_ELF 3
-#define DBG_RTIMPORT 4
-#define DBG_RTEXPORT 5
-#define DBG_IRQ 6
-#define DBG_DEVICES 7
-#define DBG_SCHED 8
-#define DBG_MSG 9
+#define DBG_ELF 4
+#define DBG_RTIMPORT 8
+#define DBG_RTEXPORT 16
+#define DBG_IRQ 32
+#define DBG_DEVICES 64
+#define DBG_SCHED 128
+#define DBG_MSG 256

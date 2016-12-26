@@ -67,7 +67,7 @@ bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t m
 //    pde[DSTMQ_PDE] = dsttcb->self;
 //    __asm__ __volatile__ ( "invlpg (tmpmq)" : : :);
 #if DEBUG
-    if(debug==DBG_MSG)
+    if(debug&DBG_MSG)
         kprintf(" msg %x sending to %x, event #%x \n",
             srctcb->mypid, thread, event);
 #endif

@@ -108,8 +108,8 @@ pid_t thread_new(char *cmdline)
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    if(debug==DBG_THREADS||debug==DBG_ELF)
-        kprintf("tcb=%x %s\n",self,cmdline);
+    if(debug&DBG_THREADS||debug==DBG_ELF)
+        kprintf("Thread %x %s\n",self,cmdline);
 #endif
     return self/__PAGESIZE;
 }

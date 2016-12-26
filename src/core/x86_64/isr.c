@@ -84,10 +84,6 @@ void isr_init()
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_IRQMAX;
     }
-#if DEBUG
-    if(debug==DBG_IRQ)
-        kprintf("IDT %x\n", idt);
-#endif
     // set up isr_syscall dispatcher and IDTR, also enable IRQs
     isr_inithw(idt, &ccb);
 }

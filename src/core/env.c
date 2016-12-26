@@ -29,8 +29,8 @@
 uint __attribute__ ((section (".data"))) nrphymax;
 uint __attribute__ ((section (".data"))) nrmqmax;
 uint __attribute__ ((section (".data"))) nrirqmax;
+uint __attribute__ ((section (".data"))) debug;
 uint8_t __attribute__ ((section (".data"))) identity;
-uint8_t __attribute__ ((section (".data"))) debug;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
@@ -150,8 +150,7 @@ void env_init()
         // output verbosity level
         if(!kmemcmp(env, "debug=", 6)) {
             env += 6;
-            debug = (*env>='0'&&*env<='9'?*env - '0':0);
-            env++;
+            env = env_dec(env, &debug, 0, 0xFFFF);
         } else
 #endif
             env++;

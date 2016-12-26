@@ -34,18 +34,18 @@ Boot Parameters
 Debugging
 ---------
 
-The possible values for debug paramter are defined in [core/env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
+The possible bit flags for debug paramter are defined in [core/env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
 
 | Value | Define | Description |
 | ----: | ------ | ----------- |
 | 0     | DBG_NONE | no debug information |
 | 1     | DBG_MEMMAP | dump memory map (either E820 or EFI) |
 | 2     | DBG_THREADS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
-| 3     | DBG_ELF | debug ELF loading |
-| 4     | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/service.c) imported values |
-| 5     | DBG_RTEXPORT | debug run-time linker exported values |
-| 6     | DBG_IRQ | dump IRQ Routing Table |
-| 7     | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pci.c) |
-| 8     | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
-| 9     | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
+| 4     | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
+| 8     | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/service.c) imported values |
+| 16    | DBG_RTEXPORT | debug run-time linker exported values |
+| 32    | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
+| 64    | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pci.c) |
+| 128   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
+| 256   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
 

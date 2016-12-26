@@ -94,7 +94,7 @@ void *service_loadelf(char *fn)
     isr_gainentropy();
 
 #if DEBUG
-    if(debug==DBG_ELF)
+    if(debug&DBG_ELF)
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
 #endif
     // valid elf for this platform?
@@ -146,7 +146,7 @@ void *service_loadelf(char *fn)
 __inline__ void service_loadso(char *fn)
 {
 #if DEBUG
-    if(debug==DBG_ELF)
+    if(debug&DBG_ELF)
         kprintf("  ");
 #endif
     service_loadelf(fn);
@@ -161,7 +161,7 @@ void service_installirq(uint8_t irq, uint64_t offs)
         // find next free slot
         while(irq_routing_table[k]!=0&&k<last) k++;
 #if DEBUG
-        if(debug==DBG_IRQ)
+        if(debug&DBG_IRQ)
             kprintf("  IRQ #%d: irt[%d]=%x %s\n",
                 irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
         if(irq_routing_table[k]!=0)
@@ -173,13 +173,13 @@ void service_installirq(uint8_t irq, uint64_t offs)
         // a video card fake irq to blit composed buffer to framebuffer.
         if (l == k && irq!=2) {
 #if DEBUG
-            if(debug==DBG_IRQ)
+            if(debug&DBG_IRQ)
                 kprintf("           unmask IRQ #%d\n", irq);
 #endif
             isr_enableirq(irq);
         }
 #if DEBUG
-    } else if(debug==DBG_IRQ) {
+    } else if(debug&DBG_IRQ) {
             kprintf("WARNING irq_routing_table[%d] for %x out of range\n", k, offs);
 #endif
     }
@@ -222,7 +222,7 @@ bool_t service_rtlink()
                 d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr->p_offset);
                 /* dynamic table */
 #if DEBUG
-                if(debug==DBG_RTIMPORT)
+                if(debug&DBG_RTIMPORT)
                     kprintf("  Import %x (%d bytes):\n",
                         phdr->p_offset + j*__PAGESIZE, (int)phdr->p_memsz
                     );
@@ -276,7 +276,7 @@ bool_t service_rtlink()
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(debug==DBG_RTIMPORT)
+                if(debug&DBG_RTIMPORT)
                     kprintf("    %x %s +%x?\n", rel->offs,
                         strtable + s->st_name, rela->r_addend
                     );
@@ -289,8 +289,8 @@ bool_t service_rtlink()
     }
 
 #if DEBUG
-    if(debug==DBG_IRQ && irq_routing_table!=NULL)
-        kprintf("IRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
+    if((debug&DBG_IRQ) && irq_routing_table!=NULL)
+        kprintf("\nIRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
 #endif
 
     /*** resolve addresses ***/
@@ -338,7 +338,7 @@ bool_t service_rtlink()
         }
         /* dynamic symbol table */
 #if DEBUG
-        if(debug==DBG_RTEXPORT)
+        if(debug&DBG_RTEXPORT)
             kprintf("  Export %x (%d bytes):\n",
                 sym, strtable-(char*)sym
             );
@@ -351,7 +351,7 @@ bool_t service_rtlink()
             if(s->st_value) {
                 uint64_t offs = (uint64_t)s->st_value + j*__PAGESIZE+TEXT_ADDRESS;
 #if DEBUG
-                if(debug==DBG_RTEXPORT)
+                if(debug&DBG_RTEXPORT)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_routing_table
@@ -377,7 +377,7 @@ bool_t service_rtlink()
                     OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
                     if(r->offs != 0 && !kstrcmp(r->sym, strtable + s->st_name)) {
 #if DEBUG
-                        if(debug==DBG_RTEXPORT)
+                        if(debug&DBG_RTEXPORT)
                             kprintf(" %x", r->offs);
 #endif
                         // save virtual address
@@ -387,7 +387,7 @@ bool_t service_rtlink()
                     }
                 }
 #if DEBUG
-                if(debug==DBG_RTEXPORT)
+                if(debug&DBG_RTEXPORT)
                     kprintf("\n");
 #endif
             }
