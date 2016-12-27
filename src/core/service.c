@@ -548,7 +548,6 @@ void ui_init()
             }
             bss += __SLOTSIZE;
         }
-kprintf("screen B %x\n",screen[1]);
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));

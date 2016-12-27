@@ -217,7 +217,6 @@ void sys_init()
             }
             bss += __SLOTSIZE;
         }
-kprintf("screen A %x\n",screen[0]);
         // map framebuffer
         bss &= ~((__SLOTSIZE*(__PAGESIZE / 8))-1);
         bss += __SLOTSIZE*(__PAGESIZE / 8);

@@ -157,15 +157,20 @@ void env_init()
         } else
         // maximum timeslice rate per second for a thread
         // to allocate CPU continously (1/quantum sec)
-        if(!kmemcmp(env, "quantum=", 9)) {
-            env += 9;
+        if(!kmemcmp(env, "quantum=", 8)) {
+            env += 8;
             env = env_dec(env, &quantum, 100, 10000);
         } else
         // maximum frame rate per second
-        // suggested values 10-100
-        if(!kmemcmp(env, "fps=", 9)) {
-            env += 9;
-            env = env_dec(env, &nrirqmax, 4, 32);
+        // suggested values 50-100
+        if(!kmemcmp(env, "fps=", 4)) {
+            env += 4;
+            env = env_dec(env, &fps, 10, 200);
+        } else
+        // display layout
+        if(!kmemcmp(env, "display=", 8)) {
+            env += 8;
+            env = env_dec(env, &display, 0, 3);
         } else
 #if DEBUG
         // output verbosity level
