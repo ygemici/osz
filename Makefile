@@ -3,7 +3,7 @@ include Config
 all: clrdd todogen util boot system apps images
 
 clrdd:
-	@rm bin/disk.dd
+	@rm bin/disk.dd 2>/dev/null || true
 
 todogen:
 	@grep -ni 'TODO:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >TODO.txt || true
@@ -65,7 +65,7 @@ testefi:
 testq:
 	@echo "TEST"
 	@echo
-	qemu-system-x86_64 -name OS/Z -sdl -m 16 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
+	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
 
 testb:
 	@echo "TEST"

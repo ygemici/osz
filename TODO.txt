@@ -6,5 +6,4 @@
 ./src/core/x86_64/pci.c:33:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/acpi.c:145:        // TODO: get values for poweroff
 ./src/core/x86_64/acpi.c:267:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/isrs.sh:615:/* TODO: don't preempt if system task and ismsg() */
-./src/core/x86_64/isrs.S:702:/* TODO: don't preempt if system task and ismsg() */
+./src/core/x86_64/isr.c:63:            /* TODO: map and swap screen[0] and screen[1], then send IRQ2 */

@@ -26,6 +26,7 @@
  */
 
 #include "font.h"
+#include "env.h"
 
 /* re-entrant counter */
 char __attribute__ ((section (".data"))) reent;
@@ -73,6 +74,7 @@ typedef unsigned char *valist;
 extern char _binary_logo_tga_start;
 extern void cpu_waitkey();
 extern uint64_t isr_entropy[4];
+extern uint64_t isr_lastfps;
 
 void kprintf_reset()
 {
@@ -214,6 +216,16 @@ void kprintf_puthex(int64_t c)
         c>>=4;
     } while(c!=0&&i>0);
     kprintf(&tmp[i]);
+}
+
+void kprintf_putfps()
+{
+    int ox=kx,oy=ky,of=fg,ob=bg;
+    kx=maxx-10; ky=0; bg=0;
+    fg=isr_lastfps>fps+fps/2?0x108010:(isr_lastfps>fps?0x101080:0x801010);
+    kprintf("%d fps",isr_lastfps);
+    kx=ox; ky=oy;
+    fg=of; bg=ob;
 }
 
 void kprintf_scrollscr()

@@ -4,6 +4,8 @@
 #define SYS_IRQ 0
 #define SYS_exit 1
 #define SYS_regsrv 2
+#define SYS_swapbuf 3
+#define SYS_seterr 4
 
 /*
 #define SYS_msgget 68

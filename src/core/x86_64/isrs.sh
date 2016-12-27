@@ -102,6 +102,7 @@ cat >isrs.S <<EOF
  */
 #define _AS 1
 #include <errno.h>
+#include <syscall.h>
 #include <limits.h>
 #include "isr.h"
 #include "platform.h"
@@ -348,21 +349,35 @@ isr_syscall0:
     pop     __PAGESIZE-24
     /* enable interrupts flag in rflags */
     orw		\$0x200, __PAGESIZE-24
-    /* tcb->gpr */
-    call	isr_savecontext
     /* 'send' */
     cmpl	\$0x646E6573, %eax
     jne		2f
-    /* if destionation is SRV_core */
+    /* if destination is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
-    call	isr_syscall
+    /* shortcut to seterr syscall */
+    cmpq	\$SYS_seterr, %rsi
+    jne     5f
+    /* tcb->errno = rdx */
+    movq	%rdx, 672
+    jmp		6f
+5:  call	isr_syscall
     jmp		6f
 1:  call	msg_send
     jmp		6f
+2:  cmpl	\$0x6c6c6163, %eax
+    jne		7f
+    call	isr_savecontext
+    xorq	%rdi, %rdi
+    call	sched_block
+    call	isr_loadcontext
+    call	msg_send
+    jmp		4f
     /* 'recv' */
-2:  cmpl	\$0x76636572, %eax
+7:  cmpl	\$0x76636572, %eax
     jne		3f
+    /* tcb->gpr */
+    call	isr_savecontext
     /* never block system thread */
     movq	sys_mapping, %rax
     /* tcb->memroot == sys_mapping? */
@@ -371,8 +386,8 @@ isr_syscall0:
     xorq	%rdi, %rdi
     call	sched_block
     jmp		4f
-3:  /* tcb->errno = EINVAL */
-    movl	\$EINVAL, 672
+    /* 'call' */
+3:  movq	\$EINVAL, 672
     /* get a new thread to run */
 4:  call	sched_pick
     orq		%rax, %rax
@@ -580,6 +595,14 @@ do
 	if [ "$handler" == "" ]; then
 		handler="excabort"
 	fi
+if [ "$isr" == "exc07devunavail" ]; then
+	cat >>isrs.S <<-EOF
+	isr_$isr:
+	    iretq
+	.align $isrirqmax, 0x90
+	
+	EOF
+else
 	cat >>isrs.S <<-EOF
 	isr_$isr:
 	    cli
@@ -592,6 +615,7 @@ do
 	.align $isrirqmax, 0x90
 	
 	EOF
+fi
 	export i=$[$i+1];
 done
 echo "			irq0" >&2
@@ -612,13 +636,35 @@ iretq
     je		1f
     addq	\$8, %rbx
 1:  incq	(%rbx)
-/* TODO: don't preempt if system task and ismsg() */
+    /* save lastest fps counter if a sec passed */
+    incq    isr_ticks+16
+    movq    isr_ticks+16, %rax
+    cmpq    %rax, quantum
+    jb      5f
+    movq    isr_currfps, %rax
+    movq    %rax, isr_lastfps
+    xorq    %rax, %rax
+    movq    %rax, isr_ticks+16
+    movq    %rax, isr_currfps
+#if DEBUG
+    call    kprintf_putfps
+#endif
+    /* never preempt system thread with pending messages */
+5:  movq	sys_mapping, %rax
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rax, 648
+    jne		3f
+    /* clismsg()!=0 */
+    movq	MQ_ADDRESS, %rax
+    subq	MQ_ADDRESS+8, %rax
+    orq		%rax, %rax
+    jnz		4f
     /* switch to a new thread if any */
-    call	sched_pick
+3:  call	sched_pick
     orq		%rax, %rax
     jz		2f
     movq	%rax, %cr3
-    $EOI
+4:  $EOI
 2:  call	isr_loadcontext
     iretq
 .align $isrirqmax, 0x90

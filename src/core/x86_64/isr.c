@@ -43,16 +43,24 @@ extern uint64_t core_mapping;
 extern uint64_t ioapic_addr;
 
 /* preemption counter */
-uint64_t __attribute__ ((section (".data"))) isr_ticks[2];
+uint64_t __attribute__ ((section (".data"))) isr_ticks[3];
 /* 256 bit random seed */
 uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
+/* current fps counter and last sec value */
+uint64_t __attribute__ ((section (".data"))) isr_currfps;
+uint64_t __attribute__ ((section (".data"))) isr_lastfps;
 
 /* System call dispatcher for messages sent to SRV_core */
 bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     switch(MSG_FUNC(event)) {
+        /* case SYS_seterr handled in asm for performance */
         case SYS_exit:
+            break;
+        case SYS_swapbuf:
+            isr_currfps++;
+            /* TODO: map and swap screen[0] and screen[1], then send IRQ2 */
             break;
         default:
             tcb->errno = EINVAL;
