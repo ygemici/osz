@@ -115,23 +115,23 @@ void isr_init()
 }
 
 /* fallback exception handler */
-void excabort(uint64_t excno, uint64_t errcode)
+void excabort(uint64_t excno, uint64_t rip, uint64_t errcode)
 {
     kpanic("---- exception %d ----",excno);
 }
 
 /* exception specific code */
-void exc00divzero(uint64_t excno)
+void exc00divzero(uint64_t excno, uint64_t rip)
 {
     kpanic("divzero %d",excno);
 }
 
-void exc01debug(uint64_t excno)
+void exc01debug(uint64_t excno, uint64_t rip)
 {
     kpanic("debug %d",excno);
 }
 
-void exc13genprot(uint64_t excno)
+void exc13genprot(uint64_t excno, uint64_t rip)
 {
     kpanic("General Protection Fault %d",excno);
 }

@@ -63,7 +63,6 @@ void main()
     env_init();
     // initialize physical memory manager, required by new thread creation
     pmm_init();
-
     // this is early, we don't have "fs" subsystem yet.
 
     // initialize the "system" task, service_init(SRV_system, "sbin/system")

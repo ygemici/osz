@@ -51,7 +51,9 @@ uint32_t __attribute__ ((section (".data"))) bg;
 char __attribute__ ((section (".data"))) kpanicprefix[] =
     "OS/Z core panic: ";
 char __attribute__ ((section (".data"))) kpanicrip[] =
-    " %x %s  ";
+    " @%x ";
+char __attribute__ ((section (".data"))) kpanicsym[] =
+    "%s  ";
 char __attribute__ ((section (".data"))) kpanicsuffix[] =
     "                                                      \n"
     "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"

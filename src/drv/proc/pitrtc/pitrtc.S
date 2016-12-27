@@ -33,10 +33,12 @@
 /*.global irq8*/
 
 _init:
+xchg %bx, %bx
     xorq    %rdi, %rdi
     movq    $SYS_sysinfo, %rsi
     movl     $0x646E6573, %eax # 'send'
     syscall
+xchg %bx, %bx
     movq    $4096, %rbx
     movq     8(%rbx), %rax
     /* must match sizeof(msg_t) */

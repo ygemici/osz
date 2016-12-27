@@ -54,6 +54,7 @@
 
 /* kernel panic */
 kpanic:
+    movq    %rsp, %rbp
     pushq   %rdi
     pushq   %rsi
     pushq   %rdx
@@ -69,15 +70,16 @@ kpanic:
     addq    $8, %rsp
     call    kprintf
     movq    __PAGESIZE-40, %rsi
-#if DEBUG
-    movq    %rsi, %rdi
-    call    service_sym
-    mov     %rax, %rdx
-#else
-    xorq    %rdx, %rdx
-#endif
     movq    $kpanicrip, %rdi
     call    kprintf
+#if DEBUG
+    movq    __PAGESIZE-40, %rdi
+    call    service_sym
+    mov     %rax, %rsi
+    movq    $kpanicsym, %rdi
+    call    kprintf
+#endif
+    call    kwaitkey
     movq    $54, %rdi
     movq    $5, %rsi
     call    kprintf_center
@@ -93,7 +95,9 @@ kpanic:
     addl    $46, kx
     addl    $1, ky
     call    kprintf_putlogo
-    cli
+    call    kwaitkey
+    mov     $0xFE, %al
+    out     %al, $0x64
     hlt
 
 /* misc memory functions */
@@ -361,12 +365,21 @@ ksend:
 
 /* an early implementation, called by kprintf */
 kwaitkey:
-1:  inb     $0x60, %al
-    andb    $0x80, %al
-    orb     %al, %al
-    jnz     1b
-1:  inb     $0x60, %al
-    andb    $0x80, %al
-    orb     %al, %al
+    /* is there a key waiting? */
+1:  inb     $0x64, %al
+    andb    $1, %al
+    jnz     2f
+    jmp     1b
+    /* yes, acknowledge */
+2:  inb     $0x60, %al
+    movb    %al, %dl
+    andb    $0x80, %dl
+    inb     $0x61, %al
+    outb    %al, $0x61
+3:  inb     $0x64, %al
+    andb    $1, %al
+    jz      2f
+    jmp     3b
+2:  or      %dl, %dl
     jz      1b
     ret

@@ -29,6 +29,7 @@
 #include "env.h"
 
 /* external resources */
+extern uint8_t _code;
 extern uint64_t *stack_ptr;
 extern char *drvnames;
 extern uint64_t *drivers;
@@ -36,6 +37,7 @@ extern uint64_t *drvptr;
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t isr_entropy[4];
+extern uint64_t hpet_addr;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -162,51 +164,43 @@ uchar *service_sym(virt_t addr)
     if(addr<TEXT_ADDRESS||(addr>=BSS_ADDRESS&&addr<(uint64_t)&bootboot))
         return nosym;
     addr &= ~(__PAGESIZE-1);
-    addr += __PAGESIZE;
     do {
-        addr -= __PAGESIZE;
         ehdr = (Elf64_Ehdr *)(addr);
-    } while(addr!=0 && kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG));
-    if(ehdr==NULL || !kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+        addr -= __PAGESIZE;
+    } while(addr>=TEXT_ADDRESS && kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG));
+    if((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
         return nosym;
-    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
+    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff+2*ehdr->e_phentsize);
     Elf64_Dyn *dyn;
     Elf64_Sym *sym, *s;
     // the string table
     char *strtable, *last=NULL;
     int i, strsz, syment;
 
-    /* Program header */
-    for(i = 0; i < ehdr->e_phnum; i++){
-        if(phdr->p_type==PT_DYNAMIC) {
-            Elf64_Dyn *d;
-            dyn = d = (Elf64_Dyn *)(ehdr + phdr->p_offset);
-            while(d->d_tag != DT_NULL) {
-                if(d->d_tag == DT_STRTAB) {
-                    strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFF);
-                }
-                if(d->d_tag == DT_STRSZ) {
-                    strsz = d->d_un.d_val;
-                }
-                /* move pointer to next dynamic entry */
-                d++;
-            }
-            /* dynamic table */
-            d = dyn;
-            while(d->d_tag != DT_NULL) {
-                if(d->d_tag == DT_SYMTAB) {
-                    sym = (Elf64_Sym *)(ehdr + (d->d_un.d_ptr&0xFFFF));
-                }
-                if(d->d_tag == DT_SYMENT) {
-                    syment = d->d_un.d_val;
-                }
-                /* move pointer to next dynamic entry */
-                d++;
-            }
-            break;
+    /* Dynamic header */
+    Elf64_Dyn *d;
+    dyn = d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
+    while(d->d_tag != DT_NULL) {
+        if(d->d_tag == DT_STRTAB) {
+            strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFF);
         }
-        /* move pointer to next section header */
-        phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
+        if(d->d_tag == DT_STRSZ) {
+            strsz = d->d_un.d_val;
+        }
+        /* move pointer to next dynamic entry */
+        d++;
+    }
+    /* dynamic table */
+    d = dyn;
+    while(d->d_tag != DT_NULL) {
+        if(d->d_tag == DT_SYMTAB) {
+            sym = (Elf64_Sym *)(ehdr + (d->d_un.d_ptr&0xFFFF));
+        }
+        if(d->d_tag == DT_SYMENT) {
+            syment = d->d_un.d_val;
+        }
+        /* move pointer to next dynamic entry */
+        d++;
     }
     /* which symbol belongs to the address? */
     s=sym;
@@ -214,8 +208,9 @@ uchar *service_sym(virt_t addr)
         if(s->st_name > strsz) break;
         if(s->st_value < addr)
             last = strtable + s->st_name;
+        s++;
     }
-    return last!=NULL ? (uchar*)last : (uchar*)nosym;
+    return last!=NULL && last[0]!=0 ? (uchar*)last : (uchar*)nosym;
 }
 
 void service_installirq(uint8_t irq, uint64_t offs)
@@ -237,7 +232,7 @@ void service_installirq(uint8_t irq, uint64_t offs)
         // first of it's kind?
         // we won't enable IRQ2 (cascade) for real. We'll use it as
         // a video card fake irq to blit composed buffer to framebuffer.
-        if (l == k && irq!=2) {
+        if (l == k && irq!=2 && (hpet_addr||irq!=0)) {
 #if DEBUG
             if(debug&DBG_IRQ)
                 kprintf("           unmask IRQ #%d\n", irq);

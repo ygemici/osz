@@ -652,19 +652,12 @@ do
 	if [ "$handler" == "" ]; then
 		handler="excabort"
 	fi
-if [ "$isr" == "exc07devunavail" ]; then
-	cat >>isrs.S <<-EOF
-	isr_$isr:
-	    iretq
-	.align $isrexcmax, 0x90
-	
-	EOF
-else
 	cat >>isrs.S <<-EOF
 	isr_$isr:
 	    cli
 	    callq	isr_savecontext
 	    xorq	%rdi, %rdi
+	    movq	__PAGESIZE-40, %rsi
 	    movb	\$$i, %dil
 	    callq	$handler
 	    callq	isr_loadcontext
@@ -672,7 +665,6 @@ else
 	.align $isrexcmax, 0x90
 	
 	EOF
-fi
 	export i=$[$i+1];
 done
 cat >>isrs.S <<EOF

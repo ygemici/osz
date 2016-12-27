@@ -344,6 +344,7 @@ isr_exc00divzero:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$0, %dil
     callq	exc00divzero
     callq	isr_loadcontext
@@ -354,6 +355,7 @@ isr_exc01debug:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$1, %dil
     callq	exc01debug
     callq	isr_loadcontext
@@ -364,6 +366,7 @@ isr_exc02nmi:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$2, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -374,6 +377,7 @@ isr_exc03chkpoint:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$3, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -384,6 +388,7 @@ isr_exc04overflow:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$4, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -394,6 +399,7 @@ isr_exc05bound:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$5, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -404,6 +410,7 @@ isr_exc06invopcode:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$6, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -411,6 +418,13 @@ isr_exc06invopcode:
 .align 64, 0x90
 
 isr_exc07devunavail:
+    cli
+    callq	isr_savecontext
+    xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
+    movb	$7, %dil
+    callq	excabort
+    callq	isr_loadcontext
     iretq
 .align 64, 0x90
 
@@ -418,6 +432,7 @@ isr_exc08dblfault:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$8, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -428,6 +443,7 @@ isr_exc09coproc:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$9, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -438,6 +454,7 @@ isr_exc10invtss:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$10, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -448,6 +465,7 @@ isr_exc11segfault:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$11, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -458,6 +476,7 @@ isr_exc12stackfault:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$12, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -468,6 +487,7 @@ isr_exc13genprot:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$13, %dil
     callq	exc13genprot
     callq	isr_loadcontext
@@ -478,6 +498,7 @@ isr_exc14pagefault:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$14, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -488,6 +509,7 @@ isr_exc15unknown:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$15, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -498,6 +520,7 @@ isr_exc16float:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$16, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -508,6 +531,7 @@ isr_exc17alignment:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$17, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -518,6 +542,7 @@ isr_exc18machinecheck:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$18, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -528,6 +553,7 @@ isr_exc19double:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$19, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -538,6 +564,7 @@ isr_exc20:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$20, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -548,6 +575,7 @@ isr_exc21:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$21, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -558,6 +586,7 @@ isr_exc22:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$22, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -568,6 +597,7 @@ isr_exc23:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$23, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -578,6 +608,7 @@ isr_exc24:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$24, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -588,6 +619,7 @@ isr_exc25:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$25, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -598,6 +630,7 @@ isr_exc26:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$26, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -608,6 +641,7 @@ isr_exc27:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$27, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -618,6 +652,7 @@ isr_exc28:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$28, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -628,6 +663,7 @@ isr_exc29:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$29, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -638,6 +674,7 @@ isr_exc30:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$30, %dil
     callq	excabort
     callq	isr_loadcontext
@@ -648,6 +685,7 @@ isr_exc31:
     cli
     callq	isr_savecontext
     xorq	%rdi, %rdi
+    movq	__PAGESIZE-40, %rsi
     movb	$31, %dil
     callq	excabort
     callq	isr_loadcontext
