@@ -42,7 +42,7 @@
 #define CTRL_APIC 1
 #define CTRL_x2APIC 2
 //if you change this, you'll have to run isrs.sh
-#define ISR_CTRL CTRL_APIC
+#define ISR_CTRL CTRL_PIC
 
 // PIC, PIT constants
 #define PIC_MASTER		0x20

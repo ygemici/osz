@@ -49,7 +49,7 @@ _main:
     jne     _main
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
-    /* rax = &irt[(irq-1)*irt[0]+1] */
+    /* rax = &irt[irq*irt[0]+1] */
     xorq    %rcx, %rcx
     movb    (%rsi), %cl
     movq    %rax, %rbx
@@ -57,7 +57,6 @@ _main:
     xorq    %rdx, %rdx
     movb    8(%rbx), %al
     movq    %rax, %rdi
-    decb    %al
     mulq    %rcx
     incq    %rax
     shlq    $3, %rax

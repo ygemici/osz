@@ -51,6 +51,7 @@ uint64_t __attribute__ ((section (".data"))) *drvptr;
 char __attribute__ ((section (".data"))) *drvnames;
 uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
+sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -100,11 +101,24 @@ void sys_init()
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i=0, s;
     uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
+    sysinfostruc = kalloc(1); //allocate system info structure
+
     // get the physical page of _usercode segment
     uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
     char *c, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
+
+    // Static fields in System Info Block (returned by a syscall)
+    sysinfostruc->datetime = bootboot.datetime;
+    sysinfostruc->timezone = bootboot.timezone;
+    sysinfostruc->quantum = quantum;
+    sysinfostruc->fb_width = bootboot.fb_width;
+    sysinfostruc->fb_height = bootboot.fb_height;
+    sysinfostruc->fb_scanline = bootboot.fb_scanline;
+    sysinfostruc->debug = debug;
+    sysinfostruc->display = display;
+    sysinfostruc->rescueshell = rescueshell;
 
     // CPU Control Block (TSS64 in kernel bss)
     kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);

@@ -15,8 +15,8 @@ nrphymax=2
 nrmqmax=1
 
 // what to debug
-debug=0
-display=2      
+debug=4
+display=1     
                                                                                                                                                 
                                                                                                                                                 
                                                                                                                                                 

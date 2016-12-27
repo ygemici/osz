@@ -35,16 +35,16 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 
 /* from isrs.S */
 extern void isr_exc00divzero();
-extern void isr_irq0();
+extern void isr_preempttimer();
 extern void isr_irq1();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 
 extern uint64_t core_mapping;
-
 extern uint64_t ioapic_addr;
+extern sysinfo_t *sysinfostruc;
 
 /* preemption counter */
-uint64_t __attribute__ ((section (".data"))) isr_ticks[3];
+uint64_t __attribute__ ((section (".data"))) isr_ticks[4];
 /* 256 bit random seed */
 uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
 /* current fps counter and last sec value */
@@ -58,6 +58,20 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
     switch(MSG_FUNC(event)) {
         /* case SYS_seterr handled in asm for performance */
         case SYS_exit:
+            break;
+        case SYS_sysinfo:
+            // dynamic fields in System Info Block
+            sysinfostruc->ticks[0] = isr_ticks[0];
+            sysinfostruc->ticks[1] = isr_ticks[1];
+            sysinfostruc->srand[0] = isr_entropy[0];
+            sysinfostruc->srand[1] = isr_entropy[1];
+            sysinfostruc->srand[2] = isr_entropy[2];
+            sysinfostruc->srand[3] = isr_entropy[3];
+            sysinfostruc->fps = isr_lastfps;
+            msg_send(tcb->mypid, MSG_PTRDATA | MSG_FUNC(SYS_ack),
+                (void*)sysinfostruc,
+                sizeof(sysinfo_t),
+                SYS_sysinfo);
             break;
         case SYS_swapbuf:
             isr_currfps++;
@@ -87,8 +101,8 @@ void isr_init()
         ptr+=ISR_EXCMAX;
     }
     // 32 irq 0 preemption timer, longer than ISR_IRQMAX
-    idt[32*2+0] = IDT_GATE_LO(IDT_INT, &isr_irq0);
-    idt[32*2+1] = IDT_GATE_HI(&isr_irq0);
+    idt[32*2+0] = IDT_GATE_LO(IDT_INT, &isr_preempttimer);
+    idt[32*2+1] = IDT_GATE_HI(&isr_preempttimer);
     // 32-255 irq handlers
     ptr = &isr_irq1;
     for(i=33;i<ISR_NUMIRQ+32;i++) {

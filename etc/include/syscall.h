@@ -30,7 +30,7 @@ msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t a
 bool_t clismsg();
 /* sync, wait until there's a message (blocking) */
 msg_t *clrecv();
-/* sync, dispatch events */
+/* sync, dispatch events (blocking, noreturn) */
 void cldispatch();
 #endif
 

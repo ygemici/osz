@@ -2,10 +2,22 @@
 #define _SYS_CORE_H 1
 
 #define SYS_IRQ 0
-#define SYS_exit 1
-#define SYS_regsrv 2
-#define SYS_swapbuf 3
-#define SYS_seterr 4
+#define SYS_ack 1
+#define SYS_nack 2
+#define SYS_sched_yield 3
+#define SYS_dl 4
+#define SYS_seterr 5
+#define SYS_exit 6
+#define SYS_sysinfo 7
+#define SYS_swapbuf 8
+
+#ifndef _AS
+void *dl(uchar *sopath, uchar *sym);
+void yield();
+void exit(int err);
+sysinfo_t *sysinfo();
+void swapbuf();
+#endif
 
 /*
 #define SYS_msgget 68

@@ -32,9 +32,9 @@
 #define local_mq_end (MQ_ADDRESS + 8)
 
 /* WARNING: must match sizeof(msg_t), for asm */
-#define msg_t_size 32
+#define msg_t_size 64
 /* WARNING: must match sizeof(msg_t)=2^x, for asm */
-#define msg_t_size_bits 5
+#define msg_t_size_bits 6
 
 #ifndef _AS
 
@@ -44,6 +44,10 @@ typedef struct {
     uint64_t mq_end;
     uint64_t mq_size;     // maximum number of pending events + 1
     uint64_t mq_recvfrom;
+    uint64_t mq_buffstart;  // mapped buffer start
+    uint64_t mq_buffend;
+    uint64_t mq_buffsize;
+    uint64_t reserved;
 } __attribute__((packed)) msghdr_t;
 
 // first item in the array is the queue header

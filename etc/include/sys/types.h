@@ -95,6 +95,10 @@ typedef struct {
     uint64_t arg0;
     uint64_t arg1;
     uint64_t arg2;
+    uint64_t arg3;
+    uint64_t arg4;
+    uint64_t arg5;
+    uint64_t ts;
 } __attribute__((packed)) msg_t;
 // bits in evt: 63TTT..TTTPFFFFFFFFFFFFFFF0
 //  where T is a thread id or subsystem id, P true if message has a pointer,
@@ -113,4 +117,18 @@ typedef struct {
 //pid_t child = fork();
 //msg->evt = MSG_DEST(child) | MSG_FUNC(anynumber) | MSG_PTRDATA
 
+typedef struct {
+    uint64_t quantum;
+    uint64_t ticks[2];
+    uint64_t datetime;    // in BCD yyyymmddhhiiss
+    int64_t  timezone;    //in minutes -1440..1440
+    uint64_t fb_width;
+    uint64_t fb_height;
+    uint64_t fb_scanline;
+    uint64_t debug;
+    uint64_t display;
+    uint64_t fps;
+    uint64_t rescueshell;
+    uint64_t srand[4];
+} __attribute__((packed)) sysinfo_t;
 #endif /* sys/types.h */

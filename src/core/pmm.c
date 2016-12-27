@@ -36,7 +36,6 @@ extern OSZ_rela *relas;
 extern char *drvnames;
 extern uint64_t *drivers;
 extern uint64_t *drvptr;
-extern uint64_t *msgbuff;
 extern uint64_t *safestack;
 
 /* Main scructure */
@@ -54,8 +53,8 @@ void* pmm_alloc()
         fmem++;
     if(i) {
         /* add entropy */
-        isr_entropy[(i+0)%4] ^= fmem->base;
-        isr_entropy[(i+2)%4] ^= fmem->base;
+        isr_entropy[(i+0)%4] ^= (uint64_t)fmem->base;
+        isr_entropy[(i+2)%4] ^= (uint64_t)fmem->base;
         isr_gainentropy();
         /* allocate page */
         kmemset((char *)fmem->base, 0, __PAGESIZE);
@@ -144,7 +143,8 @@ void pmm_init()
     // buffers
     pmm.entries = fmem = (OSZ_pmm_entry*)(&pmm_entries);
     pmm.bss     = (uint8_t*)&__bss_start;
-    pmm.bss_end = (uint8_t*)&__bss_start + (uint64_t)(__PAGESIZE * ((uint)nrphymax+5));
+    pmm.bss_end = (uint8_t*)&pmm_entries + (uint64_t)(__PAGESIZE * nrphymax);
+
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
     while(num>0) {
@@ -205,7 +205,6 @@ void pmm_init()
     relas = (OSZ_rela*)kalloc(2);
     drivers = (uint64_t*)kalloc(1);
     drvnames = (char*)kalloc(2);
-    msgbuff = (uint64_t*)kalloc(1);
     //allocate stack for ISRs and syscall
     safestack = kalloc(1);
 }

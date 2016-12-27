@@ -47,7 +47,7 @@ extern char poweroffsuffix[];
 extern void kprintf_center(int w, int h);
 extern void pci_init();
 
-/* pre-parse ACPI tables for IOAPIC address */
+/* pre-parse ACPI tables. Detect IOAPIC and HPET address */
 void acpi_early(ACPI_Header *hdr)
 {
     /* get root pointer */
@@ -82,11 +82,16 @@ void acpi_early(ACPI_Header *hdr)
             if(ptr[0]==ACPI_APIC_IOAPIC_MAGIC) {
                 ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
                 ioapic_addr = rec->address;
-                return;
+                break;
             }
             len-=ptr[1];
             ptr+=ptr[1];
         }
+    } else
+    /* High Precision Event Timer */
+    if(!kmemcmp("HPET", hdr->magic, 4)) {
+        hpet_addr = (uint64_t)hdr;
+kprintf(" early %x\n", hpet_addr);
     }
 }
 
@@ -96,12 +101,12 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     char *ptr = (char*)hdr;
     uint32_t len = hdr->length - sizeof(ACPI_Header);
     uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
-
+kprintf("hpet=%x\n",hpet_addr);
     /* add entropy */
-    isr_entropy[(len+0)%4] ^= (uint64_t)hdr;
-    isr_entropy[(len+1)%4] ^= (uint64_t)((uint64_t*)hdr);
-    isr_entropy[(len+2)%4] ^= ((uint64_t)hdr<<1);
-    isr_entropy[(len+4)%4] ^= (uint64_t)((uint64_t*)hdr);
+    isr_entropy[(len+0)%4] += (uint64_t)hdr;
+    isr_entropy[(len+1)%4] -= (uint64_t)hdr;
+    isr_entropy[(len+2)%4] += ((uint64_t)hdr<<1);
+    isr_entropy[(len+4)%4] -= (uint64_t)((uint64_t)hdr>>1);
     isr_gainentropy();
 
     /* maximum tree depth */
@@ -229,17 +234,12 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
             len-=ptr[1];
             ptr+=ptr[1];
         }
-    } else
-    /* High Precision Event Timer */
-    if(!kmemcmp("HPET", hdr->magic, 4)) {
-        hpet_addr = (uint64_t)hdr;
     }
 }
 
 /* Load device drivers into "system" task's address space */
 void acpi_init()
 {
-    hpet_addr = 0;
     SLP_EN = PM1a_CNT = 0;
     
     if(bootboot.acpi_ptr==0 ||

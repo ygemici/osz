@@ -15,10 +15,14 @@ The first item in the array is the header
 
 ```c
 typedef struct {
-	int mq_start;
-	int mq_end;
-	int mq_size;
-	pid_t mq_recvfrom;
+    uint64_t mq_start;
+    uint64_t mq_end;
+    uint64_t mq_size;
+    pid_t mq_recvfrom;
+    uint64_t mq_buffstart;
+    uint64_t mq_buffend;
+    uint64_t mq_buffsize;
+    uint64_t reserved;
 } msghdr_t;
 
 msghdr = (msghdr_t *)mq[0];
@@ -35,57 +39,59 @@ User level library
 ------------------
 
 Normally you won't see a thing about message queues. The libc library hides all the details from you, so you just
-use printf() and fopen() etc.
+use printf() and fopen() etc. as usual.
 
-Low level user Library
-----------------------
+### Low level user Library
 
-Only four functions, variations on synchronisation. They are provided by `libc`, and defined in [etc/include/syscall.h](https://github.com/bztsrc/osz/blob/master/etc/include/syscall.h).
+Only five functions, variations on synchronisation. They are provided by `libc`, and defined in [etc/include/syscall.h](https://github.com/bztsrc/osz/blob/master/etc/include/syscall.h). Wrappers around user mode syscalls.
 
 ```c
 /* async, send a message (non-blocking, except dest queue is full) */
-bool_t clsend(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+bool_t clsend(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* sync, send a message and receive result (blocking) */
-msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* async, is there a message? (non-blocking) */
 bool_t clismsg();
 /* sync, wait until there's a message (blocking) */
 msg_t *clrecv();
+/* sync, dispatch events (blocking, noreturn) */
+void cldispatch();
 ```
 
-Supervisor Mode
----------------
+Supervisor Mode (Ring 0)
+------------------------
 
 Core can't use libc, it has it's own message queue implementation. Two functions in [src/core/msg.c](https://github.com/bztsrc/osz/blob/master/src/core/msg.c):
 
 ```c
 bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic);
-bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 ```
 
-Those are variations on scalar / reference arguments and destnation translation. You can also
-pass a system service number as pid, they can be found in `etc/include/syscall.h`.
+Those are variations on scalar and reference arguments. You can also
+pass a system service number as pid, they can be found in [etc/include/syscall.h](https://github.com/bztsrc/osz/blob/master/etc/include/syscall.h).
 
 If magic is given it can be a type hint on what's ptr is pointing to. It's optional as most events accept
 only one kind of reference.
 
-Low Level
----------
+### Low Level
 
 The lowest level of message sending can be found in [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S) and it's a non-blocking call.
 
 ```c
-void ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+void ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 ```
 
-It's an effective assembly implementation on copying 32 bytes into the queue and handle start / end indeces.
+It's an effective assembly implementation of copying msg_t into the queue and handle start / end indeces.
 
-Syscall ABI
------------
+User Mode (Ring 3)
+------------------
 
-There're only two functions, and their code is passed in %eax to syscall instruction. It can be
+From userspace the queue routines can be accessed via syscall instruction. The low level user library builds on it.
+Unlike there, here're only three functions. The function is passed in %eax, and can be the following:
 
- - 'send' for sending a message, see isr_syscall() and ksend().
- - 'recv' is called when the queue is empty and receiving is not possible.
+ - `'send'` for sending a message, see [isr_syscall()](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c) and [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S). Non blocking.
+ - `'call'` sends a message and blocks until a response arrives.
+ - `'recv'` is called when the queue is empty and receiving is not possible. Blocks.
 
 The arguments are stored and read in System V ABI way: %rdi=pid_t thread, %rsi=event, %rdx=arg0/ptr, %rcx=arg1/size, %r8=arg2/magic.

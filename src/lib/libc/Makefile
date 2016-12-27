@@ -6,7 +6,7 @@ SRCS = $(filter-out service.c,$(wildcard *.c))
 OBJS = $(SRCS:.c=.o)
 LIBS =
 
-CFLAGS = -Wall -fpic -fPIC -ffreestanding
+CFLAGS = -Wall -fPIC -ffreestanding
 
 all: $(OBJS) $(BINTARGET)
 

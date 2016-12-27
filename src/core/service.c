@@ -52,8 +52,10 @@ OSZ_rela __attribute__ ((section (".data"))) *relas;
 /* pids of services. Negative pids are service ids and looked up in this */
 pid_t  __attribute__ ((section (".data"))) services[NRSRV_MAX];
 uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_usrfirst;
-
+/* irq routing */
 uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
+/* dynsym */
+unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no symbol)";
 
 /* register a user mode service for pid translation */
 uint64_t service_register(pid_t thread)
@@ -93,7 +95,6 @@ void *service_loadelf(char *fn)
     ret = i;
     isr_entropy[(i+1)%4] ^= (uint64_t)elf;
     isr_entropy[(i+3)%4] ^= (uint64_t)elf;
-    isr_gainentropy();
 
 #if DEBUG
     if(debug&DBG_ELF)
@@ -154,11 +155,74 @@ __inline__ void service_loadso(char *fn)
     service_loadelf(fn);
 }
 
+/* look up a symbol for address */
+uchar *service_sym(virt_t addr)
+{
+    Elf64_Ehdr *ehdr;
+    if(addr<TEXT_ADDRESS||(addr>=BSS_ADDRESS&&addr<(uint64_t)&bootboot))
+        return nosym;
+    addr &= ~(__PAGESIZE-1);
+    addr += __PAGESIZE;
+    do {
+        addr -= __PAGESIZE;
+        ehdr = (Elf64_Ehdr *)(addr);
+    } while(addr!=0 && kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG));
+    if(ehdr==NULL || !kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+        return nosym;
+    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
+    Elf64_Dyn *dyn;
+    Elf64_Sym *sym, *s;
+    // the string table
+    char *strtable, *last=NULL;
+    int i, strsz, syment;
+
+    /* Program header */
+    for(i = 0; i < ehdr->e_phnum; i++){
+        if(phdr->p_type==PT_DYNAMIC) {
+            Elf64_Dyn *d;
+            dyn = d = (Elf64_Dyn *)(ehdr + phdr->p_offset);
+            while(d->d_tag != DT_NULL) {
+                if(d->d_tag == DT_STRTAB) {
+                    strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFF);
+                }
+                if(d->d_tag == DT_STRSZ) {
+                    strsz = d->d_un.d_val;
+                }
+                /* move pointer to next dynamic entry */
+                d++;
+            }
+            /* dynamic table */
+            d = dyn;
+            while(d->d_tag != DT_NULL) {
+                if(d->d_tag == DT_SYMTAB) {
+                    sym = (Elf64_Sym *)(ehdr + (d->d_un.d_ptr&0xFFFF));
+                }
+                if(d->d_tag == DT_SYMENT) {
+                    syment = d->d_un.d_val;
+                }
+                /* move pointer to next dynamic entry */
+                d++;
+            }
+            break;
+        }
+        /* move pointer to next section header */
+        phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
+    }
+    /* which symbol belongs to the address? */
+    s=sym;
+    for(i=0;i<(strtable-(char*)sym)/syment;i++) {
+        if(s->st_name > strsz) break;
+        if(s->st_value < addr)
+            last = strtable + s->st_name;
+    }
+    return last!=NULL ? (uchar*)last : (uchar*)nosym;
+}
+
 void service_installirq(uint8_t irq, uint64_t offs)
 {
-    uint l,k=((irq-1)*nrirqmax)+1;
-    uint last=irq*nrirqmax;
-    if(irq>0 && irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
+    uint l,k=((irq)*nrirqmax)+1;
+    uint last=(irq+1)*nrirqmax;
+    if(irq>=0 && irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
         l = k;
         // find next free slot
         while(irq_routing_table[k]!=0&&k<last) k++;

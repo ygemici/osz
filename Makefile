@@ -26,16 +26,16 @@ util: tools
 	@date +'#define OSZ_BUILD "%Y-%m-%d %H:%M:%S UTC"' >etc/include/lastbuild.h
 	@echo '#define OSZ_ARCH "$(ARCH)"' >>etc/include/lastbuild.h
 	@echo "TOOLS"
-	@make --no-print-directory -C tools all | grep -v 'Nothing to be done' || true
+	@make --no-print-directory -e -C tools all | grep -v 'Nothing to be done' || true
 
 system: src
 	@echo "CORE"
-	@make -e --no-print-directory -C src/core all | grep -v 'Nothing to be done' || true
-	@make -e --no-print-directory -C src/lib/libc all | grep -v 'Nothing to be done' || true
+	@make -e --no-print-directory -C src system | grep -v 'Nothing to be done'
 
 apps: src
 	@echo "USERSPACE"
-	@make -e --no-print-directory -C src all | grep -v 'Nothing to be done' || true
+	@make -e --no-print-directory -C src libs | grep -v 'Nothing to be done' || true
+	@make -e --no-print-directory -C src apps | grep -v 'Nothing to be done' || true
 	@echo "DRIVERS"
 	@make -e --no-print-directory -C src drivers | grep -v 'Nothing to be done' || true
 

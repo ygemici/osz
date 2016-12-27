@@ -40,7 +40,8 @@
 extern BOOTBOOT bootboot;             // boot structure
 extern unsigned char environment[__PAGESIZE]; // configuration
 extern uint8_t fb;                    // framebuffer
-extern uint8_t tmpmap;                // tempprarily mapped page
+extern uint8_t tmpmap;                // temporarily mapped page
+extern uint8_t tmp2map;               // temporarily mapped page #2
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t _usercode;             // user mode text start
 extern uint8_t _init;                 // user mode initialization code
@@ -206,13 +207,9 @@ extern void service_init(int subsystem, char *fn);
 // ----- Message Queue -----
 /** normal message senders */
 extern bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic);
-extern bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
-#define msg_sendsrv(service, event, ptr, size, magic) \
-    msg_send(((service)&0xfff)|(uint64_t)0xfffffffffffff000, event, ptr, size, magic)
-#define msg_sendssrv(service, event, arg0, arg1, arg2) \
-    msg_sends(((service)&0xfff)|(uint64_t)0xfffffffffffff000, event, arg0, arg1, arg2)
+extern bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /** low level message sender, called by senders above and IRQ ISRs */
-extern bool_t ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+extern bool_t ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);
 
 #endif
 

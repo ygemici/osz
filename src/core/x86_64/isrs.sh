@@ -111,7 +111,7 @@ cat >isrs.S <<EOF
 
 .global isr_inithw
 .global isr_exc00divzero
-.global isr_irq0
+.global isr_preempttimer
 .global isr_irq1
 .global isr_enableirq
 .global isr_disableirq
@@ -344,12 +344,13 @@ isr_syscall0:
     movq	%rcx, __PAGESIZE-40
     /* tcp->rsp, save stack pointer and switch to core stack */
     movq	%rsp, __PAGESIZE-16
-    movq    \$safestack+1024, %rsp
     /* tcb->rflags */
+    movq	\$__PAGESIZE-16, %rsp
     pushf
-    pop     __PAGESIZE-24
+    orw		\$0x200, (%rsp)
+    movq    safestack, %rsp
+    addq    \$2048, %rsp
     /* enable interrupts flag in rflags */
-    orw		\$0x200, __PAGESIZE-24
     /* 'send' */
     cmpl	\$0x646E6573, %eax
     jne		2f
@@ -362,17 +363,26 @@ isr_syscall0:
     /* tcb->errno = rdx */
     movq	%rdx, 672
     jmp		6f
-5:  call	isr_syscall
+5:  /* shortcut to sched_yield */
+    cmpq	\$SYS_sched_yield, %rsi
+    je  	4f
+6:  call	isr_syscall
     jmp		6f
-1:  call	msg_send
+1:  call	msg_sends
     jmp		6f
+    /* 'call' */
 2:  cmpl	\$0x6c6c6163, %eax
     jne		7f
     call	isr_savecontext
     xorq	%rdi, %rdi
     call	sched_block
     call	isr_loadcontext
-    call	msg_send
+    /* if destination is SRV_core */
+    orq		%rdi, %rdi
+    jnz		9f
+    call	isr_syscall
+    jmp		4f
+9:  call	msg_sends
     jmp		4f
     /* 'recv' */
 7:  cmpl	\$0x76636572, %eax
@@ -387,7 +397,6 @@ isr_syscall0:
     xorq	%rdi, %rdi
     call	sched_block
     jmp		4f
-    /* 'call' */
 3:  movq	\$EINVAL, 672
     /* get a new thread to run */
 4:  call	sched_pick
@@ -400,6 +409,53 @@ isr_syscall0:
     movq	__PAGESIZE-16, %rsp
     sysretq
 
+    /* preemption timer */
+isr_preempttimer:
+    cli
+    call	isr_savecontext
+    /* isr_ticks++ */
+    addq	\$1, isr_ticks
+    adcq	\$0, isr_ticks+8
+    /* tcb->billcnt++ or tcb->syscnt++? */
+    movq	$656, %rbx
+    movb	%al, __PAGESIZE-32   
+    cmpb	\$0x23, %al
+    je		1f
+    addq	\$8, %rbx
+1:  incq	(%rbx)
+    /* save lastest fps counter if a sec passed */
+    incq    isr_ticks+16
+    movq    isr_ticks+16, %rax
+    cmpq    %rax, quantum
+    jb      5f
+    movq    isr_currfps, %rax
+    movq    %rax, isr_lastfps
+    xorq    %rax, %rax
+    movq    %rax, isr_ticks+16
+    movq    %rax, isr_currfps
+#if DEBUG
+    call    kprintf_putfps
+#endif
+    /* never preempt system thread with pending messages */
+5:  movq	sys_mapping, %rax
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rax, 648
+    jne		3f
+    /* clismsg()!=0 */
+    movq	MQ_ADDRESS, %rax
+    subq	MQ_ADDRESS+8, %rax
+    orq		%rax, %rax
+    jnz		4f
+    /* switch to a new thread if any */
+3:  call	sched_pick
+    orq		%rax, %rax
+    jz		2f
+    movq	%rax, %cr3
+4:  $EOI
+2:  call	isr_loadcontext
+    iretq
+
+/* set up gates and msrs, enable PIC/IOAPIC */
 isr_inithw:
 /* TSS64 descriptor in GDT */
     movq	\$gdt64_tss, %rbx
@@ -586,7 +642,7 @@ cat >>isrs.S <<EOF
     ret
 
 /* exception handler ISRs */
-	.align $isrexcmax, 0x90
+	.align $isrirqmax, 0x90
 EOF
 i=0
 for isr in $exceptions
@@ -600,7 +656,7 @@ if [ "$isr" == "exc07devunavail" ]; then
 	cat >>isrs.S <<-EOF
 	isr_$isr:
 	    iretq
-	.align $isrirqmax, 0x90
+	.align $isrexcmax, 0x90
 	
 	EOF
 else
@@ -613,64 +669,15 @@ else
 	    callq	$handler
 	    callq	isr_loadcontext
 	    iretq
-	.align $isrirqmax, 0x90
+	.align $isrexcmax, 0x90
 	
 	EOF
 fi
 	export i=$[$i+1];
 done
-echo "			irq0" >&2
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
-isr_irq0:
-    /* preemption timer */
-    cli
-xchg %bx,%bx
-iretq
-    call	isr_savecontext
-    /* isr_ticks++ */
-    addq	\$1, isr_ticks
-    adcq	\$0, isr_ticks+8
-    /* tcb->billcnt++ or tcb->syscnt++? */
-    movq	$656, %rbx
-    movb	%al, __PAGESIZE-32   
-    cmpb	\$0x23, %al
-    je		1f
-    addq	\$8, %rbx
-1:  incq	(%rbx)
-    /* save lastest fps counter if a sec passed */
-    incq    isr_ticks+16
-    movq    isr_ticks+16, %rax
-    cmpq    %rax, quantum
-    jb      5f
-    movq    isr_currfps, %rax
-    movq    %rax, isr_lastfps
-    xorq    %rax, %rax
-    movq    %rax, isr_ticks+16
-    movq    %rax, isr_currfps
-#if DEBUG
-    call    kprintf_putfps
-#endif
-    /* never preempt system thread with pending messages */
-5:  movq	sys_mapping, %rax
-    /* tcb->memroot == sys_mapping? */
-    cmpq	%rax, 648
-    jne		3f
-    /* clismsg()!=0 */
-    movq	MQ_ADDRESS, %rax
-    subq	MQ_ADDRESS+8, %rax
-    orq		%rax, %rax
-    jnz		4f
-    /* switch to a new thread if any */
-3:  call	sched_pick
-    orq		%rax, %rax
-    jz		2f
-    movq	%rax, %cr3
-4:  $EOI
-2:  call	isr_loadcontext
-    iretq
-.align $isrirqmax, 0x90
-
+    .align $isrisrmax, 0x90
 EOF
 for isr in `seq 1 $numirq`
 do
@@ -690,7 +697,7 @@ do
 	    /* no, switch to system task */
 	    movq	sys_mapping, %rax
 	    movq	%rax, %cr3
-	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
 	1:  movq	\$MQ_ADDRESS, %rdi
 	    xorq	%rsi, %rsi
 	    xorq	%rdx, %rdx

@@ -41,6 +41,8 @@ SECTIONS
         . += 4096;
         tmppte = .;
         . += 4096;
+        tmp2map = .;
+        . += 4096;
         /* CPU Control Block. We need static address for that */
         ccb = .;
         . += 4096;

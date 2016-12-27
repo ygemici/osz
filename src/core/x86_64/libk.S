@@ -26,6 +26,8 @@
  */
 #define _AS 1
 #include <limits.h>
+#include <errno.h>
+#include <syscall.h>
 #include "tcb.h"
 
 .section .text
@@ -41,6 +43,7 @@
 .global kstrlen
 .global kstrcmp
 .global ksend
+.global kwaitkey
 .extern kmap_tmp
 .extern tmpctrl
 .extern tmppte
@@ -65,7 +68,15 @@ kpanic:
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
-    movq    $kpanicclr, %rdi
+    movq    __PAGESIZE-40, %rsi
+#if DEBUG
+    movq    %rsi, %rdi
+    call    service_sym
+    mov     %rax, %rdx
+#else
+    xorq    %rdx, %rdx
+#endif
+    movq    $kpanicrip, %rdi
     call    kprintf
     movq    $54, %rdi
     movq    $5, %rsi
@@ -303,9 +314,9 @@ ksend:
        rather remove the last item from the message queue
        to make space and we continue */
     movq    %rsi, %rax
-    /* destination pid == 0? */
+    /* destination pid == -1 ? */
     shrq    $16, %rax
-    orq     %rax, %rax
+    cmpl    $SRV_system, %eax
     jne     4f
     /* mqhdr->mq_end++ */
     incq    8(%rdi)
@@ -321,12 +332,20 @@ ksend:
     orq     %rax, %rsi
     /* copy message */
     movq    (%rdi), %rax
-    shlq    $5, %rax
+    shlq    $6, %rax
     addq    %rdi, %rax
     movq    %rsi, (%rax)
     movq    %rdx, 8(%rax)
     movq    %rcx, 16(%rax)
     movq    %r8, 24(%rax)
+    movq    16(%rbp), %r9
+    movq    %r9, 32(%rax)
+    movq    24(%rbp), %r9
+    movq    %r9, 40(%rax)
+    movq    32(%rbp), %r9
+    movq    %r9, 48(%rax)
+    movq    isr_ticks, %r9
+    movq    %r9, 56(%rax)
     /* mqhdr->mq_start++ */
     incq    (%rdi)
     movq    (%rdi), %rax
@@ -337,4 +356,17 @@ ksend:
     incb    %al
     ret
 4:  xorq    %rax, %rax
+    ret
+
+
+/* an early implementation, called by kprintf */
+kwaitkey:
+1:  inb     $0x60, %al
+    andb    $0x80, %al
+    orb     %al, %al
+    jnz     1b
+1:  inb     $0x60, %al
+    andb    $0x80, %al
+    orb     %al, %al
+    jz      1b
     ret

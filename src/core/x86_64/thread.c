@@ -97,6 +97,8 @@ pid_t thread_new(char *cmdline)
     msghdr_t *msghdr = (msghdr_t *)&tmpmap;
     msghdr->mq_start = msghdr->mq_end = 1;
     msghdr->mq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
+    msghdr->mq_buffstart = msghdr->mq_buffend = (nrmqmax+1);
+    msghdr->mq_buffsize = __SLOTSIZE/__PAGESIZE/2;
     // set up stack, watch out for alignment
     kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
     i = 511-((kstrlen(cmdline)+2+15)/16*2);

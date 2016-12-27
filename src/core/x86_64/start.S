@@ -145,24 +145,27 @@ cpu_init:
     orl     $0x200, %eax
     andb    $0xFB, %al
     movq    %rax, %cr4
-
     /* init entropy */
     /* add cpu feature bits */
-    xorq    %rax, isr_entropy
-    xorq    %rbx, isr_entropy+8
-    xorq    %rcx, isr_entropy+16
-    xorq    %rdx, isr_entropy+24
-    call    isr_gainentropy
+    mov     $isr_entropy, %rdi
     /* add bootboot structure, environment and core segments */
     mov     $bootboot, %rsi
 2:  lodsq
-    xorq    %rax, isr_entropy
+    xorq    %rax, (%rdi)
     lodsq
-    xorq    %rax, isr_entropy+8
+    xorq    %rax, 8(%rdi)
     lodsq
-    xorq    %rax, isr_entropy+16
+    xorq    %rax, 16(%rdi)
     lodsq
-    xorq    %rax, isr_entropy+24
+    xorq    %rax, 24(%rdi)
+    lodsq
+    addq    %rax, (%rdi)
+    lodsq
+    addq    %rax, 8(%rdi)
+    lodsq
+    addq    %rax, 16(%rdi)
+    lodsq
+    addq    %rax, 24(%rdi)
     cmp     $__bss_start, %rsi
     jb      2b
     call    isr_gainentropy
@@ -176,15 +179,3 @@ cpu_init:
 /* rodata */
 nocpu:
 .asciz "CPU feature %a not supported"
-
-/* an early implementation, called by kprintf */
-cpu_waitkey:
-1:  inb     $0x60, %al
-    andb    $0x80, %al
-    orb     %al, %al
-    jnz     1b
-1:  inb     $0x60, %al
-    andb    $0x80, %al
-    orb     %al, %al
-    jz      1b
-    ret

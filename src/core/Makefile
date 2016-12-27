@@ -37,8 +37,7 @@ endif
 endif
 	@strip -s -K fb -K bootboot -K environment $(BINTARGET)
 	@echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null
-	@#    make it look like a shared library to avoid execution from shell
-	@#echo -ne '\003' | dd conv=notrunc of=$(BINTARGET) bs=1 seek=16 1>/dev/null 2>/dev/null
+	@echo -ne '\003' | dd conv=notrunc of=$(BINTARGET) bs=1 seek=16 1>/dev/null 2>/dev/null
 
 clean:
 	@rm *.o $(ARCH)/*.o $(BINTARGET) ../../bin/*.sym 2>/dev/null || true

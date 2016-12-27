@@ -50,8 +50,8 @@ uint32_t __attribute__ ((section (".data"))) bg;
 /* ascii arts */
 char __attribute__ ((section (".data"))) kpanicprefix[] =
     "OS/Z core panic: ";
-char __attribute__ ((section (".data"))) kpanicclr[] =
-    "        ";
+char __attribute__ ((section (".data"))) kpanicrip[] =
+    " %x %s  ";
 char __attribute__ ((section (".data"))) kpanicsuffix[] =
     "                                                      \n"
     "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
@@ -66,13 +66,14 @@ char __attribute__ ((section (".data"))) poweroffprefix[] =
     "OS/Z shutdown finished.\n";
 char __attribute__ ((section (".data"))) poweroffsuffix[] =
     "TURN OFF YOUR COMPUTER";
+char __attribute__ ((section (".data"))) nullstr[] = "(null)";
 
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
 extern char _binary_logo_tga_start;
-extern void cpu_waitkey();
+extern void kwaitkey();
 extern uint64_t isr_entropy[4];
 extern uint64_t isr_lastfps;
 
@@ -182,8 +183,8 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
-    isr_entropy[offs%4] ^= (uint64_t)c;
-    isr_entropy[(offs+1)%4] ^= (uint64_t)glyph;
+    isr_entropy[offs%4] += (uint64_t)c;
+    isr_entropy[(offs+1)%4] -= (uint64_t)glyph;
 }
 
 void kprintf_putascii(int64_t c)
@@ -267,7 +268,7 @@ void kprintf_scrollscr()
                 kx++;
         }
         // wait for user input
-        cpu_waitkey();
+        kwaitkey();
         // clear the message
         for(y=0;y<font->height;y++){
             line=tmp;
@@ -305,6 +306,13 @@ void kprintf(char* fmt, ...)
     uint64_t arg;
     char *p;
 
+    if(fmt==NULL)
+        fmt=nullstr;
+    /* starts with "\x1b[UT"? */
+    if(*((uint32_t*)fmt)==(uint32_t)0x54555B1B) {
+        kprintf_unicodetable();
+        return;
+    }
 // print out the whole charset
 // return kprintf_unicodetable();
 

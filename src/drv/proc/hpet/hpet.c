@@ -1,6 +1,6 @@
 #include <osZ.h>
 
-/*public*/ void irq8()
+public void irq0()
 {
 }
 

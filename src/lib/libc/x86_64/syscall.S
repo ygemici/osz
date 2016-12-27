@@ -27,12 +27,12 @@
 
 #define _AS 1
 #include <limits.h>
+#include <syscall.h>
 
 .global clcall
 .global clsend
 .global clrecv
 .global clismsg
-.global cldl
 
 .section .text.user
 
@@ -41,7 +41,7 @@
 /* void clsend(thread,event,arg0,arg1,arg2) */
 clsend:
     # non-blocking send message
-    /* this will call msg_send() or msg_sends() in core */
+    /* this will call msg_sends() in core */
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
@@ -57,7 +57,7 @@ clcall:
     shrq     $32, %rax
     movswl   %ax, %eax
     movl     %eax, MQ_ADDRESS + 28
-    movl     $0x646E6573, %eax # 'send'
+    movl     $0x6c6c6163, %eax # 'call'
     syscall
     movq     $0, MQ_ADDRESS + 24
     /* fall into to clrecv code */
@@ -75,7 +75,7 @@ clrecv:
     /* failsafe, repeat if there's no message */
     jmp      1b
 2:  /* must match sizeof(msg_t) */
-    shlq    $5, %rax
+    shlq    $6, %rax
     addq    %rbx, %rax
     /* mqhdr->mq_end++ */
     incq    8(%rbx)
@@ -90,13 +90,4 @@ clismsg:
     # non-blocking is there a message?
     movq     MQ_ADDRESS, %rax
     subq     MQ_ADDRESS+8, %rax
-    ret
-
-/* void *cldl(&symtable,objectfile) */
-cldl:
-    # dynamically link a shared object
-    # rdi: pointer to symtable to fill
-    # rsi: pointer to .so file
-    movl     $0x6B6E696C, %eax # 'link'
-    syscall
     ret
