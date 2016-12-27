@@ -36,6 +36,7 @@
 .global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
+.global isr_irq1
 .global isr_enableirq
 .global isr_disableirq
 .global isr_gainentropy
@@ -48,7 +49,7 @@
 .section .data
     .align	16
 idt64:
-    .word	(32+16)*16-1
+    .word	(32+24)*16-1
     .quad	0
     .align	8
 isr_preemptcnt:
@@ -318,7 +319,7 @@ isr_inithw:
     xorq	%rdi, %rdi
 1:  call	isr_disableirq
     incl	%edi
-    cmpl	$16, %edi
+    cmpl	$24, %edi
     jb		1b
 
     /* enable IOAPIC in IMCR */
@@ -695,8 +696,9 @@ isr_exc31:
 /* IRQ handler ISRs */
 isr_irq0:
     /* preemption timer */
-iretq
     cli
+xchg %bx,%bx
+iretq
     call	isr_savecontext
     /* isr_ticks++ */
     addq	$1, isr_ticks
@@ -1133,6 +1135,206 @@ isr_irq16:
     xorq	%rsi, %rsi
     xorq	%rdx, %rdx
     movb	$16, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq17:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$17, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq18:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$18, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq19:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$19, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq20:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$20, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq21:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$21, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq22:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$22, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq23:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$23, %dl
+    xorq	%rcx, %rcx
+    call	ksend
+    call	isr_gainentropy
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
+
+isr_irq24:
+    cli
+    call	isr_savecontext
+    /* tcb->memroot == sys_mapping? */
+    movq	%cr3, %rax
+    cmpq	sys_mapping, %rax
+    je		1f
+    /* no, switch to system task */
+    movq	sys_mapping, %rax
+    movq	%rax, %cr3
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0); */
+1:  movq	$MQ_ADDRESS, %rdi
+    xorq	%rsi, %rsi
+    xorq	%rdx, %rdx
+    movb	$24, %dl
     xorq	%rcx, %rcx
     call	ksend
     call	isr_gainentropy

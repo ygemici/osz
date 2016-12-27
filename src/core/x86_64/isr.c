@@ -36,6 +36,7 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
+extern void isr_irq1();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 
 extern uint64_t core_mapping;
@@ -85,9 +86,12 @@ void isr_init()
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_EXCMAX;
     }
+    // 32 irq 0 preemption timer, longer than ISR_IRQMAX
+    idt[32*2+0] = IDT_GATE_LO(IDT_INT, &isr_irq0);
+    idt[32*2+1] = IDT_GATE_HI(&isr_irq0);
     // 32-255 irq handlers
-    ptr = &isr_irq0;
-    for(i=32;i<64;i++) {
+    ptr = &isr_irq1;
+    for(i=33;i<ISR_NUMIRQ+32;i++) {
         idt[i*2+0] = IDT_GATE_LO(IDT_INT, ptr);
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_IRQMAX;

@@ -45,7 +45,7 @@ Although I did my best, it doesn't mean it won't crash under unforseen circumsta
 The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example type
 
 ```shell
-qemu-system-x86_64 -sdl -m 32 -hda bin/disk.dd
+qemu-system-x86_64 -hda bin/disk.dd
 ```
 
 But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/src/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory

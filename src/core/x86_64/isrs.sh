@@ -112,6 +112,7 @@ cat >isrs.S <<EOF
 .global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
+.global isr_irq1
 .global isr_enableirq
 .global isr_disableirq
 .global isr_gainentropy
@@ -623,8 +624,9 @@ cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
 isr_irq0:
     /* preemption timer */
-iretq
     cli
+xchg %bx,%bx
+iretq
     call	isr_savecontext
     /* isr_ticks++ */
     addq	\$1, isr_ticks

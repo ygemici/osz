@@ -53,7 +53,7 @@ bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t m
     if((int64_t)thread < 0) {
         if(-(int64_t)thread < nrservices) {
             thread = services[-((int64_t)thread)];
-		} else {
+        } else {
             srctcb->errno = EINVAL;
             return false;
         }
@@ -122,7 +122,6 @@ bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t m
     kmap((uint64_t)&tmpmap, (uint64_t)(oldtcbphy), PG_CORE_NOCACHE);
     // NOTE: swapped dsttcb and srctcb!!!
 
-breakpoint;
     // send message to the mapped queue
     dsttcb->errno = EBUSY;
     if(!ksend((msghdr_t*)MQ_ADDRESS,
