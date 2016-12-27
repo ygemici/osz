@@ -1,6 +1,9 @@
 include Config
 
-all: todogen util boot system apps images
+all: clrdd todogen util boot system apps images
+
+clrdd:
+	@rm bin/disk.dd
 
 todogen:
 	@grep -ni 'TODO:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >TODO.txt || true
@@ -57,12 +60,12 @@ test: testq
 testefi:
 	@echo "TEST"
 	@echo
-	qemu-system-x86_64 -name OS/Z -bios bios-TianoCoreEFI.bin -m 256 -d guest_errors -hda fat:bin/ESP -option-rom loader/bootboot.rom -monitor stdio
+	qemu-system-x86_64 -name OS/Z -bios bios-TianoCoreEFI.bin -m 64 -d guest_errors -hda fat:bin/ESP -option-rom loader/bootboot.rom -monitor stdio
 
 testq:
 	@echo "TEST"
 	@echo
-	qemu-system-x86_64 -name OS/Z -sdl -m 256 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
+	qemu-system-x86_64 -name OS/Z -sdl -m 16 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
 
 testb:
 	@echo "TEST"

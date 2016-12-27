@@ -27,6 +27,9 @@ Boot Parameters
 | nrmqmax   | 1      | number | core | the number of pages for Message Queue (32 bytes each) |
 | nrirqmax  | 8      | number | core | the maximum number of IRQ handlers per IRQ |
 | identity  | false  | boolean | core | force running first time setup to get machine's identity, such as hostname |
+| quantum   | 100    | number | core | maximum timeframe a thread can own at once (1/quantum sec) |
+| fps       | 10     | number | core | minimum frame rate |
+| display   | 0      | number | core | selects output mode |
 | networking | true | boolean | core | disable networking [system service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
 | sound | true | boolean | core | disable sound service |
 | rescueshell | false | boolean | core | if true, starts `/bin/sh` instead of `/sbin/init` |
@@ -49,3 +52,12 @@ The possible bit flags for debug paramter are defined in [core/env.h](https://gi
 | 128   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
 | 256   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
 
+Display
+-------
+
+| Value | Define | Description |
+| ----: | ------ | ----------- |
+| 0     | DSP_MONO_MONO | a simple 2D pixelbuffer grayscale filtered on framebuffer copy |
+| 1     | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32ARGB0 color pixels |
+| 2     | DSP_STEREO_MONO | two 2D pixelbuffers, they are converted grayscale and an additional red-cyan filtering applied |
+| 3     | DSP_STEREO_COLOR | two 2D pixelbuffers, the ways of combining color left and right eye's view is driver specific |

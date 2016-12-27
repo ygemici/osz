@@ -69,6 +69,58 @@ void* pmm_alloc()
     return i ? (void*)fmem->base - __PAGESIZE : NULL;
 }
 
+// allocate a physical page slot (2M)
+// returns physical address
+void* pmm_allocslot()
+{
+    OSZ_pmm_entry *fmem = pmm.entries;
+    int i;
+again:
+    i = 0;
+    while(i++<pmm.size && fmem->size<__SLOTSIZE/__PAGESIZE)
+        fmem++;
+    i--;
+    if(i<pmm.size) {
+        /* add entropy */
+        isr_entropy[(i+0)%4] ^= fmem->base;
+        isr_entropy[(i+3)%4] ^= fmem->base;
+        isr_gainentropy();
+        /* alignment */
+        if(fmem->base & (__SLOTSIZE-1)){
+            if(fmem->size<(__SLOTSIZE + (fmem->base & (__SLOTSIZE-1)))/__PAGESIZE) {
+                i++;
+                if(i<pmm.size)
+                    goto again;
+                else
+                    goto panic;
+            }
+
+            /* split the memory fragment in two */
+            int j;
+            for(j=pmm.size;j>i;j--) {
+                pmm.entries[j].base = pmm.entries[j-1].base;
+                pmm.entries[j].size = pmm.entries[j-1].size;
+            }
+            pmm.size++;
+            j= (fmem->base & (__SLOTSIZE-1))/__PAGESIZE;
+            fmem->size = j;
+            fmem++;
+            fmem->base += j*__PAGESIZE;
+            fmem->size -= j;
+        }
+        /* allocate page slot */
+        kmemset((char *)fmem->base, 0, __SLOTSIZE);
+        fmem->base += __SLOTSIZE;
+        fmem->size -= __SLOTSIZE/__PAGESIZE;
+        pmm.freepages-=__SLOTSIZE/__PAGESIZE;
+    } else {
+panic:
+        // out of memory, should never happen during boot
+        kpanic("pmm_allocslot: Out of physical RAM");
+    }
+    return i<pmm.size ? (void*)fmem->base - __SLOTSIZE : NULL;
+}
+
 void pmm_init()
 {
     // memory map provided by the loader

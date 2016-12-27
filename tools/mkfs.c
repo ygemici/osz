@@ -611,15 +611,15 @@ int main(int argc, char **argv)
             "./mkfs disk\n");
         exit(0);
     }
-    if(argc>1 && argv[2]!=NULL){
+    if(!strcmp(argv[1],"disk")) {
+        createdisk();
+    } else
+    if(argc>1){
         if(!strcmp(argv[2],"cat")) {
             cat(argc,argv);
         } else
         if(!strcmp(argv[2],"ls")) {
             ls(argc,argv);
-        } else
-        if(!strcmp(argv[2],"disk")) {
-            createdisk();
         } else
         if(argc>2) {
             createimage(argv[2],argv[3]);

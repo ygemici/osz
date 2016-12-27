@@ -366,11 +366,11 @@ getmemmap:  xor         eax, eax
 .notacpi:   cmp         al, 1
             jne         .notmax
 .freemem:   ;do we have a ramdisk area?
-            cmp         dword [bootboot.initrd_ptr], ecx
+            cmp         dword [bootboot.initrd_ptr], 0
             jnz         .entryok
             ;is it big enough for the core and the ramdisk?
             mov         ebp, INITRD_MAXSIZE*1024*1024 + CORE_MAX
-            add         ebp, 1024*1024-1
+;            add         ebp, 1024*1024-1
             shr         ebp, 20
             shl         ebp, 20
             ;is this free memory hole big enough? (first fit)
@@ -403,8 +403,6 @@ getmemmap:  xor         eax, eax
             adc         edx, dword [di+4]
             and         edx, 000FFFFFFh
             ;is it bigger than the current max?
-            cmp         edx, dword [maxbase+4]
-            jb          .notmax
             cmp         edx, dword [maxbase+4]
             ja          .newmax
             cmp         eax, dword [maxbase]
@@ -458,8 +456,8 @@ getmemmap:  xor         eax, eax
             mov         edx, dword [maxbase+4]
             or          edx, edx
             jnz         .enoughmem
-            ;128M of RAM required
-            cmp         eax, 128*1024*1024
+            ;16M of RAM required
+            cmp         eax, 15*1024*1024
             jae         .enoughmem
 .notenoughmem:
             mov         si, noenmem

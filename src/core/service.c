@@ -33,6 +33,8 @@ extern uint64_t *stack_ptr;
 extern char *drvnames;
 extern uint64_t *drivers;
 extern uint64_t *drvptr;
+extern phy_t screen[2];
+extern phy_t pdpe;
 extern uint64_t isr_entropy[4];
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
@@ -510,7 +512,7 @@ void fs_init()
     // dynamic linker
     if(service_rtlink()) {
         // map initrd in "fs" task's memory
-        thread_mapbss(bootboot.initrd_ptr, bootboot.initrd_size);
+        thread_mapbss(BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
@@ -532,8 +534,21 @@ void ui_init()
     service_loadso("lib/libc.so");
     // dynamic linker
     if(service_rtlink()) {
-        // map screen buffer. Allocated by system task
-        // TODO: screen buffer
+        // allocate and map screen buffer B
+        int i;
+        phy_t bss = (phy_t)BSS_ADDRESS + ((phy_t)__SLOTSIZE * ((phy_t)__PAGESIZE / 8));
+        i = (bootboot.fb_width * bootboot.fb_height * 4 +
+            __SLOTSIZE - 1) / __SLOTSIZE;
+        if(display>=DSP_STEREO_MONO)
+            i*=2;
+        while(i-->0) {
+            thread_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            if(!screen[1]) {
+                screen[1]=pdpe;
+            }
+            bss += __SLOTSIZE;
+        }
+kprintf("screen B %x\n",screen[1]);
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));

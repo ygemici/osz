@@ -26,13 +26,16 @@
  */
 
 extern uint64_t nrphymax;
-extern uint nrmqmax;
-extern uint nrirqmax;
+extern uint64_t nrmqmax;
+extern uint64_t nrirqmax;
 extern uint8_t networking;
 extern uint8_t sound;
 extern uint8_t rescueshell;
 extern uint8_t identity;
-extern uint8_t debug;
+extern uint64_t debug;
+extern uint64_t quantum;
+extern uint64_t fps;
+extern uint64_t display;
 
 /* debug levels */
 #define DBG_NONE 0
@@ -45,3 +48,9 @@ extern uint8_t debug;
 #define DBG_DEVICES 64
 #define DBG_SCHED 128
 #define DBG_MSG 256
+
+/* display options */
+#define DSP_MONO_MONO 0
+#define DSP_MONO_COLOR 1
+#define DSP_STEREO_MONO 2
+#define DSP_STEREO_COLOR 3

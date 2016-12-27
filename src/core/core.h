@@ -95,6 +95,9 @@ extern void pmm_init();
 /** Allocate a physical memory page */
 extern void *pmm_alloc();
 
+/** Allocate a physical memory slot (2M) */
+extern void *pmm_allocslot();
+
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
 extern void isr_enableirq(uint8_t irq);
@@ -159,14 +162,14 @@ extern void kfree(void* ptr);
 extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
 // ----- Threads -----
+/** Map a specific memory area into user bss */
+extern void thread_mapbss(virt_t bss, phy_t phys, size_t size, uint64_t access);
+
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
 
 /** Sanity check thread data */
 extern bool_t thread_check(OSZ_tcb *tcb, phy_t *paging);
-
-/** Map a specific memory area into user bss */
-extern void thread_mapbss(phy_t phys, size_t size);
 
 // ----- Scheduler -----
 /** Add thread to scheduling */

@@ -36,6 +36,7 @@ extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern uint64_t pt;
 extern OSZ_rela *relas;
+extern phy_t pdpe;
 
 extern void kprintf_center(int w, int h);
 extern void isr_initirq();
@@ -49,6 +50,7 @@ uint64_t __attribute__ ((section (".data"))) *drivers;
 uint64_t __attribute__ ((section (".data"))) *drvptr;
 char __attribute__ ((section (".data"))) *drvnames;
 uint64_t __attribute__ ((section (".data"))) *safestack;
+phy_t __attribute__ ((section (".data"))) screen[2];
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -202,12 +204,29 @@ void sys_init()
 
     // dynamic linker
     if(service_rtlink()) {
-    
-        // TODO: allocate and map screen buffer
-
+        // allocate and map screen buffer A
+        phy_t bss = (phy_t)BSS_ADDRESS + ((phy_t)__SLOTSIZE * ((phy_t)__PAGESIZE / 8)), fbp=(phy_t)bootboot.fb_ptr;
+        i = (bootboot.fb_width * bootboot.fb_height * 4 +
+            __SLOTSIZE - 1) / __SLOTSIZE;
+        if(display>=DSP_STEREO_MONO)
+            i*=2;
+        while(i-->0) {
+            thread_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            if(!screen[0]) {
+                screen[0]=pdpe;
+            }
+            bss += __SLOTSIZE;
+        }
+kprintf("screen A %x\n",screen[0]);
         // map framebuffer
-        thread_mapbss((phy_t)bootboot.fb_ptr, bootboot.fb_size);
-    
+        bss &= ~((__SLOTSIZE*(__PAGESIZE / 8))-1);
+        bss += __SLOTSIZE*(__PAGESIZE / 8);
+        i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
+        while(i-->0) {
+            thread_mapbss(bss,fbp,__SLOTSIZE, PG_USER_RW);
+            bss += __SLOTSIZE;
+            fbp += __SLOTSIZE;
+        }
         // don't link other elfs against irq_routing_table
         irq_routing_table = NULL;
         // modify TCB for system task, platform specific part

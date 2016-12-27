@@ -3,7 +3,7 @@ OS/Z - an operating system for hackers
 
 ![OS/Z](http://forum.osdev.org/download/file.php?avatar=17273_1482039401.png)
 
-[Download live image, osZ-x86_64-latest.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true)   -   [Documentation](https://github.com/bztsrc/osz/tree/master/docs)   -   [Support](http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383)
+[Download live image, osZ-latest-x86_64.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true)   - - -   [Documentation](https://github.com/bztsrc/osz/tree/master/docs)   - - -   [Support](http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383)
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
@@ -28,13 +28,13 @@ Features
  - ELF64 object format support
  - UNICODE support with UTF-8
 
-Requirements
-------------
+Hardware Requirements
+---------------------
 
  - 5 Mb free disk space
- - 256 Mb RAM
- - 800x600/ARGB32 display
- - x86_64 processor
+ - 16 Mb RAM
+ - 800 x 600 / ARGB display
+ - x86_64 processor with SSE3
 
 Testing
 -------
@@ -42,10 +42,10 @@ Testing
 I always push the source to git in a state that's known to [compile](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without errors by a `make clean all` command.
 Although I did my best, it doesn't mean it won't crash under unforseen circumstances :-)
 
-The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example
+The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example type
 
 ```shell
-qemu-system-x86_64 -name OS/Z -sdl -m 256 -hda bin/disk.dd
+qemu-system-x86_64 -sdl -m 16 -hda bin/disk.dd
 ```
 
 But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/src/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory

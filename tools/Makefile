@@ -63,7 +63,7 @@ home:
 
 images: initrd esp usr var home
 	@echo "  mkfs		bin/disk.dd"
-	./mkfs.o disk
+	@./mkfs.o disk
 
 vdi: $(DDIMAGE)
 	@echo "  mkfs		bin/disk.vdi"

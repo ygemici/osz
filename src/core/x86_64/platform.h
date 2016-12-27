@@ -47,3 +47,4 @@ typedef uint64_t virt_t;
 #define PG_USER_RW 0b00111
 #define PG_USER_RWNOCACHE 0b10111
 #define PG_USER_DRVMEM 0b01111
+#define PG_SLOT 0b10000000

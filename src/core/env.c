@@ -26,10 +26,13 @@
  */
 
 // parsed values
-uint __attribute__ ((section (".data"))) nrphymax;
-uint __attribute__ ((section (".data"))) nrmqmax;
-uint __attribute__ ((section (".data"))) nrirqmax;
-uint __attribute__ ((section (".data"))) debug;
+uint64_t __attribute__ ((section (".data"))) nrphymax;
+uint64_t __attribute__ ((section (".data"))) nrmqmax;
+uint64_t __attribute__ ((section (".data"))) nrirqmax;
+uint64_t __attribute__ ((section (".data"))) debug;
+uint64_t __attribute__ ((section (".data"))) quantum;
+uint64_t __attribute__ ((section (".data"))) fps;
+uint64_t __attribute__ ((section (".data"))) display;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
@@ -39,7 +42,7 @@ uint8_t __attribute__ ((section (".data"))) rescueshell;
 extern uint64_t lapic_addr;
 extern uint64_t ioapic_addr;
 
-unsigned char *env_hex(unsigned char *s, uint *v, uint min, uint max)
+unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
     if(*s=='0' && *(s+1)=='x')
         s+=2;
@@ -60,7 +63,7 @@ unsigned char *env_hex(unsigned char *s, uint *v, uint min, uint max)
     return s;
 }
 
-unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max)
+unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
     if(*s=='0' && *(s+1)=='x')
         return env_hex(s+2, v, min, max);
@@ -93,11 +96,17 @@ void env_init()
 {
     unsigned char *env = environment;
     int i = __PAGESIZE;
+
     // set up defaults
     networking = sound = true;
     identity = false;
     ioapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
+    quantum = 100;
+    fps = 10;
+    display = 0;//DSP_MONO_COLOR
+    
+    //parse ascii text
     while(i-->0 && *env!=0) {
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
@@ -118,13 +127,13 @@ void env_init()
         if(!kmemcmp(env, "apic=", 5)) {
             env += 5;
             // we only accept hex value for this parameter
-            env = env_hex(env, (uint*)&lapic_addr, 1024*1024, 0);
+            env = env_hex(env, (uint64_t*)&lapic_addr, 1024*1024, 0);
         } else
         // manually override IOAPIC address
         if(!kmemcmp(env, "ioapic=", 7)) {
             env += 7;
             // we only accept hex value for this parameter
-            env = env_hex(env, (uint*)&ioapic_addr, 1024*1024, 0);
+            env = env_hex(env, (uint64_t*)&ioapic_addr, 1024*1024, 0);
         } else
         // disable networking
         if(!kmemcmp(env, "networking=", 11)) {
@@ -145,6 +154,18 @@ void env_init()
         if(!kmemcmp(env, "identity=", 9)) {
             env += 9;
             env = env_boolf(env, &identity);
+        } else
+        // maximum timeslice rate per second for a thread
+        // to allocate CPU continously (1/quantum sec)
+        if(!kmemcmp(env, "quantum=", 9)) {
+            env += 9;
+            env = env_dec(env, &quantum, 100, 10000);
+        } else
+        // maximum frame rate per second
+        // suggested values 10-100
+        if(!kmemcmp(env, "fps=", 9)) {
+            env += 9;
+            env = env_dec(env, &nrirqmax, 4, 32);
         } else
 #if DEBUG
         // output verbosity level

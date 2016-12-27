@@ -104,8 +104,8 @@ void main()
 
     // started message, cover out "starting" message
     kprintf_reset();
-    kprintf("OS/Z ready. Allocated %d pages out of %d.\n",
-        pmm.totalpages - pmm.freepages, pmm.totalpages);
+    kprintf("OS/Z ready. Allocated %d pages out of %d, free %d.%d%%\n",
+        pmm.totalpages - pmm.freepages, pmm.totalpages, pmm.freepages*100/pmm.totalpages, (pmm.freepages*1000/pmm.totalpages)%10);
 
     // enable system task. That will initialize devices and then blocks.
     // When that happens, scheduler will choose a task to run and...
