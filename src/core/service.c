@@ -230,9 +230,11 @@ void service_installirq(uint8_t irq, uint64_t offs)
 #endif
         irq_routing_table[k] = offs;
         // first of it's kind?
-        // we won't enable IRQ2 (cascade) for real. We'll use it as
-        // a video card fake irq to blit composed buffer to framebuffer.
-        if (l == k && irq!=2 && (hpet_addr||irq!=0)) {
+        // we won't enable IRQ2 (cascade) for real. With PIC, it's
+        // enabled already, and with IOAPIC it doesn't matter.
+        // We'll use it as a video card's soft irq to blit composed
+        // buffer to framebuffer.
+        if (l == k && irq!=2) {
 #if DEBUG
             if(debug&DBG_IRQ)
                 kprintf("           unmask IRQ #%d\n", irq);

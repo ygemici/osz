@@ -79,7 +79,6 @@ kpanic:
     movq    $kpanicsym, %rdi
     call    kprintf
 #endif
-    call    kwaitkey
     movq    $54, %rdi
     movq    $5, %rsi
     call    kprintf_center

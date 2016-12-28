@@ -116,6 +116,7 @@ cat >isrs.S <<EOF
 .global isr_enableirq
 .global isr_disableirq
 .global isr_gainentropy
+
 .extern isr_ticks
 .extern isr_entropy
 .extern gdt64_tss
@@ -409,52 +410,6 @@ isr_syscall0:
     movq	__PAGESIZE-16, %rsp
     sysretq
 
-    /* preemption timer */
-isr_preempttimer:
-    cli
-    call	isr_savecontext
-    /* isr_ticks++ */
-    addq	\$1, isr_ticks
-    adcq	\$0, isr_ticks+8
-    /* tcb->billcnt++ or tcb->syscnt++? */
-    movq	$656, %rbx
-    movb	%al, __PAGESIZE-32   
-    cmpb	\$0x23, %al
-    je		1f
-    addq	\$8, %rbx
-1:  incq	(%rbx)
-    /* save lastest fps counter if a sec passed */
-    incq    isr_ticks+16
-    movq    isr_ticks+16, %rax
-    cmpq    %rax, quantum
-    jb      5f
-    movq    isr_currfps, %rax
-    movq    %rax, isr_lastfps
-    xorq    %rax, %rax
-    movq    %rax, isr_ticks+16
-    movq    %rax, isr_currfps
-#if DEBUG
-    call    kprintf_putfps
-#endif
-    /* never preempt system thread with pending messages */
-5:  movq	sys_mapping, %rax
-    /* tcb->memroot == sys_mapping? */
-    cmpq	%rax, 648
-    jne		3f
-    /* clismsg()!=0 */
-    movq	MQ_ADDRESS, %rax
-    subq	MQ_ADDRESS+8, %rax
-    orq		%rax, %rax
-    jnz		4f
-    /* switch to a new thread if any */
-3:  call	sched_pick
-    orq		%rax, %rax
-    jz		2f
-    movq	%rax, %cr3
-4:  $EOI
-2:  call	isr_loadcontext
-    iretq
-
 /* set up gates and msrs, enable PIC/IOAPIC */
 isr_inithw:
 /* TSS64 descriptor in GDT */
@@ -523,9 +478,11 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	EOF
 else
 	cat >>isrs.S <<-EOF
+/*
 	    movb	\$0xFF, %al
 	    outb	%al, \$PIC_MASTER_DATA
 	    outb	%al, \$PIC_SLAVE_DATA
+*/
 	    /* IOAPIC init */
 	    movq	ioapic_addr, %rax
 	    orq 	%rax, %rax
@@ -648,7 +605,7 @@ i=0
 for isr in $exceptions
 do
 	echo "			$isr" >&2
-	handler=`grep " $isr" isr.c|cut -d '(' -f 1|cut -d ' ' -f 2`
+	handler=`grep " $isr" isr.c vmm.c |cut -d '(' -f 1|cut -d ' ' -f 2`
 	if [ "$handler" == "" ]; then
 		handler="excabort"
 	fi
@@ -670,6 +627,53 @@ done
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
     .align $isrisrmax, 0x90
+    /* preemption timer */
+isr_preempttimer:
+xchg %bx, %bx
+    cli
+    call	isr_savecontext
+    $EOI
+    /* isr_ticks++ */
+    addq	\$1, isr_ticks
+    adcq	\$0, isr_ticks+8
+    /* tcb->billcnt++ or tcb->syscnt++? */
+    movq	$656, %rbx
+    movb	__PAGESIZE-32, %al   
+    cmpb	\$0x23, %al
+    je		1f
+    addq	\$8, %rbx
+1:  incq	(%rbx)
+    /* save lastest fps counter if a sec passed */
+    incq    isr_ticks+16
+    movq    isr_ticks+16, %rax
+    cmpq    %rax, quantum
+    jb      5f
+    movq    isr_currfps, %rax
+    movq    %rax, isr_lastfps
+    xorq    %rax, %rax
+    movq    %rax, isr_ticks+16
+    movq    %rax, isr_currfps
+#if DEBUG
+    call    kprintf_putfps
+#endif
+    /* never preempt system thread with pending messages */
+5:  movq	sys_mapping, %rax
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rax, 648
+    jne		3f
+    /* clismsg()!=0 */
+    movq	MQ_ADDRESS, %rax
+    subq	MQ_ADDRESS+8, %rax
+    orq		%rax, %rax
+    jnz		2f
+    /* switch to a new thread if any */
+3:  call	sched_pick
+    orq		%rax, %rax
+    jz		2f
+    movq	%rax, %cr3
+2:  call	isr_loadcontext
+    iretq
+    .align $isrisrmax, 0x90
 EOF
 for isr in `seq 1 $numirq`
 do
@@ -682,6 +686,7 @@ do
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
+	    $EOI
 	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
 	    cmpq	sys_mapping, %rax
@@ -697,7 +702,6 @@ do
 	    xorq	%rcx, %rcx
 	    call	ksend
 	    call	isr_gainentropy
-	    $EOI
 	    call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90

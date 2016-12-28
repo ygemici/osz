@@ -116,7 +116,7 @@ __inline__ inline bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, 
             // get mapping for message buffer
             for(s = bs; s > 0; s --) {
                 pte = *kmap_getpte((uint64_t)p);
-                paging[msghdr->mq_buffstart] = (pte & ~(__PAGESIZE-1)) + PG_USER_RW;
+                paging[msghdr->mq_buffstart] = (pte & ~(__PAGESIZE-1)) + PG_USER_RO;
                 p += __PAGESIZE;
                 msghdr->mq_buffstart++;
             }

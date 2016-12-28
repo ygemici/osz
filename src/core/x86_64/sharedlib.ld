@@ -33,7 +33,7 @@ SECTIONS
     *(.text.startup .text.startup.*)
     *(.text.hot .text.hot.*)
     *(.text .stub .text.* .gnu.linkonce.t.*)
-  } :text
+  } :text =0x90
   /* important that dynstr follows dynsym */
   .dynsym         : { *(.dynsym) }
   .dynstr         : { *(.dynstr) }

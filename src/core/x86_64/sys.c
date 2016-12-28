@@ -236,7 +236,7 @@ void sys_init()
         bss += __SLOTSIZE*(__PAGESIZE / 8);
         i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
         while(i-->0) {
-            thread_mapbss(bss,fbp,__SLOTSIZE, PG_USER_RW);
+            thread_mapbss(bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
             bss += __SLOTSIZE;
             fbp += __SLOTSIZE;
         }

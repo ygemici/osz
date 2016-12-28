@@ -30,15 +30,13 @@
 
 .global _init
 .global irq0
-/*.global irq8*/
+.global irq8
 
 _init:
-xchg %bx, %bx
     xorq    %rdi, %rdi
     movq    $SYS_sysinfo, %rsi
     movl     $0x646E6573, %eax # 'send'
     syscall
-xchg %bx, %bx
     movq    $4096, %rbx
     movq     8(%rbx), %rax
     /* must match sizeof(msg_t) */
@@ -55,6 +53,7 @@ xchg %bx, %bx
     /*rbx=quantum*/
     movq    (%rax), %rbx
 
+    /* initialize PIT */
     movq    $1193180, %rax
     xorq    %rdx, %rdx
     divl    %ebx
@@ -66,19 +65,73 @@ xchg %bx, %bx
     outb    %al, $0x43
     movb    %bl, %al
     outb    %al, $0x40
-    jmp     2f
-2:  mov     %bh, %al
+    mov     %bh, %al
     outb    %al, $0x40
+
+    /* initialize RTC */
+    /* disable NMI */
+    inb     $0x70, %al
+    btsw    $8, %ax
+    outb    %al, $0x70
+    /* reprogram RTC to 1024Hz */
+    movb    $0xA, %ah
+    movb    %ah, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    andb    $0xF0, %al
+    orb     $6, %al
+    xchg    %ah, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  movb    %ah, %al
+    outb    %al, $0x71
+    /* enable periodic IRQ8 in RTC */
+    movb    $0xB, %ah
+    movb    %ah, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    orb     $0x40, %al
+    xchgb   %ah, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  movb   %ah, %al
+    outb    %al, $0x71
+    jmp     1f
+1:  /* reenable NMI */
+    inb     $0x70, %al
+    btrw    $8, %ax
+    outb    %al, $0x70
+
+/*
+    # RTC enable
+    inb     $0xA1, %al
+    andb    $0xFF-1, %al
+    outb    %al, $0xA1
+    # PIC enable
     inb     $0x21, %al
-    btr     $0, %ax
-    btr     $1, %ax
+    andb    $0xFF-5, %al
     outb    %al, $0x21
+*/
+
     ret
 
 irq0:
+    xorb    %al, %al
+    outb    %al, $0x43
+    inb     $0x40, %al
+    jmp     1f
+1:  inb     $0x40, %al
+/*
+    # PIC EOI
     movb    $0x20, %al
     outb    %al, $0x21
+    inb     $0x21, %al
+    andb    $0xFF-5, %al
+    outb    %al, $0x21
+*/
     ret
 
-.irq8:
+irq8:
     ret
