@@ -209,15 +209,33 @@ isr_syscall0:
     /* if destination is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
+    
     /* shortcut to seterr syscall */
     cmpq	$SYS_seterr, %rsi
-    jne     5f
+5:  jne     5f
     /* tcb->errno = rdx */
     movq	%rdx, 672
     jmp		6f
 5:  /* shortcut to sched_yield */
     cmpq	$SYS_sched_yield, %rsi
     je  	4f
+    /* shortcut to ack syscall, only allow system task */
+    cmpq	$SYS_ack, %rsi
+    jne     6f
+    movq	sys_mapping, %rsi
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rsi, 648
+    jne		6f
+    movq    %rdx, %rdi
+#if DEBUG
+    pushq   %rdi
+#endif
+    call    isr_enableirq
+#if DEBUG
+    popq    %rdi
+    call    dbg_enableirq
+#endif
+    jmp     5f
 6:  call	isr_syscall
     jmp		6f
 1:  call	msg_sends
@@ -307,11 +325,10 @@ isr_inithw:
     movb	$0x1, %al
     outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
-/*
     movb	$0xFF, %al
     outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
-*/
+
     /* IOAPIC init */
     movq	ioapic_addr, %rax
     orq 	%rax, %rax
@@ -333,7 +350,7 @@ isr_inithw:
 1:  call	isr_disableirq
     incl	%edi
     cmpl	$24, %edi
-    jb		1b
+    jne		1b
 
     /* enable IOAPIC in IMCR */
     movb	$0x70, %al
@@ -393,8 +410,11 @@ isr_inithw:
 /* exception handler ISRs */
 	.align 128, 0x90
 isr_exc00divzero:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$0, %dil
@@ -404,8 +424,11 @@ isr_exc00divzero:
 .align 64, 0x90
 
 isr_exc01debug:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$1, %dil
@@ -415,8 +438,11 @@ isr_exc01debug:
 .align 64, 0x90
 
 isr_exc02nmi:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$2, %dil
@@ -426,19 +452,25 @@ isr_exc02nmi:
 .align 64, 0x90
 
 isr_exc03chkpoint:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$3, %dil
-    callq	excabort
+    callq	exc03chkpoint
     callq	isr_loadcontext
     iretq
 .align 64, 0x90
 
 isr_exc04overflow:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$4, %dil
@@ -448,8 +480,11 @@ isr_exc04overflow:
 .align 64, 0x90
 
 isr_exc05bound:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$5, %dil
@@ -459,8 +494,11 @@ isr_exc05bound:
 .align 64, 0x90
 
 isr_exc06invopcode:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$6, %dil
@@ -470,8 +508,11 @@ isr_exc06invopcode:
 .align 64, 0x90
 
 isr_exc07devunavail:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$7, %dil
@@ -481,8 +522,11 @@ isr_exc07devunavail:
 .align 64, 0x90
 
 isr_exc08dblfault:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$8, %dil
@@ -492,8 +536,11 @@ isr_exc08dblfault:
 .align 64, 0x90
 
 isr_exc09coproc:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$9, %dil
@@ -503,8 +550,11 @@ isr_exc09coproc:
 .align 64, 0x90
 
 isr_exc10invtss:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$10, %dil
@@ -514,8 +564,11 @@ isr_exc10invtss:
 .align 64, 0x90
 
 isr_exc11segfault:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$11, %dil
@@ -525,8 +578,11 @@ isr_exc11segfault:
 .align 64, 0x90
 
 isr_exc12stackfault:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$12, %dil
@@ -536,8 +592,11 @@ isr_exc12stackfault:
 .align 64, 0x90
 
 isr_exc13genprot:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$13, %dil
@@ -547,8 +606,11 @@ isr_exc13genprot:
 .align 64, 0x90
 
 isr_exc14pagefault:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$14, %dil
@@ -558,8 +620,11 @@ isr_exc14pagefault:
 .align 64, 0x90
 
 isr_exc15unknown:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$15, %dil
@@ -569,8 +634,11 @@ isr_exc15unknown:
 .align 64, 0x90
 
 isr_exc16float:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$16, %dil
@@ -580,8 +648,11 @@ isr_exc16float:
 .align 64, 0x90
 
 isr_exc17alignment:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$17, %dil
@@ -591,8 +662,11 @@ isr_exc17alignment:
 .align 64, 0x90
 
 isr_exc18machinecheck:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$18, %dil
@@ -602,8 +676,11 @@ isr_exc18machinecheck:
 .align 64, 0x90
 
 isr_exc19double:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$19, %dil
@@ -613,8 +690,11 @@ isr_exc19double:
 .align 64, 0x90
 
 isr_exc20:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$20, %dil
@@ -624,8 +704,11 @@ isr_exc20:
 .align 64, 0x90
 
 isr_exc21:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$21, %dil
@@ -635,8 +718,11 @@ isr_exc21:
 .align 64, 0x90
 
 isr_exc22:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$22, %dil
@@ -646,8 +732,11 @@ isr_exc22:
 .align 64, 0x90
 
 isr_exc23:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$23, %dil
@@ -657,8 +746,11 @@ isr_exc23:
 .align 64, 0x90
 
 isr_exc24:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$24, %dil
@@ -668,8 +760,11 @@ isr_exc24:
 .align 64, 0x90
 
 isr_exc25:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$25, %dil
@@ -679,8 +774,11 @@ isr_exc25:
 .align 64, 0x90
 
 isr_exc26:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$26, %dil
@@ -690,8 +788,11 @@ isr_exc26:
 .align 64, 0x90
 
 isr_exc27:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$27, %dil
@@ -701,8 +802,11 @@ isr_exc27:
 .align 64, 0x90
 
 isr_exc28:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$28, %dil
@@ -712,8 +816,11 @@ isr_exc28:
 .align 64, 0x90
 
 isr_exc29:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$29, %dil
@@ -723,8 +830,11 @@ isr_exc29:
 .align 64, 0x90
 
 isr_exc30:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$30, %dil
@@ -734,8 +844,11 @@ isr_exc30:
 .align 64, 0x90
 
 isr_exc31:
+xchg %bx, %bx
     cli
     callq	isr_savecontext
+    /* tcb->excerr = 0; */
+    movq	$0, 680
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$31, %dil
@@ -751,9 +864,6 @@ isr_preempttimer:
 xchg %bx, %bx
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* isr_ticks++ */
     addq	$1, isr_ticks
     adcq	$0, isr_ticks+8
@@ -764,7 +874,12 @@ xchg %bx, %bx
     je		1f
     addq	$8, %rbx
 1:  incq	(%rbx)
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
+    jmp 2f
     /* save lastest fps counter if a sec passed */
+/*
     incq    isr_ticks+16
     movq    isr_ticks+16, %rax
     cmpq    %rax, quantum
@@ -777,18 +892,14 @@ xchg %bx, %bx
 #if DEBUG
     call    kprintf_putfps
 #endif
-    /* never preempt system thread with pending messages */
+*/
+    /* never preempt system thread */
 5:  movq	sys_mapping, %rax
     /* tcb->memroot == sys_mapping? */
     cmpq	%rax, 648
-    jne		3f
-    /* clismsg()!=0 */
-    movq	MQ_ADDRESS, %rax
-    subq	MQ_ADDRESS+8, %rax
-    orq		%rax, %rax
-    jnz		2f
+    je		2f
     /* switch to a new thread if any */
-3:  call	sched_pick
+    call	sched_pick
     orq		%rax, %rax
     jz		2f
     movq	%rax, %cr3
@@ -798,9 +909,6 @@ xchg %bx, %bx
 isr_irq1:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -814,7 +922,11 @@ isr_irq1:
     xorq	%rdx, %rdx
     movb	$1, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -823,9 +935,6 @@ isr_irq1:
 isr_irq2:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -839,7 +948,11 @@ isr_irq2:
     xorq	%rdx, %rdx
     movb	$2, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -848,9 +961,6 @@ isr_irq2:
 isr_irq3:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -864,7 +974,11 @@ isr_irq3:
     xorq	%rdx, %rdx
     movb	$3, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -873,9 +987,6 @@ isr_irq3:
 isr_irq4:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -889,7 +1000,11 @@ isr_irq4:
     xorq	%rdx, %rdx
     movb	$4, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -898,9 +1013,6 @@ isr_irq4:
 isr_irq5:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -914,7 +1026,11 @@ isr_irq5:
     xorq	%rdx, %rdx
     movb	$5, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -923,9 +1039,6 @@ isr_irq5:
 isr_irq6:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -939,7 +1052,11 @@ isr_irq6:
     xorq	%rdx, %rdx
     movb	$6, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -948,9 +1065,6 @@ isr_irq6:
 isr_irq7:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -964,7 +1078,11 @@ isr_irq7:
     xorq	%rdx, %rdx
     movb	$7, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -973,9 +1091,6 @@ isr_irq7:
 isr_irq8:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -989,7 +1104,11 @@ isr_irq8:
     xorq	%rdx, %rdx
     movb	$8, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -998,9 +1117,6 @@ isr_irq8:
 isr_irq9:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1014,7 +1130,11 @@ isr_irq9:
     xorq	%rdx, %rdx
     movb	$9, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1023,9 +1143,6 @@ isr_irq9:
 isr_irq10:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1039,7 +1156,11 @@ isr_irq10:
     xorq	%rdx, %rdx
     movb	$10, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1048,9 +1169,6 @@ isr_irq10:
 isr_irq11:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1064,7 +1182,11 @@ isr_irq11:
     xorq	%rdx, %rdx
     movb	$11, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1073,9 +1195,6 @@ isr_irq11:
 isr_irq12:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1089,7 +1208,11 @@ isr_irq12:
     xorq	%rdx, %rdx
     movb	$12, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1098,9 +1221,6 @@ isr_irq12:
 isr_irq13:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1114,7 +1234,11 @@ isr_irq13:
     xorq	%rdx, %rdx
     movb	$13, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1123,9 +1247,6 @@ isr_irq13:
 isr_irq14:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1139,7 +1260,11 @@ isr_irq14:
     xorq	%rdx, %rdx
     movb	$14, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1148,9 +1273,6 @@ isr_irq14:
 isr_irq15:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1164,7 +1286,11 @@ isr_irq15:
     xorq	%rdx, %rdx
     movb	$15, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1173,9 +1299,6 @@ isr_irq15:
 isr_irq16:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1189,7 +1312,11 @@ isr_irq16:
     xorq	%rdx, %rdx
     movb	$16, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1198,9 +1325,6 @@ isr_irq16:
 isr_irq17:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1214,7 +1338,11 @@ isr_irq17:
     xorq	%rdx, %rdx
     movb	$17, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1223,9 +1351,6 @@ isr_irq17:
 isr_irq18:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1239,7 +1364,11 @@ isr_irq18:
     xorq	%rdx, %rdx
     movb	$18, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1248,9 +1377,6 @@ isr_irq18:
 isr_irq19:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1264,7 +1390,11 @@ isr_irq19:
     xorq	%rdx, %rdx
     movb	$19, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1273,9 +1403,6 @@ isr_irq19:
 isr_irq20:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1289,7 +1416,11 @@ isr_irq20:
     xorq	%rdx, %rdx
     movb	$20, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1298,9 +1429,6 @@ isr_irq20:
 isr_irq21:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1314,7 +1442,11 @@ isr_irq21:
     xorq	%rdx, %rdx
     movb	$21, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1323,9 +1455,6 @@ isr_irq21:
 isr_irq22:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1339,7 +1468,11 @@ isr_irq22:
     xorq	%rdx, %rdx
     movb	$22, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1348,9 +1481,6 @@ isr_irq22:
 isr_irq23:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1364,7 +1494,11 @@ isr_irq23:
     xorq	%rdx, %rdx
     movb	$23, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq
@@ -1373,9 +1507,6 @@ isr_irq23:
 isr_irq24:
     cli
     call	isr_savecontext
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     /* tcb->memroot == sys_mapping? */
     movq	%cr3, %rax
     cmpq	sys_mapping, %rax
@@ -1389,7 +1520,11 @@ isr_irq24:
     xorq	%rdx, %rdx
     movb	$24, %dl
     xorq	%rcx, %rcx
+    call	isr_disableirq
     call	ksend
+    /* APIC EOI */
+    movq	apic, %rax
+    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
     call	isr_loadcontext
     iretq

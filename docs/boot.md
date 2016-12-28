@@ -34,13 +34,13 @@ That platform independent code does the following:
  3. `env_init` parses the environment variables passed by the loader in [src/core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c)
  4. `pmm_init()` sets up Physical Memory Manager in [src/core/pmm.c](https://github.com/bztsrc/osz/blob/master/src/core/pmm.c)
 
-After that it initializes system services (subsystems):
+After that it initializes system services (subsystems), begining with the three critical services:
 
- 1. first of all, the user space counterpart of core, "system" task by calling `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
+ 1. first is the user space counterpart of core, "system" task. Loaded by `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal service, save it has the initrd mapped in it's bss segment.
  3. on order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike networking and sound services which are optional.
- 4. the call `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) is used to load several other parts.
- 5. as a last thing, switch to userland by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
+ 4. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) is used to load several other parts.
+ 5. and as a final thing, a switch to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 That `sys_enable()` function switches to system task, and starts executing it. Because `sys_init()` has cleared Interrupt Flag,
 system task can freely call all device driver's initialization code without interruption.
@@ -53,3 +53,15 @@ User
 The first real userspace process is either [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c), or if rescueshell was requested in [etc/CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG), it's [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c).
 
 Init will start further services (not subsystems) among others the user session service that provides a login prompt.
+
+### Executables
+
+They start at `_start` defined in [lib/libc/(platform)/crt0.S](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/crt0.S).
+
+### Shared libraries
+
+Similarly to executable, but the entry point is called `_init`. If not defined, fallbacks to [lib/libc/(platform)/init.S](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/init.S).
+
+### Services
+
+Service's entry point is called `_init` as well, which must end in a call to `cldispath()`. If not defined, fallbacks to [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).

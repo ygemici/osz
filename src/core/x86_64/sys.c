@@ -59,7 +59,7 @@ char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 }
 
 /* turn off computer */
-void sys_poweroff()
+void sys_disable()
 {
     // APCI poweroff
     acpi_poweroff();
@@ -81,7 +81,7 @@ __inline__ void sys_enable()
     // map "system" task's TCB
     kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
 
-    // fake an interrupt handler return to start multitasking
+    // fake an interrupt handler return to force first task switch
     __asm__ __volatile__ (
         // switch to system task's address space
         "mov %0, %%rax; mov %%rax, %%cr3;"
@@ -100,8 +100,6 @@ void sys_init()
     /* this code should go in service.c, but has platform dependent parts */
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i=0, s;
-    uint64_t *safestack = kalloc(1);//allocate extra stack for ISRs
-    sysinfostruc = kalloc(1); //allocate system info structure
 
     // get the physical page of _usercode segment
     uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
@@ -255,7 +253,9 @@ void sys_init()
     
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
-
+#if DEBUG
+        dbg_init();
+#endif
     } else {
         kpanic("unable to start system task");
     }

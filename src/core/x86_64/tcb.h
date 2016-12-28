@@ -55,6 +55,7 @@ typedef struct {
     uint64_t billcnt;   // ticks thread spent in ring 3      tcb+ 656
     uint64_t syscnt;    // ticks thread spent in ring 0      tcb+ 664
     uint64_t errno;     // thread safe libc errno            tcb+ 672
+    uint64_t excerr;    // exception error code              tcb+ 680
     // ordering does not matter from here, fields below not referenced in asm
     pid_t sendto;
     pid_t blksend;      // head of blocked threads chain (sending to this thread)
@@ -71,8 +72,8 @@ typedef struct {
     uint64_t cmdline;   // pointer to argc in stack
     uuid_t acl[128];    // access control list
 
-    uint8_t padding[__PAGESIZE-2832-TCB_ISRSTACK-40];
-    uint8_t irqhandlerstack[TCB_ISRSTACK];
+    uint8_t padding[__PAGESIZE-2840-TCB_ISRSTACK];
+    uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
     // the last 40 bytes of stack is referenced directly from asm
     uint64_t rip;       // at the end of ist_usr stack an iretq

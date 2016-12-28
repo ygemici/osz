@@ -25,32 +25,38 @@
  * @brief Core environment variables (defined in FS0:\BOOTBOOT\CONFIG)
  */
 
-extern uint64_t nrphymax;
-extern uint64_t nrmqmax;
-extern uint64_t nrirqmax;
-extern uint8_t networking;
-extern uint8_t sound;
-extern uint8_t rescueshell;
-extern uint8_t identity;
-extern uint64_t debug;
-extern uint64_t quantum;
-extern uint64_t fps;
-extern uint64_t display;
+#ifndef _AS
+#ifndef _ENV_C_
+extern uint64_t nrphymax;   // number of hysical fragment pages
+extern uint64_t nrmqmax;    // number of message queue pages
+extern uint64_t nrirqmax;   // number of interrupt routing pages
+extern uint64_t nrsrvmax;   // number of services pages
+extern uint64_t nrlogmax;   // number of syslog_buf pages
+extern uint8_t networking;  // should start net service on boot?
+extern uint8_t sound;       // should start sound service?
+extern uint8_t rescueshell; // boot rescue shell instead of init?
+extern uint8_t identity;    // run first time setup
+extern uint64_t debug;      // see below
+extern uint64_t quantum;    // max CPU allocation time: 1/quantum sec
+extern uint64_t fps;        // max frame per sec
+extern uint64_t display;    // see below
+#endif
+#endif
 
 /* debug levels */
-#define DBG_NONE 0
-#define DBG_MEMMAP 1
-#define DBG_THREADS 2
-#define DBG_ELF 4
-#define DBG_RTIMPORT 8
-#define DBG_RTEXPORT 16
-#define DBG_IRQ 32
-#define DBG_DEVICES 64
-#define DBG_SCHED 128
-#define DBG_MSG 256
+#define DBG_NONE 0          // none, false
+#define DBG_MEMMAP 1        // mm
+#define DBG_THREADS 2       // th
+#define DBG_ELF 4           // el
+#define DBG_RTIMPORT 8      // ri
+#define DBG_RTEXPORT 16     // re
+#define DBG_IRQ 32          // ir
+#define DBG_DEVICES 64      // de
+#define DBG_SCHED 128       // sc
+#define DBG_MSG 256         // ms
 
 /* display options */
-#define DSP_MONO_MONO 0
-#define DSP_MONO_COLOR 1
-#define DSP_STEREO_MONO 2
-#define DSP_STEREO_COLOR 3
+#define DSP_MONO_MONO 0     // flat grayscale
+#define DSP_MONO_COLOR 1    // flat color
+#define DSP_STEREO_MONO 2   // grayscale red-cyan anaglyph
+#define DSP_STEREO_COLOR 3  // anything (polarized glass, VR helmet etc.)

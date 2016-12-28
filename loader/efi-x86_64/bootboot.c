@@ -378,17 +378,11 @@ LoadCore(UINT8 *initrd_ptr)
         // Check program header
         Elf64_Phdr *phdr=(Elf64_Phdr *)((UINT8 *)ehdr+ehdr->e_phoff);
         for(i=0;i<ehdr->e_phnum;i++){
-            if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff) {
+            if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
                 core_len = ((phdr->p_filesz+4096-1)/4096)*4096;
-                // Allocate memory (2M)
-                uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 2*1024*1024/4096, (EFI_PHYSICAL_ADDRESS*)&core_ptr);
-                if (core_ptr == NULL) {
-                    return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
-                }
-                ZeroMem(core_ptr,2*1024*1024);
+                core_ptr = (UINT8 *)ehdr;
                 entrypoint=ehdr->e_entry;
-                DBG(L" * Entry point @%lx, offset @%lx, text @%lx %d bytes\n",entrypoint, (UINT8 *)ehdr+phdr->p_offset, core_ptr, core_len);
-                CopyMem(core_ptr,(UINT8 *)ehdr+phdr->p_offset,core_len);
+                DBG(L" * Entry point @%lx, text @%lx %d bytes\n",entrypoint, core_ptr, core_len);
                 return EFI_SUCCESS;
             }
             phdr=(Elf64_Phdr *)((UINT8 *)phdr+ehdr->e_phentsize);

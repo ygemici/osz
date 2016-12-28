@@ -44,7 +44,7 @@
 #define BSS_ADDRESS (0x100000000)
 // (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
 #define NRMQ_MAX	63
-#define NRSRV_MAX	64
+#define NRSRV_MAX	16
 
 #  define CHAR_BIT	8
 #  define SCHAR_MIN	(-128)

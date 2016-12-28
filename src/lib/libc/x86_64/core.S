@@ -43,9 +43,9 @@ dl:
     # rdi: pointer to .so file path
     # rsi: pointer to symbol name
     movq    %rdi, %rdx
-    movq    %rsi, %rcx
     xorq    %rdi, %rdi
-    movq    $SYS_sysinfo, %rsi
+    movq    %rsi, %r8
+    movq    $SYS_dl, %rsi
     movl     $0x646E6573, %eax # 'send'
     syscall
     jmp     2f

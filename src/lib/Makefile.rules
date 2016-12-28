@@ -1,0 +1,27 @@
+include ../../../../Config
+
+BINTARGET = ../../../../bin/root/lib/$(TARGET)
+SRCS = $(wildcard *.c)
+SRCS += $(wildcard *.S)
+TMP = $(SRCS:.c=.o)
+OBJS = $(TMP:.S=.o)
+LIBS += -lc
+
+CFLAGS += -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_LIBRARY=1
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/root/lib
+
+all: $(OBJS) $(BINTARGET)
+
+%.o: %.S
+	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+
+%.o: %.c
+	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+
+$(BINTARGET):
+	@echo "  src		$(TARGET)"
+	@mkdir -p ../../../../bin/root/lib/$(dir $(TARGET))
+	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+
+clean:
+	@rm *.o $(BINTARGET) 2>/dev/null || true

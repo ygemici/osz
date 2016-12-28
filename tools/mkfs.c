@@ -482,6 +482,19 @@ int createdisk()
     setint(2,gpt+560+384);                          //noefi flag
     memcpy(gpt+568+384,L"OS/Z Private Data",34);    //name
 
+    // GPT, OS/Z Swap Partition (mounted at /dev/swap)
+    memcpy(gpt+512+512,"OS/Z",4);                   //entrytype, magic
+    setint(256,gpt+516+512);                        //version 1.0, no flags
+    memcpy(gpt+522+512,"swap",4);                   //mount point
+    setint(uuid[0]+5,gpt+528+512);                  //partition UUID
+    setint(uuid[1],gpt+532+512);
+    setint(uuid[2],gpt+536+512);
+    setint(uuid[3],gpt+540+512);
+    setint(((gs+es+us+vs+hs)/512)+1,gpt+544+512);   //startlba
+    setint(((gs+es+us+vs+hs+1)/512),gpt+552+512);   //endlba
+    setint(2,gpt+560+512);                          //noefi flag
+    memcpy(gpt+568+512,L"OS/Z Swap Area",30);       //name
+
     // Checksums
     //partitions
     i=(int)((unsigned char)gpt[80]*(unsigned char)gpt[84]); //length=number*size

@@ -1,8 +1,6 @@
-NAME="OS/Z"
-ID=osZ
-VERSION="0.0.1"
-PRETTY_NAME="OS/Z Bende"
-ANSI_COLOR="0;44;37"
-HOME_URL="https://github.com/bztsrc/osz"
-SUPPORT_URL="http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383"
-BUG_REPORT_URL="https://github.com/bztsrc/osz/issues"
+NAME = "OS/Z mArci"
+ID = osZ
+VERSION = "0.0.1a"
+HOME_URL = "https://github.com/bztsrc/osz"
+SUPPORT_URL = "http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383"
+BUG_REPORT_URL = "https://github.com/bztsrc/osz/issues"

@@ -29,41 +29,43 @@
 #include <limits.h>
 #include <syscall.h>
 
-.global clcall
-.global clsend
-.global clrecv
-.global clismsg
+.global mq_call
+.global mq_send
+.global mq_recv
+.global mq_ismsg
 
 .section .text.user
 
 /* dest: pid_t<<16 + msg type */
 
-/* void clsend(thread,event,arg0,arg1,arg2) */
-clsend:
+/* void mq_send(thread,event,arg0,arg1,arg2,arg3,arg4,arg5) */
+mq_send:
     # non-blocking send message
     /* this will call msg_sends() in core */
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
 
-/* msg_t *clcall(thread,event,arg0,arg1,arg2) */
-clcall:
+/* msg_t *mq_call(thread,event,arg0,arg1,arg2,arg3,arg4,arg5) */
+mq_call:
     # blocking, send a request and receive result
     # rdi: destination pid + message type
     /* must match OSZ_tcb, tcb->recvfrom */
     movq     %rdi, %rax
     shrq     $16, %rax
+    /* lock message queue */
     movl     %eax, MQ_ADDRESS + 24
     shrq     $32, %rax
     movswl   %ax, %eax
     movl     %eax, MQ_ADDRESS + 28
     movl     $0x6c6c6163, %eax # 'call'
     syscall
+    /* unlock */
     movq     $0, MQ_ADDRESS + 24
-    /* fall into to clrecv code */
+    /* fall into to mq_recv code */
 
-/* msg_t *clrecv(from) */
-clrecv:
+/* msg_t *mq_recv(from) */
+mq_recv:
     # blocking receive message
 1:  movq     $MQ_ADDRESS, %rbx
     movq     8(%rbx), %rax
@@ -85,8 +87,8 @@ clrecv:
     movq    $1, 8(%rbx)
 3:  ret
 
-/* uint64_t clismsg() */
-clismsg:
+/* uint64_t mq_ismsg() */
+mq_ismsg:
     # non-blocking is there a message?
     movq     MQ_ADDRESS, %rax
     subq     MQ_ADDRESS+8, %rax

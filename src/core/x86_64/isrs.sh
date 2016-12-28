@@ -358,15 +358,33 @@ isr_syscall0:
     /* if destination is SRV_core */
     orq		%rdi, %rdi
     jnz		1f
+    
     /* shortcut to seterr syscall */
     cmpq	\$SYS_seterr, %rsi
-    jne     5f
+5:  jne     5f
     /* tcb->errno = rdx */
     movq	%rdx, 672
     jmp		6f
 5:  /* shortcut to sched_yield */
     cmpq	\$SYS_sched_yield, %rsi
     je  	4f
+    /* shortcut to ack syscall, only allow system task */
+    cmpq	\$SYS_ack, %rsi
+    jne     6f
+    movq	sys_mapping, %rsi
+    /* tcb->memroot == sys_mapping? */
+    cmpq	%rsi, 648
+    jne		6f
+    movq    %rdx, %rdi
+#if DEBUG
+    pushq   %rdi
+#endif
+    call    isr_enableirq
+#if DEBUG
+    popq    %rdi
+    call    dbg_enableirq
+#endif
+    jmp     5f
 6:  call	isr_syscall
     jmp		6f
 1:  call	msg_sends
@@ -478,11 +496,10 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	EOF
 else
 	cat >>isrs.S <<-EOF
-/*
 	    movb	\$0xFF, %al
 	    outb	%al, \$PIC_MASTER_DATA
 	    outb	%al, \$PIC_SLAVE_DATA
-*/
+	
 	    /* IOAPIC init */
 	    movq	ioapic_addr, %rax
 	    orq 	%rax, %rax
@@ -504,7 +521,7 @@ else
 	1:  call	isr_disableirq
 	    incl	%edi
 	    cmpl	\$$numirq, %edi
-	    jb		1b
+	    jne		1b
 	
 	    /* enable IOAPIC in IMCR */
 	    movb	\$0x70, %al
@@ -609,10 +626,23 @@ do
 	if [ "$handler" == "" ]; then
 		handler="excabort"
 	fi
+	if [ "$isr" -ge 10 -a "$isr" -le 14 ]; then
+		read -r -d '' EXCERR <<-EOF
+		    /* tcb->excerr = errcode; */
+		    popq	680
+		EOF
+	else
+		read -r -d '' EXCERR <<-EOF
+		    /* tcb->excerr = 0; */
+		    movq	\$0, 680
+		EOF
+	fi
 	cat >>isrs.S <<-EOF
 	isr_$isr:
+xchg %bx, %bx
 	    cli
 	    callq	isr_savecontext
+	    $EXCERR
 	    xorq	%rdi, %rdi
 	    movq	__PAGESIZE-40, %rsi
 	    movb	\$$i, %dil
@@ -632,7 +662,6 @@ isr_preempttimer:
 xchg %bx, %bx
     cli
     call	isr_savecontext
-    $EOI
     /* isr_ticks++ */
     addq	\$1, isr_ticks
     adcq	\$0, isr_ticks+8
@@ -643,7 +672,10 @@ xchg %bx, %bx
     je		1f
     addq	\$8, %rbx
 1:  incq	(%rbx)
+    $EOI
+    jmp 2f
     /* save lastest fps counter if a sec passed */
+/*
     incq    isr_ticks+16
     movq    isr_ticks+16, %rax
     cmpq    %rax, quantum
@@ -656,18 +688,14 @@ xchg %bx, %bx
 #if DEBUG
     call    kprintf_putfps
 #endif
-    /* never preempt system thread with pending messages */
+*/
+    /* never preempt system thread */
 5:  movq	sys_mapping, %rax
     /* tcb->memroot == sys_mapping? */
     cmpq	%rax, 648
-    jne		3f
-    /* clismsg()!=0 */
-    movq	MQ_ADDRESS, %rax
-    subq	MQ_ADDRESS+8, %rax
-    orq		%rax, %rax
-    jnz		2f
+    je		2f
     /* switch to a new thread if any */
-3:  call	sched_pick
+    call	sched_pick
     orq		%rax, %rax
     jz		2f
     movq	%rax, %cr3
@@ -686,7 +714,6 @@ do
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
-	    $EOI
 	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
 	    cmpq	sys_mapping, %rax
@@ -700,7 +727,9 @@ do
 	    xorq	%rdx, %rdx
 	    movb	\$$isr, %dl
 	    xorq	%rcx, %rcx
+	    call	isr_disableirq
 	    call	ksend
+	    $EOI
 	    call	isr_gainentropy
 	    call	isr_loadcontext
 	    iretq

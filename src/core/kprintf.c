@@ -47,6 +47,9 @@ int __attribute__ ((section (".data"))) scry;
 uint32_t __attribute__ ((section (".data"))) fg;
 uint32_t __attribute__ ((section (".data"))) bg;
 
+/* argument */
+uint8_t __attribute__ ((section (".data"))) cnt;
+
 /* ascii arts */
 char __attribute__ ((section (".data"))) kpanicprefix[] =
     "OS/Z core panic: ";
@@ -200,12 +203,17 @@ void kprintf_putascii(int64_t c)
 
 void kprintf_putdec(int64_t c)
 {
-    int i=32;
+    int i=12;
     tmp[i]=0;
     do {
         tmp[--i]='0'+(c%10);
         c/=10;
     } while(c!=0&&i>0);
+    if(cnt>0&&cnt<10) {
+        while(i>12-cnt) {
+            tmp[--i]=' ';
+        }
+    }
     kprintf(&tmp[i]);
 }
 
@@ -218,6 +226,11 @@ void kprintf_puthex(int64_t c)
         tmp[--i]=n<10?'0'+n:'A'+n-10;
         c>>=4;
     } while(c!=0&&i>0);
+    if(cnt>0&&cnt<=8) {
+        while(i>16-cnt*2) {
+            tmp[--i]='0';
+        }
+    }
     kprintf(&tmp[i]);
 }
 
@@ -312,11 +325,10 @@ void kprintf(char* fmt, ...)
         fmt=nullstr;
     /* starts with "\x1b[UT"? */
     if(*((uint32_t*)fmt)==(uint32_t)0x54555B1B) {
+        /* print out the whole charset */
         kprintf_unicodetable();
         return;
     }
-// print out the whole charset
-// return kprintf_unicodetable();
 
     while(fmt[0]!=0) {
         // special characters
@@ -339,9 +351,14 @@ void kprintf(char* fmt, ...)
         } else
         // argument access
         if(fmt[0]=='%' && !reent) {
-            fmt++;
+            fmt++; cnt=0;
             if(fmt[0]=='%') {
                 goto put;
+            }
+            while(fmt[0]>='0'&&fmt[0]<='9') {
+                cnt *= 10;
+                cnt += fmt[0]-'0';
+                fmt++;
             }
             p = *((char**)(args));
             arg = vaarg(args, int64_t);

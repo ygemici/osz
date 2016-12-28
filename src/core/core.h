@@ -29,6 +29,7 @@
 #define _OSZ_CORE_H
 
 #include "../../etc/include/osZ.h"
+#include "../../etc/include/lastbuild.h"
 #include "../../loader/bootboot.h"
 #include "pmm.h"
 #include "msg.h"
@@ -54,7 +55,7 @@ extern uint64_t sys_mapping;          // paging tables for "system" task
 extern OSZ_pmm pmm;                   // Physical Memory Manager data
 
 /* see etc/include/syscall.h */
-extern pid_t services[];
+extern pid_t *services;
 
 /* size of the file returned by fs_locate() */
 extern uint64_t fs_size;
@@ -113,7 +114,7 @@ extern void sys_init();
 extern void sys_enable();
 
 /** Turn the computer off */
-extern void sys_poweroff();
+extern void sys_disable();
 
 
 // ----- File System -----
@@ -123,6 +124,10 @@ extern void fs_init();
 /** Locate a file on initrd and return it's physical address
     NOTE: returned file's size is in fs_size */
 extern void *fs_locate(char *fn);
+
+// ----- Syslog interface -----
+/** Initialize user interface thread */
+extern void syslog_early(char* fmt, ...);
 
 // ----- User interface -----
 /** Initialize user interface thread */
@@ -210,6 +215,11 @@ extern bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uin
 extern bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /** low level message sender, called by senders above and IRQ ISRs */
 extern bool_t ksend(msghdr_t *mqhdr, uint64_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);
+
+#if DEBUG
+extern void dbg_init();
+extern void dbg_enable();
+#endif
 
 #endif
 

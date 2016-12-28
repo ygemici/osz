@@ -26,7 +26,7 @@
  */
 
 #define _AS 1
-#include <syscall.h>
+#include <osZ.h>
 
 .global irq1
 

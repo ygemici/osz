@@ -1,4 +1,5 @@
 include ../../Config
+include ../../etc/etc/os-release
 TARGET = lib/sys/core
 
 BINTARGET = ../../bin/root/$(TARGET)
@@ -6,7 +7,7 @@ SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS =
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
-CFLAGS = -DDEBUG=$(DEBUG) -Wall -fpic -ffreestanding -fvisibility=hidden -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+CFLAGS = -DDEBUG=$(DEBUG) -DOSZ_CORE=1 -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -Wall -fpic -ffreestanding -fvisibility=hidden -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 
 all: $(OBJS) $(BINTARGET)
 
@@ -35,8 +36,8 @@ else
 	@readelf -s $(BINTARGET) | cut -b 9-25,60- | tail -n +4 | grep -v -e '^000000000000' | sort >>../../bin/core.sym
 endif
 endif
-	@strip -s -K fb -K bootboot -K environment $(BINTARGET)
-	@echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null
+	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)
+	@#echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null
 	@echo -ne '\003' | dd conv=notrunc of=$(BINTARGET) bs=1 seek=16 1>/dev/null 2>/dev/null
 
 clean:

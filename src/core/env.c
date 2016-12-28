@@ -24,11 +24,15 @@
  *
  * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG)
  */
+#define _ENV_C_ 1
+#include "env.h"
 
 // parsed values
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
 uint64_t __attribute__ ((section (".data"))) nrirqmax;
+uint64_t __attribute__ ((section (".data"))) nrsrvmax;
+uint64_t __attribute__ ((section (".data"))) nrlogmax;
 uint64_t __attribute__ ((section (".data"))) debug;
 uint64_t __attribute__ ((section (".data"))) quantum;
 uint64_t __attribute__ ((section (".data"))) fps;
@@ -39,6 +43,7 @@ uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
 
 // for overriding default or autodetected values
+extern uint64_t hpet_addr;
 extern uint64_t lapic_addr;
 extern uint64_t ioapic_addr;
 
@@ -92,6 +97,63 @@ unsigned char *env_boolf(unsigned char *s, uint8_t *v)
     return s+1;
 }
 
+unsigned char *env_display(unsigned char *s)
+{
+    if(*s>='0' && *s<='9')
+        return env_dec(s, &display, 0, 3);
+    display = DSP_MONO_COLOR;
+    while(*s!=0 && *s!='\n') {
+        // skip separators
+        if(*s==' '||*s=='\t'||*s==',')
+            { s++; continue; }
+        if(s[0]=='m' && s[1]=='m')  display = DSP_MONO_MONO;
+        if(s[0]=='m' && s[1]=='c')  display = DSP_MONO_COLOR;
+        if(s[0]=='s' && s[1]=='m')  display = DSP_STEREO_MONO;
+        if(s[0]=='s' && s[1]=='c')  display = DSP_STEREO_COLOR;
+        s++;
+    }
+    return s;
+}
+
+#if DEBUG
+unsigned char *env_debug(unsigned char *s)
+{
+    if(*s>='0' && *s<='9')
+        return env_dec(s, &debug, 0, 0xFFFF);
+    debug = 0;
+    while(*s!=0 && *s!='\n') {
+        // skip separators
+        if(*s==' '||*s=='\t'||*s==',')
+            { s++; continue; }
+        // terminators
+        if(((s[0]=='f'||s[0]=='F')&&(s[1]=='a'||s[1]=='A')) ||
+           ((s[0]=='n'||s[0]=='N')&&(s[1]=='o'||s[1]=='O')))
+            break;
+        // debug flags
+        if(s[0]=='m' && s[1]=='m')              debug |= DBG_MEMMAP;
+        if(s[0]=='M' && s[1]=='M')              debug |= DBG_MEMMAP;
+        if(s[0]=='t' && s[1]=='h')              debug |= DBG_THREADS;
+        if(s[0]=='T' && s[1]=='H')              debug |= DBG_THREADS;
+        if(s[0]=='e' && s[1]=='l')              debug |= DBG_ELF;
+        if(s[0]=='E' && s[1]=='L')              debug |= DBG_ELF;
+        if(s[0]=='r' && (s[1]=='i'||s[2]=='i')) debug |= DBG_RTIMPORT;
+        if(s[0]=='R' && (s[1]=='I'||s[2]=='I')) debug |= DBG_RTIMPORT;
+        if(s[0]=='r' && (s[1]=='e'||s[2]=='e')) debug |= DBG_RTEXPORT;
+        if(s[0]=='R' && (s[1]=='E'||s[2]=='E')) debug |= DBG_RTEXPORT;
+        if(s[0]=='i' && s[1]=='r')              debug |= DBG_IRQ;
+        if(s[0]=='I' && s[1]=='R')              debug |= DBG_IRQ;
+        if(s[0]=='d' && s[1]=='e')              debug |= DBG_DEVICES;
+        if(s[0]=='D' && s[1]=='E')              debug |= DBG_DEVICES;
+        if(s[0]=='s' && s[1]=='c')              debug |= DBG_SCHED;
+        if(s[0]=='S' && s[1]=='C')              debug |= DBG_SCHED;
+        if(s[0]=='m' && s[1]=='s')              debug |= DBG_MSG;
+        if(s[0]=='M' && s[1]=='S')              debug |= DBG_MSG;
+        s++;
+    }
+    return s;
+}
+#endif
+
 void env_init()
 {
     unsigned char *env = environment;
@@ -100,18 +162,31 @@ void env_init()
     // set up defaults
     networking = sound = true;
     identity = false;
-    ioapic_addr = 0;
+    hpet_addr = ioapic_addr = lapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
+    nrphymax = nrlogmax = 2;
+    nrmqmax = 1;
     quantum = 100;
     fps = 10;
-    display = 0;//DSP_MONO_COLOR
-    
+    display = DSP_MONO_COLOR;
+    debug = DBG_NONE;
+
     //parse ascii text
     while(i-->0 && *env!=0) {
+        // skip comments
+        if((env[0]=='/'&&env[1]=='/') || env[0]=='#') {
+            while(env[0]!=0 && env[0]!='\n')
+                { i--; env++; }
+        }
+        if(env[0]=='/'&&env[1]=='*') {
+            env+=2;
+            while(env[0]!=0 && env[-1]!='*' && env[0]!='/')
+                { i--; env++; }
+        }
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
             env += 9;
-            env = env_dec(env, &nrphymax, 1, 32);
+            env = env_dec(env, &nrphymax, 2, 128);
         } else
         // number of message queue pages
         if(!kmemcmp(env, "nrmqmax=", 8)) {
@@ -122,6 +197,22 @@ void env_init()
         if(!kmemcmp(env, "nrirqmax=", 9)) {
             env += 9;
             env = env_dec(env, &nrirqmax, 4, 32);
+        } else
+        // number of services pages
+        if(!kmemcmp(env, "nrsrvmax=", 9)) {
+            env += 9;
+            env = env_dec(env, &nrsrvmax, 1, NRSRV_MAX);
+        } else
+        // number of syslog buffer pages
+        if(!kmemcmp(env, "nrlogmax=", 9)) {
+            env += 9;
+            env = env_dec(env, &nrlogmax, 2, 128);
+        } else
+        // manually override HPET address
+        if(!kmemcmp(env, "hpet=", 5)) {
+            env += 5;
+            // we only accept hex value for this parameter
+            env = env_hex(env, (uint64_t*)&hpet_addr, 1024*1024, 0);
         } else
         // manually override APIC address
         if(!kmemcmp(env, "apic=", 5)) {
@@ -170,13 +261,13 @@ void env_init()
         // display layout
         if(!kmemcmp(env, "display=", 8)) {
             env += 8;
-            env = env_dec(env, &display, 0, 3);
+            env = env_display(env);
         } else
 #if DEBUG
         // output verbosity level
         if(!kmemcmp(env, "debug=", 6)) {
             env += 6;
-            env = env_dec(env, &debug, 0, 0xFFFF);
+            env = env_debug(env);
         } else
 #endif
             env++;

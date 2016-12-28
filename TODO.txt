@@ -5,7 +5,8 @@
 ./src/core/sched.c:77:        /* TODO: swap -> ccb.hd_active */
 ./src/core/sched.c:80:        /* TODO: ccb.hd_blocked -> ccb.hd_active */
 ./src/core/x86_64/pci.c:33:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/acpi.c:150:        // TODO: get values for poweroff
-./src/core/x86_64/acpi.c:267:// TODO:  service_installirq(irq, ehdr->e_shoff);
-./src/core/x86_64/isr.c:78:            /* TODO: map and swap screen[0] and screen[1], then send IRQ2 */
+./src/core/x86_64/acpi.c:155:        // TODO: get values for poweroff
+./src/core/x86_64/acpi.c:275:// TODO:  service_installirq(irq, ehdr->e_shoff);
+./src/core/x86_64/isr.c:84:            /* TODO: map and swap screen[0] and screen[1], then send IRQ2 */
+./src/core/x86_64/dbg.c:112:    /* TODO: debugger, disasm, step through */
 ./src/core/msg.c:93:    /* TODO: use mq_buffstart properly as a circular buffer */

@@ -31,7 +31,7 @@
 
 extern sysinfo_t *sysinfostruc;
 extern uint64_t nrservices;
-extern pid_t services[];
+extern pid_t *services;
 
 /* send a message with scalar values */
 __attribute__ ((flatten)) bool_t msg_send(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)

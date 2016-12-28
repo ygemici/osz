@@ -46,6 +46,7 @@
 
 #include "env.h"
 
+extern char*syslog_buf;
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************
@@ -109,9 +110,9 @@ void main()
     // When that happens, scheduler will choose a task to run and...
     sys_enable();
     // ...we should never return here. Instead sched_pick() will
-    // call sys_poweroff() when no tasks left in shutdown procedure.
+    // call sys_disable() when no tasks left in shutdown procedure.
     // But just in case of unwanted return, we call poweroff anyway.
 
     /* step 6: go to dreamless sleep. */
-    sys_poweroff();
+    sys_disable();
 }

@@ -26,7 +26,7 @@
  */
 
 #define _AS 1
-#include <syscall.h>
+#include <osZ.h>
 
 .global _init
 .global irq0
@@ -118,12 +118,12 @@ _init:
     ret
 
 irq0:
+/*
     xorb    %al, %al
     outb    %al, $0x43
     inb     $0x40, %al
     jmp     1f
 1:  inb     $0x40, %al
-/*
     # PIC EOI
     movb    $0x20, %al
     outb    %al, $0x21

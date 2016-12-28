@@ -22,16 +22,16 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief System Service Event Dispatcher
+ * @brief Message Queue Event Dispatcher
  */
 
 #include <osZ.h>
 
-private void cldispatch()
+private void mq_dispatch()
 {
     while(1) {
         /* get work */
-        msg_t *msg = clrecv();
+        msg_t *msg = mq_recv();
     }
 }
 

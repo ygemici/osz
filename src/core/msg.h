@@ -47,7 +47,7 @@ typedef struct {
     uint64_t mq_buffstart;  // mapped buffer start
     uint64_t mq_buffend;
     uint64_t mq_buffsize;
-    uint64_t reserved;
+    uint64_t mq_buffmin;
 } __attribute__((packed)) msghdr_t;
 
 // first item in the array is the queue header

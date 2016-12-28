@@ -386,13 +386,6 @@ getmemmap:  xor         eax, eax
             ; "allocate" initrd
             add         dword [di], ebp
             sub         dword [di+8], ebp
-            ;save first free memory as core pointer
-            mov         dword [core_ptr], eax
-            ;page align
-            add         eax, CORE_MAX
-            add         eax, 4096-1
-            shr         eax, 12
-            shl         eax, 12
             ;save ramdisk pointer
             mov         dword [bootboot.initrd_ptr], eax
 .entryok:   ;get limit of memory
@@ -992,7 +985,7 @@ protmode_start:
             je          @f
             cmp         dword [esi], 464C457Fh ; ELF magic
             jne         .badcore
-@@:         cmp         word [esi+4], 0102h ;lsb 64 bit
+@@:         cmp         word [esi+4], 0102h ;lsb 64 bit, shared object
             je          @f
 .badcore:   mov         esi, badcore
             jmp         prot_diefunc
@@ -1002,27 +995,23 @@ protmode_start:
             mov         dword [entrypoint], eax
             mov         eax, dword [esi+0x18+4]
             mov         dword [entrypoint+4], eax
-            ;parse ELF binary and copy text section to dword[core_ptr]
-            xor         ecx, ecx
+            ;parse ELF binary and save text section address to dword[core_ptr]
             mov         cx, word [esi+0x38]     ; program header entries phnum
             mov         eax, dword [esi+0x20]   ; program header
             add         esi, eax
             sub         esi, 56
+            inc         cx
 .nextph:    add         esi, 56
-            dec         ecx
+            dec         cx
             jz          .badcore
             cmp         word [esi], 1               ; p_type, loadable
             jne         .nextph
+            cmp         dword [esi+8], 0            ; p_offset == 0
+            jne         .nextph
             cmp         word [esi+22], 0FFFFh       ; p_vaddr == negative address
             jne         .nextph
-            ;copy
-            mov         eax, dword [esi+8]          ; p_offset
-            mov         ecx, dword [esi+32]         ; p_filesz
-            mov         edi, dword [core_ptr]
-            mov         esi, ebx
-            add         esi, eax
-            shr         ecx, 2
-            repnz       movsd
+            ;got it
+            mov         dword [core_ptr], ebx
 
             ; ------- set video resolution -------
             prot_realmode

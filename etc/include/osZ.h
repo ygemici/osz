@@ -30,8 +30,14 @@
 #include <features.h>
 #include <errno.h>
 #include <limits.h>
-#include <stdint.h>
-#include <sys/types.h>
+
+#ifndef _AS
+# include <stdint.h>
+# include <sys/types.h>
+# ifndef OSZ_CORE
+#  include <stdio.h>
+#  include <stdlib.h>
+# endif
+#endif
+
 #include <syscall.h>
-#include <stdio.h>
-#include <stdlib.h>

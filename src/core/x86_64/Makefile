@@ -6,7 +6,7 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS =
 
-CFLAGS = -DDEBUG=$(DEBUG) -Wall -fpic -ffreestanding
+CFLAGS = -DDEBUG=$(DEBUG) -DOSZ_CORE=1 -Wall -fpic -ffreestanding
 
 all: isrs.S syscall.o $(OBJS) ok
 

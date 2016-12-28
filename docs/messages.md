@@ -47,15 +47,15 @@ Only five functions, variations on synchronisation. They are provided by `libc`,
 
 ```c
 /* async, send a message (non-blocking, except dest queue is full) */
-bool_t clsend(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
+bool_t mq_send(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* sync, send a message and receive result (blocking) */
-msg_t *clcall(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
+msg_t *mq_call(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* async, is there a message? (non-blocking) */
-bool_t clismsg();
+bool_t mq_ismsg();
 /* sync, wait until there's a message (blocking) */
-msg_t *clrecv();
+msg_t *mq_recv();
 /* sync, dispatch events (blocking, noreturn) */
-void cldispatch();
+void mq_dispatch();
 ```
 
 Supervisor Mode (Ring 0)
@@ -95,3 +95,20 @@ Unlike there, here're only three functions. The function is passed in %eax, and 
  - `'recv'` is called when the queue is empty and receiving is not possible. Blocks.
 
 The arguments are stored and read in System V ABI way: %rdi=pid_t thread, %rsi=event, %rdx=arg0/ptr, %rcx=arg1/size, %r8=arg2/magic.
+
+Examples
+```
+    xorq    %rdi, %rdi
+    movb    $SYS_sysinfo, %dil
+    movl     $0x646E6573, %eax # 'send'
+	syscall
+```
+or
+```
+    xorq    %rsi, %rsi
+    movb    $EINVAL, %sil
+    xorq    %rdi, %rdi
+    movb    $SYS_seterr, %dil
+    movl     $0x646E6573, %eax # 'send'
+	syscall
+```

@@ -37,6 +37,11 @@ extern char *drvnames;
 extern uint64_t *drivers;
 extern uint64_t *drvptr;
 extern uint64_t *safestack;
+extern char *syslog_buf;
+extern char *syslog_ptr;
+extern char *syslog_header;
+extern sysinfo_t *sysinfostruc;
+extern pid_t *services;
 
 /* Main scructure */
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
@@ -122,6 +127,7 @@ panic:
 
 void pmm_init()
 {
+    char *types[] = { "????", "free", "resv", "ACPI", "ACPI", "used", "MMIO" };
     // memory map provided by the loader
     MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
     // our new free pages directory, pmm.entries
@@ -133,6 +139,12 @@ void pmm_init()
     // that's 2*4096/16 = 512 maximum fragments
     if(nrphymax<2)
         nrphymax=2;
+    // minimum for services pages
+    if(nrsrvmax<1)
+        nrsrvmax=1;
+    // minimum for syslog buffer pages
+    if(nrlogmax<1)
+        nrlogmax=1;
     // initialize pmm structure
     pmm.magic = OSZ_PMM_MAGICH;
     pmm.size = 0;
@@ -172,12 +184,11 @@ void pmm_init()
 #if DEBUG
     if(debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
-    char *types[] = { "????", "free", "resv", "ACPI", "ACPI", "used", "MMIO" };
 #endif
     while(num>0) {
 #if DEBUG
         if(debug&DBG_MEMMAP)
-            kprintf("  %s %x (%d)\n",
+            kprintf("  %s %8x %9d\n",
                 MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Size(entry)
             );
@@ -207,6 +218,31 @@ void pmm_init()
     drvnames = (char*)kalloc(2);
     //allocate stack for ISRs and syscall
     safestack = kalloc(1);
+    //allocate system info structure
+    sysinfostruc = kalloc(1);
+    //allocate services structure
+    services = kalloc(nrsrvmax);
+    //allocate syslog buffer
+    syslog_buf = syslog_ptr = kalloc(nrlogmax);
+
+    //output syslog header
+    i = kstrlen((char*)&syslog_header);
+    kmemcpy(syslog_buf, (char*)&syslog_header, i);
+    syslog_ptr += i;
+
+    //dump memory map to log
+    num = (bootboot.size-128)/16;
+    entry = (MMapEnt*)&bootboot.mmap;
+    pmm.totalpages = 0;
+    syslog_early("Memory Map (%d entries)\n", num);
+    while(num>0) {
+        syslog_early(" %s %8x %9d\n",
+            MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
+            MMapEnt_Ptr(entry), MMapEnt_Size(entry)
+        );
+        num--;
+        entry++;
+    }
 }
 
 // allocate kernel bss

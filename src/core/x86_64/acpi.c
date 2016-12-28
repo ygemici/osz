@@ -29,11 +29,12 @@
 #include "../env.h"
 #include "acpi.h"
 
+/* main properties, configurable */
+uint64_t __attribute__ ((section (".data"))) hpet_addr;
 uint64_t __attribute__ ((section (".data"))) lapic_addr;
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
-uint64_t __attribute__ ((section (".data"))) hpet_addr;
 
-// poweroff stuff
+/* poweroff stuff, autodetected */
 uint32_t __attribute__ ((section (".data"))) SLP_EN;
 uint32_t __attribute__ ((section (".data"))) SLP_TYPa;
 uint32_t __attribute__ ((section (".data"))) PM1a_CNT;
@@ -89,9 +90,8 @@ void acpi_early(ACPI_Header *hdr)
         }
     } else
     /* High Precision Event Timer */
-    if(!kmemcmp("HPET", hdr->magic, 4)) {
+    if(!hpet_addr && !kmemcmp("HPET", hdr->magic, 4)) {
         hpet_addr = (uint64_t)hdr;
-kprintf(" early %x\n", hpet_addr);
     }
 }
 
@@ -101,7 +101,6 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     char *ptr = (char*)hdr;
     uint32_t len = hdr->length - sizeof(ACPI_Header);
     uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
-kprintf("hpet=%x\n",hpet_addr);
     /* add entropy */
     isr_entropy[(len+0)%4] += (uint64_t)hdr;
     isr_entropy[(len+1)%4] -= (uint64_t)hdr;
@@ -117,7 +116,8 @@ kprintf("hpet=%x\n",hpet_addr);
     if(debug&DBG_DEVICES) {
         for(i=0;i<level;i++) kprintf("  ");
         kprintf("%c%c%c%c ", hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3]);
-        kprintf("%x %d\n", hdr, hdr->length);
+        kprintf("%8x %d ", hdr, hdr->length);
+        kprintf("%c%c%c%c\n", hdr->oemid[0], hdr->oemid[1], hdr->oemid[2], hdr->oemid[3]);
     }
 #endif
     /* System tables pointer, should never get it, but just in case failsafe */
@@ -130,6 +130,11 @@ kprintf("hpet=%x\n",hpet_addr);
     } else
     /* System tables */
     if(!kmemcmp("RSDT", hdr->magic, 4) || !kmemcmp("XSDT", hdr->magic, 4)) {
+        /* defaults for qemu and bochs */
+        if(!kmemcmp(hdr->oemid,"BOCHS",5)) {
+            PM1a_CNT = 0xB004;
+            SLP_EN = 0x2000;
+        }
         ptr = 0;
         while(len>0) {
             if(hdr->magic[0]=='X') {
@@ -148,8 +153,10 @@ kprintf("hpet=%x\n",hpet_addr);
     if(!kmemcmp("FACP", hdr->magic, 4)) {
         ACPI_FACP *fadt = (ACPI_FACP *)hdr;
         // TODO: get values for poweroff
-        PM1a_CNT = fadt->PM1a_cnt_blk;
-        PM1b_CNT = fadt->PM1b_cnt_blk;
+        if(PM1a_CNT==0) {
+            PM1a_CNT = fadt->PM1a_cnt_blk;
+            PM1b_CNT = fadt->PM1b_cnt_blk;
+        }
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
@@ -166,7 +173,8 @@ kprintf("hpet=%x\n",hpet_addr);
                     kprintf("IOAPIC  %x %d %x\n", ptr, ptr[1], rec->address);
                 }
 #endif
-                ioapic_addr = rec->address;
+                if(!ioapic_addr)
+                    ioapic_addr = rec->address;
 #if DEBUG
             } else
             if(ptr[0]==ACPI_APIC_LAPIC_MAGIC) {
@@ -266,7 +274,6 @@ void acpi_init()
             "lib/sys/proc/hpet.so");
 // TODO:  service_installirq(irq, ehdr->e_shoff);
     }
-
 }
 
 void acpi_poweroff()
@@ -274,14 +281,18 @@ void acpi_poweroff()
     // APCI poweroff
 /*
     if(PM1a_CNT!=0) {
+        int en = SLP_TYPa | SLP_EN;
         //acpi_enable();
+        breakpoint;
         __asm__ __volatile__ (
-            "mov %0, %%rax; mov %1, %%rdx; outw %%ax, %%dx" : :
-            "a"(SLP_TYPa | SLP_EN), "Nd"(PM1a_CNT) );
-        if ( PM1b_CNT != 0 )
+            "movq %0, %%rax; movq %1, %%rdx; outw %%ax, %%dx" : :
+            "m"(en), "m"(PM1a_CNT) );
+        if ( PM1b_CNT != 0 ) {
+            en = SLP_TYPb | SLP_EN;
             __asm__ __volatile__ (
-                "mov %0, %%rax; mov %1, %%rdx; outw %%ax, %%dx" : :
-                "a"(SLP_TYPb | SLP_EN), "Nd"(PM1b_CNT) );
+                "movq %0, %%rax; movq %1, %%rdx; outw %%ax, %%dx" : :
+                "m"(en), "m"(PM1b_CNT) );
+        }
     }
 */
 }

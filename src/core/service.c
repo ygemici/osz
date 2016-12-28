@@ -52,7 +52,7 @@ typedef unsigned char *valist;
 OSZ_rela __attribute__ ((section (".data"))) *relas;
 
 /* pids of services. Negative pids are service ids and looked up in this */
-pid_t  __attribute__ ((section (".data"))) services[NRSRV_MAX];
+pid_t  __attribute__ ((section (".data"))) *services;
 uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_usrfirst;
 /* irq routing */
 uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
@@ -160,15 +160,25 @@ __inline__ void service_loadso(char *fn)
 /* look up a symbol for address */
 uchar *service_sym(virt_t addr)
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
+    uint64_t ptr;
     if(addr<TEXT_ADDRESS||(addr>=BSS_ADDRESS&&addr<(uint64_t)&bootboot))
         return nosym;
-    addr &= ~(__PAGESIZE-1);
-    do {
-        ehdr = (Elf64_Ehdr *)(addr);
-        addr -= __PAGESIZE;
-    } while(addr>=TEXT_ADDRESS && kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG));
-    if((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+    if((uint64_t)addr > ((uint64_t)&environment+__PAGESIZE)) {
+        ptr = (uint64_t)&environment+__PAGESIZE;
+    } else {
+        ptr = addr;
+        ptr &= ~(__PAGESIZE-1);
+        while(ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
+            ptr -= __PAGESIZE;
+        ehdr = (Elf64_Ehdr*)ptr;
+        if(ptr==TEXT_ADDRESS && tcb->memroot == sys_mapping)
+            return (uchar*)"_main (irq dispatcher)";
+    }
+
+    if(((uint64_t)ehdr < ((uint64_t)&environment+__PAGESIZE)) &&
+       ((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
         return nosym;
     Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff+2*ehdr->e_phentsize);
     Elf64_Dyn *dyn;
@@ -182,7 +192,7 @@ uchar *service_sym(virt_t addr)
     dyn = d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
     while(d->d_tag != DT_NULL) {
         if(d->d_tag == DT_STRTAB) {
-            strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFF);
+            strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFFF);
         }
         if(d->d_tag == DT_STRSZ) {
             strsz = d->d_un.d_val;
@@ -194,7 +204,7 @@ uchar *service_sym(virt_t addr)
     d = dyn;
     while(d->d_tag != DT_NULL) {
         if(d->d_tag == DT_SYMTAB) {
-            sym = (Elf64_Sym *)(ehdr + (d->d_un.d_ptr&0xFFFF));
+            sym = (Elf64_Sym *)(ehdr + (d->d_un.d_ptr&0xFFFFF));
         }
         if(d->d_tag == DT_SYMENT) {
             syment = d->d_un.d_val;
@@ -213,34 +223,23 @@ uchar *service_sym(virt_t addr)
     return last!=NULL && last[0]!=0 ? (uchar*)last : (uchar*)nosym;
 }
 
+c_assert(ISR_NUMIRQ < 224);
+
 void service_installirq(uint8_t irq, uint64_t offs)
 {
-    uint l,k=((irq)*nrirqmax)+1;
+    uint k=((irq)*nrirqmax)+1;
     uint last=(irq+1)*nrirqmax;
-    if(irq>=0 && irq<128 && k<ISR_NUMIRQ*nrirqmax-1) {
-        l = k;
+    if(irq>=0 && irq<ISR_NUMIRQ && k<ISR_NUMIRQ*nrirqmax-1) {
         // find next free slot
         while(irq_routing_table[k]!=0&&k<last) k++;
 #if DEBUG
         if(debug&DBG_IRQ)
             kprintf("  IRQ #%d: irt[%d]=%x %s\n",
                 irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
+#endif
         if(irq_routing_table[k]!=0)
-            kprintf("WARNING too many IRQ handlers for %d\n", irq);
-#endif
+            kpanic("too many (%d+) IRQ handlers for %d\n", nrirqmax, irq);
         irq_routing_table[k] = offs;
-        // first of it's kind?
-        // we won't enable IRQ2 (cascade) for real. With PIC, it's
-        // enabled already, and with IOAPIC it doesn't matter.
-        // We'll use it as a video card's soft irq to blit composed
-        // buffer to framebuffer.
-        if (l == k && irq!=2) {
-#if DEBUG
-            if(debug&DBG_IRQ)
-                kprintf("           unmask IRQ #%d\n", irq);
-#endif
-            isr_enableirq(irq);
-        }
 #if DEBUG
     } else if(debug&DBG_IRQ) {
             kprintf("WARNING irq_routing_table[%d] for %x out of range\n", k, offs);
@@ -613,6 +612,6 @@ void ui_init()
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
     } else {
-        kpanic("thread check failed for /sbin/fs");
+        kpanic("thread check failed for /sbin/ui");
     }
 }

@@ -107,7 +107,7 @@ zero and growing downwards.
 Example kernel
 --------------
 
-A minimal kernel would be:
+A minimal kernel that demostrates how to access BOOTBOOT environment:
 
 ```c
 #include <bootboot.h>
@@ -121,6 +121,7 @@ extern uint8_t fb;
 void _start()
 {
     int x, y, s=bootboot.fb_scanline, w=bootboot.fb_width, h=bootboot.fb_height;
+
     // cross-hair
     for(y=0;y<h;y++) { *((uint32_t*)(&fb + s*y + (w*2)))=0x00FFFFFF; }
     for(x=0;x<w;x++) { *((uint32_t*)(&fb + s*(h/2)+x*4))=0x00FFFFFF; }
@@ -143,7 +144,7 @@ gcc -nostdlib -nodefaultlibs -nostartfiles -Xlinker --nmagic -T link.ld -o kerne
 strip -s -K fb -K bootboot -K environment kernel
 ```
 
-[Linker script](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld) link.ld goes like:
+A minimal linker script would be:
 
 ```c
 FBUF_ADDRESS = 0xffffffffe0000000;
@@ -163,7 +164,12 @@ SECTIONS
     {
         _code = .;
         *(.text)
+        *(.rodata)
         . = ALIGN(4096);
+		_data = .;
+        *(.data)
+        . = ALIGN(4096);
+        __bss_start = .;
     }
    _end = .;
 
@@ -176,6 +182,7 @@ SECTIONS
    }
 }
 ```
+See [src/core/(platform)/supervisor.ld](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld) for a more complex read life example.
 
 Installation
 ------------
@@ -191,16 +198,16 @@ cd tmp
 find . | cpio -H hpodc -o ../INITRD
 ```
 
-Or the last line could be:
+Or if you prefer tar format, the last line could be:
 
 ```
 tar -cf ../INITRD *
 ```
 
-if you'd prefer Star format. Don't use comperssion, it's not supported (yet).
+Don't use comperssion, it's not supported (yet ;-) ).
 
 2. Create FS0:\BOOTBOOT directory, and copy the archive you've created as
-            INITRD into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/src/etc/CONFIG)
+            INITRD into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md)
             there too, and put your environment variables there. Start it
             with a comment "// BOOTBOOT" and fill up with spaces so that
             the file became exactly 4096 bytes (1 page) long.
@@ -209,14 +216,25 @@ if you'd prefer Star format. Don't use comperssion, it's not supported (yet).
 // BOOTBOOT Options
 // this file has to be 4096 bytes long.
 
-// Loader specific
+// --- Loader specific ---
 width=800
 height=600
 kernel=lib/sys/core
 
-// Kernel specific
+// --- Kernel specific, you're choosing ---
 anythingyouwant=somevalue
 otherstuff=enabled
+
+// maximum frame rate of the compositor
+fps=10                          
+                                
+// what to debug, decimal number or comma separated list of:
+//  mm = memory map, th = threads, el = elf loading,
+//  ri = run-time linker imports, re = run-time exports
+//  ir = IRQ Routing Table, de = devices, sc = scheduler
+//  ms = messaging              
+debug=th,sc,ms
+
 ```
 
 3.1. *EFI disk*: copy __bootboot.efi__ to **_FS0:\EFI\BOOT\BOOTX64.EFI_**. Done!
@@ -265,7 +283,7 @@ their own filesystem.
 If all filesystem drivers failed, BOOTBOOT compliant loader will brute-force
 look for the first ELF image in the first initrd image on the first partition,
 which is quite comfortable specially when you boot it from ROM. You just copy
-your initrd on the EFI System Partition, and there you go!
+your initrd on the EFI System Partition, and ready to rock and roll!
 
 The reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/src/docs/fs.md) as initrd.
 Gzip uncompressor coming soon in EFI version.

@@ -4,6 +4,10 @@ CORE_ADDRESS  = 0xffffffffffe00000;
 
 ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
+PHDRS
+{
+  text PT_LOAD FILEHDR PHDRS ;
+}
 SECTIONS
 {
     . = FBUF_ADDRESS;
@@ -15,7 +19,9 @@ SECTIONS
         environment = .;
         . += 4096;
 
-    .text : AT(ADDR(.text) - CORE_ADDRESS)
+	/* put headers in load segment so that we won't have to copy
+	   text segment on loading as it will be aligned */
+    .text CORE_ADDRESS + SIZEOF_HEADERS + (8192): AT(ADDR(.text) - CORE_ADDRESS + SIZEOF_HEADERS)
     {
         /* code */
         PROVIDE(_code = .);
@@ -48,7 +54,7 @@ SECTIONS
         . += 4096;
         /* physical memory manager free memory entries */
         pmm_entries = .;
-    }
+    } :text
    PROVIDE(_etext = .);
 
    /DISCARD/ :

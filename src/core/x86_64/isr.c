@@ -43,6 +43,10 @@ extern uint64_t core_mapping;
 extern uint64_t ioapic_addr;
 extern sysinfo_t *sysinfostruc;
 
+#if DEBUG
+extern void dbg_enable(uint64_t rip);
+#endif
+
 /* preemption counter */
 uint64_t __attribute__ ((section (".data"))) isr_ticks[4];
 /* 256 bit random seed */
@@ -56,7 +60,9 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     switch(MSG_FUNC(event)) {
-        /* case SYS_seterr handled in asm for performance */
+        /* case SYS_ack: in isr_syscall0 asm for performance */
+        /* case SYS_seterr: in isr_syscall0 asm for performance */
+        /* case SYS_sched_yield: in isr_syscall0 asm for performance */
         case SYS_exit:
             break;
         case SYS_sysinfo:
@@ -110,7 +116,7 @@ void isr_init()
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_IRQMAX;
     }
-    // set up isr_syscall dispatcher and IDTR, also enable IRQs
+    // set up isr_syscall dispatcher and IDTR, also mask all IRQs
     isr_inithw(idt, &ccb);
 }
 
@@ -129,6 +135,13 @@ void exc00divzero(uint64_t excno, uint64_t rip)
 void exc01debug(uint64_t excno, uint64_t rip)
 {
     kpanic("debug %d",excno);
+}
+
+void exc03chkpoint(uint64_t excno, uint64_t rip)
+{
+#if DEBUG
+    dbg_enable(rip);
+#endif
 }
 
 void exc13genprot(uint64_t excno, uint64_t rip)

@@ -43,10 +43,13 @@ typedef struct {
   uint8_t    magic[4];    // BOOT
   uint32_t   size;        // length of bootboot structure
   uint64_t   datetime;    // in BCD yyyymmddhhiiss
+
+  // 4 architecture specific pointers. This is for x86_64
   uint64_t   acpi_ptr;    // system table pointers
   uint64_t   smbi_ptr;
   uint64_t   efi_ptr;
   uint64_t   mp_ptr;
+
   uint64_t   initrd_ptr;  // ramdisk image position and size
   uint64_t   initrd_size;
   uint64_t   mmap_ptr;    // virtual address of mmap

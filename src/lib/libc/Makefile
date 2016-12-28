@@ -21,4 +21,4 @@ $(BINTARGET): $(SRCS)
 	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic -Bshareable -L../../../bin/root/lib *.o $(ARCH)/*.o -Xlinker --build-id=sha1 -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
-	@rm cl.S *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt0.o ../../../bin/service.o 2>/dev/null || true
+	@rm *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/root/lib/crt0.o ../../../bin/service.o 2>/dev/null || true

@@ -40,13 +40,35 @@
 _init:
     ret
 
-/* normal entry point, so called main() */
+/* normal user space entry point, so called _main() */
 _main:
+    /* get IRQ Routing Table */
+    movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
+    lodsq
+    xorq    %rdx, %rdx
+    /* enable IRQs */
+1:  cmp     $0, (%rsi)
+    jz      2f
+    pushq   %rdx
+    pushq   %rsi
+    xorq    %rdi, %rdi
+    xorq    %rsi, %rsi
+    movb    $SYS_ack, %sil
+    movl     $0x646E6573, %eax # 'send'
+    syscall
+    popq    %rsi
+    popq    %rdx
+2:  addq    %rax, %rsi
+    incb    %dl
+    cmpb    $ISR_NUMIRQ, %dl
+    jne     1b
+
     /* get work to do */
-    call    clrecv
+getwork:
+    call    mq_recv
     /* MSG_FUNC(msg.evt) != SYS_IRQ? */
     cmpw    $SYS_IRQ, (%rax)
-    jne     _main
+    jne     getwork
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
     /* rax = &irt[irq*irt[0]+1] */
@@ -56,14 +78,14 @@ _main:
     xorq    %rax, %rax
     xorq    %rdx, %rdx
     movb    8(%rbx), %al
-    movq    %rax, %rdi
+    movq    %rdi, %rax
     mulq    %rcx
     incq    %rax
     shlq    $3, %rax
     addq    %rsi, %rax
     /* now call the irq handlers (*rax)(irq); */
 1:  cmpq    $TEXT_ADDRESS, (%rax)
-    jbe     _main
+    jbe     getwork
     pushq   %rax
     pushq   %rcx
     pushq   %rdi
@@ -75,4 +97,12 @@ _main:
     decb    %cl
     orb     %cl, %cl
     jnz     1b
-    jmp     _main
+    /* notify core to reenable IRQ */
+    movq    %rdi, %rdx
+    xorq    %rdi, %rdi
+    xorq    %rsi, %rsi
+    movb    $SYS_ack, %sil
+    movl     $0x646E6573, %eax # 'send'
+    syscall
+    /* loop forever */
+    jmp     getwork

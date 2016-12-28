@@ -78,7 +78,10 @@ kpanic:
     mov     %rax, %rsi
     movq    $kpanicsym, %rdi
     call    kprintf
-#endif
+    movq    $kpanicrip, %rdi
+    xorq    %rsi, %rsi
+    call    dbg_enable
+#else
     movq    $54, %rdi
     movq    $5, %rsi
     call    kprintf_center
@@ -94,6 +97,7 @@ kpanic:
     addl    $46, kx
     addl    $1, ky
     call    kprintf_putlogo
+#endif
     call    kwaitkey
     mov     $0xFE, %al
     out     %al, $0x64

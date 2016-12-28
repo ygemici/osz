@@ -45,13 +45,19 @@
 .global strsignal
 .global basename
 .global dirname
-.global sprintf
 
 .section .text
 strcpy:
+1:  lodsb
+    stosb
+    or      %al, %al
+    jnz     1b
+    movq    %rdi, %rax
     ret
 
 strncpy:
+    movq    %rdx, %rcx
+    repnz   movsb
     ret
 
 strcat:
@@ -61,10 +67,32 @@ strncat:
     ret
 
 strcmp:
-    ret
+    xorq    %rax, %rax
+1:  lodsb
+    cmpb    %al, (%rdi)
+    jne     2f
+    incq    %rdi
+    or      %al, %al
+    jnz     1b
+2:  ret
 
 strncmp:
-    ret
+    xorq    %rax, %rax
+    incl    %edx
+1:  decl    %edx
+    jz      3f
+    lodsb
+    or      %al, %al
+    jnz     2f
+    cmpb    $0, (%rdi)
+    je      3f
+    incb    %al
+    jmp     3f
+2:  subb    (%rdi), %al
+    incq    %rdi
+    or      %al, %al
+    jz      1b
+3:  ret
 
 strdup:
     ret
@@ -82,6 +110,14 @@ strstr:
     ret
 
 strlen:
+    movq    %rdi, %rsi
+    xor     %rcx, %rcx
+    decq    %rcx
+1:  lodsb
+    incq    %rcx
+    or      %al, %al
+    jnz     1b
+    movq    %rcx, %rax
     ret
 
 strnlen:
@@ -106,7 +142,4 @@ basename:
     ret
 
 dirname:
-    ret
-
-sprintf:
     ret

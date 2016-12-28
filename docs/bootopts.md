@@ -20,24 +20,27 @@ Boot Parameters
 | width     | 800    | number | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
 | height    | 600    | number | loader |  -II-  |
 | kernel    | lib/sys/core | string | loader | the name of kernel executable on initrd |
-| debug     | 0      | decimal | core | specifies which debug information to show (if compiled with debugging) |
+| debug     | 0      | decimal | core | specifies which debug information to show (if compiled with debugging, see below) |
+| hpet      | -      | hexdec | core | override autodetected HPET address |
 | apic      | -      | hexdec | core | override autodetected LAPIC address |
 | ioapic    | -      | hexdec | core | override autodetected IOAPIC address |
-| nrphymax  | 1      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
-| nrmqmax   | 1      | number | core | the number of pages for Message Queue (32 bytes each) |
+| nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
+| nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
+| nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
+| nrlogmax  | 2      | number | core | the number of pages for early syslog buffer |
 | nrirqmax  | 8      | number | core | the maximum number of IRQ handlers per IRQ |
-| identity  | false  | boolean | core | force running first time setup to get machine's identity, such as hostname |
-| quantum   | 100    | number | core | maximum timeframe a thread can own at once (1/quantum sec) |
-| fps       | 10     | number | core | minimum frame rate |
-| display   | 0      | number | core | selects output mode |
+| quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
+| fps       | 10     | number | core | requested frame rate |
+| display   | 0      | number | core | selects output mode (see below) |
 | networking | true | boolean | core | disable networking [system service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
 | sound | true | boolean | core | disable sound service |
+| identity  | false  | boolean | core | force running first time setup to get machine's identity, such as hostname |
 | rescueshell | false | boolean | core | if true, starts `/bin/sh` instead of `/sbin/init` |
+
+The available values for debug parameter and display can be found in [core/env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
 
 Debugging
 ---------
-
-The possible bit flags for debug paramter are defined in [core/env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
 
 | Value | Define | Description |
 | ----: | ------ | ----------- |
@@ -59,5 +62,5 @@ Display
 | ----: | ------ | ----------- |
 | 0     | DSP_MONO_MONO | a simple 2D pixelbuffer grayscale filtered on framebuffer copy |
 | 1     | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32ARGB0 color pixels |
-| 2     | DSP_STEREO_MONO | two 2D pixelbuffers, they are converted grayscale and an additional red-cyan filtering applied |
-| 3     | DSP_STEREO_COLOR | two 2D pixelbuffers, the ways of combining color left and right eye's view is driver specific |
+| 2     | DSP_STEREO_MONO | two 2D pixelbuffers, they are converted grayscale and a red-cyan filtering applied |
+| 3     | DSP_STEREO_COLOR | two 2D pixelbuffers, the way of combining left and right eye's view is 100% driver specific |

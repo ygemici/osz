@@ -11,5 +11,5 @@ public void openwrd(){}
 
 void _init()
 {
-	cldispatch();
+	mq_dispatch();
 }
