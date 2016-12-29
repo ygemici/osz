@@ -36,7 +36,7 @@ and yet they will be loaded together as if it was a monolitic kernel.
 License
 -------
 
-General Public License version 3.
+The protocol as well as the reference implementations are Public Domain.
 
 Glossary
 --------
