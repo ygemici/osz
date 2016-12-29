@@ -79,7 +79,7 @@ __inline__ void sys_enable()
     OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
 
     // map "system" task's TCB
-    kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_system]*__PAGESIZE), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_SYS]*__PAGESIZE), PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to force first task switch
     __asm__ __volatile__ (
@@ -134,8 +134,7 @@ void sys_init()
     isr_init();
 
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    pid_t pid = thread_new("system");
-    services[-SRV_system] = pid;
+    pid_t pid = thread_new("SYS");
     sys_mapping = tcb->memroot;
 
     // map device driver dispatcher
@@ -253,6 +252,8 @@ void sys_init()
     
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+        services[-SRV_SYS] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_SYS,"SYS",pid);
 #if DEBUG
         dbg_init();
 #endif

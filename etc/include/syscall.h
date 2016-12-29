@@ -2,17 +2,17 @@
 #define _SYSCALL_H 1
 
 // system services
-#define SRV_core		 0
-#define SRV_system  	-1
-#define SRV_fs			-2
-#define SRV_ui			-3
-#define SRV_LASTCRIT	SRV_ui
+#define SRV_CORE		 0
+#define SRV_SYS			-1
+#define SRV_FS			-2
+#define SRV_UI			-3
+#define SRV_CRITLAST	SRV_UI
 #define SRV_syslog		-4
 #define SRV_net			-5
 #define SRV_sound		-6
 #define SRV_init		-7
-#define SRV_usrfirst	-8
-#define SRV_LAST		-NRSRV_MAX
+#define SRV_USRFIRST	-8
+#define SRV_USRLAST		-NRSRV_MAX
 // get function indeces
 #include <sys/core.h>
 #include <sys/syslog.h>

@@ -36,16 +36,17 @@ That platform independent code does the following:
 
 After that it initializes system services (subsystems), begining with the three critical services:
 
- 1. first is the user space counterpart of core, "system" task. Loaded by `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
+ 1. first is the user space counterpart of core, "SYS" task. Loaded by `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal service, save it has the initrd mapped in it's bss segment.
  3. on order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike networking and sound services which are optional.
- 4. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) is used to load several other parts.
+ 4. initializes syslog service by `syslog_init()` in[src/core/syslog.c](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c).
+ 4. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) for several other parts.
  5. and as a final thing, a switch to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 That `sys_enable()` function switches to system task, and starts executing it. Because `sys_init()` has cleared Interrupt Flag,
-system task can freely call all device driver's initialization code without interruption.
+system task can freely call all device driver's initialization code without interruption. 
 
-After all driver init codes executed, the system task begun to anwser to events. As there are no messages in the queue, it blocks. By doing so, the true multitasking began, and `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) chooses a thread to run.
+After all driver init codes executed, the system task begun to anwser to events. As there are no messages in the queue, it enables IRQs and blocks. By yielding, the true multitasking began, and `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) chooses a thread to run.
 
 User
 ----

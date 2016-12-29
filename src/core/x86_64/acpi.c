@@ -130,6 +130,9 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     } else
     /* System tables */
     if(!kmemcmp("RSDT", hdr->magic, 4) || !kmemcmp("XSDT", hdr->magic, 4)) {
+        char tmp[9];
+        kmemcpy((char*)&tmp[0],(char*)&hdr->oemid[0],8); tmp[9]=0;
+        syslog_early("%cSDT %x %s",(uint8_t)hdr->magic[0],hdr,&tmp[0]);
         /* defaults for qemu and bochs */
         if(!kmemcmp(hdr->oemid,"BOCHS",5)) {
             PM1a_CNT = 0xB004;

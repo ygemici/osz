@@ -7,7 +7,7 @@ HOMEFILE = ../bin/home.part
 DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VDMKIMAGE = ../bin/disk.vdmk
-SRCS = $(filter-out dumpelf.c dynamic.c,$(wildcard *.c))
+SRCS = $(wildcard *.c)
 OPT  = -g
 LIBS =
 OBJS = $(SRCS:.c=.o)

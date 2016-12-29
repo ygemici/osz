@@ -58,7 +58,7 @@ unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max
         else if(*s >= 'a' && *s <= 'f')
             *v += (uint64_t)((unsigned char)(*s)-'a'+10);
         else if(*s >= 'A' && *s <= 'F')
-            *s += (uint64_t)((unsigned char)(*s)-'A'+10);
+            *v += (uint64_t)((unsigned char)(*s)-'A'+10);
         s++;
     } while((*s>='0'&&*s<='9')||(*s>='a'&&*s<='f')||(*s>='A'&&*s<='F'));
     if(*v < min)
@@ -102,16 +102,15 @@ unsigned char *env_display(unsigned char *s)
     if(*s>='0' && *s<='9')
         return env_dec(s, &display, 0, 3);
     display = DSP_MONO_COLOR;
-    while(*s!=0 && *s!='\n') {
-        // skip separators
-        if(*s==' '||*s=='\t'||*s==',')
-            { s++; continue; }
-        if(s[0]=='m' && s[1]=='m')  display = DSP_MONO_MONO;
-        if(s[0]=='m' && s[1]=='c')  display = DSP_MONO_COLOR;
-        if(s[0]=='s' && s[1]=='m')  display = DSP_STEREO_MONO;
-        if(s[0]=='s' && s[1]=='c')  display = DSP_STEREO_COLOR;
+    // skip separators
+    while(*s==' '||*s=='\t')
         s++;
-    }
+    if(s[0]=='m' && s[1]=='m')  display = DSP_MONO_MONO;
+    if(s[0]=='m' && s[1]=='c')  display = DSP_MONO_COLOR;
+    if(s[0]=='s' && s[1]=='m')  display = DSP_STEREO_MONO;
+    if(s[0]=='s' && s[1]=='c')  display = DSP_STEREO_COLOR;
+    while(*s!=0 && *s!='\n')
+        s++;
     return s;
 }
 
@@ -164,7 +163,7 @@ void env_init()
     identity = false;
     hpet_addr = ioapic_addr = lapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
-    nrphymax = nrlogmax = 2;
+    nrphymax = nrlogmax = 16;
     nrmqmax = 1;
     quantum = 100;
     fps = 10;
@@ -206,7 +205,7 @@ void env_init()
         // number of syslog buffer pages
         if(!kmemcmp(env, "nrlogmax=", 9)) {
             env += 9;
-            env = env_dec(env, &nrlogmax, 2, 128);
+            env = env_dec(env, &nrlogmax, 4, 128);
         } else
         // manually override HPET address
         if(!kmemcmp(env, "hpet=", 5)) {

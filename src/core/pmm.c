@@ -54,6 +54,12 @@ void* pmm_alloc()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
     int i = pmm.size;
+    // run-time asserts
+    if(pmm.freepages>pmm.totalpages)
+        kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
+    if(pmm.size<1)
+        kprintf("WARNING shound not happen pmm.size %d < 1",pmm.size);
+    // skip empty slots
     while(i-->0 && fmem->size==0)
         fmem++;
     if(i) {
@@ -230,10 +236,13 @@ void pmm_init()
     kmemcpy(syslog_buf, (char*)&syslog_header, i);
     syslog_ptr += i;
 
+    //first real message
+    syslog_early("Started uuid %4x-%2x-%2x-%8x",(uint32_t)isr_entropy[0],(uint16_t)isr_entropy[1],(uint16_t)isr_entropy[2],isr_entropy[3]);
+    syslog_early("Frame buffer %d x %d @%x",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr);
+    
     //dump memory map to log
     num = (bootboot.size-128)/16;
     entry = (MMapEnt*)&bootboot.mmap;
-    pmm.totalpages = 0;
     syslog_early("Memory Map (%d entries)\n", num);
     while(num>0) {
         syslog_early(" %s %8x %9d\n",

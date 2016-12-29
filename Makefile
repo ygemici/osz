@@ -38,6 +38,9 @@ apps: src
 	@make -e --no-print-directory -C src apps | grep -v 'Nothing to be done' || true
 	@echo "DRIVERS"
 	@make -e --no-print-directory -C src drivers | grep -v 'Nothing to be done' || true
+ifeq ($(DEBUG),1)
+	@make -e --no-print-directory -C src gensyms 2>&1 | grep -v 'Nothing to be done' | grep -v 'No rule to make target' || true
+endif
 
 images: tools
 	@echo "IMAGES"

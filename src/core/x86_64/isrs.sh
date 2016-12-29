@@ -169,24 +169,17 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
 	/* void isr_enableirq(uint64_t irq) */
 	isr_enableirq:
-	    cmpl	\$2, %edi
-	    je		1f
-	    xorl	%edx, %edx
-	    incl	%edx
 	    movl	%edi, %ecx
-	    cmpl	\$8, %ecx
-	    jae		2f
-	    shll	%cl, %edx
-	    notl	%edx
+	    andw	\$0xF, %cx
+	    cmpb	\$8, %cl
+	    jae		1f
 	    inb		\$PIC_MASTER_DATA, %al
-	    andb	%dl, %al
+	    btrw	%cx, %ax
 	    outb	%al, \$PIC_MASTER_DATA
-	1:  ret
-	2:  subl	\$8, %edi
-	    shll	%cl, %edx
-	    notl	%edx
+	    ret
+	1:  subb	\$8, %cl
 	    inb		\$PIC_SLAVE_DATA, %al
-	    andb	%cl, %al
+	    btrw	%cx, %ax
 	    outb	%al, \$PIC_SLAVE_DATA
 	    ret
 	
@@ -194,20 +187,17 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	isr_disableirq:
 	    cmpl	\$2, %edi
 	    je		1f
-	    xorl	%edx, %edx
-	    incl	%edx
 	    movl	%edi, %ecx
+	    andw	\$0xF, %cx
 	    cmpl	\$8, %edi
 	    jae		2f
-	    shll	%cl, %edx
 	    inb		\$PIC_MASTER_DATA, %al
-	    orb		%cl, %al
+	    btsw	%cx, %ax
 	    outb	%al, \$PIC_MASTER_DATA
 	1:  ret
 	2:  subl	\$8, %edi
-	    shll	%cl, %edx
 	    inb		\$PIC_SLAVE_DATA, %al
-	    orb		%cl, %al
+	    btsw	%cx, %ax
 	    outb	%al, \$PIC_SLAVE_DATA
 	    ret
 	
@@ -340,7 +330,6 @@ isr_gainentropy:
 /* syscall dispatcher, platform dependent wrapper */
 .align	16, 0x90
 isr_syscall0:
-    cli
     /* tcb->rip */
     movq	%rcx, __PAGESIZE-40
     /* tcp->rsp, save stack pointer and switch to core stack */
@@ -348,7 +337,7 @@ isr_syscall0:
     /* tcb->rflags */
     movq	\$__PAGESIZE-16, %rsp
     pushf
-    orw		\$0x200, (%rsp)
+/*    orw		\$0x200, (%rsp) */
     movq    safestack, %rsp
     addq    \$2048, %rsp
     /* enable interrupts flag in rflags */
@@ -369,6 +358,7 @@ isr_syscall0:
     cmpq	\$SYS_sched_yield, %rsi
     je  	4f
     /* shortcut to ack syscall, only allow system task */
+xchg %bx, %bx
     cmpq	\$SYS_ack, %rsi
     jne     6f
     movq	sys_mapping, %rsi
@@ -486,13 +476,13 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	read -r -d '' EOI <<-EOF
 	    /* PIC EOI */
 	    movb	\$0x20, %al
-	    outb	%al, \$PIC_MASTER_DATA
+	    outb	%al, \$PIC_MASTER
 	EOF
 	read -r -d '' EOI2 <<-EOF
 	    /* PIC EOI */
 	    movb	\$0x20, %al
-	    outb	%al, \$PIC_SLAVE_DATA
-	    outb	%al, \$PIC_MASTER_DATA
+	    outb	%al, \$PIC_SLAVE
+	    outb	%al, \$PIC_MASTER
 	EOF
 else
 	cat >>isrs.S <<-EOF
@@ -711,6 +701,7 @@ do
 		EOI="$EOI2";
 	fi
 	cat >>isrs.S <<-EOF
+	.align $isrirqmax, 0x90
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
@@ -721,16 +712,20 @@ do
 	    /* no, switch to system task */
 	    movq	sys_mapping, %rax
 	    movq	%rax, %cr3
-	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-	1:  movq	\$MQ_ADDRESS, %rdi
-	    xorq	%rsi, %rsi
-	    xorq	%rdx, %rdx
-	    movb	\$$isr, %dl
-	    xorq	%rcx, %rcx
+	1:  /* isr_disableirq(irq); */
+	    xorq	%rdi, %rdi
+	    movb	\$$isr, %dil
+	    pushq   %rdi
+xchg %bx, %bx
 	    call	isr_disableirq
+	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+	    popq    %rdx
+	    xorq	%rcx, %rcx
+	    xorq	%rsi, %rsi
+	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend
-	    $EOI
 	    call	isr_gainentropy
+	    $EOI
 	    call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90

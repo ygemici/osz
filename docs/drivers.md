@@ -1,7 +1,7 @@
 OS/Z Device Drivers
 ===================
 
-They are shared libs which are loaded to system task's address space and allowed to map MMIO and use in/out instructions.
+They are shared libs which are loaded to "SYS" task's address space and allowed to map MMIO and use in/out instructions.
 
 Supported devices
 -----------------

@@ -46,7 +46,6 @@
 
 #include "env.h"
 
-extern char*syslog_buf;
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************
@@ -56,6 +55,8 @@ void main()
     /* initialize console so that we can report errors and stats */
     kprintf_init();
     kprintf("OS/Z starting...\n");
+    // note: we cannot call syslog_early("starting") as syslog_buf
+    // is not allocated yet.
 
     /* step 1: motoric reflexes */
     // check processor capabilities
@@ -77,6 +78,8 @@ void main()
     // special service_init(SRV_ui, "sbin/ui")
     ui_init();
     // other means of communication
+    // start "syslog" task so others can log errors
+    service_init(SRV_syslog, "sbin/syslog");
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
         service_init(SRV_net, "sbin/net");
@@ -86,25 +89,24 @@ void main()
         service_init(SRV_sound, "sbin/sound");
     }
 
-    /* step 3: historic memory */
-    // start "syslog" task so others can log errors
-    service_init(SRV_syslog, "sbin/syslog");
-
-    /* step 4: who am I */
+    /* step 3: who am I */
     fs_locate("etc/hostname");
     if(identity || fs_size==0) {
         // start first time turn on's set up task
         service_init(USER_PROCESS, "sbin/identity");
     }
 
-    /* step 5: stand up and prosper. */
+    /* step 4: stand up and prosper. */
     // load "init" or "sh" process
     service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
 
-    // started message, cover out "starting" message
+    // The "ready" message. Cover out "starting" message
     kprintf_reset();
-    kprintf("OS/Z ready. Allocated %d pages out of %d, free %d.%d%%\n\n",
-        pmm.totalpages - pmm.freepages, pmm.totalpages, pmm.freepages*100/pmm.totalpages, (pmm.freepages*1000/pmm.totalpages)%10);
+    kprintf("OS/Z ready. Allocated %d pages out of %d",
+        pmm.totalpages - pmm.freepages, pmm.totalpages);
+    kprintf(", free %d.%d%%\n\n",
+        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
+    syslog_early("Ready. %d of %d free.",pmm.totalpages - pmm.freepages, pmm.totalpages);
 
     // enable system task. That will initialize devices and then blocks.
     // When that happens, scheduler will choose a task to run and...

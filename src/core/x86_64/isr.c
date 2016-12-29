@@ -78,10 +78,17 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
                 (void*)sysinfostruc,
                 sizeof(sysinfo_t),
                 SYS_sysinfo);
+            // when SYS task asks for it, enable interrupts
+            if(tcb->mypid == services[-SRV_SYS] && (uint64_t)ptr==0xB007B007) {
+                tcb->rflags |= 0x200;
+breakpoint;
+            }
             break;
         case SYS_swapbuf:
             isr_currfps++;
-            /* TODO: map and swap screen[0] and screen[1], then send IRQ2 */
+            /* TODO: map and swap screen[0] and screen[1] */
+            /* flush screen buffer to video memory */
+            msg_sends(services[-SRV_SYS], MSG_FUNC(SYS_swapbuf),0,0,0,0,0,0);
             break;
         default:
             tcb->errno = EINVAL;

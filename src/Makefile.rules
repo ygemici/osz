@@ -23,8 +23,8 @@ $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
 	@$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 ifeq ($(LINKER),sharedlib)
-ifneq ($(TARGET),sbin/system)
-	@../../tools/genfuncmap.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h
+ifneq ($(TARGET),sbin/sys)
+	@../../tools/elftool.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h
 endif
 endif
 

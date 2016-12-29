@@ -28,7 +28,7 @@
 #define _AS 1
 #include <osZ.h>
 
-.global irq2
+.global mem2vid
 
-irq2:
+mem2vid:
     ret

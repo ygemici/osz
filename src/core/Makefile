@@ -30,11 +30,7 @@ $(BINTARGET): platform font.o logo.o $(SRCS)
 	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
 	@echo "0000000000200000 _usercode" >../../bin/core.sym
-ifneq ($(wildchard /usr/bin/nm),)
-	@nm -s $(BINTARGET) | cut -b 1-17,20- | grep -v -e '^000000000000' | sort >>../../bin/core.sym
-else
-	@readelf -s $(BINTARGET) | cut -b 9-25,60- | tail -n +4 | grep -v -e '^000000000000' | sort >>../../bin/core.sym
-endif
+	@../../tools/elftool.o -s 0 $(BINTARGET) | sort >>../../bin/core.sym
 endif
 	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)
 	@#echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null

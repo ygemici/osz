@@ -27,7 +27,7 @@ Boot Parameters
 | nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
 | nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
 | nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
-| nrlogmax  | 2      | number | core | the number of pages for early syslog buffer |
+| nrlogmax  | 16     | number | core | the number of pages for early syslog buffer |
 | nrirqmax  | 8      | number | core | the maximum number of IRQ handlers per IRQ |
 | quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |

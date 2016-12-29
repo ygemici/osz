@@ -129,7 +129,7 @@ void sched_block(OSZ_tcb *tcb)
         kprintf("sched_block(%x)\n", tcb);
 #endif
     /* never block the system task */
-    if(tcb->mypid == services[-SRV_system] ||
+    if(tcb->mypid == services[-SRV_SYS] ||
        tcb->memroot == sys_mapping)
         return;
     tcb->blktime = isr_ticks[0];

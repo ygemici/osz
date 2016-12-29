@@ -4,19 +4,27 @@
 #define SYS_IRQ 0
 #define SYS_ack 1
 #define SYS_nack 2
-#define SYS_sched_yield 3
-#define SYS_dl 4
+#define SYS_dl 3
+#define SYS_sched_yield 4
 #define SYS_seterr 5
 #define SYS_exit 6
 #define SYS_sysinfo 7
 #define SYS_swapbuf 8
+#define SYS_alarm 9
+#define SYS_mmap 10
+#define SYS_munmap 11
+#define SYS_fork 12
+#define SYS_exec 13
 
 #ifndef _AS
 void *dl(uchar *sopath, uchar *sym);
 void yield();
+void seterr(int errno);
 void exit(int err);
 sysinfo_t *sysinfo();
 void swapbuf();
+pid_t fork();
+void exec(uchar *cmd);
 #endif
 
 /*

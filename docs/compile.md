@@ -29,7 +29,7 @@ $ make clean all testq
 TOOLS
   src		mkfs.c
   src		efirom.c
-  src		genfuncmap.c
+  src		elftool.c
 LOADER
   src		efi/inffast.c
   src		efi/inflate.c

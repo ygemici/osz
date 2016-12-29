@@ -45,10 +45,12 @@ _main:
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
     lodsq
+    shlq    $3, %rax
     xorq    %rdx, %rdx
     /* enable IRQs */
 1:  cmp     $0, (%rsi)
     jz      2f
+    pushq   %rax
     pushq   %rdx
     pushq   %rsi
     xorq    %rdi, %rdi
@@ -58,10 +60,18 @@ _main:
     syscall
     popq    %rsi
     popq    %rdx
+    popq    %rax
 2:  addq    %rax, %rsi
     incb    %dl
     cmpb    $ISR_NUMIRQ, %dl
     jne     1b
+    /* release interrupts */
+    xorq    %rdi, %rdi
+    xorq    %rsi, %rsi
+    movq    $0xB007B007, %rdx
+    movb    $SYS_sysinfo, %sil
+    movl     $0x646E6573, %eax # 'send'
+    syscall
 
     /* get work to do */
 getwork:
@@ -70,6 +80,7 @@ getwork:
     cmpw    $SYS_IRQ, (%rax)
     jne     getwork
     /* get IRQ Routing Table */
+    movq    8(%rax), %rdi
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
     /* rax = &irt[irq*irt[0]+1] */
     xorq    %rcx, %rcx

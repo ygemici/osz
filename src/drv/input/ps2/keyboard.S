@@ -83,7 +83,7 @@ irq1:
     incb    kbd_pressed(%rip)
     movw    $SYS_keypress, %si
 3:  /* send a key event to UI task */
-    movq    $SRV_ui, %rdi
+    movq    $SRV_UI, %rdi
     xorq	%rdx, %rdx
     xorq	%rcx, %rcx
     movl     $0x646E6573, %eax # 'send'

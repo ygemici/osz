@@ -55,12 +55,8 @@ idt64:
     .align	8
 isr_preemptcnt:
     .quad	0
-apic:
-    .quad	0
-ioapic:
-    .quad	0
 ctrl:
-    .asciz "APIC"
+    .asciz "PIC"
     .align 8
 nopic:
     .asciz	"%s not supported"
@@ -68,69 +64,38 @@ ioctrl:
     .asciz	"IOAPIC"
 
 .section .text
-/* uint64_t ioapic_read(uint32_t port) */
-ioapic_read:
-    incl	%edi
-    movl	%edi, ioapic
-    movl	ioapic+16, %eax
-    shlq	$32, %rax
-    decl	%edi
-    movl	%edi, ioapic
-    movl	ioapic+16, %eax
-    ret
-
-/* void ioapic_write(uint32_t port, uint64_t value) */
-ioapic_write:
-    movq	%rsi, %rax
-    shrq	$32, %rax
-    incl	%edi
-    movl	%edi, ioapic
-    movl	%eax, ioapic+16
-    decl	%edi
-    movl	%edi, ioapic
-    movl	%esi, ioapic+16
-    ret
-
 /* void isr_enableirq(uint64_t irq) */
 isr_enableirq:
-    movq	%rdi, %rax
-    addq	$32, %rax
-    orq		$IOAPIC_IRQMASK, %rax
-    btrl	$16, %eax
-    movq	%rdi, %rdx
-    shlq	$1, %rdx
-    addq	$IOAPIC_IRQ0, %rdx
-    /* write the high dword first */
-    movq	%rax, %rcx
-    shrq	$32, %rcx
-    incl	%edx
-    movq	ioapic, %rsi
-    movl	%edx, (%rsi)
-    movl	%ecx, 16(%rsi)
-    /* and then the low with unmask bit */
-    decl	%edx
-    movl	%edx, (%rsi)
-    movl	%eax, 16(%rsi)
+    movl	%edi, %ecx
+    andw	$0xF, %cx
+    cmpb	$8, %cl
+    jae		1f
+    inb		$PIC_MASTER_DATA, %al
+    btrw	%cx, %ax
+    outb	%al, $PIC_MASTER_DATA
+    ret
+1:  subb	$8, %cl
+    inb		$PIC_SLAVE_DATA, %al
+    btrw	%cx, %ax
+    outb	%al, $PIC_SLAVE_DATA
     ret
 
 /* void isr_disableirq(uint64_t irq) */
 isr_disableirq:
-    movq	%rdi, %rax
-    addq	$32, %rax
-    orq		$IOAPIC_IRQMASK, %rax
-    btsl	$16, %eax
-    movq	%rdi, %rdx
-    shlq	$1, %rdx
-    addq	$IOAPIC_IRQ0, %rdx
-    /* write the low dword first with mask bit */
-    movq	ioapic, %rsi
-    movl	%edx, (%rsi)
-    movl	%eax, 16(%rsi)
-    shrq	$32, %rax
-    /* and then the high dword */
-    incl	%edx
-    movl	%edx, (%rsi)
-    movl	%eax, 16(%rsi)
+    cmpl	$2, %edi
+    je		1f
+    movl	%edi, %ecx
+    andw	$0xF, %cx
+    cmpl	$8, %edi
+    jae		2f
+    inb		$PIC_MASTER_DATA, %al
+    btsw	%cx, %ax
+    outb	%al, $PIC_MASTER_DATA
+1:  ret
+2:  subl	$8, %edi
+    inb		$PIC_SLAVE_DATA, %al
+    btsw	%cx, %ax
+    outb	%al, $PIC_SLAVE_DATA
     ret
 
 /* store thread's context into Thread Control Block */
@@ -191,7 +156,6 @@ isr_gainentropy:
 /* syscall dispatcher, platform dependent wrapper */
 .align	16, 0x90
 isr_syscall0:
-    cli
     /* tcb->rip */
     movq	%rcx, __PAGESIZE-40
     /* tcp->rsp, save stack pointer and switch to core stack */
@@ -199,7 +163,7 @@ isr_syscall0:
     /* tcb->rflags */
     movq	$__PAGESIZE-16, %rsp
     pushf
-    orw		$0x200, (%rsp)
+/*    orw		$0x200, (%rsp) */
     movq    safestack, %rsp
     addq    $2048, %rsp
     /* enable interrupts flag in rflags */
@@ -220,6 +184,7 @@ isr_syscall0:
     cmpq	$SYS_sched_yield, %rsi
     je  	4f
     /* shortcut to ack syscall, only allow system task */
+xchg %bx, %bx
     cmpq	$SYS_ack, %rsi
     jne     6f
     movq	sys_mapping, %rsi
@@ -325,82 +290,11 @@ isr_inithw:
     movb	$0x1, %al
     outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
+    /* PIC init */
     movb	$0xFF, %al
-    outb	%al, $PIC_MASTER_DATA
     outb	%al, $PIC_SLAVE_DATA
-
-    /* IOAPIC init */
-    movq	ioapic_addr, %rax
-    orq 	%rax, %rax
-    jnz  	1f
-    movq	$nopic, %rdi
-    movq	$ioctrl, %rsi
-    call	kpanic
-    1:
-    /* map ioapic at pmm.bss_end and increase bss pointer */
-    movq	pmm + 40, %rdi
-    movq	%rdi, ioapic
-    movq	%rax, %rsi
-    movb	$PG_CORE_NOCACHE, %dl
-    call	kmap
-    addq	$__PAGESIZE, pmm + 40
-
-    /* setup IRQs, mask them all */
-    xorq	%rdi, %rdi
-1:  call	isr_disableirq
-    incl	%edi
-    cmpl	$24, %edi
-    jne		1b
-
-    /* enable IOAPIC in IMCR */
-    movb	$0x70, %al
-    outb	%al, $0x22
-    movb	$1, %al
-    outb	%al, $0x23
-    /* APIC init */
-    xorq	%rax, %rax
-    incb	%al
-    cpuid
-    btl 	$9, %edx
-    jc  	1f
-    movq	$nopic, %rdi
-    movq	$ctrl, %rsi
-    call	kpanic
-    1:
-    /* find apic physical address */
-    movq	lapic_addr, %rax
-    orq		%rax, %rax
-    jnz		1f
-    movl	$0x1B, %ecx
-    rdmsr
-    andw	$0xF000, %ax
-    1:
-    /* map apic at pmm.bss_end and increase bss pointer */
-    movq	pmm + 40, %rdi
-    movq	%rdi, apic
-    movq	%rax, %rsi
-    movb	$PG_CORE_NOCACHE, %dl
-    call	kmap
-    addq	$__PAGESIZE, pmm + 40
-    /* setup */
-    mov		apic, %rbx
-    movl	$0xFFFFFFFF, APIC_DFR(%rbx)
-    movl	APIC_DFR(%rbx), %eax
-    andl	$0x00FFFFFF, %eax
-    orb		$1, %al
-    movl	%eax, APIC_LDR(%rbx)
-    movl	$APIC_DISABLE, APIC_LVT_TMR(%rbx)
-    movl	$APIC_DISABLE, APIC_LVT_LINT0(%rbx)
-    movl	$APIC_DISABLE, APIC_LVT_LINT1(%rbx)
-    movl	$IOAPIC_NMI, APIC_LVT_PERF(%rbx)
-    movl	$0, APIC_TASKPRI(%rbx)
-    /* enable */
-    movl	$0x1B, %ecx
-    rdmsr
-    btsl	$11, %eax
-    wrmsr
-    /* sw enable 
-    movl	$APIC_SW_ENABLE+39, APIC_SPURIOUS(%rbx) */
+    btrw	$2, %ax /* enable cascade irq 2 */
+    outb	%al, $PIC_MASTER_DATA
     /* enable NMI */
     inb		$0x70, %al
     btrw	$8, %ax
@@ -874,9 +768,9 @@ xchg %bx, %bx
     je		1f
     addq	$8, %rbx
 1:  incq	(%rbx)
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     jmp 2f
     /* save lastest fps counter if a sec passed */
 /*
@@ -906,6 +800,7 @@ xchg %bx, %bx
 2:  call	isr_loadcontext
     iretq
     .align , 0x90
+.align 128, 0x90
 isr_irq1:
     cli
     call	isr_savecontext
@@ -916,22 +811,27 @@ isr_irq1:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$1, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$1, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq2:
     cli
     call	isr_savecontext
@@ -942,22 +842,27 @@ isr_irq2:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$2, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$2, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq3:
     cli
     call	isr_savecontext
@@ -968,22 +873,27 @@ isr_irq3:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$3, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$3, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq4:
     cli
     call	isr_savecontext
@@ -994,22 +904,27 @@ isr_irq4:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$4, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$4, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq5:
     cli
     call	isr_savecontext
@@ -1020,22 +935,27 @@ isr_irq5:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$5, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$5, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq6:
     cli
     call	isr_savecontext
@@ -1046,22 +966,27 @@ isr_irq6:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$6, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$6, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq7:
     cli
     call	isr_savecontext
@@ -1072,22 +997,27 @@ isr_irq7:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$7, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$7, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq8:
     cli
     call	isr_savecontext
@@ -1098,22 +1028,28 @@ isr_irq8:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$8, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$8, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq9:
     cli
     call	isr_savecontext
@@ -1124,22 +1060,28 @@ isr_irq9:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$9, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$9, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq10:
     cli
     call	isr_savecontext
@@ -1150,22 +1092,28 @@ isr_irq10:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$10, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$10, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq11:
     cli
     call	isr_savecontext
@@ -1176,22 +1124,28 @@ isr_irq11:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$11, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$11, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq12:
     cli
     call	isr_savecontext
@@ -1202,22 +1156,28 @@ isr_irq12:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$12, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$12, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq13:
     cli
     call	isr_savecontext
@@ -1228,22 +1188,28 @@ isr_irq13:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$13, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$13, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq14:
     cli
     call	isr_savecontext
@@ -1254,22 +1220,28 @@ isr_irq14:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$14, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$14, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq15:
     cli
     call	isr_savecontext
@@ -1280,22 +1252,28 @@ isr_irq15:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$15, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$15, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq16:
     cli
     call	isr_savecontext
@@ -1306,22 +1284,28 @@ isr_irq16:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$16, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$16, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq17:
     cli
     call	isr_savecontext
@@ -1332,22 +1316,28 @@ isr_irq17:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$17, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$17, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq18:
     cli
     call	isr_savecontext
@@ -1358,22 +1348,28 @@ isr_irq18:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$18, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$18, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq19:
     cli
     call	isr_savecontext
@@ -1384,22 +1380,28 @@ isr_irq19:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$19, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$19, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq20:
     cli
     call	isr_savecontext
@@ -1410,22 +1412,28 @@ isr_irq20:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$20, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$20, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq21:
     cli
     call	isr_savecontext
@@ -1436,22 +1444,28 @@ isr_irq21:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$21, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$21, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq22:
     cli
     call	isr_savecontext
@@ -1462,22 +1476,28 @@ isr_irq22:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$22, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$22, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq23:
     cli
     call	isr_savecontext
@@ -1488,22 +1508,28 @@ isr_irq23:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$23, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$23, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90
 
+.align 128, 0x90
 isr_irq24:
     cli
     call	isr_savecontext
@@ -1514,18 +1540,23 @@ isr_irq24:
     /* no, switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
-1:  movq	$MQ_ADDRESS, %rdi
-    xorq	%rsi, %rsi
-    xorq	%rdx, %rdx
-    movb	$24, %dl
-    xorq	%rcx, %rcx
+1:  /* isr_disableirq(irq); */
+    xorq	%rdi, %rdi
+    movb	$24, %dil
+    pushq   %rdi
+xchg %bx, %bx
     call	isr_disableirq
+    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    popq    %rdx
+    xorq	%rcx, %rcx
+    xorq	%rsi, %rsi
+    movq	$MQ_ADDRESS, %rdi
     call	ksend
-    /* APIC EOI */
-    movq	apic, %rax
-    movl	$0, APIC_EOI(%rax)
     call	isr_gainentropy
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_loadcontext
     iretq
 .align 128, 0x90

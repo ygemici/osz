@@ -323,7 +323,7 @@ ksend:
     movq    %rsi, %rax
     /* destination pid == -1 ? */
     shrq    $16, %rax
-    cmpl    $SRV_system, %eax
+    cmpl    $SRV_SYS, %eax
     jne     4f
     /* mqhdr->mq_end++ */
     incq    8(%rdi)

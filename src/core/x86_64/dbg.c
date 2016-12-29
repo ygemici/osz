@@ -44,9 +44,7 @@ void dbg_init()
 
 void dbg_enableirq(uint64_t irq)
 {
-    if(irq!=0)
     kprintf(" (re)enabled IRQ #%d \n", irq);
-breakpoint;
 }
 
 void dbg_enable(uint64_t rip, char *reason)
@@ -78,36 +76,43 @@ void dbg_enable(uint64_t rip, char *reason)
     kprintf("r14=%8x r15=%8x \n",tcb->gpr+96,tcb->gpr+104);
     /* stack */
     ky=3; kx=fx=44;
-    while(i++<12){
-        kprintf("rsp+%1x rbp-%1x: %8x \n",
-            (uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
-            (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp),
-            *rsp
-        );
-        rsp++;
-    }
-    /* back trace */
-    ky+=2; kx=fx=0;
-    fg=0xCc6c4b; bg=0x200000;
-    kprintf("[Back trace]\n");
-    fg=0x8c2c0b; bg=0;
-    rsp=(uint64_t*)tcb->rsp;
-    i=0;
-    kprintf("%8x: %s \n",
-        tcb->rip, service_sym(tcb->rip)
-    );
-    while(i++<64){
-        if(((rsp[1]==0x23||rsp[1]==0x08) &&
-            (rsp[4]==0x1b||rsp[4]==0x18)) || tcb->rsp==__PAGESIZE-40) {
-            kprintf("%8x: %s \n   *interrupt* \n",tcb->rip, service_sym(tcb->rip));
-            rsp=(uint64_t*)rsp[3];
-            continue;
-        }
-        if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) || *rsp>((uint64_t)&environment+(uint64_t)__PAGESIZE))
-            kprintf("%8x: %s \n",
-                *rsp, service_sym(*rsp)
+    if((uint64_t)rsp<(uint64_t)TEXT_ADDRESS || (uint64_t)rsp>(uint64_t)((uint64_t)&environment+(uint64_t)__PAGESIZE)) {
+        while(i++<12){
+            kprintf("rsp+%1x rbp-%1x: %8x \n",
+                (uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
+                (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp),
+                *rsp
             );
-        rsp++;
+            rsp++;
+        }
+        /* back trace */
+        ky+=2; kx=fx=0;
+        fg=0xCc6c4b; bg=0x200000;
+        kprintf("[Back trace]\n");
+        fg=0x8c2c0b; bg=0;
+        rsp=(uint64_t*)tcb->rsp;
+        i=0;
+        kprintf("%8x: %s \n",
+            tcb->rip, service_sym(tcb->rip)
+        );
+        while(i++<64){
+            if(((rsp[1]==0x23||rsp[1]==0x08) &&
+                (rsp[4]==0x1b||rsp[4]==0x18)) || tcb->rsp==__PAGESIZE-40) {
+                kprintf("%8x: %s \n  * interrupt * \n",tcb->rip, service_sym(tcb->rip));
+                rsp=(uint64_t*)rsp[3];
+                continue;
+            }
+            if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
+               (*rsp>((uint64_t)&environment+(uint64_t)__PAGESIZE) &&
+               (uint64_t)*rsp<(uint64_t)&__bss_start)) {
+                kprintf("%8x: %s \n",
+                    *rsp, service_sym(*rsp)
+                );
+            }
+            rsp++;
+        }
+    } else {
+        kprintf("  * not available *\n");
     }
     /* TODO: debugger, disasm, step through */
     breakpoint;

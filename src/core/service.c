@@ -37,7 +37,7 @@ extern uint64_t *drvptr;
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t isr_entropy[4];
-extern uint64_t hpet_addr;
+extern uint64_t *syslog_buf;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -53,7 +53,7 @@ OSZ_rela __attribute__ ((section (".data"))) *relas;
 
 /* pids of services. Negative pids are service ids and looked up in this */
 pid_t  __attribute__ ((section (".data"))) *services;
-uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_usrfirst;
+uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_USRFIRST;
 /* irq routing */
 uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
 /* dynsym */
@@ -117,6 +117,7 @@ void *service_loadelf(char *fn)
 #if DEBUG
             kprintf("WARNING corrupt ELF binary: %s\n", fn);
 #endif
+            syslog_early("WARNING corrupt ELF binary: %s", fn);
             return (void*)(-1);
     }
     /* map text segment */
@@ -234,16 +235,16 @@ void service_installirq(uint8_t irq, uint64_t offs)
         while(irq_routing_table[k]!=0&&k<last) k++;
 #if DEBUG
         if(debug&DBG_IRQ)
-            kprintf("  IRQ #%d: irt[%d]=%x %s\n",
+            kprintf("  IRQ %3d: irt[%4d]=%4x %s\n",
                 irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
 #endif
+        syslog_early(" %3d: irt[%4d]=%4x %s",
+            irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
         if(irq_routing_table[k]!=0)
-            kpanic("too many (%d+) IRQ handlers for %d\n", nrirqmax, irq);
+            syslog_early("too many (%d+) IRQ handlers for %d\n", nrirqmax, irq);
         irq_routing_table[k] = offs;
-#if DEBUG
-    } else if(debug&DBG_IRQ) {
-            kprintf("WARNING irq_routing_table[%d] for %x out of range\n", k, offs);
-#endif
+    } else {
+            syslog_early("WARNING irq_routing_table[%d] for %x out of range", k, offs);
     }
 }
 
@@ -354,6 +355,8 @@ bool_t service_rtlink()
     if((debug&DBG_IRQ) && irq_routing_table!=NULL)
         kprintf("\nIRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
 #endif
+    if(irq_routing_table!=NULL)
+        syslog_early("IRQ Routing Table (%d IRQs, %d handlers per IRQ)", ISR_NUMIRQ, nrirqmax);
 
     /*** resolve addresses ***/
     for(j=0; j<__PAGESIZE/8; j++) {
@@ -429,9 +432,19 @@ bool_t service_rtlink()
                         service_installirq(k, offs);
                     } else {
                         // record the irq handler's offset for later, we cannot
-                        // install it. We'll have to autodetect the irq
+                        // install it yet. We'll have to autodetect the irq number
                         ehdr->e_shoff = offs;
                     }
+                }
+                if(irq_routing_table != NULL && !kmemcmp(strtable + s->st_name,"mem2vid",8)) {
+#if DEBUG
+                    if(debug&DBG_IRQ)
+                        kprintf("  IRQ m2v: irt[%4d]=%4x %s\n",
+                            (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
+#endif
+                    syslog_early(" m2v: irt[%4d]=%4x %s",
+                            (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
+                    irq_routing_table[(ISR_NUMIRQ*nrirqmax)+1] = offs;
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address
@@ -508,12 +521,9 @@ void service_init(int subsystem, char *fn)
         cmd++;
     cmd++;
     pid_t pid = thread_new(cmd);
-    services[-subsystem] = pid;
     // map executable
     if(service_loadelf(fn) == (void*)(-1)) {
-#if DEBUG
-        kprintf("WARNING unable to load ELF from %s\n", fn);
-#endif
+        syslog_early("WARNING unable to load ELF from %s", fn);
         return;
     }
     // map libc
@@ -522,10 +532,11 @@ void service_init(int subsystem, char *fn)
     if(service_rtlink()) {
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        services[-subsystem] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
     } else {
-#if DEBUG
-        kprintf("WARNING thread check failed for %s\n", fn);
-#endif
+        syslog_early("WARNING thread check failed for %s", fn);
     }
 }
 
@@ -535,8 +546,7 @@ void fs_init()
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
-    pid_t pid = thread_new("fs");
-    services[-SRV_fs] = pid;
+    pid_t pid = thread_new("FS");
     // map file system dispatcher
     if(service_loadelf("sbin/fs") == (void*)(-1)) {
         kpanic("unable to load ELF from /sbin/fs");
@@ -547,6 +557,7 @@ void fs_init()
     if(drvs==NULL) {
         // hardcoded if driver list not found
         // should not happen!
+        syslog_early("/etc/sys/drivers not found");
         service_loadso("lib/sys/fs/gpt.so");    // disk
         service_loadso("lib/sys/fs/fsz.so");    // initrd and OS/Z partitions
         service_loadso("lib/sys/fs/vfat.so");   // EFI boot partition
@@ -576,6 +587,9 @@ void fs_init()
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        services[-SRV_FS] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_FS,"FS",pid);
     } else {
         kpanic("thread check failed for /sbin/fs");
     }
@@ -584,9 +598,9 @@ void fs_init()
 /* Initialize the user interface service, the "ui" task */
 void ui_init()
 {
-    pid_t pid = thread_new("ui");
-    services[-SRV_ui] = pid;
-    // map file system dispatcher
+    pid_t pid = thread_new("UI");
+
+    // map user interface code
     if(service_loadelf("sbin/ui") == (void*)(-1)) {
         kpanic("unable to load ELF from /sbin/ui");
     }
@@ -611,7 +625,41 @@ void ui_init()
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        services[-SRV_UI] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",pid);
     } else {
         kpanic("thread check failed for /sbin/ui");
+    }
+}
+
+/* Initialize the system logger service, the "syslog" task */
+void syslog_init()
+{
+    int i=0,j=0;
+    uint64_t *paging = (uint64_t *)&tmpmap;
+    pid_t pid = thread_new("syslog");
+    // map file system dispatcher
+    if(service_loadelf("sbin/syslog") == (void*)(-1)) {
+        syslog_early("unable to load ELF from /sbin/syslog");
+    }
+    // map early syslog buffer
+    for(i=0;paging[i]!=0;i++);
+    for(j=0;j<nrlogmax;j++)
+        paging[i+j] = (((uint64_t)kmap_getpte(
+            (uint64_t)syslog_buf + j*__PAGESIZE))
+            * ~(__PAGESIZE-1)) + PG_USER_RO;
+            
+    // map libc
+    service_loadso("lib/libc.so");
+    // dynamic linker
+    if(service_rtlink()) {
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        services[-SRV_syslog] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
+    } else {
+        syslog_early("thread check failed for /sbin/syslog");
     }
 }
