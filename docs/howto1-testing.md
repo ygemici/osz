@@ -122,7 +122,7 @@ So as the stack has user mode segment selectors, the CPU will drop
 privileged mode. We can see the non-privileged user mode code starts
 at 0x200000, and user mode stack is right beneath it.
 
-By stepping through, you'll find yourself on the [.text.user](tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
+By stepping through, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
 will iterate through detected devices by calling their _init() method.
 
 Enabling Multitask

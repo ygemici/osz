@@ -767,7 +767,7 @@ isr_preempttimer:
     movq	$656, %rbx
     movb	__PAGESIZE-33, %al   
     cmpb	$0xFF, %al
-    je		1f
+    jne		1f
     addq	$8, %rbx
 1:  incq	(%rbx)
     /* PIC EOI */
