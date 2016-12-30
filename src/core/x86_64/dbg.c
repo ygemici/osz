@@ -55,6 +55,12 @@ void dbg_enable(uint64_t rip, char *reason)
     uint64_t *rsp=(uint64_t*)tcb->rsp;
     __asm__ __volatile__ ( "movq %%cr2, %%rax; movq %%rax, %0" : "=r"(cr2) : : "%rax"); 
     __asm__ __volatile__ ( "movq %%cr3, %%rax; movq %%rax, %0" : "=r"(cr3) : : "%rax"); 
+    if(reason!=NULL&&*reason!=0) {
+        kprintf_reset();
+        fg = 0xFFDD33;
+        bg = 0;
+        kprintf("OS/Z core debug: %s  \n", reason);
+    }
     fx=kx=0; ky=2;
     fg=0xCc6c4b; bg=0x200000;
     /* registers */
@@ -62,7 +68,7 @@ void dbg_enable(uint64_t rip, char *reason)
     kx = 44;
     kprintf("[Stack]\n");
 
-    fg=0x8c2c0b; bg=0;
+    fg=0x9c3c1b; bg=0;
     kprintf("cs=%4x rip=%8x \n",tcb->cs,tcb->rip);
     kprintf("rflags=%8x excerr=%d \n",tcb->rflags,tcb->excerr);
     kprintf("cr2=%8x cr3=%8x \n\n",cr2,cr3);
@@ -89,7 +95,7 @@ void dbg_enable(uint64_t rip, char *reason)
         ky+=2; kx=fx=0;
         fg=0xCc6c4b; bg=0x200000;
         kprintf("[Back trace]\n");
-        fg=0x8c2c0b; bg=0;
+        fg=0x9c3c1b; bg=0;
         rsp=(uint64_t*)tcb->rsp;
         i=0;
         kprintf("%8x: %s \n",

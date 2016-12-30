@@ -44,9 +44,9 @@
 
 // must be __PAGESIZE long
 typedef struct {
-    uint32_t magic;
-    uint8_t state;      // thread state and flags
+    uint32_t magic;     // Thread Control Block magic, must be 'THRD'
     uint8_t priority;   // thread priority
+    uint8_t state;      // thread state and flags
     uint16_t cpu;       // APIC ID of cpu on which this thread runs
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128
@@ -70,9 +70,10 @@ typedef struct {
     uint64_t blkcnt;    // ticks thread spent blocked
     uint64_t swapminor; // only used when thread is hybernated
     uint64_t cmdline;   // pointer to argc in stack
+    uint64_t name;      // pointer to argv[0] in stack
     uuid_t acl[128];    // access control list
 
-    uint8_t padding[__PAGESIZE-2840-TCB_ISRSTACK];
+    uint8_t padding[__PAGESIZE-2848-TCB_ISRSTACK];
     uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
     // the last 40 bytes of stack is referenced directly from asm

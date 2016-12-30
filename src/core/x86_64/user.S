@@ -68,27 +68,47 @@ _main:
     /* release interrupts */
     xorq    %rdi, %rdi
     xorq    %rsi, %rsi
-    movq    $0xB007B007, %rdx
-    movb    $SYS_sysinfo, %sil
+    movl    $0xB0070E01, %edx
+    movb    $SYS_ack, %sil
+    xchg    %bx, %bx
     movl     $0x646E6573, %eax # 'send'
     syscall
 
     /* get work to do */
 getwork:
     call    mq_recv
-    /* MSG_FUNC(msg.evt) != SYS_IRQ? */
-    cmpw    $SYS_IRQ, (%rax)
+    /* MSG_FUNC(msg.evt) == SYS_swapbuf? */
+    cmpw    $SYS_swapbuf, (%rax)
+    jne     1f
+    movq    $TEXT_ADDRESS + __PAGESIZE + (ISR_NUMIRQ*ISR_NUMHANDLER+1)*8, %rsi
+    /* get IRQ Routing Table */
+    movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
+    /* rax = irt[ISR_NUMIRQ*irt[0]+1] */
+    xorq    %rcx, %rcx
+    movb    (%rsi), %cl /* rcx = irt[0] */
+    xorq    %rdx, %rdx
+    movq    $ISR_NUMIRQ, %rax
+    mulq    %rcx
+    incq    %rax
+    shlq    $3, %rax
+    addq    %rsi, %rax
+    /* call mem2vid() */
+    cmpq    $TEXT_ADDRESS, (%rax)
+    jbe     getwork
+    call    *(%rax)
+    jmp     getwork
+
+    /* MSG_FUNC(msg.evt) == SYS_IRQ? */
+1:  cmpw    $SYS_IRQ, (%rax)
     jne     getwork
     /* get IRQ Routing Table */
-    movq    8(%rax), %rdi
+    movq    8(%rax), %rdi /* rdi = irq */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
     /* rax = &irt[irq*irt[0]+1] */
     xorq    %rcx, %rcx
-    movb    (%rsi), %cl
+    movb    (%rsi), %cl /* rcx = irt[0] */
     movq    %rax, %rbx
-    xorq    %rax, %rax
     xorq    %rdx, %rdx
-    movb    8(%rbx), %al
     movq    %rdi, %rax
     mulq    %rcx
     incq    %rax
@@ -96,7 +116,7 @@ getwork:
     addq    %rsi, %rax
     /* now call the irq handlers (*rax)(irq); */
 1:  cmpq    $TEXT_ADDRESS, (%rax)
-    jbe     getwork
+    jbe     2f
     pushq   %rax
     pushq   %rcx
     pushq   %rdi
@@ -104,7 +124,7 @@ getwork:
     popq    %rdi
     popq    %rcx
     popq    %rax
-    addq    $8, %rax
+2:  addq    $8, %rax
     decb    %cl
     orb     %cl, %cl
     jnz     1b

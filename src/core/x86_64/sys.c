@@ -241,7 +241,7 @@ void sys_init()
         irq_routing_table = NULL;
         // modify TCB for system task, platform specific part
         tcb->priority = PRI_SYS;
-        //set IOPL=3 in rFlags
+        //set IOPL=3 in rFlags to permit IO address space
         tcb->rflags |= (3<<12);
         //clear IF flag so that interrupts will be enabled only
         //after system task blocked for the first time. It is important

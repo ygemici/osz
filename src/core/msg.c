@@ -61,14 +61,6 @@ __inline__ inline bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, 
             return false;
         }
     }
-    // map thread's message queue
-    kmap((uint64_t)&tmpmap, (uint64_t)(thread*__PAGESIZE), PG_CORE_NOCACHE);
-    dstmemroot = dsttcb->memroot;
-    kmap((uint64_t)&tmpmap, (uint64_t)(dsttcb->self), PG_CORE_NOCACHE);
-    kmap((uint64_t)&tmp2map, (uint64_t)(paging[MQ_ADDRESS/__PAGESIZE]), PG_CORE_NOCACHE);
-
-//    pde[DSTMQ_PDE] = dsttcb->self;
-//    __asm__ __volatile__ ( "invlpg (tmpmq)" : : :);
 #if DEBUG
     if(debug&DBG_MSG) {
         kprintf(" msg pid %x sending to pid %x, event #%x",
@@ -76,10 +68,18 @@ __inline__ inline bool_t msg_sends(pid_t thread, uint64_t event, uint64_t arg0, 
         if(event & MSG_PTRDATA)
             kprintf(" %x *%x[%d]",arg2,arg0,arg1);
         else
-            kprintf("(%x,%x,%x) %x",arg0,arg1,arg2);
+            kprintf("(%x,%x,%x,%x) %x",arg0,arg1,arg2,arg3);
         kprintf("\n");
     }
 #endif
+    // map thread's message queue
+    kmap((uint64_t)&tmpmap, (uint64_t)(thread>0?thread*__PAGESIZE:oldtcbphy), PG_CORE_NOCACHE);
+    dstmemroot = dsttcb->memroot;
+    kmap((uint64_t)&tmpmap, (uint64_t)(dsttcb->self), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmp2map, (uint64_t)(paging[MQ_ADDRESS/__PAGESIZE]), PG_CORE_NOCACHE);
+
+//    pde[DSTMQ_PDE] = dsttcb->self;
+//    __asm__ __volatile__ ( "invlpg (tmpmq)" : : :);
     // check if the dest is receiving from ANY (0) or from our pid
     if(msghdr->mq_recvfrom != 0 && msghdr->mq_recvfrom != srctcb->mypid) {
         srctcb->errno = EAGAIN;

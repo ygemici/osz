@@ -99,39 +99,32 @@ _init:
 1:  movb   %ah, %al
     outb    %al, $0x71
     jmp     1f
-1:  /* reenable NMI */
+1:
+    /* initialize RTC at 1024Hz */
+    /* enable periodic IRQ8 in RTC */
+    movb    $0x0B, %ah
+    movb    %ah, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    orb     $0x40, %al
+    xchg    %al, %ah
+    outb    %al, $0x70
+    jmp     1f
+1:  movb    %ah, %al
+    outb    %al, $0x71
+  /* reenable NMI */
     inb     $0x70, %al
     btrw    $8, %ax
     outb    %al, $0x70
-
-/*
-    # RTC enable
-    inb     $0xA1, %al
-    andb    $0xFF-1, %al
-    outb    %al, $0xA1
-    # PIC enable
-    inb     $0x21, %al
-    andb    $0xFF-5, %al
-    outb    %al, $0x21
-*/
-
     ret
 
 irq0:
-/*
-    xorb    %al, %al
-    outb    %al, $0x43
-    inb     $0x40, %al
-    jmp     1f
-1:  inb     $0x40, %al
-    # PIC EOI
-    movb    $0x20, %al
-    outb    %al, $0x21
-    inb     $0x21, %al
-    andb    $0xFF-5, %al
-    outb    %al, $0x21
-*/
     ret
 
 irq8:
+    movb    $0x0C, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
     ret

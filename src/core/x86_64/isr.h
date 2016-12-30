@@ -31,18 +31,20 @@
 #define IDT_INT 0x8E010008
 #define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))
 #define IDT_GATE_HI(offset) ((uint64_t)(offset)>>32)
-#define ISR_NUMIRQ 24
-#define ISR_NUMHANDLER 4
-#define ISR_EXCMAX 64
-#define ISR_IRQMAX 128
-#define ISR_STACK 128
 
 //controllers
 #define CTRL_PIC 0
 #define CTRL_APIC 1
 #define CTRL_x2APIC 2
-//if you change this, you'll have to run isrs.sh
+
+/* if you change  one of this, you'll have to run isrs.sh */
+#define ISR_NUMIRQ 24       //maximum number of IRQ lines
+#define ISR_NUMHANDLER 4    //maximum number of handlers per IRQ
+#define ISR_EXCMAX 64       //maximum code size of exception ISRs
+#define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
+#define ISR_STACK 128       //minimum size of stack for ISRs
 #define ISR_CTRL CTRL_PIC
+/* if you change  one of this, you'll have to run isrs.sh */
 
 // PIC, PIT constants
 #define PIC_MASTER		0x20

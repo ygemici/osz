@@ -78,8 +78,8 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
                 (void*)sysinfostruc,
                 sizeof(sysinfo_t),
                 SYS_sysinfo);
-            // when SYS task asks for it, enable interrupts
-            if(tcb->mypid == services[-SRV_SYS] && (uint64_t)ptr==0xB007B007) {
+            // when SYS task signals a boot eoi, enable interrupts
+            if(tcb->mypid == services[-SRV_SYS] && (uint64_t)ptr==0xB0070E01) {
                 tcb->rflags |= 0x200;
 breakpoint;
             }

@@ -81,11 +81,11 @@ irq1:
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
-    movw    $SYS_keypress, %si
 3:  /* send a key event to UI task */
+    movq    %rdx, %rsi
     movq    $SRV_UI, %rdi
-    xorq	%rdx, %rdx
-    xorq	%rcx, %rcx
+    shlq    $16, %rdi
+    movw    $SYS_keypress, %di
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret

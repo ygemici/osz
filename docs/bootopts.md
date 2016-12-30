@@ -27,7 +27,7 @@ Boot Parameters
 | nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
 | nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
 | nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
-| nrlogmax  | 16     | number | core | the number of pages for early syslog buffer |
+| nrlogmax  | 8      | number | core | the number of pages for early syslog buffer |
 | nrirqmax  | 8      | number | core | the maximum number of IRQ handlers per IRQ |
 | quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |
@@ -60,7 +60,8 @@ Display
 
 | Value | Define | Description |
 | ----: | ------ | ----------- |
-| 0     | DSP_MONO_MONO | a simple 2D pixelbuffer grayscale filtered on framebuffer copy |
-| 1     | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32ARGB0 color pixels |
-| 2     | DSP_STEREO_MONO | two 2D pixelbuffers, they are converted grayscale and a red-cyan filtering applied |
-| 3     | DSP_STEREO_COLOR | two 2D pixelbuffers, the way of combining left and right eye's view is 100% driver specific |
+| 0     | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32xRGB0 color pixels |
+| 1     | DSP_STEREO_MONO | two 2D pixelbuffers*, they are converted grayscale and a red-cyan filtering applied |
+| 2     | DSP_STEREO_COLOR | two 2D pixelbuffers*, the way of combining left and right eye's view is 100% driver specific |
+
+(* the two buffers are concatenated in a one big buffer of double the height)

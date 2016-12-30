@@ -102,6 +102,7 @@ pid_t thread_new(char *cmdline)
     // set up stack, watch out for alignment
     kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
     i = 511-((kstrlen(cmdline)+2+15)/16*2);
+    tcb->name = TEXT_ADDRESS - __PAGESIZE + i*8;
     kstrcpy((char*)(&paging[i--]), cmdline);
     paging[i--] = 0;                                 // argv[1]
     paging[i] = TEXT_ADDRESS-__PAGESIZE+(i+2)*8;i--; // argv[0]
@@ -113,7 +114,7 @@ pid_t thread_new(char *cmdline)
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
     if(debug&DBG_THREADS||debug==DBG_ELF)
-        kprintf("Thread %x %s\n",self,cmdline);
+        kprintf("Thread %x %s\n",self/__PAGESIZE,cmdline);
 #endif
     return self/__PAGESIZE;
 }

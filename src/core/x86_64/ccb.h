@@ -37,7 +37,7 @@
 /* for priority levels see src/core/tcb.h */
 #ifndef _AS
 typedef struct {
-    uint32_t magic;     // +00 (TSS64 offset)
+    uint32_t magic;     // +00 (TSS64 offset) CPU Control Block magic 'CPUB'
     uint64_t rsp0;      // +04
     uint64_t rsp1;      // +0C
     uint64_t rsp2;      // +14
@@ -58,4 +58,7 @@ typedef struct {
     pid_t hd_active[8]; // priority queues (heads of active threads)
     pid_t cr_active[8]; // priority queues (current threads)
 } __attribute__((packed)) OSZ_ccb;
+
+c_assert(sizeof(OSZ_ccb) <= __PAGESIZE);
+
 #endif

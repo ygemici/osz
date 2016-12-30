@@ -1,4 +1,4 @@
-./loader/efi-x86_64/zlib_inflate/bootboot.c:36:    // TODO: debug why this isn't working. No errors, no output
+./loader/efi-x86_64/zlib_inflate/bootboot.c:21:    // TODO: debug why this isn't working. No errors, no output
 ./src/lib/libc/exit.c:6:    /* TODO: call atexit handlers and dtors */
 ./src/core/sched.c:54:    /* TODO: ccb.hd_active -> ccb.hd_alarm */
 ./src/core/sched.c:65:    /* TODO: ccb.hd_blocked -> swap */
@@ -8,5 +8,5 @@
 ./src/core/x86_64/acpi.c:158:        // TODO: get values for poweroff
 ./src/core/x86_64/acpi.c:278:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/isr.c:89:            /* TODO: map and swap screen[0] and screen[1] */
-./src/core/x86_64/dbg.c:117:    /* TODO: debugger, disasm, step through */
+./src/core/x86_64/dbg.c:123:    /* TODO: debugger, disasm, step through */
 ./src/core/msg.c:93:    /* TODO: use mq_buffstart properly as a circular buffer */

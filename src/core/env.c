@@ -105,10 +105,14 @@ unsigned char *env_display(unsigned char *s)
     // skip separators
     while(*s==' '||*s=='\t')
         s++;
-    if(s[0]=='m' && s[1]=='m')  display = DSP_MONO_MONO;
     if(s[0]=='m' && s[1]=='c')  display = DSP_MONO_COLOR;
+    if(s[0]=='M' && s[1]=='C')  display = DSP_MONO_COLOR;
     if(s[0]=='s' && s[1]=='m')  display = DSP_STEREO_MONO;
+    if(s[0]=='S' && s[1]=='M')  display = DSP_STEREO_MONO;
+    if(s[0]=='a' && s[1]=='n')  display = DSP_STEREO_MONO;  //anaglyph
     if(s[0]=='s' && s[1]=='c')  display = DSP_STEREO_COLOR;
+    if(s[0]=='S' && s[1]=='C')  display = DSP_STEREO_COLOR;
+    if(s[0]=='r' && s[1]=='e')  display = DSP_STEREO_COLOR; //real 3D
     while(*s!=0 && *s!='\n')
         s++;
     return s;
@@ -163,7 +167,7 @@ void env_init()
     identity = false;
     hpet_addr = ioapic_addr = lapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
-    nrphymax = nrlogmax = 16;
+    nrphymax = nrlogmax = 8;
     nrmqmax = 1;
     quantum = 100;
     fps = 10;

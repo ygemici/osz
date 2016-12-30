@@ -31,7 +31,7 @@ Features
 Hardware Requirements
 ---------------------
 
- - 5 Mb free disk space
+ - 3 Mb free disk space
  - 32 Mb RAM
  - 800 x 600 / ARGB display
  - x86_64 processor with SSE3
@@ -39,39 +39,12 @@ Hardware Requirements
 Testing
 -------
 
-I always push the source to git in a state that's known to [compile](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without errors by a `make clean all` command.
-Although I did my best, it doesn't mean it won't crash under unforseen circumstances :-)
-
 The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example type
 
 ```shell
 qemu-system-x86_64 -hda bin/disk.dd
 ```
-
-But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/src/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory
-with TianoCore EFI. For that one should type
-
-```shell
-make testefi
-```
-
-To run the resulting image in qemu with BIOS
-
-```shell
-make testq
-```
-
-To run the result with BIOS in bochs
-
-```shell
-make testb
-```
-
-To convert the raw disk image to something that VirtualBox can be fed with:
-
-```shell
-make vdi
-```
+For more options, see [Testing How To](https://github.com/bztsrc/osz/tree/master/docs/howto1-testing.md).
 
 License
 -------

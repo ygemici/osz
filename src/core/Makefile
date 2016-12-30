@@ -29,7 +29,7 @@ $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
 	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
-	@echo "0000000000200000 _usercode" >../../bin/core.sym
+	@echo "0000000000200000 _init" >../../bin/core.sym
 	@../../tools/elftool.o -s 0 $(BINTARGET) | sort >>../../bin/core.sym
 endif
 	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)

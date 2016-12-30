@@ -68,6 +68,12 @@ All threads had the chance to run, so there was no stravation and time was split
  
 Which is pretty much the distribution one would expect for those priority levels.
 
+Visibility
+----------
+
+The priority queue list heads are placed in the [CPU Control Block](https://github.com/bztsrc/osz/tree/master/src/core/x86_64/ccb.h).
+That page is per CPU core mapped, meaning all application processors will have their own priority queues.
+
 Thread States
 -------------
 
@@ -88,3 +94,4 @@ There are three states. The following figure demostrates them and their transiti
              |      v
         (CPU resource allocated)
 ```
+When a thread is actively running, it's Thread Control Block is mapped at address 0.

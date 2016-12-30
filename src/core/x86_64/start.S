@@ -145,8 +145,8 @@ cpu_init:
     orl     $0x200, %eax
     andb    $0xFB, %al
     movq    %rax, %cr4
+
     /* init entropy */
-    /* add cpu feature bits */
     mov     $isr_entropy, %rdi
     /* add bootboot structure, environment and core segments */
     mov     $bootboot, %rsi

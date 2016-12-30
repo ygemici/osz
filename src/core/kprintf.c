@@ -57,6 +57,8 @@ char __attribute__ ((section (".data"))) kpanicrip[] =
     " @%x ";
 char __attribute__ ((section (".data"))) kpanicsym[] =
     "%s  ";
+char __attribute__ ((section (".data"))) kpanictlb[] =
+    "paging error resolving %8x at step %d. ";
 char __attribute__ ((section (".data"))) kpanicsuffix[] =
     "                                                      \n"
     "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"

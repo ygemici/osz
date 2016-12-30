@@ -56,7 +56,6 @@ extern uint64_t display;    // see below
 #define DBG_MSG 256         // ms
 
 /* display options */
-#define DSP_MONO_MONO 0     // flat grayscale
-#define DSP_MONO_COLOR 1    // flat color
-#define DSP_STEREO_MONO 2   // grayscale red-cyan anaglyph
+#define DSP_MONO_COLOR 1    // flat 2D color
+#define DSP_STEREO_MONO 2   // grayscale red-cyan 3D anaglyph
 #define DSP_STEREO_COLOR 3  // anything (polarized glass, VR helmet etc.)

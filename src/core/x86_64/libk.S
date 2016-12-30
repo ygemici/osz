@@ -86,7 +86,7 @@ kpanic:
     movq    $5, %rsi
     call    kprintf_center
     push    kx
-    movl    $0x8c2c0b, fg
+    movl    $0x9c3c1b, fg
     movl    $0x100000, bg
     movq    $kpanicsuffix, %rdi
     call    kprintf
@@ -253,6 +253,7 @@ kmap_init:
 kmap_getpte:
     /* we have tmpctrl, so we can map PTE */
     movq    kmap_tmp, %rbx
+    xorq    %r9, %r9
     /* PML4 */
     movq    %rdi, %rax
     shrq    $12+9+9+9, %rax
@@ -264,6 +265,7 @@ kmap_getpte:
     movq    %rdx, (%rbx)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
+    incb    %r9b
     /* PDPE */
     mov     (%rax), %rdx
     movq    %rdi, %rax
@@ -271,10 +273,13 @@ kmap_getpte:
     andl    $0x1FF, %eax
     shlq    $3, %rax
     andw    $0xF000, %dx
+    orq     %rdx, %rdx
+    jz      1f
     incw    %dx
     movq    %rdx, (%rbx)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
+    incb    %r9b
     /* PDE */
     mov     (%rax), %rdx
     movq    %rdi, %rax
@@ -282,11 +287,14 @@ kmap_getpte:
     andl    $0x1FF, %eax
     shlq    $3, %rax
     andw    $0xF000, %dx
+    orq     %rdx, %rdx
+    jz      1f
     incw    %dx
     movq    %rdx, (%rbx)
     invlpg  (%rbx)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
+    incb    %r9b
     /* PTE */
     mov     (%rax), %rdx
     movq    %rdi, %rax
@@ -294,11 +302,17 @@ kmap_getpte:
     andl    $0x1FF, %eax
     shlq    $3, %rax
     andw    $0xF000, %dx
+    orq     %rdx, %rdx
+    jz      1f
     incw    %dx
     movq    %rdx, (%rbx)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
     ret
+1:  movq    %r9, %rdx
+    movq    %rdi, %rsi
+    movq    $kpanictlb, %rdi
+    call    kpanic
 
 /* send a message to a message queue. This has to be effective
    and I didn't like the code gcc generated, that's why it's
