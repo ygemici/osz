@@ -1,5 +1,5 @@
 /*
- * lib/libc/x86_64/mouse.S
+ * drv/input/ps2/mouse.S
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

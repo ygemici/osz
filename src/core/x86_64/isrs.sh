@@ -540,7 +540,6 @@ do
 	cat >>isrs.S <<-EOF
 	.align $isrirqmax, 0x90
 	isr_irq$isr:
-	    $DBG
 	    cli
 	    call	isr_savecontext
 	    $TIMER

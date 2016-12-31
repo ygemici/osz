@@ -38,6 +38,7 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
+extern uint64_t sys_getts(char *p);
 
 extern uint64_t core_mapping;
 extern uint64_t ioapic_addr;
@@ -66,13 +67,14 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
     switch(MSG_FUNC(event)) {
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
-        /* case SYS_sched_yield: in isr_syscall0 asm for performance */
         case SYS_exit:
             break;
+
         case SYS_sysinfo:
             // dynamic fields in System Info Block
             sysinfostruc->ticks[0] = isr_ticks[TICKS_LO];
             sysinfostruc->ticks[1] = isr_ticks[TICKS_HI];
+            sysinfostruc->quantumcnt = isr_ticks[TICKS_QALL];
             sysinfostruc->timestamp_s = isr_ticks[TICKS_TS];
             sysinfostruc->timestamp_ns = isr_ticks[TICKS_NTS];
             sysinfostruc->srand[0] = isr_entropy[0];
@@ -84,23 +86,23 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
                 (void*)sysinfostruc,
                 sizeof(sysinfo_t),
                 SYS_sysinfo);
-            // when SYS task signals a boot eoi, enable interrupts
-            if(tcb->memroot == sys_mapping && (uint64_t)ptr==0xB0070E01) {
-                tcb->rflags |= 0x200;
-            }
             break;
+
         case SYS_swapbuf:
             isr_currfps++;
             /* TODO: map and swap screen[0] and screen[1] */
             /* flush screen buffer to video memory */
             msg_sends(services[-SRV_SYS], MSG_FUNC(SYS_swapbuf),0,0,0,0,0,0);
             break;
-        case SYS_stime:
+
+        case SYS_setbcddate:
             /* set system time stamp (UTC) */
             if(tcb->memroot == sys_mapping || thread_allowed("stime",FSZ_WRITE)) {
-                isr_ticks[TICKS_TS] = (uint64_t)ptr;
+                isr_ticks[TICKS_TS] = sys_getts((char*)&ptr);
+                isr_ticks[TICKS_NTS] = 0;
             }
             break;
+
         default:
             tcb->errno = EINVAL;
             return false;

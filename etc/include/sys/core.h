@@ -10,12 +10,13 @@
 #define SYS_exit 6
 #define SYS_sysinfo 7
 #define SYS_swapbuf 8
-#define SYS_stime 9
-#define SYS_alarm 10
-#define SYS_mmap 11
-#define SYS_munmap 12
-#define SYS_fork 13
-#define SYS_exec 14
+#define SYS_setbcddate 9
+#define SYS_stime 10
+#define SYS_alarm 11
+#define SYS_mmap 12
+#define SYS_munmap 13
+#define SYS_fork 14
+#define SYS_exec 15
 
 #ifndef _AS
 void *dl(uchar *sopath, uchar *sym);

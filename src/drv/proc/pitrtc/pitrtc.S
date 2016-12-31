@@ -1,5 +1,5 @@
 /*
- * lib/libc/x86_64/keyboard.S
+ * drv/proc/pitrtc.S
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief PS2 keyboard driver
+ * @brief PIT and RTC timers for legacy computers
  */
 
 #define _AS 1
@@ -50,12 +50,8 @@ _init:
 
     /* initialize RTC */
 
-    /* disable NMI */
-    inb     $0x70, %al
-    btsw    $8, %ax
-    outb    %al, $0x70
     /* reprogram RTC to 1024Hz */
-    movb    $0xA, %ah
+    movb    $0x8A, %ah
     movb    %ah, %al
     outb    %al, $0x70
     jmp     1f
@@ -68,8 +64,7 @@ _init:
 1:  movb    %ah, %al
     outb    %al, $0x71
     /* enable periodic IRQ8 in RTC */
-/*
-    movb    $0xB, %ah
+    movb    $0x8B, %ah
     movb    %ah, %al
     outb    %al, $0x70
     jmp     1f
@@ -81,18 +76,15 @@ _init:
 1:  movb   %ah, %al
     outb    %al, $0x71
     jmp     1f
-*/
 1:
-  /* reenable NMI */
-    inb     $0x70, %al
-    btrw    $8, %ax
-    outb    %al, $0x70
-
-    /* precalculate number of ticks in 4 secs */
-    movq    %rsi, %rax
-    shlq    $2, %rax
+    /* rtc counter to update system time */
+    movq    $1024, %rax
     movq    %rax, rtc_total(%rip)
     movq    %rax, rtc_cnt(%rip)
+
+  /* reenable NMI */
+    xorb    %al, %al
+    outb    %al, $0x70
     ret
 
 irq0:
@@ -109,7 +101,7 @@ irq8:
     /* step counter */
     decq    rtc_cnt(%rip)
     cmpq    $0, rtc_cnt(%rip)
-    jnz     1f
+    jnz     3f
     /* reset if reached zero */
     movq    rtc_total(%rip), %rax
     movq    %rax, rtc_cnt(%rip)
@@ -117,8 +109,83 @@ irq8:
     /* read precise time from CMOS and send a SYS_stime call
      * this will compensate IRQ inaccurancy on virtual machines */
 
-    /* TODO: read cmos time */
-1:  ret
+    /* read cmos time */
+    lea     cmos(%rip), %rbx
+
+    /* wait for update finish, when register A bit 7 turns off */
+/*
+2:  movb    $0x8A, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    btw     $8, %ax
+    jnc     2b
+2:  movb    $0x8A, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    btw     $8, %ax
+    jc      2b
+*/
+    /* ok, now we can read date time */
+
+    /* century */
+    movb    $0xB2, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    orb     %al, %al
+    jnz     2f
+    movb    $0x20, %al
+2:  movb    %al, 0(%rbx)
+    /* year */
+    movb    $0x89, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    movb    %al, 1(%rbx)
+    /* month */
+    movb    $0x88, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    movb    %al, 2(%rbx)
+    /* day */
+    movb    $0x87, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    movb    %al, 3(%rbx)
+    /* hours */
+    movb    $0x84, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    movb    %al, 4(%rbx)
+    /* min */
+    movb    $0x82, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    movb    %al, 5(%rbx)
+    /* sec */
+    movb    $0x80, %al
+    outb    %al, $0x70
+    jmp     1f
+1:  inb     $0x71, %al
+    movb    %al, 6(%rbx)
+
+    xorq    %rdi, %rdi
+    xorq    %rsi, %rsi
+    movw    $SYS_setbcddate, %si
+    movq    (%rbx), %rdx
+    movl     $0x646E6573, %eax # 'send'
+    syscall
+
+3:  /* reenable NMI */
+    xorb    %al, %al
+    outb    %al, $0x70
+    ret
 
 .section .data
 tmrfreq:
@@ -126,4 +193,6 @@ tmrfreq:
 rtc_cnt:
     .quad 0
 rtc_total:
+    .quad 0
+cmos:
     .quad 0

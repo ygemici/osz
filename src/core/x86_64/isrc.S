@@ -207,6 +207,7 @@ isr_timer:
 
     /* isr_ticks[TICKS_SEC]--; */
     decq    isr_ticks + 32
+    /* a sec passed, isr_ticks[TICKS_SEC]==0? */
     cmpq    $0, isr_ticks + 32
     jnz     1f
     /* isr_ticks[TICKS_TS]++; isr_ticks[TICKS_NTS]=0; */
@@ -262,6 +263,8 @@ isr_timer:
     decq    isr_ticks + 40
     cmpq    $0, isr_ticks + 40
     jnz     2f
+    /* isr_ticks[TICKS_QALL]++; */
+    incq    isr_ticks + 56
     /* isr_ticks[TICKS_QUANTUM] = quantumdiv; */
     movq    quantumdiv, %rax
     movq    %rax, isr_ticks + 40

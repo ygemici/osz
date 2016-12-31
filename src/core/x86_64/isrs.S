@@ -617,7 +617,6 @@ isr_exc31:
     .align , 0x90
 .align 128, 0x90
 isr_irq0:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
@@ -657,7 +656,6 @@ isr_irq0:
 
 .align 128, 0x90
 isr_irq1:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -696,7 +694,6 @@ isr_irq1:
 
 .align 128, 0x90
 isr_irq2:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -735,7 +732,6 @@ isr_irq2:
 
 .align 128, 0x90
 isr_irq3:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -774,7 +770,6 @@ isr_irq3:
 
 .align 128, 0x90
 isr_irq4:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -813,7 +808,6 @@ isr_irq4:
 
 .align 128, 0x90
 isr_irq5:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -852,7 +846,6 @@ isr_irq5:
 
 .align 128, 0x90
 isr_irq6:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -891,7 +884,6 @@ isr_irq6:
 
 .align 128, 0x90
 isr_irq7:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -930,7 +922,6 @@ isr_irq7:
 
 .align 128, 0x90
 isr_irq8:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -970,7 +961,6 @@ isr_irq8:
 
 .align 128, 0x90
 isr_irq9:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1010,7 +1000,6 @@ isr_irq9:
 
 .align 128, 0x90
 isr_irq10:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1050,7 +1039,6 @@ isr_irq10:
 
 .align 128, 0x90
 isr_irq11:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1090,7 +1078,6 @@ isr_irq11:
 
 .align 128, 0x90
 isr_irq12:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1130,7 +1117,6 @@ isr_irq12:
 
 .align 128, 0x90
 isr_irq13:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1170,7 +1156,6 @@ isr_irq13:
 
 .align 128, 0x90
 isr_irq14:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1210,7 +1195,6 @@ isr_irq14:
 
 .align 128, 0x90
 isr_irq15:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1250,7 +1234,6 @@ isr_irq15:
 
 .align 128, 0x90
 isr_irq16:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1290,7 +1273,6 @@ isr_irq16:
 
 .align 128, 0x90
 isr_irq17:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1330,7 +1312,6 @@ isr_irq17:
 
 .align 128, 0x90
 isr_irq18:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1370,7 +1351,6 @@ isr_irq18:
 
 .align 128, 0x90
 isr_irq19:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1410,7 +1390,6 @@ isr_irq19:
 
 .align 128, 0x90
 isr_irq20:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1450,7 +1429,6 @@ isr_irq20:
 
 .align 128, 0x90
 isr_irq21:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1490,7 +1468,6 @@ isr_irq21:
 
 .align 128, 0x90
 isr_irq22:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1530,7 +1507,6 @@ isr_irq22:
 
 .align 128, 0x90
 isr_irq23:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     
@@ -1570,7 +1546,6 @@ isr_irq23:
 
 .align 128, 0x90
 isr_irq24:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     

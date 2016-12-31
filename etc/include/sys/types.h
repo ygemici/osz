@@ -118,18 +118,19 @@ typedef struct {
 //msg->evt = MSG_DEST(child) | MSG_FUNC(anynumber) | MSG_PTRDATA
 
 typedef struct {
-    uint64_t quantum;
-    uint64_t freq;
-    uint64_t ticks[2];
-    uint64_t timestamp_s;
-    uint64_t timestamp_ns;
-    uint64_t fb_width;
-    uint64_t fb_height;
-    uint64_t fb_scanline;
-    uint64_t debug;
-    uint64_t srand[4];
-    uint8_t display;
-    uint8_t fps;
-    uint8_t rescueshell;
+    uint64_t quantum;       // max time a task can allocate CPU 1/quantum
+    uint64_t quantumcnt;    // total number of task switches
+    uint64_t freq;          // timer freqency, task switch at freq/quantum
+    uint64_t ticks[2];      // overall jiffies counter
+    uint64_t timestamp_s;   // UTC timestamp
+    uint64_t timestamp_ns;  // UTC timestamp nanosec fraction
+    uint64_t fb_width;      // framebuffer width
+    uint64_t fb_height;     // framebuffer height
+    uint64_t fb_scanline;   // framebuffer line size
+    uint64_t srand[4];      // random seed bits
+    uint64_t debug;         // debug flags (see env.h)
+    uint8_t display;        // display type (see env.h)
+    uint8_t fps;            // maximum frame per second
+    uint8_t rescueshell;    // rescue shell requested flag
 } __attribute__((packed)) sysinfo_t;
 #endif /* sys/types.h */

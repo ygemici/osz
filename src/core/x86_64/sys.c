@@ -107,10 +107,9 @@ __inline__ void sys_enable()
         "%rsp" );
 }
 
-/* get system timestamp */
-uint64_t sys_getts()
+/* get system timestamp from a BCD date */
+uint64_t sys_getts(char *p)
 {
-    char *p = (char *)&bootboot.datetime;
     uint64_t j,r=0;
     /* decode BCD */
     uint64_t y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
@@ -281,7 +280,7 @@ void sys_init()
             quantumdiv, fpsdiv
         );
         /* use bootboot.datetime and bootboot.timezone to calculate */
-        isr_ticks[TICKS_TS] = sys_getts();
+        isr_ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
         isr_ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
         isr_ticks[TICKS_HI] = isr_ticks[TICKS_LO] = 0;
         // set up system counters
