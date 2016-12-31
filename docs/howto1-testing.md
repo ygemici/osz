@@ -53,13 +53,13 @@ Our jurney begins before the firmware takes control of the hardware.
 <bochs:1> c
 ```
 
-Just press <kbd>c</kbd> and <kbd>Enter</kbd> to continue.
+Just continue as we don't want to debug BIOS.
 
 OS/Z boot ends
 --------------
 
 The first intersting point is where the operating system was loaded, arranged
-it's memory and interrupt controller and is about to leave privileged mode.
+it's memory and interrupts and is about to leave privileged mode.
 
 You must see "OS/Z ready." on the top left corner of your screen with
 white on black, and something similar to this on debug console:
@@ -79,20 +79,20 @@ job is to map the first task and start executing it.
 To obtain your current pid, you'll type simply `page 0`.
 
 <pre>
-<bochs:2> page 0
+&lt;bochs:2> page 0
 PML4: 0x0000000000033007    ps         a pcd pwt U W P
 PDPE: 0x0000000000034007    ps         a pcd pwt U W P
  PDE: 0x8000000000035007 XD ps         a pcd pwt U W P
  PTE: 0x8000000000031005 XD    g pat d a pcd pwt U R P
-linear page 0x0000000000000000 maps to physical page 0x<b>000000031</b>000
-<bochs:3>
+linear page 0x0000000000000000 maps to physical page 0x<i><b>000000031</b></i>000
+&lt;bochs:3>
 </pre>
 
-And look for the last number on output. Forget the last yeros, '000' and there's your pid. It's `0x31` in our case.
+And look for the last number on output. Forget the last three zeros, and there's your pid. It's `0x31` in our case.
 
 ### Checking pid
 
-One can make it sure to have a valid pid by typing (adding a '000' to pid). For current task, use `x /5bc 0`.
+You can check the validity of a pid anytime with:
 
 ```
 <bochs:3> xp /5bc 0x31000
@@ -100,12 +100,15 @@ One can make it sure to have a valid pid by typing (adding a '000' to pid). For 
 0x0000000000031000 <bogus+       0>:  T    H    R    D   \0  
 <bochs:4>
 ```
+
 Here we can see that the page starts with the magic `'THRD'` so identifies as a Thread Control Block. The
 number tells us that it's priority. In our case it's `priority queue 0`, meaning it's "SYS" task we're watching.
 
 Save the first 8 bytes, the actual bitfields of this TCB page is platform specific as it's holding a copy of the CPU state as well.
 Each struct definition can be found in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).
 
+For current task, use `x /5bc 0`.
+ 
 ### What will iret do?
 
 ```
@@ -123,7 +126,7 @@ As the stack stores user mode segment selectors, the CPU will drop
 privileged mode. We can see that the user mode code starts
 at 0x200000, and it's stack is right beneath it.
 
-By stepping through, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
+By stepping through the instruction, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
 will iterate through detected devices by calling their _init() method.
 
 Enabling Multitask

@@ -46,7 +46,15 @@ After that it initializes system services (subsystems), begining with the three 
 That `sys_enable()` function switches to system task, and starts executing it. Because `sys_init()` has cleared Interrupt Flag,
 system task can freely call all device driver's initialization code without interruption. 
 
-After all driver init codes executed, the system task begun to anwser to events. As there are no messages in the queue, it enables IRQs and blocks. By yielding, the true multitasking began, and `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) chooses a thread to run.
+Driver Initialization
+---------------------
+
+The "SYS" task starts by calling all shared libraries (device drivers) entry points to initialize. After that
+it enables all IRQs that it has a handler for, and notifies core to enable interrupt flag. And with that the true
+multitasking began, and `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c)
+chooses a thread to run.
+
+When scheduler returns control to "SYS" task again, it will be in an endless loop waiting for events.
 
 User
 ----
