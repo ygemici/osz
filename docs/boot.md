@@ -57,7 +57,7 @@ Init will start further services (not subsystems) among others the user session 
 
 ### Executables
 
-They start at `_start` defined in [lib/libc/(platform)/crt0.S](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/crt0.S).
+They start at label `_start` defined in [lib/libc/(platform)/crt0.S](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/crt0.S).
 
 ### Shared libraries
 

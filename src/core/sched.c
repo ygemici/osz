@@ -28,7 +28,7 @@
 #include "env.h"
 
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
-extern uint64_t isr_ticks[2];   //ticks counter (128 bit)
+extern uint64_t isr_ticks[8];   //ticks counter (128 bit)
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
@@ -44,15 +44,42 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
     return (OSZ_tcb*)(&tmpmap);
 }
 
-// block until alarm
-void sched_alarm(OSZ_tcb *tcb, uint64_t at)
+#define sched_yield() mq_recv()
+
+// block until alarm, add thread to ccb.hd_timerq list
+// note that isr_alarm() consumes threads from timer queue
+void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 {
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_alarm(%x, %d)\n", tcb->mypid, at);
+        kprintf("sched_alarm(%x, %d.%d)\n", tcb->mypid, sec, nsec);
 #endif
-    /* TODO: ccb.hd_active -> ccb.hd_alarm */
-    tcb->state = tcb_state_hybernated;
+    pid_t pid = tcb->mypid, next=ccb.hd_timerq, prev=0;
+    /* ccb.hd_active -> ccb.hd_timerq */
+    sched_block(tcb);
+    // restore mapping
+    tcb = sched_get_tcb(pid);
+    tcb->alarmsec = sec;
+    tcb->alarmns = nsec;
+    tcb->state |= tcb_flag_alarm;
+    do {
+        OSZ_tcb *t = sched_get_tcb(next);
+        pid_t tmp = next ? t->alarm : 0;
+        if(next==0 || (t->alarmsec >= sec &&
+           t->alarmns  >= nsec)) {
+            if(prev!=0) {
+                OSZ_tcb *t = sched_get_tcb(prev);
+                t->alarm = pid;
+                tcb = sched_get_tcb(pid);
+            } else {
+                ccb.hd_timerq = pid;
+            }
+            tcb->alarm = next;
+            break;
+        }
+        prev = next;
+        next = tmp;
+    } while(next!=0);
 }
 
 // hybernate a thread
@@ -138,7 +165,7 @@ void sched_block(OSZ_tcb *tcb)
     pid_t pid = tcb->mypid;
     sched_remove(tcb);
     // restore mapping
-    sched_get_tcb(pid);
+    tcb = sched_get_tcb(pid);
     // link as the first item in chain
     tcb->next = ccb.hd_blocked;
     tcb->prev = 0;

@@ -31,4 +31,5 @@
 .global mem2vid
 
 mem2vid:
+xchg %bx, %bx
     ret

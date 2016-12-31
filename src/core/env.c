@@ -46,6 +46,7 @@ uint8_t __attribute__ ((section (".data"))) rescueshell;
 extern uint64_t hpet_addr;
 extern uint64_t lapic_addr;
 extern uint64_t ioapic_addr;
+extern uint64_t fpsdiv;
 
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
@@ -275,4 +276,8 @@ void env_init()
 #endif
             env++;
     }
+    /* checks */
+    if(fps==0||quantum==0||quantum/fps<3)
+        kpanic("bad environment values: fps=%d quantum=%d",fps,quantum);
+    fpsdiv = quantum/fps;
 }

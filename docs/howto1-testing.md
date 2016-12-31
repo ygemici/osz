@@ -78,20 +78,21 @@ job is to map the first task and start executing it.
 
 To obtain your current pid, you'll type simply `page 0`.
 
-```
+<pre>
 <bochs:2> page 0
 PML4: 0x0000000000033007    ps         a pcd pwt U W P
 PDPE: 0x0000000000034007    ps         a pcd pwt U W P
  PDE: 0x8000000000035007 XD ps         a pcd pwt U W P
  PTE: 0x8000000000031005 XD    g pat d a pcd pwt U R P
-linear page 0x0000000000000000 maps to physical page 0x000000031000
+linear page 0x0000000000000000 maps to physical page 0x<b>000000031</b>000
 <bochs:3>
-```
+</pre>
+
 And look for the last number on output. Forget the last yeros, '000' and there's your pid. It's `0x31` in our case.
 
 ### Checking pid
 
-One can make it sure to have a valid pid by typing (adding a '000' to pid)
+One can make it sure to have a valid pid by typing (adding a '000' to pid). For current task, use `x /5bc 0`.
 
 ```
 <bochs:3> xp /5bc 0x31000
@@ -99,11 +100,11 @@ One can make it sure to have a valid pid by typing (adding a '000' to pid)
 0x0000000000031000 <bogus+       0>:  T    H    R    D   \0  
 <bochs:4>
 ```
-Here we can see that the page starts with the magic `'THRD'` so it's a Thread Control Block. The last
-number tells us that it's running on `priority queue 0`, so it's "SYS" task.
+Here we can see that the page starts with the magic `'THRD'` so identifies as a Thread Control Block. The
+number tells us that it's priority. In our case it's `priority queue 0`, meaning it's "SYS" task we're watching.
 
-The actual bitfields of this page is platform specific as it's holding a copy of the CPU state.
-Each struct definition can be checked up in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).
+Save the first 8 bytes, the actual bitfields of this TCB page is platform specific as it's holding a copy of the CPU state as well.
+Each struct definition can be found in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).
 
 ### What will iret do?
 
@@ -118,9 +119,9 @@ Stack address size 8
 <bochs:3> 
 
 ```
-So as the stack has user mode segment selectors, the CPU will drop
-privileged mode. We can see the non-privileged user mode code starts
-at 0x200000, and user mode stack is right beneath it.
+As the stack stores user mode segment selectors, the CPU will drop
+privileged mode. We can see that the user mode code starts
+at 0x200000, and it's stack is right beneath it.
 
 By stepping through, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
 will iterate through detected devices by calling their _init() method.
@@ -140,7 +141,7 @@ Next at t=22686813
 <bochs:8>
 ```
 
-You can count on me when I say we're on "SYS" task (if in doubt type `page 0`). So load
+You can count on me when I say we're on "SYS" task (if in doubt type `x /5bc 0`). So load
 it's symbols, and check code.
 
 ```
@@ -164,14 +165,14 @@ task to run, and thus enabling multitask. The OS will switch to the next task ev
 Further break points
 --------------------
 
-The simulation will stop on every interrupt and syscall, for example:
+The simulation will stop on every interrupt, for example:
 
 ```
 <bochs:10> c
 00022900925e[CPU0  ] interrupt(): vector = 20, TYPE = 0, EXT = 1
 (0) Magic breakpoint
 Next at t=22900926
-(0) [0x000000172283] 0008:ffffffffffe09283 (isr_preempttimer+3): cli                       ; fa
+(0) [0x000000172283] 0008:ffffffffffe09283 (isr_irq0_preempt+3): cli                       ; fa
 <bochs:11> c
 00022900972e[CPU0  ] interrupt(): vector = 28, TYPE = 0, EXT = 1
 (0) Magic breakpoint

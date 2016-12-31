@@ -21,14 +21,14 @@ nrsrvmax=1
 quantum=100
 
 // maximum frame rate of the compositor
-fps=10
+fps=20
 
 // what to debug, decimal number or comma separated list of:
 //  mm = memory map, th = threads, el = elf loading,
 //  ri = run-time linker imports, re = run-time exports
 //  ir = IRQ Routing Table, de = devices, sc = scheduler
 //  ms = messaging
-debug=th,ir,ms   
+debug=th,ms,ir   
 
 // display transformation type, decimal number 0-3 or one of:
 //  0 mm = mono channel, mono (grayscale) colors

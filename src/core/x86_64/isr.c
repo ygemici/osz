@@ -35,12 +35,13 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 
 /* from isrs.S */
 extern void isr_exc00divzero();
-extern void isr_preempttimer();
+extern void isr_irq0_preempt();
 extern void isr_irq1();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 
 extern uint64_t core_mapping;
 extern uint64_t ioapic_addr;
+extern uint64_t fpsdiv;
 extern sysinfo_t *sysinfostruc;
 
 #if DEBUG
@@ -48,7 +49,7 @@ extern void dbg_enable(uint64_t rip);
 #endif
 
 /* preemption counter */
-uint64_t __attribute__ ((section (".data"))) isr_ticks[4];
+uint64_t __attribute__ ((section (".data"))) isr_ticks[8];
 /* 256 bit random seed */
 uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
 /* current fps counter and last sec value */
@@ -81,7 +82,6 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
             // when SYS task signals a boot eoi, enable interrupts
             if(tcb->mypid == services[-SRV_SYS] && (uint64_t)ptr==0xB0070E01) {
                 tcb->rflags |= 0x200;
-breakpoint;
             }
             break;
         case SYS_swapbuf:
@@ -105,6 +105,15 @@ void isr_init()
     void *ptr;
     int i;
 
+    // set up system counters
+    isr_ticks[TICKS_HI] = isr_ticks[TICKS_LO] =
+    isr_ticks[TICKS_NTS] = isr_currfps = isr_lastfps = 0;
+    isr_ticks[TICKS_SEC] = quantum;
+    isr_ticks[TICKS_FPS] = fpsdiv;
+    isr_lastfps = fps/2;
+    /* TODO: use bootboot.datetime and bootboot.timezone to calculate */
+    isr_ticks[TICKS_TS] = 1483091802;
+kprintf("isr %d %d\n", isr_currfps, isr_lastfps);
     // generate IDT
     ptr = &isr_exc00divzero;
     // 0-31 exception handlers
@@ -114,9 +123,9 @@ void isr_init()
         ptr+=ISR_EXCMAX;
     }
     // 32 irq 0 preemption timer, longer than ISR_IRQMAX
-    idt[32*2+0] = IDT_GATE_LO(IDT_INT, &isr_preempttimer);
-    idt[32*2+1] = IDT_GATE_HI(&isr_preempttimer);
-    // 32-255 irq handlers
+    idt[32*2+0] = IDT_GATE_LO(IDT_INT, &isr_irq0_preempt);
+    idt[32*2+1] = IDT_GATE_HI(&isr_irq0_preempt);
+    // 33-255 irq handlers
     ptr = &isr_irq1;
     for(i=33;i<ISR_NUMIRQ+32;i++) {
         idt[i*2+0] = IDT_GATE_LO(IDT_INT, ptr);

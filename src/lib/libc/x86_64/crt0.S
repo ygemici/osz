@@ -42,12 +42,11 @@
 .section .text
 
 _start:
-    /* restore argc, argv as it may be ruined by shlib's _init */
+    /* restore argc, argv as they may be ruined by shlib's _init */
     movq    (%rsp), %rdi
     movq    8(%rsp), %rsi
     /* call main(argc,argv) function */
     call    main
     /* exit thread */
     movq    %rax, %rdi
-    call    exit
-    ret
+    jmp    exit

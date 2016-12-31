@@ -69,6 +69,7 @@ numhnd=`grep "ISR_NUMHANDLER" isr.h|cut -d ' ' -f 3`
 isrexcmax=`grep "ISR_EXCMAX" isr.h|cut -d ' ' -f 3`
 isrirqmax=`grep "ISR_IRQMAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
+isralarm=`grep "ISR_IRQALARM" isr.h|cut -d ' ' -f 3`
 ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
 idtsz=$[(($numirq*$numhnd*8+4095)/4096)*4096]
 DEBUG=`grep "DEBUG" ../../../Config |cut -d ' ' -f 3`
@@ -117,14 +118,17 @@ cat >isrs.S <<EOF
 
 .global isr_inithw
 .global isr_exc00divzero
-.global isr_preempttimer
+.global isr_irq0_preempt
 .global isr_irq1
 .global isr_enableirq
 .global isr_disableirq
-.global isr_gainentropy
 
 .extern isr_ticks
-.extern isr_entropy
+.extern isr_gainentropy
+.extern isr_savecontext
+.extern isr_loadcontext
+.extern isr_syscall0
+.extern isr_alarm
 .extern gdt64_tss
 .extern excabort
 .extern pmm
@@ -211,6 +215,7 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 else
 	cat >>isrs.S <<-EOF
 	/* uint64_t ioapic_read(uint32_t port) */
+/*
 	ioapic_read:
 	    incl	%edi
 	    movl	%edi, ioapic
@@ -220,8 +225,10 @@ else
 	    movl	%edi, ioapic
 	    movl	ioapic+16, %eax
 	    ret
+*/
 	
 	/* void ioapic_write(uint32_t port, uint64_t value) */
+/*
 	ioapic_write:
 	    movq	%rsi, %rax
 	    shrq	\$32, %rax
@@ -232,6 +239,7 @@ else
 	    movl	%edi, ioapic
 	    movl	%esi, ioapic+16
 	    ret
+*/
 	
 	/* void isr_enableirq(uint64_t irq) */
 	isr_enableirq:
@@ -278,150 +286,7 @@ else
 	EOF
 fi
 cat >>isrs.S <<EOF
-/* store thread's context into Thread Control Block */
-isr_savecontext:
-    movq	%rax, OSZ_tcb_gpr +   0
-    movq	%rbx, OSZ_tcb_gpr +   8
-    movq	%rcx, OSZ_tcb_gpr +  16
-    movq	%rdx, OSZ_tcb_gpr +  24
-    movq	%rsi, OSZ_tcb_gpr +  32
-    movq	%rdi, OSZ_tcb_gpr +  40
-    movq	%r8,  OSZ_tcb_gpr +  48
-    movq	%r9,  OSZ_tcb_gpr +  56
-    movq	%r10, OSZ_tcb_gpr +  64
-    movq	%r11, OSZ_tcb_gpr +  72
-    movq	%r12, OSZ_tcb_gpr +  80
-    movq	%r13, OSZ_tcb_gpr +  88
-    movq	%r14, OSZ_tcb_gpr +  96
-    movq	%r15, OSZ_tcb_gpr + 104
-    movq	%rbp, OSZ_tcb_gpr + 112
-    ret
-
-/* restore thread's context from Thread Control Block */
-isr_loadcontext:
-    movq	OSZ_tcb_gpr +   0, %rax
-    movq	OSZ_tcb_gpr +   8, %rbx
-    movq	OSZ_tcb_gpr +  16, %rcx
-    movq	OSZ_tcb_gpr +  24, %rdx
-    movq	OSZ_tcb_gpr +  32, %rsi
-    movq	OSZ_tcb_gpr +  40, %rdi
-    movq	OSZ_tcb_gpr +  48, %r8
-    movq	OSZ_tcb_gpr +  56, %r9
-    movq	OSZ_tcb_gpr +  64, %r10
-    movq	OSZ_tcb_gpr +  72, %r11
-    movq	OSZ_tcb_gpr +  80, %r12
-    movq	OSZ_tcb_gpr +  88, %r13
-    movq	OSZ_tcb_gpr +  96, %r14
-    movq	OSZ_tcb_gpr + 104, %r15
-    movq	OSZ_tcb_gpr + 112, %rbp
-    ret
-
-isr_gainentropy:
-    /* isr_entropy[isr_ticks[0]&3] ^=
-       (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
-    movq	isr_ticks, %rax
-    movq	%rax, %rdx
-    incq	%rdx
-    movq	%rdx, %rcx
-    shlq	\$3, %rdx
-    andq	\$3, %rax
-    addq	\$isr_entropy, %rax
-    addq	\$isr_entropy, %rdx
-    andb	\$0x3f, %cl
-    rolq	%cl, (%rax)
-    movq	(%rax), %rax
-    xorq	%rax, (%rdx)
-    ret
-
-/* syscall dispatcher, platform dependent wrapper */
-.align	16, 0x90
-isr_syscall0:
-    cli
-    /* make the environment look like in an irq handler */
-    /* tcb->rip */
-    movq	%rcx, __PAGESIZE-40
-    /* tcp->rsp, save stack pointer and switch to core stack */
-    movq	%rsp, __PAGESIZE-16
-    movq	\$__PAGESIZE-40, %rsp
-
-    /* 'send' */
-    cmpl	\$0x646E6573, %eax
-    jne		1f
-    /* if destination is SRV_core? */
-    orq		%rdi, %rdi
-    jnz		4f
-
-    /*** public syscalls ***/
-    /* shortcut to seterr syscall */
-    cmpb	\$SYS_seterr, %sil
-    jne 	2f
-    /* tcb->errno = rdx */
-    movq	%rdx, 672
-    jmp		9f
-2:
-    /*** "SYS" task only ***/
-    /* tcb->memroot == sys_mapping? */
-    movq	sys_mapping, %rcx
-    cmpq	%rcx, 648
-    jne		3f
-
-    /* shortcut to ack syscall */
-    cmpb	\$SYS_ack, %sil
-    jne     3f
-    /* drivers initialized, IRQs enabled acknowledge */
-    cmpl    \$0xB0070E01, %edx
-    jne     2f
-    /* turn on interrupt flag */
-    orl		\$0x200, __PAGESIZE-24
-    jmp     9f
-    /* enable the given irq */
-2:  movq    %rdx, %rdi
-    call    isr_enableirq
-    jmp     9f
-
-3:  call	isr_syscall
-    jmp		9f
-4:  call	msg_sends
-    jmp		9f
-
-    /* 'call' */
-1:  cmpl	\$0x6c6c6163, %eax
-    jne		1f
-    /* tcb->gpr */
-    call	isr_savecontext
-    xorq	%rdi, %rdi
-    call	sched_block
-    call	isr_loadcontext
-    /* if destination is SRV_core */
-    orq		%rdi, %rdi
-    jnz		2f
-    call	isr_syscall
-    jmp		8f
-2:  call	msg_sends
-    jmp		8f
-
-    /* 'recv' */
-1:  cmpl	\$0x76636572, %eax
-    jne		1f
-    /* tcb->gpr */
-    call	isr_savecontext
-    /* never block system thread */
-    movq	sys_mapping, %rcx
-    /* tcb->memroot == sys_mapping? */
-    cmpq	%rcx, 648
-    je		8f
-    xorq	%rdi, %rdi
-    call	sched_block
-    jmp		8f
-    /* tcb->errno = EINVAL */
-1:  movq	\$EINVAL, 672
-8:  call	isr_loadcontext
-9:  movq	__PAGESIZE-24, %r11
-    movq	__PAGESIZE-40, %rcx
-    movq	__PAGESIZE-16, %rsp
-    sysretq
-
-/* set up gates and msrs, enable PIC/IOAPIC */
+/* set up gates and msrs, enable interrupt controller */
 isr_inithw:
 /* TSS64 descriptor in GDT */
     movq	\$gdt64_tss, %rbx
@@ -656,11 +521,10 @@ cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
     .align $isrisrmax, 0x90
     /* preemption timer */
-isr_preempttimer:
-    $DBG
+isr_irq0_preempt:
     cli
     call	isr_savecontext
-    /* isr_ticks++ */
+    /* uint128_t isr_ticks++ */
     addq	\$1, isr_ticks
     adcq	\$0, isr_ticks+8
     /* if(tcb->rip < 0) tcb->syscnt++; else tcb->billcnt++; */
@@ -670,32 +534,58 @@ isr_preempttimer:
     jne		1f
     addq	\$8, %rbx
 1:  incq	(%rbx)
-    $EOI
-    jmp 2f
+
+    /* send a mem2vid IRQ every fpsdiv ticks */
+    decq    isr_ticks+24
+    movq    isr_ticks+24, %rax
+    orq     %rax, %rax
+    jnz     1f
+    mov     fpsdiv, %rax
+    $DBG
+    movq    %rax, isr_ticks+24
+    /* increase fps counter */
+    incq    isr_currfps
+    /* build a mem2vid message */
+    /* msg_sends(SRV_core, SYS_IRQ, ISR_NUMIRQ, 0,0,0,0); */
+    movq    \$ISR_NUMIRQ, %rdx
+    xorq    %rcx, %rcx
+    xorq    %rsi, %rsi
+    movq    \$MQ_ADDRESS, %rdi
+    call    ksend
+1:
     /* save lastest fps counter if a sec passed */
-    incq    isr_ticks+16
+    decq    isr_ticks+16
     movq    isr_ticks+16, %rax
-    cmpq    %rax, quantum
-    jb      5f
-    movq    isr_currfps, %rax
+    orq     %rax, %rax
+    jnz     1f
+    /* isr_ticks[TICKS_SEC] = quantum; */
+    movq    quantum, %rax
+    $DBG
+    movq    %rax, isr_ticks+16
+    /* isr_lastfps = (isr_lastfps + isr_currfps) / 2 */
+    movq    isr_lastfps, %rax
+/*    addq    isr_currfps, %rax
+    shrq    \$1, %rax*/
     movq    %rax, isr_lastfps
     xorq    %rax, %rax
-    movq    %rax, isr_ticks+16
     movq    %rax, isr_currfps
 #if DEBUG
     call    kprintf_putfps
 #endif
     /* never preempt system thread */
-5:  movq	sys_mapping, %rax
+1:  movq	sys_mapping, %rax
     /* tcb->memroot == sys_mapping? */
     cmpq	%rax, 648
-    je		2f
+    je		1f
     /* switch to a new thread if any */
     call	sched_pick
     orq		%rax, %rax
-    jz		2f
+    jz		1f
     movq	%rax, %cr3
-2:  call	isr_loadcontext
+1:
+    $EOI
+    call	isr_gainentropy
+    call	isr_loadcontext
     iretq
     .align $isrisrmax, 0x90
 EOF
@@ -706,10 +596,18 @@ do
 	then
 		EOI="$EOI2";
 	fi
+	if [ "$isr" == "$isralarm" ]
+	then
+		read -r -d '' ALARMCHK <<-EOF
+		    /* isr_alarm(SRV_core, SYS_IRQ, ISR_IRQALARM, 0,0,0,0); */
+		    call	isr_alarm
+		EOF
+	else
+		ALARMCHK="";
+	fi
 	cat >>isrs.S <<-EOF
 	.align $isrirqmax, 0x90
 	isr_irq$isr:
-	    $DBG
 	    cli
 	    call	isr_savecontext
 	    /* tcb->memroot == sys_mapping? */
@@ -730,6 +628,7 @@ do
 	    xorq	%rsi, %rsi
 	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend
+	    $ALARMCHK
 	    call	isr_gainentropy
 	    $EOI
 	    call	isr_loadcontext

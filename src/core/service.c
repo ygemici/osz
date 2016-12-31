@@ -38,6 +38,7 @@ extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t isr_entropy[4];
 extern uint64_t *syslog_buf;
+extern uint64_t alarmfreq;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -436,15 +437,23 @@ bool_t service_rtlink()
                         ehdr->e_shoff = offs;
                     }
                 }
-                if(irq_routing_table != NULL && !kmemcmp(strtable + s->st_name,"mem2vid",8)) {
+                if(irq_routing_table != NULL) {
+                    if(!kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG
-                    if(debug&DBG_IRQ)
-                        kprintf("  IRQ m2v: irt[%4d]=%4x %s\n",
-                            (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
+                        if(debug&DBG_IRQ)
+                            kprintf("  IRQ m2v: irt[%4d]=%4x %s\n",
+                                (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
 #endif
-                    syslog_early(" m2v: irt[%4d]=%4x %s",
-                            (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
-                    irq_routing_table[(ISR_NUMIRQ*nrirqmax)+1] = offs;
+                        syslog_early(" m2v: irt[%4d]=%4x %s",
+                                (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
+                        irq_routing_table[(ISR_NUMIRQ*nrirqmax)+1] = offs;
+                    }
+                    if(!kmemcmp(strtable + s->st_name,"alarmfreq",10)) {
+                        alarmfreq = *((uint64_t*)((char*)ehdr + s->st_value));
+                        //failsave
+                        if(alarmfreq<1024)
+                            alarmfreq = 1024;
+                    }
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address

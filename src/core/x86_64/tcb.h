@@ -34,13 +34,17 @@
 #define OSZ_tcb_memroot 648
 
 /* platform specific TCB flags */
-#define OSZ_tcb_needsxsave     32
+#define tcb_flag_needsxsave     128
 
 #ifndef _AS
 #include "../tcb.h"
 
 // maximum size of IRQ handler routine's stack
 #define TCB_ISRSTACK 512
+
+/* please note that this structure is referenced a lot from asm
+ * which can't use structs, so I've given the relative offsets for
+ * each field in the struct. The current thread's tcb is at 0. */
 
 // must be __PAGESIZE long
 typedef struct {
@@ -56,24 +60,25 @@ typedef struct {
     uint64_t syscnt;    // ticks thread spent in ring 0      tcb+ 664
     uint64_t errno;     // thread safe libc errno            tcb+ 672
     uint64_t excerr;    // exception error code              tcb+ 680
-    // ordering does not matter from here, fields below not referenced in asm
-    pid_t sendto;
-    pid_t blksend;      // head of blocked threads chain (sending to this thread)
-    pid_t next;         // next thread in this priority level
-    pid_t prev;         // previous thread in this priority level
-    pid_t alarm;        // next thread in alarm queue
-    uint64_t alarmat;   // when to wake up
-    uint64_t linkmem;   // number of linked memory pages
-    uint64_t allocmem;  // number of allocated memory pages
-    uint64_t self;      // self pointer (physical address of TLB PT)
-    uint64_t blktime;   // time when thread was blocked
-    uint64_t blkcnt;    // ticks thread spent blocked
-    uint64_t swapminor; // only used when thread is hybernated
-    uint64_t cmdline;   // pointer to argc in stack
-    uint64_t name;      // pointer to argv[0] in stack
-    uuid_t acl[128];    // access control list
+    pid_t sendto;       // destination thread                tcb+ 688
+    pid_t blksend;      // head of threads waiting to send   tcb+ 696
+    pid_t next;         // next thread in priority level     tcb+ 704
+    pid_t prev;         // previous thread in priority level tcb+ 712
+    pid_t alarm;        // next thread in alarm queue        tcb+ 720
+    uint64_t alarmsec;  // when to wake up (UTC timestamp)   tcb+ 728
+    uint64_t alarmns;   // when to wake up (nanosec)         tcb+ 736
+    uint64_t linkmem;   // number of linked memory pages     tcb+ 744
+    uint64_t allocmem;  // number of allocated memory pages  tcb+ 752
+    uint64_t self;      // self pointer (phy_t of TLB PT)    tcb+ 760
+    uint64_t blktime;   // time when thread was blocked      tcb+ 768
+    uint64_t blkcnt;    // ticks thread spent blocked        tcb+ 776
+    uint64_t swapminor; // swap inode when hybernated        tcb+ 784
+    uint64_t cmdline;   // pointer to argc in stack          tcb+ 792
+    uint64_t name;      // pointer to argv[0] in stack       tcb+ 800
+    uuid_t acl[128];    // access control list               tcb+ 808
 
-    uint8_t padding[__PAGESIZE-2848-TCB_ISRSTACK];
+    // compile time check for minimum stack size
+    uint8_t padding[__PAGESIZE-128*16-TCB_ISRSTACK- 808 ];
     uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
     // the last 40 bytes of stack is referenced directly from asm
@@ -84,6 +89,7 @@ typedef struct {
     uint64_t ss;
 } __attribute__((packed)) OSZ_tcb;
 
+// compile time upper bound check
 c_assert(sizeof(OSZ_tcb) == __PAGESIZE);
 
 #endif

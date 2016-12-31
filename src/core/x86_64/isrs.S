@@ -35,14 +35,17 @@
 
 .global isr_inithw
 .global isr_exc00divzero
-.global isr_preempttimer
+.global isr_irq0_preempt
 .global isr_irq1
 .global isr_enableirq
 .global isr_disableirq
-.global isr_gainentropy
 
 .extern isr_ticks
-.extern isr_entropy
+.extern isr_gainentropy
+.extern isr_savecontext
+.extern isr_loadcontext
+.extern isr_syscall0
+.extern isr_alarm
 .extern gdt64_tss
 .extern excabort
 .extern pmm
@@ -98,150 +101,7 @@ isr_disableirq:
     outb	%al, $PIC_SLAVE_DATA
     ret
 
-/* store thread's context into Thread Control Block */
-isr_savecontext:
-    movq	%rax, OSZ_tcb_gpr +   0
-    movq	%rbx, OSZ_tcb_gpr +   8
-    movq	%rcx, OSZ_tcb_gpr +  16
-    movq	%rdx, OSZ_tcb_gpr +  24
-    movq	%rsi, OSZ_tcb_gpr +  32
-    movq	%rdi, OSZ_tcb_gpr +  40
-    movq	%r8,  OSZ_tcb_gpr +  48
-    movq	%r9,  OSZ_tcb_gpr +  56
-    movq	%r10, OSZ_tcb_gpr +  64
-    movq	%r11, OSZ_tcb_gpr +  72
-    movq	%r12, OSZ_tcb_gpr +  80
-    movq	%r13, OSZ_tcb_gpr +  88
-    movq	%r14, OSZ_tcb_gpr +  96
-    movq	%r15, OSZ_tcb_gpr + 104
-    movq	%rbp, OSZ_tcb_gpr + 112
-    ret
-
-/* restore thread's context from Thread Control Block */
-isr_loadcontext:
-    movq	OSZ_tcb_gpr +   0, %rax
-    movq	OSZ_tcb_gpr +   8, %rbx
-    movq	OSZ_tcb_gpr +  16, %rcx
-    movq	OSZ_tcb_gpr +  24, %rdx
-    movq	OSZ_tcb_gpr +  32, %rsi
-    movq	OSZ_tcb_gpr +  40, %rdi
-    movq	OSZ_tcb_gpr +  48, %r8
-    movq	OSZ_tcb_gpr +  56, %r9
-    movq	OSZ_tcb_gpr +  64, %r10
-    movq	OSZ_tcb_gpr +  72, %r11
-    movq	OSZ_tcb_gpr +  80, %r12
-    movq	OSZ_tcb_gpr +  88, %r13
-    movq	OSZ_tcb_gpr +  96, %r14
-    movq	OSZ_tcb_gpr + 104, %r15
-    movq	OSZ_tcb_gpr + 112, %rbp
-    ret
-
-isr_gainentropy:
-    /* isr_entropy[isr_ticks[0]&3] ^=
-       (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
-    movq	isr_ticks, %rax
-    movq	%rax, %rdx
-    incq	%rdx
-    movq	%rdx, %rcx
-    shlq	$3, %rdx
-    andq	$3, %rax
-    addq	$isr_entropy, %rax
-    addq	$isr_entropy, %rdx
-    andb	$0x3f, %cl
-    rolq	%cl, (%rax)
-    movq	(%rax), %rax
-    xorq	%rax, (%rdx)
-    ret
-
-/* syscall dispatcher, platform dependent wrapper */
-.align	16, 0x90
-isr_syscall0:
-    cli
-    /* make the environment look like in an irq handler */
-    /* tcb->rip */
-    movq	%rcx, __PAGESIZE-40
-    /* tcp->rsp, save stack pointer and switch to core stack */
-    movq	%rsp, __PAGESIZE-16
-    movq	$__PAGESIZE-40, %rsp
-
-    /* 'send' */
-    cmpl	$0x646E6573, %eax
-    jne		1f
-    /* if destination is SRV_core? */
-    orq		%rdi, %rdi
-    jnz		4f
-
-    /*** public syscalls ***/
-    /* shortcut to seterr syscall */
-    cmpb	$SYS_seterr, %sil
-    jne 	2f
-    /* tcb->errno = rdx */
-    movq	%rdx, 672
-    jmp		9f
-2:
-    /*** "SYS" task only ***/
-    /* tcb->memroot == sys_mapping? */
-    movq	sys_mapping, %rcx
-    cmpq	%rcx, 648
-    jne		3f
-
-    /* shortcut to ack syscall */
-    cmpb	$SYS_ack, %sil
-    jne     3f
-    /* drivers initialized, IRQs enabled acknowledge */
-    cmpl    $0xB0070E01, %edx
-    jne     2f
-    /* turn on interrupt flag */
-    orl		$0x200, __PAGESIZE-24
-    jmp     9f
-    /* enable the given irq */
-2:  movq    %rdx, %rdi
-    call    isr_enableirq
-    jmp     9f
-
-3:  call	isr_syscall
-    jmp		9f
-4:  call	msg_sends
-    jmp		9f
-
-    /* 'call' */
-1:  cmpl	$0x6c6c6163, %eax
-    jne		1f
-    /* tcb->gpr */
-    call	isr_savecontext
-    xorq	%rdi, %rdi
-    call	sched_block
-    call	isr_loadcontext
-    /* if destination is SRV_core */
-    orq		%rdi, %rdi
-    jnz		2f
-    call	isr_syscall
-    jmp		8f
-2:  call	msg_sends
-    jmp		8f
-
-    /* 'recv' */
-1:  cmpl	$0x76636572, %eax
-    jne		1f
-    /* tcb->gpr */
-    call	isr_savecontext
-    /* never block system thread */
-    movq	sys_mapping, %rcx
-    /* tcb->memroot == sys_mapping? */
-    cmpq	%rcx, 648
-    je		8f
-    xorq	%rdi, %rdi
-    call	sched_block
-    jmp		8f
-    /* tcb->errno = EINVAL */
-1:  movq	$EINVAL, 672
-8:  call	isr_loadcontext
-9:  movq	__PAGESIZE-24, %r11
-    movq	__PAGESIZE-40, %rcx
-    movq	__PAGESIZE-16, %rsp
-    sysretq
-
-/* set up gates and msrs, enable PIC/IOAPIC */
+/* set up gates and msrs, enable interrupt controller */
 isr_inithw:
 /* TSS64 descriptor in GDT */
     movq	$gdt64_tss, %rbx
@@ -756,11 +616,10 @@ isr_exc31:
 /* IRQ handler ISRs */
     .align , 0x90
     /* preemption timer */
-isr_preempttimer:
-    xchg %bx, %bx
+isr_irq0_preempt:
     cli
     call	isr_savecontext
-    /* isr_ticks++ */
+    /* uint128_t isr_ticks++ */
     addq	$1, isr_ticks
     adcq	$0, isr_ticks+8
     /* if(tcb->rip < 0) tcb->syscnt++; else tcb->billcnt++; */
@@ -770,39 +629,64 @@ isr_preempttimer:
     jne		1f
     addq	$8, %rbx
 1:  incq	(%rbx)
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
-    jmp 2f
+
+    /* send a mem2vid IRQ every fpsdiv ticks */
+    decq    isr_ticks+24
+    movq    isr_ticks+24, %rax
+    orq     %rax, %rax
+    jnz     1f
+    mov     fpsdiv, %rax
+    xchg %bx, %bx
+    movq    %rax, isr_ticks+24
+    /* increase fps counter */
+    incq    isr_currfps
+    /* build a mem2vid message */
+    /* msg_sends(SRV_core, SYS_IRQ, ISR_NUMIRQ, 0,0,0,0); */
+    movq    $ISR_NUMIRQ, %rdx
+    xorq    %rcx, %rcx
+    xorq    %rsi, %rsi
+    movq    $MQ_ADDRESS, %rdi
+    call    ksend
+1:
     /* save lastest fps counter if a sec passed */
-    incq    isr_ticks+16
+    decq    isr_ticks+16
     movq    isr_ticks+16, %rax
-    cmpq    %rax, quantum
-    jb      5f
-    movq    isr_currfps, %rax
+    orq     %rax, %rax
+    jnz     1f
+    /* isr_ticks[TICKS_SEC] = quantum; */
+    movq    quantum, %rax
+    xchg %bx, %bx
+    movq    %rax, isr_ticks+16
+    /* isr_lastfps = (isr_lastfps + isr_currfps) / 2 */
+    movq    isr_lastfps, %rax
+/*    addq    isr_currfps, %rax
+    shrq    $1, %rax*/
     movq    %rax, isr_lastfps
     xorq    %rax, %rax
-    movq    %rax, isr_ticks+16
     movq    %rax, isr_currfps
 #if DEBUG
     call    kprintf_putfps
 #endif
     /* never preempt system thread */
-5:  movq	sys_mapping, %rax
+1:  movq	sys_mapping, %rax
     /* tcb->memroot == sys_mapping? */
     cmpq	%rax, 648
-    je		2f
+    je		1f
     /* switch to a new thread if any */
     call	sched_pick
     orq		%rax, %rax
-    jz		2f
+    jz		1f
     movq	%rax, %cr3
-2:  call	isr_loadcontext
+1:
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
+    call	isr_gainentropy
+    call	isr_loadcontext
     iretq
     .align , 0x90
 .align 128, 0x90
 isr_irq1:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -823,6 +707,7 @@ isr_irq1:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -833,7 +718,6 @@ isr_irq1:
 
 .align 128, 0x90
 isr_irq2:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -854,6 +738,7 @@ isr_irq2:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -864,7 +749,6 @@ isr_irq2:
 
 .align 128, 0x90
 isr_irq3:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -885,6 +769,7 @@ isr_irq3:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -895,7 +780,6 @@ isr_irq3:
 
 .align 128, 0x90
 isr_irq4:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -916,6 +800,7 @@ isr_irq4:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -926,7 +811,6 @@ isr_irq4:
 
 .align 128, 0x90
 isr_irq5:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -947,6 +831,7 @@ isr_irq5:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -957,7 +842,6 @@ isr_irq5:
 
 .align 128, 0x90
 isr_irq6:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -978,6 +862,7 @@ isr_irq6:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -988,7 +873,6 @@ isr_irq6:
 
 .align 128, 0x90
 isr_irq7:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1009,6 +893,7 @@ isr_irq7:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1019,7 +904,6 @@ isr_irq7:
 
 .align 128, 0x90
 isr_irq8:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1040,6 +924,8 @@ isr_irq8:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    /* isr_alarm(SRV_core, SYS_IRQ, ISR_IRQALARM, 0,0,0,0); */
+    call	isr_alarm
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1051,7 +937,6 @@ isr_irq8:
 
 .align 128, 0x90
 isr_irq9:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1072,6 +957,7 @@ isr_irq9:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1083,7 +969,6 @@ isr_irq9:
 
 .align 128, 0x90
 isr_irq10:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1104,6 +989,7 @@ isr_irq10:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1115,7 +1001,6 @@ isr_irq10:
 
 .align 128, 0x90
 isr_irq11:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1136,6 +1021,7 @@ isr_irq11:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1147,7 +1033,6 @@ isr_irq11:
 
 .align 128, 0x90
 isr_irq12:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1168,6 +1053,7 @@ isr_irq12:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1179,7 +1065,6 @@ isr_irq12:
 
 .align 128, 0x90
 isr_irq13:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1200,6 +1085,7 @@ isr_irq13:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1211,7 +1097,6 @@ isr_irq13:
 
 .align 128, 0x90
 isr_irq14:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1232,6 +1117,7 @@ isr_irq14:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1243,7 +1129,6 @@ isr_irq14:
 
 .align 128, 0x90
 isr_irq15:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1264,6 +1149,7 @@ isr_irq15:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1275,7 +1161,6 @@ isr_irq15:
 
 .align 128, 0x90
 isr_irq16:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1296,6 +1181,7 @@ isr_irq16:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1307,7 +1193,6 @@ isr_irq16:
 
 .align 128, 0x90
 isr_irq17:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1328,6 +1213,7 @@ isr_irq17:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1339,7 +1225,6 @@ isr_irq17:
 
 .align 128, 0x90
 isr_irq18:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1360,6 +1245,7 @@ isr_irq18:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1371,7 +1257,6 @@ isr_irq18:
 
 .align 128, 0x90
 isr_irq19:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1392,6 +1277,7 @@ isr_irq19:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1403,7 +1289,6 @@ isr_irq19:
 
 .align 128, 0x90
 isr_irq20:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1424,6 +1309,7 @@ isr_irq20:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1435,7 +1321,6 @@ isr_irq20:
 
 .align 128, 0x90
 isr_irq21:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1456,6 +1341,7 @@ isr_irq21:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1467,7 +1353,6 @@ isr_irq21:
 
 .align 128, 0x90
 isr_irq22:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1488,6 +1373,7 @@ isr_irq22:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1499,7 +1385,6 @@ isr_irq22:
 
 .align 128, 0x90
 isr_irq23:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1520,6 +1405,7 @@ isr_irq23:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
@@ -1531,7 +1417,6 @@ isr_irq23:
 
 .align 128, 0x90
 isr_irq24:
-    xchg %bx, %bx
     cli
     call	isr_savecontext
     /* tcb->memroot == sys_mapping? */
@@ -1552,6 +1437,7 @@ isr_irq24:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
+    
     call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al

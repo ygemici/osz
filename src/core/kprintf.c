@@ -82,6 +82,7 @@ typedef unsigned char *valist;
 extern char _binary_logo_tga_start;
 extern void kwaitkey();
 extern uint64_t isr_entropy[4];
+extern uint64_t isr_currfps;
 extern uint64_t isr_lastfps;
 
 void kprintf_reset()
@@ -239,9 +240,9 @@ void kprintf_puthex(int64_t c)
 void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
-    kx=maxx-10; ky=0; bg=0;
-    fg=isr_lastfps>fps+fps/2?0x108010:(isr_lastfps>fps?0x101080:0x801010);
-    kprintf("%d fps",isr_lastfps);
+    kx=0; ky=maxy-1; bg=0;
+    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
+    kprintf(" %d fps",isr_lastfps);
     kx=ox; ky=oy;
     fg=of; bg=ob;
 }

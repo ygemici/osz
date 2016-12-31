@@ -95,9 +95,14 @@ gdt64_end:
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
 cpu_init:
+    mov     $isr_entropy, %rdi
     xorq    %rax, %rax
     incb    %al
     cpuid
+    xorq    %rax, (%rdi)
+    xorq    %rbx, 8(%rdi)
+    xorq    %rcx, 16(%rdi)
+    xorq    %rdx, 24(%rdi)
     /* minimum processor family */
     movq    $0x796C696D6166, %rsi
     cmp     $0x0600, %ax

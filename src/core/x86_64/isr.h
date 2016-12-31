@@ -43,8 +43,17 @@
 #define ISR_EXCMAX 64       //maximum code size of exception ISRs
 #define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
+#define ISR_IRQALARM 8      //irq to trigger alarm queue checks
 #define ISR_CTRL CTRL_PIC
 /* if you change  one of this, you'll have to run isrs.sh */
+
+//isr_ticks indeces for counters
+#define TICKS_LO 0  //+00 overall ticks (128 bit)
+#define TICKS_HI 1  //+08
+#define TICKS_SEC 2 //+16 ticks / sec counter
+#define TICKS_FPS 3 //+24 fps / sec counter
+#define TICKS_TS 4  //+32 timestamp sec counter
+#define TICKS_NTS 5 //+40 timestamp nanosec fraction
 
 // PIC, PIT constants
 #define PIC_MASTER		0x20

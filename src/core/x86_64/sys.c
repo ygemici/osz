@@ -52,6 +52,11 @@ char __attribute__ ((section (".data"))) *drvnames;
 uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
+uint64_t __attribute__ ((section (".data"))) fpsdiv;
+/* alarm queue stuff */
+uint64_t __attribute__ ((section (".data"))) alarmfreq;
+uint64_t __attribute__ ((section (".data"))) alarmstep;
+uint64_t __attribute__ ((section (".data"))) alarmstepmax;
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -177,8 +182,8 @@ void sys_init()
     // map libc
     service_loadso("lib/libc.so");
     // detect devices and load drivers (sharedlibs) for them
-    drvptr = drivers;
-    if(drvs==NULL) {
+    drvptr = drivers; alarmstepmax=0;
+    if(drvs!=NULL) {
         // should never happen!
 #if DEBUG
         kprintf("WARNING missing /etc/sys/drivers\n");
@@ -215,6 +220,35 @@ void sys_init()
 
     // dynamic linker
     if(service_rtlink()) {
+        char *unit="";
+        uint64_t t;
+        // check for alarm timer driver
+        if(alarmfreq==0)
+            kpanic("unable to initialize alarm timer");
+        // maximum rate 1GHz
+        if(alarmfreq>1000000000)
+            alarmfreq = 1000000000;
+        //calculate stepping
+        alarmstep = 1000000000/alarmfreq;
+        //failsafe
+        if(alarmstep<1)
+            alarmstep=1;
+        alarmstepmax = alarmstep*alarmfreq;
+        t = alarmfreq;
+        if(t>10000) { t=alarmfreq/1000; unit="k"; }
+        if(t>1000000) { t=alarmfreq/1000000; unit="M"; }
+#if DEBUG
+        if(debug&DBG_IRQ)
+            kprintf("  IRQ %3d: alarm freq %d %sHz (step %d ns, diff -%d ns/sec)\n",
+                ISR_IRQALARM, t, unit, alarmstep,
+                1000000000-alarmstepmax
+            );
+#endif
+        syslog_early(" alarm: irq%d freq %d %sHz (step %d ns, diff -%d ns/sec)\n",
+            ISR_IRQALARM, t, unit, alarmstep,
+            1000000000-alarmstepmax
+        );
+        
         // allocate and map screen buffer A
         phy_t bss = (phy_t)BSS_ADDRESS + ((phy_t)__SLOTSIZE * ((phy_t)__PAGESIZE / 8)), fbp=(phy_t)bootboot.fb_ptr;
         i = (bootboot.fb_width * bootboot.fb_height * 4 +
