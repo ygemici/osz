@@ -1,0 +1,2 @@
+//#define PIT_DIVISOR 1193180
+#define PIT_DIVISOR 1193

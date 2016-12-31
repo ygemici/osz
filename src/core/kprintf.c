@@ -72,7 +72,7 @@ char __attribute__ ((section (".data"))) kpanicsuffix2[] =
 char __attribute__ ((section (".data"))) poweroffprefix[] =
     "OS/Z shutdown finished.\n";
 char __attribute__ ((section (".data"))) poweroffsuffix[] =
-    "TURN OFF YOUR COMPUTER";
+    "TURN OFF YOUR COMPUTER.";
 char __attribute__ ((section (".data"))) nullstr[] = "(null)";
 
 typedef unsigned char *valist;

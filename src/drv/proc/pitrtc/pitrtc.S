@@ -28,36 +28,16 @@
 #define _AS 1
 #include <osZ.h>
 
+#include "config.h"
+
 .global _init
 .global irq0
 .global irq8
+.global tmrfreq
 
 _init:
-    xorq    %rdi, %rdi
-    movq    $SYS_sysinfo, %rsi
-    movl     $0x646E6573, %eax # 'send'
-    syscall
-    movq    $4096, %rbx
-    movq     8(%rbx), %rax
-    /* must match sizeof(msg_t) */
-    shlq    $6, %rax
-    addq    %rbx, %rax
-    /* mqhdr->mq_end++ */
-    incq    8(%rbx)
-    movq    8(%rbx), %rcx
-    cmpq    16(%rbx), %rcx
-    jne     1f
-    movq    $1, 8(%rbx)
-1:
-    mov     8(%rax), %rax
-    /*rbx=quantum*/
-    movq    (%rax), %rbx
-
-    /* initialize PIT */
-    movq    $1193180, %rax
-    xorq    %rdx, %rdx
-    divl    %ebx
-    xchgl   %eax, %ebx
+    /* initialize PIT to max/10 interrupts per sec */
+    movq    $PIT_DIVISOR, %rbx
     movb    $0b00110100, %al    //bit 7,6 = (00) channel 0
                                 //bit 5,4 = (11) write LSB then MSB
                                 //bit 3-1 = (010) rate generator
@@ -69,6 +49,7 @@ _init:
     outb    %al, $0x40
 
     /* initialize RTC */
+
     /* disable NMI */
     inb     $0x70, %al
     btsw    $8, %ax
@@ -87,6 +68,7 @@ _init:
 1:  movb    %ah, %al
     outb    %al, $0x71
     /* enable periodic IRQ8 in RTC */
+/*
     movb    $0xB, %ah
     movb    %ah, %al
     outb    %al, $0x70
@@ -99,32 +81,49 @@ _init:
 1:  movb   %ah, %al
     outb    %al, $0x71
     jmp     1f
+*/
 1:
-    /* initialize RTC at 1024Hz */
-    /* enable periodic IRQ8 in RTC */
-    movb    $0x0B, %ah
-    movb    %ah, %al
-    outb    %al, $0x70
-    jmp     1f
-1:  inb     $0x71, %al
-    orb     $0x40, %al
-    xchg    %al, %ah
-    outb    %al, $0x70
-    jmp     1f
-1:  movb    %ah, %al
-    outb    %al, $0x71
   /* reenable NMI */
     inb     $0x70, %al
     btrw    $8, %ax
     outb    %al, $0x70
+
+    /* precalculate number of ticks in 4 secs */
+    movq    %rsi, %rax
+    shlq    $2, %rax
+    movq    %rax, rtc_total(%rip)
+    movq    %rax, rtc_cnt(%rip)
     ret
 
 irq0:
+    /* nothing to do, but we still need a stub function */
     ret
 
 irq8:
+    /* acknowledge irq8 in RTC */
     movb    $0x0C, %al
     outb    %al, $0x70
     jmp     1f
 1:  inb     $0x71, %al
-    ret
+
+    /* step counter */
+    decq    rtc_cnt(%rip)
+    cmpq    $0, rtc_cnt(%rip)
+    jnz     1f
+    /* reset if reached zero */
+    movq    rtc_total(%rip), %rax
+    movq    %rax, rtc_cnt(%rip)
+
+    /* read precise time from CMOS and send a SYS_stime call
+     * this will compensate IRQ inaccurancy on virtual machines */
+
+    /* TODO: read cmos time */
+1:  ret
+
+.section .data
+tmrfreq:
+    .quad PIT_DIVISOR
+rtc_cnt:
+    .quad 0
+rtc_total:
+    .quad 0

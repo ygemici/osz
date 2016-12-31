@@ -124,6 +124,26 @@ bool_t thread_check(OSZ_tcb *tcb, phy_t *paging)
     return true;
 }
 
+bool_t thread_allowed(char *grp, uint8_t access)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)(0);
+    char *g;
+    int i,j;
+    if(grp==NULL||grp[0]==0)
+        return false;
+    j=kstrlen(grp);
+    if(j>15)
+        j=15;
+    for(i=0;i<TCB_MAXACE;i++) {
+        g = (char *)(&tcb->acl[i]);
+        if(g[0]==0)
+            return false;
+        if(!kmemcmp(g, grp, j))
+            return (g[15] & access)!=0;
+    }
+    return false;
+}
+
 /* map memory into thread's address space */
 void thread_mapbss(virt_t bss, phy_t phys, size_t size, uint64_t access)
 {

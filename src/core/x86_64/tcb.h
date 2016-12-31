@@ -41,6 +41,8 @@
 
 // maximum size of IRQ handler routine's stack
 #define TCB_ISRSTACK 512
+// maximum number of ACE
+#define TCB_MAXACE 128
 
 /* please note that this structure is referenced a lot from asm
  * which can't use structs, so I've given the relative offsets for
@@ -75,10 +77,10 @@ typedef struct {
     uint64_t swapminor; // swap inode when hybernated        tcb+ 784
     uint64_t cmdline;   // pointer to argc in stack          tcb+ 792
     uint64_t name;      // pointer to argv[0] in stack       tcb+ 800
-    uuid_t acl[128];    // access control list               tcb+ 808
+    uuid_t acl[TCB_MAXACE];// access control list            tcb+ 808
 
     // compile time check for minimum stack size
-    uint8_t padding[__PAGESIZE-128*16-TCB_ISRSTACK- 808 ];
+    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 808 ];
     uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
     // the last 40 bytes of stack is referenced directly from asm

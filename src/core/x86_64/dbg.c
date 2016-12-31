@@ -38,13 +38,11 @@ extern int fx;
 
 extern uchar *service_sym(virt_t addr);
 
+uint8_t __attribute__ ((section (".data"))) dbg_enabled;
+
 void dbg_init()
 {
-}
-
-void dbg_enableirq(uint64_t irq)
-{
-    kprintf(" (re)enabled IRQ #%d \n", irq);
+    dbg_enabled = 1;
 }
 
 void dbg_enable(uint64_t rip, char *reason)

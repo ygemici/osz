@@ -46,6 +46,10 @@
 
 #include "env.h"
 
+#if DEBUG
+extern char *syslog_buf;
+#endif
+
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************
@@ -101,12 +105,16 @@ void main()
     service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
 
     // The "ready" message. Cover out "starting" message
+    syslog_early("Ready. %d of %d free.",pmm.totalpages - pmm.freepages, pmm.totalpages);
     kprintf_reset();
     kprintf("OS/Z ready. Allocated %d pages out of %d",
         pmm.totalpages - pmm.freepages, pmm.totalpages);
     kprintf(", free %d.%d%%\n\n",
         pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
-    syslog_early("Ready. %d of %d free.",pmm.totalpages - pmm.freepages, pmm.totalpages);
+#if DEBUG
+    if(debug&DBG_LOG)
+        kprintf(syslog_buf);
+#endif
 
     // enable system task. That will initialize devices and then blocks.
     // When that happens, scheduler will choose a task to run and...

@@ -38,7 +38,7 @@ extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t isr_entropy[4];
 extern uint64_t *syslog_buf;
-extern uint64_t alarmfreq;
+extern uint64_t freq;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -448,11 +448,9 @@ bool_t service_rtlink()
                                 (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
                         irq_routing_table[(ISR_NUMIRQ*nrirqmax)+1] = offs;
                     }
-                    if(!kmemcmp(strtable + s->st_name,"alarmfreq",10)) {
-                        alarmfreq = *((uint64_t*)((char*)ehdr + s->st_value));
-                        //failsave
-                        if(alarmfreq<1024)
-                            alarmfreq = 1024;
+                    if(!kmemcmp(strtable + s->st_name,"tmrfreq",8)) {
+                        freq = *((uint64_t*)((char*)ehdr + s->st_value));
+                        kprintf(" timer frequency set to %d Hz by %s\n", freq, drivers[j]);
                     }
                 }
                 // look up in relas array which addresses require

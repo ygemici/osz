@@ -68,7 +68,7 @@ testefi:
 testq:
 	@echo "TEST"
 	@echo
-	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
+	qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
 
 testb:
 	@echo "TEST"

@@ -152,6 +152,8 @@ unsigned char *env_debug(unsigned char *s)
         if(s[0]=='S' && s[1]=='C')              debug |= DBG_SCHED;
         if(s[0]=='m' && s[1]=='s')              debug |= DBG_MSG;
         if(s[0]=='M' && s[1]=='S')              debug |= DBG_MSG;
+        if(s[0]=='l' && s[1]=='o')              debug |= DBG_LOG;
+        if(s[0]=='L' && s[1]=='O')              debug |= DBG_LOG;
         s++;
     }
     return s;
@@ -170,7 +172,7 @@ void env_init()
     nrirqmax = ISR_NUMHANDLER;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
-    quantum = 100;
+    quantum = 1024;
     fps = 10;
     display = DSP_MONO_COLOR;
     debug = DBG_NONE;
@@ -276,8 +278,4 @@ void env_init()
 #endif
             env++;
     }
-    /* checks */
-    if(fps==0||quantum==0||quantum/fps<3)
-        kpanic("bad environment values: fps=%d quantum=%d",fps,quantum);
-    fpsdiv = quantum/fps;
 }

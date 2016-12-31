@@ -54,6 +54,7 @@ extern uint64_t display;    // see below
 #define DBG_DEVICES 64      // de
 #define DBG_SCHED 128       // sc
 #define DBG_MSG 256         // ms
+#define DBG_LOG 512         // lo
 
 /* display options */
 #define DSP_MONO_COLOR 1    // flat 2D color

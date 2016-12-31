@@ -37,6 +37,9 @@ extern char poweroffsuffix[];
 extern uint64_t pt;
 extern OSZ_rela *relas;
 extern phy_t pdpe;
+extern uint64_t isr_ticks[];
+extern uint64_t isr_lastfps;
+extern uint64_t isr_currfps;
 
 extern void kprintf_center(int w, int h);
 extern void isr_initirq();
@@ -52,11 +55,11 @@ char __attribute__ ((section (".data"))) *drvnames;
 uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
-uint64_t __attribute__ ((section (".data"))) fpsdiv;
 /* alarm queue stuff */
-uint64_t __attribute__ ((section (".data"))) alarmfreq;
+uint64_t __attribute__ ((section (".data"))) freq;
+uint64_t __attribute__ ((section (".data"))) fpsdiv;
+uint64_t __attribute__ ((section (".data"))) quantumdiv;
 uint64_t __attribute__ ((section (".data"))) alarmstep;
-uint64_t __attribute__ ((section (".data"))) alarmstepmax;
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -72,7 +75,7 @@ void sys_disable()
     kprintf_init();
     kprintf(poweroffprefix);
     fg = 0x29283f;
-    kprintf_center(20, -8);
+    kprintf_center(21, -8);
     kprintf(poweroffsuffix);
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
@@ -83,7 +86,12 @@ __inline__ void sys_enable()
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
 
-    // map "system" task's TCB
+#if DEBUG
+    // initialize debugger, it can be used only with thread mappings
+    dbg_init();
+#endif
+
+    // map "SYS" task's TCB
     kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_SYS]*__PAGESIZE), PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to force first task switch
@@ -99,7 +107,41 @@ __inline__ void sys_enable()
         "%rsp" );
 }
 
-/* Initialize the "system" task */
+/* get system timestamp */
+uint64_t sys_getts()
+{
+    char *p = (char *)&bootboot.datetime;
+    uint64_t j,r=0;
+    /* decode BCD */
+    uint64_t y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
+    uint64_t m = ((p[2]>>4)*10)+(p[2]&0x0F);
+    uint64_t d = ((p[3]>>4)*10)+(p[3]&0x0F);
+    uint64_t h = ((p[4]>>4)*10)+(p[4]&0x0F);
+    uint64_t i = ((p[5]>>4)*10)+(p[5]&0x0F);
+    uint64_t s = ((p[6]>>4)*10)+(p[6]&0x0F);
+    uint64_t md[12] = {31,0,31,30,31,30,31,31,30,31,30,31};
+    /* is current year leap year? then tweak February */
+    md[1]=((y&3)!=0 ? 28 : ((y%100)==0 && (y%400)!=0?28:29));
+
+    // get number of days since Epoch, cheating
+    r = 16801; // precalculated number of days (1970.jan.1-2017.jan.1.)
+    for(j=2016;j<y;j++)
+        r += ((j&3)!=0 ? 365 : ((j%100)==0 && (j%400)!=0?365:366));
+    // in this year
+    for(j=1;j<m;j++)
+        r += md[j-1];
+    // in this month
+    r += d-1;
+    // convert to sec
+    r *= 24*60*60;
+    // add time with timezone correction to get UTC timestamp
+    r += h*60*60 + (bootboot.timezone + i)*60 + s;
+    // we don't honor leap sec here, but this timestamp should
+    // be rewritten by a timer driver with more accurate value
+    return r;
+}
+
+/* Initialize the "SYS" task */
 void sys_init()
 {
     /* this code should go in service.c, but has platform dependent parts */
@@ -111,17 +153,6 @@ void sys_init()
     char *c, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
-
-    // Static fields in System Info Block (returned by a syscall)
-    sysinfostruc->datetime = bootboot.datetime;
-    sysinfostruc->timezone = bootboot.timezone;
-    sysinfostruc->quantum = quantum;
-    sysinfostruc->fb_width = bootboot.fb_width;
-    sysinfostruc->fb_height = bootboot.fb_height;
-    sysinfostruc->fb_scanline = bootboot.fb_scanline;
-    sysinfostruc->debug = debug;
-    sysinfostruc->display = display;
-    sysinfostruc->rescueshell = rescueshell;
 
     // CPU Control Block (TSS64 in kernel bss)
     kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
@@ -182,8 +213,10 @@ void sys_init()
     // map libc
     service_loadso("lib/libc.so");
     // detect devices and load drivers (sharedlibs) for them
-    drvptr = drivers; alarmstepmax=0;
-    if(drvs!=NULL) {
+    drvptr = drivers;
+    // default timer frequency
+    freq = 0;
+    if(drvs==NULL) {
         // should never happen!
 #if DEBUG
         kprintf("WARNING missing /etc/sys/drivers\n");
@@ -220,35 +253,44 @@ void sys_init()
 
     // dynamic linker
     if(service_rtlink()) {
-        char *unit="";
         uint64_t t;
-        // check for alarm timer driver
-        if(alarmfreq==0)
-            kpanic("unable to initialize alarm timer");
-        // maximum rate 1GHz
-        if(alarmfreq>1000000000)
-            alarmfreq = 1000000000;
-        //calculate stepping
-        alarmstep = 1000000000/alarmfreq;
-        //failsafe
-        if(alarmstep<1)
-            alarmstep=1;
-        alarmstepmax = alarmstep*alarmfreq;
-        t = alarmfreq;
-        if(t>10000) { t=alarmfreq/1000; unit="k"; }
-        if(t>1000000) { t=alarmfreq/1000000; unit="M"; }
-#if DEBUG
-        if(debug&DBG_IRQ)
-            kprintf("  IRQ %3d: alarm freq %d %sHz (step %d ns, diff -%d ns/sec)\n",
-                ISR_IRQALARM, t, unit, alarmstep,
-                1000000000-alarmstepmax
-            );
-#endif
-        syslog_early(" alarm: irq%d freq %d %sHz (step %d ns, diff -%d ns/sec)\n",
-            ISR_IRQALARM, t, unit, alarmstep,
-            1000000000-alarmstepmax
+
+        /*** Timer stuff ***/
+        /* checks */
+        if(freq==0)
+            kpanic("unable to load timer driver");
+        if(freq<1000)       freq=1000;      //min 1000 interrupts per sec
+        if(freq>1000000000) freq=1000000000;//max 1GHz
+        if(quantum<10)      quantum=10;     //min 10 task switch per sec
+        if(quantum>freq/4)  quantum=freq/4; //max 1 switch per 4 interrupts
+        if(fps<5)           fps=5;          //min 5 frames per sec
+        if(fps>freq/16)     fps=freq/16;    //max 1 mem2vid per 16 interrupts
+        //calculate stepping in nanosec
+        alarmstep = 1000000000/freq;
+        //failsafes
+        if(alarmstep<1)     alarmstep=1;    //unit to add to nanosec per interrupt
+        quantumdiv = freq/quantum;          //number of ints to a task switch
+        fpsdiv = freq/fps;                  //number of ints to a mem2vid
+        if(quantumdiv*4 > fpsdiv)
+            fpsdiv = quantumdiv/4;
+        t = 1000000000 - (alarmstep*freq);
+        syslog_early("Timer: IRQ %d at %d Hz, step %d ns, err %d ns",
+            ISR_IRQTMR, freq, alarmstep, t
         );
+        syslog_early("Timer: task %d ints, frame %d ints",
+            quantumdiv, fpsdiv
+        );
+        /* use bootboot.datetime and bootboot.timezone to calculate */
+        isr_ticks[TICKS_TS] = sys_getts();
+        isr_ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
+        isr_ticks[TICKS_HI] = isr_ticks[TICKS_LO] = 0;
+        // set up system counters
+        isr_ticks[TICKS_SEC] = freq;
+        isr_ticks[TICKS_QUANTUM] = quantum;
+        isr_ticks[TICKS_FPS] = fpsdiv;
+    
         
+        /*** Double Screen stuff ***/
         // allocate and map screen buffer A
         phy_t bss = (phy_t)BSS_ADDRESS + ((phy_t)__SLOTSIZE * ((phy_t)__PAGESIZE / 8)), fbp=(phy_t)bootboot.fb_ptr;
         i = (bootboot.fb_width * bootboot.fb_height * 4 +
@@ -271,6 +313,8 @@ void sys_init()
             bss += __SLOTSIZE;
             fbp += __SLOTSIZE;
         }
+
+        /*** IRQ routing stuff ***/
         // don't link other elfs against irq_routing_table
         irq_routing_table = NULL;
         // modify TCB for system task, platform specific part
@@ -284,13 +328,20 @@ void sys_init()
         //start executing at the begining of the text segment
         tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
     
+        // Static fields in System Info Block (returned by a syscall)
+        sysinfostruc->freq = freq;
+        sysinfostruc->quantum = quantum;
+        sysinfostruc->fb_width = bootboot.fb_width;
+        sysinfostruc->fb_height = bootboot.fb_height;
+        sysinfostruc->fb_scanline = bootboot.fb_scanline;
+        sysinfostruc->debug = debug;
+        sysinfostruc->display = display;
+        sysinfostruc->rescueshell = rescueshell;
+
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
         services[-SRV_SYS] = pid;
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_SYS,"SYS",pid);
-#if DEBUG
-        dbg_init();
-#endif
     } else {
         kpanic("unable to start system task");
     }

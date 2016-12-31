@@ -37,6 +37,8 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
         return (OSZ_tcb*)0;
     // last mapped or last used tcb
     if((uint64_t)thread==(uint64_t)(&tmpmap) ||
+       (uint64_t)thread==(uint64_t)(&tmp2map) ||
+       (uint64_t)thread==(uint64_t)(&tmpalarm) ||
        (uint64_t)thread==(uint64_t)pmm.bss_end)
         return (OSZ_tcb*)(thread);
     // map a new tcb
@@ -80,6 +82,8 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
         prev = next;
         next = tmp;
     } while(next!=0);
+    // map the tcb at the head of the queue for easy access
+    kmap((uint64_t)&tmpalarm, (uint64_t)(ccb.hd_timerq * __PAGESIZE), PG_CORE_NOCACHE);
 }
 
 // hybernate a thread

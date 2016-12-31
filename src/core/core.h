@@ -43,6 +43,7 @@ extern unsigned char environment[__PAGESIZE]; // configuration
 extern uint8_t fb;                    // framebuffer
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
+extern uint8_t tmpalarm;              // temporarily mapped tcb for alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t _usercode;             // user mode text start
 extern uint8_t _init;                 // user mode initialization code
@@ -176,6 +177,9 @@ extern pid_t thread_new(char *cmdline);
 
 /** Sanity check thread data */
 extern bool_t thread_check(OSZ_tcb *tcb, phy_t *paging);
+
+/** Check access for a group */
+extern bool_t thread_allowed(char *grp, uint8_t access);
 
 // ----- Scheduler -----
 /** Add thread to scheduling */

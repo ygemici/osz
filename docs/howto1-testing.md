@@ -175,7 +175,7 @@ The simulation will stop on every interrupt, for example:
 00022900925e[CPU0  ] interrupt(): vector = 20, TYPE = 0, EXT = 1
 (0) Magic breakpoint
 Next at t=22900926
-(0) [0x000000172283] 0008:ffffffffffe09283 (isr_irq0_preempt+3): cli                       ; fa
+(0) [0x000000172283] 0008:ffffffffffe09283 (isr_irq0+3): cli                       ; fa
 <bochs:11> c
 00022900972e[CPU0  ] interrupt(): vector = 28, TYPE = 0, EXT = 1
 (0) Magic breakpoint

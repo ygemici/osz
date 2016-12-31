@@ -69,10 +69,12 @@ kpanic:
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
+#if DEBUG
+    cmpb    $0, dbg_enabled
+    jz      1f
     movq    __PAGESIZE-40, %rsi
     movq    $kpanicrip, %rdi
     call    kprintf
-#if DEBUG
     movq    __PAGESIZE-40, %rdi
     call    service_sym
     mov     %rax, %rsi
@@ -81,7 +83,9 @@ kpanic:
     movq    $kpanicrip, %rdi
     xorq    %rsi, %rsi
     call    dbg_enable
-#else
+    jmp     2f
+1:
+#endif
     movq    $54, %rdi
     movq    $5, %rsi
     call    kprintf_center
@@ -97,8 +101,7 @@ kpanic:
     addl    $46, kx
     addl    $1, ky
     call    kprintf_putlogo
-#endif
-    call    kwaitkey
+2:  call    kwaitkey
     mov     $0xFE, %al
     out     %al, $0x64
     hlt

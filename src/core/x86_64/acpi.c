@@ -28,6 +28,7 @@
 #include "platform.h"
 #include "../env.h"
 #include "acpi.h"
+#include "isr.h"
 
 /* main properties, configurable */
 uint64_t __attribute__ ((section (".data"))) hpet_addr;
@@ -271,11 +272,13 @@ void acpi_init()
         // fallback to default if not found and not given either
         if(ioapic_addr==0)
             ioapic_addr=0xFEC00000;
-        // load timer driver
-        service_loadso(hpet_addr==0?
-            "lib/sys/proc/pitrtc.so":
+        /* load timer driver */
+        //   with PIC:  PIT and RTC
+        //   with APIC: HPET, if detected, APIC timer otherwise
+        service_loadso(hpet_addr==0 || (hpet_addr & (__PAGESIZE-1))!=0?
+            (ISR_CTRL==CTRL_PIC?"lib/sys/proc/pitrtc.so":
+            "lib/sys/proc/apic.so"):
             "lib/sys/proc/hpet.so");
-// TODO:  service_installirq(irq, ehdr->e_shoff);
     }
 }
 

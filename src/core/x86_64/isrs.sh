@@ -69,7 +69,7 @@ numhnd=`grep "ISR_NUMHANDLER" isr.h|cut -d ' ' -f 3`
 isrexcmax=`grep "ISR_EXCMAX" isr.h|cut -d ' ' -f 3`
 isrirqmax=`grep "ISR_IRQMAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
-isralarm=`grep "ISR_IRQALARM" isr.h|cut -d ' ' -f 3`
+isrtimer=`grep "ISR_IRQTMR" isr.h|cut -d ' ' -f 3`
 ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
 idtsz=$[(($numirq*$numhnd*8+4095)/4096)*4096]
 DEBUG=`grep "DEBUG" ../../../Config |cut -d ' ' -f 3`
@@ -118,8 +118,7 @@ cat >isrs.S <<EOF
 
 .global isr_inithw
 .global isr_exc00divzero
-.global isr_irq0_preempt
-.global isr_irq1
+.global isr_irq0
 .global isr_enableirq
 .global isr_disableirq
 
@@ -129,6 +128,7 @@ cat >isrs.S <<EOF
 .extern isr_loadcontext
 .extern isr_syscall0
 .extern isr_alarm
+.extern isr_timer
 .extern gdt64_tss
 .extern excabort
 .extern pmm
@@ -139,7 +139,7 @@ idt64:
     .word	(32+$numirq)*16-1
     .quad	0
     .align	8
-isr_preemptcnt:
+isr_next:
     .quad	0
 EOF
 if [ "$ctrl" == "CTRL_PIC" ]; then
@@ -520,96 +520,30 @@ done
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
     .align $isrisrmax, 0x90
-    /* preemption timer */
-isr_irq0_preempt:
-    cli
-    call	isr_savecontext
-    /* uint128_t isr_ticks++ */
-    addq	\$1, isr_ticks
-    adcq	\$0, isr_ticks+8
-    /* if(tcb->rip < 0) tcb->syscnt++; else tcb->billcnt++; */
-    movq	\$656, %rbx
-    movb	__PAGESIZE-33, %al   
-    cmpb	\$0xFF, %al
-    jne		1f
-    addq	\$8, %rbx
-1:  incq	(%rbx)
-
-    /* send a mem2vid IRQ every fpsdiv ticks */
-    decq    isr_ticks+24
-    movq    isr_ticks+24, %rax
-    orq     %rax, %rax
-    jnz     1f
-    mov     fpsdiv, %rax
-    $DBG
-    movq    %rax, isr_ticks+24
-    /* increase fps counter */
-    incq    isr_currfps
-    /* build a mem2vid message */
-    /* msg_sends(SRV_core, SYS_IRQ, ISR_NUMIRQ, 0,0,0,0); */
-    movq    \$ISR_NUMIRQ, %rdx
-    xorq    %rcx, %rcx
-    xorq    %rsi, %rsi
-    movq    \$MQ_ADDRESS, %rdi
-    call    ksend
-1:
-    /* save lastest fps counter if a sec passed */
-    decq    isr_ticks+16
-    movq    isr_ticks+16, %rax
-    orq     %rax, %rax
-    jnz     1f
-    /* isr_ticks[TICKS_SEC] = quantum; */
-    movq    quantum, %rax
-    $DBG
-    movq    %rax, isr_ticks+16
-    /* isr_lastfps = (isr_lastfps + isr_currfps) / 2 */
-    movq    isr_lastfps, %rax
-/*    addq    isr_currfps, %rax
-    shrq    \$1, %rax*/
-    movq    %rax, isr_lastfps
-    xorq    %rax, %rax
-    movq    %rax, isr_currfps
-#if DEBUG
-    call    kprintf_putfps
-#endif
-    /* never preempt system thread */
-1:  movq	sys_mapping, %rax
-    /* tcb->memroot == sys_mapping? */
-    cmpq	%rax, 648
-    je		1f
-    /* switch to a new thread if any */
-    call	sched_pick
-    orq		%rax, %rax
-    jz		1f
-    movq	%rax, %cr3
-1:
-    $EOI
-    call	isr_gainentropy
-    call	isr_loadcontext
-    iretq
-    .align $isrisrmax, 0x90
 EOF
-for isr in `seq 1 $numirq`
+for isr in `seq 0 $numirq`
 do
 	echo "			irq$isr" >&2
 	if [ "$EOI2" != "" -a $isr -gt 7 ]
 	then
 		EOI="$EOI2";
 	fi
-	if [ "$isr" == "$isralarm" ]
+	if [ "$isr" == "$isrtimer" ]
 	then
-		read -r -d '' ALARMCHK <<-EOF
-		    /* isr_alarm(SRV_core, SYS_IRQ, ISR_IRQALARM, 0,0,0,0); */
-		    call	isr_alarm
+		read -r -d '' TIMER <<-EOF
+		    /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
+		    call	isr_timer
 		EOF
 	else
-		ALARMCHK="";
+		TIMER="";
 	fi
 	cat >>isrs.S <<-EOF
 	.align $isrirqmax, 0x90
 	isr_irq$isr:
+	    $DBG
 	    cli
 	    call	isr_savecontext
+	    $TIMER
 	    /* tcb->memroot == sys_mapping? */
 	    movq	%cr3, %rax
 	    cmpq	sys_mapping, %rax
@@ -628,10 +562,16 @@ do
 	    xorq	%rsi, %rsi
 	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend
-	    $ALARMCHK
 	    call	isr_gainentropy
 	    $EOI
-	    call	isr_loadcontext
+	    /* switch task */
+	    movq	isr_next, %rax
+	    orq 	%rax, %rax
+	    jz  	1f
+	    movq	%rax, %cr3
+	    xorq	%rax, %rax
+	    movq	%rax, isr_next
+	1:  call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90
 	

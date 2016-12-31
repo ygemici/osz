@@ -119,16 +119,17 @@ typedef struct {
 
 typedef struct {
     uint64_t quantum;
+    uint64_t freq;
     uint64_t ticks[2];
-    uint64_t datetime;    // in BCD yyyymmddhhiiss
-    int64_t  timezone;    //in minutes -1440..1440
+    uint64_t timestamp_s;
+    uint64_t timestamp_ns;
     uint64_t fb_width;
     uint64_t fb_height;
     uint64_t fb_scanline;
     uint64_t debug;
-    uint64_t display;
-    uint64_t fps;
-    uint64_t rescueshell;
     uint64_t srand[4];
+    uint8_t display;
+    uint8_t fps;
+    uint8_t rescueshell;
 } __attribute__((packed)) sysinfo_t;
 #endif /* sys/types.h */
