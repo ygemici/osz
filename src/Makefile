@@ -19,7 +19,7 @@ system:
 	@make -e --no-print-directory -C core all | grep -v 'Nothing to be done'
 	@make -e --no-print-directory -C lib/libc all | grep -v 'Nothing to be done' || true
 
-gensyms: all
+gensyms: $(APPS)
 
 .PHONY: Makefile
 

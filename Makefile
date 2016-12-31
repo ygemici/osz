@@ -63,7 +63,8 @@ test: testq
 testefi:
 	@echo "TEST"
 	@echo
-	qemu-system-x86_64 -name OS/Z -bios bios-TianoCoreEFI.bin -m 64 -d guest_errors -hda fat:bin/ESP -option-rom loader/bootboot.rom -monitor stdio
+	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -option-rom loader/bootboot.rom -d guest_errors -global isa-debugcon.iobase=0x402 -debugcon file:bin/ovmf.log -monitor stdio
+	@qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -global isa-debugcon.iobase=0x402 -debugcon file:bin/ovmf.log -monitor stdio
 
 testq:
 	@echo "TEST"
