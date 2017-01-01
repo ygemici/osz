@@ -350,7 +350,7 @@ void checkcompilation()
 //Assemble all together. Get the partition images and write out as a whole disk
 int createdisk()
 {
-    unsigned long int i,gs=1024+512,es,us,vs,hs;
+    unsigned long int i,gs=7*512,es,us,vs,hs,ss=4096;
     unsigned long int uuid[4]={0x12345678,0x12345678,0x12345678,0x12345678};
     char *esp=readfileall(espfile);
     es=read_size;
@@ -360,7 +360,8 @@ int createdisk()
     vs=read_size;
     char *home=readfileall(homefile);
     hs=read_size;
-    char *gpt=malloc(gs);
+    char *gpt=malloc(gs+512);
+    char *swap=malloc(ss);
     // get MBR code if any
     char *loader=readfileall(stage1);   //stage1 loader
     if(loader==NULL) {
@@ -392,13 +393,18 @@ int createdisk()
 
     // generate partitioning tables
     // MBR, GPT record
+    setint(2,loader+0x1C0);                     //start CHS
     loader[0x1C2]=0xEE;                         //type
+    setint((gs/512)+1,loader+0x1C4);            //end CHS
     setint(1,loader+0x1C6);                     //start lba
     setint((gs/512),loader+0x1CA);              //end lba
     // MBR, EFI System Partition record
+    setint((gs/512)+2,loader+0x1D0);            //start CHS
     loader[0x1D2]=0xEF;                         //type
+    setint(((gs+es)/512)+2,loader+0x1D4);       //end CHS
     setint((gs/512)+1,loader+0x1D6);            //start lba
-    setint(((gs+es)/512),loader+0x1DA);         //end lba
+    setint(((es)/512),loader+0x1DA);            //end lba
+/*
     // MBR, OS/Z System Partition record
     loader[0x1E2]='Z';                          //type
     setint(((gs+es)/512)+1,loader+0x1E6);       //start lba
@@ -407,7 +413,7 @@ int createdisk()
     loader[0x1F2]='Z';                          //type
     setint(((gs+es+us)/512)+1,loader+0x1F6);    //start lba
     setint(((gs+es+us+vs)/512),loader+0x1FA);   //end lba
-    
+*/    
     // magic
     loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
 
@@ -418,9 +424,9 @@ int createdisk()
     setint(92,gpt+12);                          //size
     setint(0xDEADCC32,gpt+16);                  //crc
     setint(1,gpt+24);                           //primarylba
-    setint(((gs+es+us+vs+hs)/512)+3,gpt+32);    //backuplba
-    setint(34,gpt+40);                          //firstusable
-    setint(((gs+es+us+vs+hs)/512)+1,gpt+48);    //lastusable
+    setint(((gs+gs+es+us+vs+hs+ss)/512),gpt+32);//backuplba
+    setint((gs/512)+1,gpt+40);                  //firstusable
+    setint(((gs+es+us+vs+hs+ss)/512),gpt+48);   //lastusable
     setint(uuid[0],gpt+56);                     //disk UUID
     setint(uuid[1],gpt+60);
     setint(uuid[2],gpt+64);
@@ -453,7 +459,6 @@ int createdisk()
     setint(uuid[3],gpt+540+128);
     setint(((gs+es)/512)+1,gpt+544+128);            //startlba
     setint(((gs+es+us)/512),gpt+552+128);           //endlba
-    setint(3,gpt+560+128);                          //system+noefi flag
     memcpy(gpt+568+128,L"OS/Z System",22);          //name
 
     // GPT, OS/Z Public Data Partition (mounted at /var)
@@ -466,7 +471,6 @@ int createdisk()
     setint(uuid[3],gpt+540+256);
     setint(((gs+es+us)/512)+1,gpt+544+256);         //startlba
     setint(((gs+es+us+vs)/512),gpt+552+256);        //endlba
-    setint(3,gpt+560+256);                          //system+noefi flag
     memcpy(gpt+568+256,L"OS/Z Public Data",32);     //name
 
     // GPT, OS/Z Home Partition (mounted at /home)
@@ -479,7 +483,6 @@ int createdisk()
     setint(uuid[3],gpt+540+384);
     setint(((gs+es+us+vs)/512)+1,gpt+544+384);      //startlba
     setint(((gs+es+us+vs+hs)/512),gpt+552+384);     //endlba
-    setint(2,gpt+560+384);                          //noefi flag
     memcpy(gpt+568+384,L"OS/Z Private Data",34);    //name
 
     // GPT, OS/Z Swap Partition (mounted at /dev/swap)
@@ -491,8 +494,7 @@ int createdisk()
     setint(uuid[2],gpt+536+512);
     setint(uuid[3],gpt+540+512);
     setint(((gs+es+us+vs+hs)/512)+1,gpt+544+512);   //startlba
-    setint(((gs+es+us+vs+hs+1)/512),gpt+552+512);   //endlba
-    setint(2,gpt+560+512);                          //noefi flag
+    setint(((gs+es+us+vs+hs+ss)/512),gpt+552+512);  //endlba
     memcpy(gpt+568+512,L"OS/Z Swap Area",30);       //name
 
     // Checksums
@@ -514,12 +516,16 @@ int createdisk()
     fwrite(usr,us,1,f);
     fwrite(var,vs,1,f);
     fwrite(home,hs,1,f);
+    fwrite(swap,ss,1,f);
+
     //write GPT partition entries again
     fwrite(gpt+512,gs-512,1,f);
     //write GPT backup header
-    setint(((gs+es+us+vs+hs)/512)+(gs/512),gpt+24); //primarylba
-    setint(1,gpt+32);                           //backuplba
-    setint(((gs+es+us+vs+hs)/512)+1,gpt+72);    //partitionlba
+    i=getint(gpt+32);
+    setint(getint(gpt+24),gpt+32);                     //backuplba
+    setint(i,gpt+24);                                  //primarylba
+
+    setint((i*512-gs)/512+1,gpt+72);                   //partitionlba
     i=getint(gpt+12);   //header size
     setint(0,gpt+16);   //must be zero when calculating
     setint(eficrc32_calc(gpt,i),gpt+16);

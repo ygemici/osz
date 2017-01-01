@@ -37,7 +37,7 @@ ifneq ("$(wildcard ../loader/bootboot.bin)","")
 	@cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
-	@mkfs.vfat -F 12 -n "EFI SYSTEM" $(ESPFILE) >/dev/null
+	@mkfs.vfat -F 12 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
 	@mkdir ../bin/tmp 2>/dev/null || true
 	@sudo mount -o loop $(ESPFILE) ../bin/tmp
 	@sudo cp -r ../bin/ESP/* ../bin/tmp/ || true
@@ -67,7 +67,9 @@ images: initrd esp usr var home
 
 vdi: $(DDIMAGE)
 	@echo "  mkfs		bin/disk.vdi"
+	@rm -f $(VDIIMAGE) 2>/dev/null || true
 	@VBoxManage convertfromraw $(DDIMAGE) $(VDIIMAGE)
+	@VBoxManage internalcommands sethduuid $(VDIIMAGE) 45a68a8d-9a2b-42ba-91f9-99c7259bfa8a 2>/dev/null || true
 
 vdmk: $(DDIMAGE)
 	@#echo "  mkfs		bin/disk.vdmk"
