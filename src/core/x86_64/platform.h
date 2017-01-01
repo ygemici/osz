@@ -41,6 +41,7 @@ typedef uint64_t virt_t;
 #define thread_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
 #define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
 
+/* VMM access bits */
 #define PG_CORE 0b00011
 #define PG_CORE_NOCACHE 0b11011
 #define PG_USER_RO 0b00101

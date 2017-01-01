@@ -29,11 +29,8 @@
 
 .section .text
 .global _start
-.global cpu_init
-.global cpu_waitkey
 .global gdt64_tss
 .extern main
-.extern core_mapping
 
 /**********************************************************************
  *                     OS/Z Loader entry point                        *
@@ -68,33 +65,15 @@ _start:
     movl    %eax, %es
     movl    %eax, %fs
     movl    %eax, %gs
-/* setup stack (should be ok, but be sure) */
-    xor     %rsp, %rsp
-/* jump to C function main() in 64 bit code segment */
-    pushq   $0x08
-    pushq   $main
-    lretq
+/* setup stack frame (should be ok, but be sure) */
+    xorq    %rsp, %rsp
+    xorq    %rbp, %rbp
 
-    .align  16
-gdt64:
-    .word   gdt64_end-gdt64_start-1
-    .quad   gdt64_start
-    .align  64
-/* placed in text intentionally, it's rodata */
-gdt64_start:
-    .quad 0x0000000000000000    /* always empty */
-    .quad 0x002098000000ffff    /* 08 core CS */
-    .quad 0x008092000000ffff    /* 10 core DS */
-    .quad 0x0080f2000000ffff    /* 18 user DS */
-    .quad 0x0020f8000000ffff    /* 20 user CS */
-gdt64_tss:
-    .quad 0x0000890000000068    /* 28 tss */
-    .quad 0x0000000000000000
-gdt64_end:
+    /* initialize console so that we can report errors and stats */
+    call    kprintf_init
 
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
-cpu_init:
     mov     $isr_entropy, %rdi
     xorq    %rax, %rax
     incb    %al
@@ -174,13 +153,31 @@ cpu_init:
     cmp     $__bss_start, %rsi
     jb      2b
     call    isr_gainentropy
-    ret
+
+/* jump to C function main() in 64 bit code segment */
+    pushq   $0x08
+    pushq   $main
+    lretq
 
     /* feature not supported */
 1:  movq    $nocpu, %rdi
-    push    %rsi
-    push    %rdi
     call    kpanic
-/* rodata */
+
+/* placed in text intentionally, it's rodata */
 nocpu:
 .asciz "CPU feature %a not supported"
+    .align  16
+gdt64:
+    .word   gdt64_end-gdt64_start-1
+    .quad   gdt64_start
+    .align  64
+gdt64_start:
+    .quad 0x0000000000000000    /* always empty */
+    .quad 0x002098000000ffff    /* 08 core CS */
+    .quad 0x008092000000ffff    /* 10 core DS */
+    .quad 0x0080f2000000ffff    /* 18 user DS */
+    .quad 0x0020f8000000ffff    /* 20 user CS */
+gdt64_tss:
+    .quad 0x0000890000000068    /* 28 tss */
+    .quad 0x0000000000000000
+gdt64_end:

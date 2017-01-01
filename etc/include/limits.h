@@ -45,6 +45,8 @@
 // (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
 #define NRMQ_MAX	63
 #define NRSRV_MAX	16
+// minimum required memory in megabytes
+#define PHYMEM_MIN	32 //Mb
 
 #  define CHAR_BIT	8
 #  define SCHAR_MIN	(-128)

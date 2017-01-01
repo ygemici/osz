@@ -17,7 +17,8 @@ nrmqmax=1
 // number of pages for service pid translation
 nrsrvmax=1
 
-// scheduler quantum
+// scheduler quantum. A task can run 
+// continuously up to 1/quantum secs.
 quantum=100
 
 // maximum frame rate of the compositor
@@ -27,16 +28,15 @@ fps=20
 //  mm = memory map, th = threads, el = elf loading,
 //  ri = run-time linker imports, re = run-time exports
 //  ir = IRQ Routing Table, de = devices, sc = scheduler
-//  ms = messaging
+//  ms = messaging, lo = print out system log
 debug=lo
 
 // display transformation type, decimal number 0-3 or one of:
-//  0 mm = mono channel, mono (grayscale) colors
-//  1 mc = mono channel, rgb color
-//  2 sm = stereo channels, grayscale red-cyan
-//  3 sc = stereo channels, rgb color
-display=1
-                                                                                                                     
+//  0 mc = mono channel, rgb color
+//  1 sm = stereo channels, grayscale red-cyan
+//  2 sc = stereo channels, rgb color
+display=0
+                                                                                    
                                                                                                                                                 
                                                                                                                                                 
                                                                                                                                                 

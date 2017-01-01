@@ -56,34 +56,32 @@ extern char *syslog_buf;
 */
 void main()
 {
-    /* initialize console so that we can report errors and stats */
-    kprintf_init();
     kprintf("OS/Z starting...\n");
     // note: we cannot call syslog_early("starting") as syslog_buf
     // is not allocated yet.
 
     /* step 1: motoric reflexes */
-    // check processor capabilities
-    cpu_init();
     // parse environment
     env_init();
     // initialize physical memory manager, required by new thread creation
     pmm_init();
-    // this is early, we don't have "fs" subsystem yet.
+    // this is early, we don't have "FS" subsystem yet.
 
-    // initialize the "system" task, service_init(SRV_system, "sbin/system")
-    // In addition this will detect device drivers
+    // initialize the "SYS" task, service_init(SRV_SYS, "sbin/system")
+    // this will also detect device drivers
     sys_init();
-    // initialize "fs" task, special service_init(SRV_fs, "sbin/fs")
+    // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
     fs_init();
 
     /* step 2: communication */
-    // initialize "ui" task to handle user input / output
-    // special service_init(SRV_ui, "sbin/ui")
+    // initialize "UI" task to handle user input / output
+    // special service_init(SRV_UI, "sbin/ui")
     ui_init();
+
     // other means of communication
     // start "syslog" task so others can log errors
-    service_init(SRV_syslog, "sbin/syslog");
+    // special service_init(SRV_syslog, "sbin/syslog")
+    syslog_init();
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
         service_init(SRV_net, "sbin/net");
@@ -120,9 +118,9 @@ void main()
     // When that happens, scheduler will choose a task to run and...
     sys_enable();
     // ...we should never return here. Instead sched_pick() will
-    // call sys_disable() when no tasks left in shutdown procedure.
+    // call sys_disable() when no tasks left during shutdown procedure.
     // But just in case of unwanted return, we call poweroff anyway.
 
-    /* step 6: go to dreamless sleep. */
+    /* step 5: go to dreamless sleep. */
     sys_disable();
 }

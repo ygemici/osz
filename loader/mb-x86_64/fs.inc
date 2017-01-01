@@ -115,7 +115,7 @@ fsz_initrd:
             cmp         dword [esi], 'FSDR'
             jne         .nolib
 
-.srchsys:   ; find sys in lib/
+.srchsys:   ; find sys in sys/
             mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
             mov         eax, 'sys/'
 @@:         add         esi, 128
@@ -144,7 +144,7 @@ fsz_initrd:
             cmp         dword [esi], 'FSDR'
             jne         .nolib
 
-.srchcore:  ; find core in lib/sys. This one is configurable
+.srchcore:  ; find core in lib/sys. This filename part is configurable
             mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
             ;filename, 8 characters supported
             mov         eax, dword [kernel+8]

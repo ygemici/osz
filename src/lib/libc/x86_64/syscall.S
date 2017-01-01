@@ -34,7 +34,7 @@
 .global mq_recv
 .global mq_ismsg
 
-.section .text.user
+.section .text
 
 /* dest: pid_t<<16 + msg type */
 

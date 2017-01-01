@@ -40,6 +40,7 @@ extern phy_t pdpe;
 extern uint64_t isr_ticks[];
 extern uint64_t isr_lastfps;
 extern uint64_t isr_currfps;
+extern uint64_t freq;
 
 extern void kprintf_center(int w, int h);
 extern void isr_initirq();
@@ -55,11 +56,6 @@ char __attribute__ ((section (".data"))) *drvnames;
 uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
-/* alarm queue stuff */
-uint64_t __attribute__ ((section (".data"))) freq;
-uint64_t __attribute__ ((section (".data"))) fpsdiv;
-uint64_t __attribute__ ((section (".data"))) quantumdiv;
-uint64_t __attribute__ ((section (".data"))) alarmstep;
 
 char *sys_getdriver(char *device, char *drvs, char *drvs_end)
 {
@@ -252,42 +248,9 @@ void sys_init()
 
     // dynamic linker
     if(service_rtlink()) {
-        uint64_t t;
 
         /*** Timer stuff ***/
-        /* checks */
-        if(freq==0)
-            kpanic("unable to load timer driver");
-        if(freq<1000)       freq=1000;      //min 1000 interrupts per sec
-        if(freq>1000000000) freq=1000000000;//max 1GHz
-        if(quantum<10)      quantum=10;     //min 10 task switch per sec
-        if(quantum>freq/4)  quantum=freq/4; //max 1 switch per 4 interrupts
-        if(fps<5)           fps=5;          //min 5 frames per sec
-        if(fps>freq/16)     fps=freq/16;    //max 1 mem2vid per 16 interrupts
-        //calculate stepping in nanosec
-        alarmstep = 1000000000/freq;
-        //failsafes
-        if(alarmstep<1)     alarmstep=1;    //unit to add to nanosec per interrupt
-        quantumdiv = freq/quantum;          //number of ints to a task switch
-        fpsdiv = freq/fps;                  //number of ints to a mem2vid
-        if(quantumdiv*4 > fpsdiv)
-            fpsdiv = quantumdiv/4;
-        t = 1000000000 - (alarmstep*freq);
-        syslog_early("Timer: IRQ %d at %d Hz, step %d ns, err %d ns",
-            ISR_IRQTMR, freq, alarmstep, t
-        );
-        syslog_early("Timer: task %d ints, frame %d ints",
-            quantumdiv, fpsdiv
-        );
-        /* use bootboot.datetime and bootboot.timezone to calculate */
-        isr_ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
-        isr_ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
-        isr_ticks[TICKS_HI] = isr_ticks[TICKS_LO] = 0;
-        // set up system counters
-        isr_ticks[TICKS_SEC] = freq;
-        isr_ticks[TICKS_QUANTUM] = quantum;
-        isr_ticks[TICKS_FPS] = fpsdiv;
-    
+        isr_tmrinit();
         
         /*** Double Screen stuff ***/
         // allocate and map screen buffer A
@@ -297,7 +260,7 @@ void sys_init()
         if(display>=DSP_STEREO_MONO)
             i*=2;
         while(i-->0) {
-            thread_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            vmm_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             if(!screen[0]) {
                 screen[0]=pdpe;
             }
@@ -308,7 +271,7 @@ void sys_init()
         bss += __SLOTSIZE*(__PAGESIZE / 8);
         i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
         while(i-->0) {
-            thread_mapbss(bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
+            vmm_mapbss(bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
             bss += __SLOTSIZE;
             fbp += __SLOTSIZE;
         }
@@ -320,8 +283,8 @@ void sys_init()
         tcb->priority = PRI_SYS;
         //set IOPL=3 in rFlags to permit IO address space
         tcb->rflags |= (3<<12);
-        //clear IF flag so that interrupts will be enabled only
-        //after system task blocked for the first time. It is important
+        //clear IF flag, interrupts will be enabled only
+        //when system task tells to do so. It is important
         //to initialize device driver with IRQs masked.
         tcb->rflags &= ~(0x200);
         //start executing at the begining of the text segment

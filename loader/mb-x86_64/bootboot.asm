@@ -291,8 +291,6 @@ getmemmap:  xor         eax, eax
             mov         dword [bootboot.acpi_ptr], eax
             mov         dword [bootboot.smbi_ptr], eax
             mov         dword [bootboot.initrd_ptr], eax
-            mov         dword [maxbase], eax
-            mov         dword [maxbase+4], eax
             mov         eax, bootboot_MAGIC
             mov         dword [bootboot.magic], eax
             mov         dword [bootboot.size], 128
@@ -380,14 +378,6 @@ getmemmap:  xor         eax, eax
             add         eax, dword [di]                 ;add base
             adc         edx, dword [di+4]
             and         edx, 000FFFFFFh
-            ;is it bigger than the current max?
-            cmp         edx, dword [maxbase+4]
-            ja          .newmax
-            cmp         eax, dword [maxbase]
-            jbe         .notmax
-            ;save new limit
-.newmax:    mov         dword [maxbase], eax
-            mov         dword [maxbase+4], edx
 .notmax:    add         dword [bootboot.size], 16
             ;bubble up entry if necessary
             push        si
@@ -429,15 +419,7 @@ getmemmap:  xor         eax, eax
 .E820ok:    ;check total memory size
             xor         ecx, ecx
             cmp         dword [bootboot.initrd_ptr], ecx
-            jz          .notenoughmem
-            mov         eax, dword [maxbase]            ;get last address
-            mov         edx, dword [maxbase+4]
-            or          edx, edx
             jnz         .enoughmem
-            ;16M of RAM required
-            cmp         eax, 15*1024*1024
-            jae         .enoughmem
-.notenoughmem:
             mov         si, noenmem
             jmp         real_diefunc
 .enoughmem:
@@ -1280,7 +1262,6 @@ GDT_value:  dw          $-GDT_table
             align       16
 entrypoint: dq          0
 core_ptr:   dd          0
-maxbase:    dd          0
 ebdaptr:    dd          0
 hw_stack:   dd          0
 lastmsg:    dd          0

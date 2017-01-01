@@ -88,7 +88,8 @@ extern uint64_t isr_lastfps;
 
 void kprintf_reset()
 {
-    kx = ky = fx = scry = 0;
+    kx = ky = fx = 0;
+    scry = maxy - 2;
     reent = 0;
     fg = 0xC0C0C0;
     bg = 0;
@@ -118,7 +119,6 @@ void kprintf_init()
     maxy = bootboot.fb_height / font->height;
     // default fg and bg, cursor at home
     kprintf_reset();
-    scry = maxy - 2;
     // display boot logo
     char *data = &_binary_logo_tga_start + 0x255;
     char *palette = &_binary_logo_tga_start + 0x12;

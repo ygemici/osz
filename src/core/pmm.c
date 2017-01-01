@@ -140,6 +140,7 @@ void pmm_init()
     OSZ_pmm_entry *fmem;
     uint num = (bootboot.size-128)/16;
     uint i;
+    uint64_t m = 0;
 
     // allocate at least 2 pages for free memory entries
     // that's 2*4096/16 = 512 maximum fragments
@@ -200,6 +201,8 @@ void pmm_init()
             );
 #endif
         if(MMapEnt_IsFree(entry)) {
+            if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
+                m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
             fmem->base = MMapEnt_Ptr(entry);
             fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
             if(fmem->size!=0) {
@@ -214,6 +217,9 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
+    // memory check, -1 for rounding errors
+    if(m/1024/1024 < PHYMEM_MIN-1)
+        kpanic("Not enough memory. At least %d Mb of RAM required.", PHYMEM_MIN);
 
     // ok, now we can allocate bss memory for core
 

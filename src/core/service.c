@@ -256,7 +256,7 @@ void service_installirq(uint8_t irq, uint64_t offs)
  *  - stack_ptr: physical address of thread's stack */
 bool_t service_rtlink()
 {
-    int i, j, k, n = 0;
+    int i, j, k, l = -1, n = 0;
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     OSZ_rela *rel = relas;
     uint64_t *paging = (uint64_t *)&tmpmap;
@@ -450,7 +450,7 @@ bool_t service_rtlink()
                     }
                     if(!kmemcmp(strtable + s->st_name,"tmrfreq",8)) {
                         freq = *((uint64_t*)((char*)ehdr + s->st_value));
-                        kprintf(" timer frequency set to %d Hz by %s\n", freq, drivers[j]);
+                        l = j;
                     }
                 }
                 // look up in relas array which addresses require
@@ -484,6 +484,8 @@ bool_t service_rtlink()
             kpanic("shared library missing for %s()\n", r->sym);
         }
     }
+    if(l!=-1)
+        syslog_early("Timer: frequency set by %s\n", drivers[l]);
 
     // push entry point as the last callback
     // crt0 starts with a 'ret', so _start function address
@@ -507,7 +509,7 @@ bool_t service_rtlink()
 
     // go again (other way around) and save entry points onto stack,
     // but skip the first ELF as executor's entry point is already
-    // on the stack
+    // pushed on the stack
     for(j=__PAGESIZE/8-1; j>1; j--) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
@@ -520,7 +522,7 @@ bool_t service_rtlink()
     return thread_check(tcb, (phy_t*)paging);
 }
 
-/* Initialize a system service, save "fs" and "system" */
+/* Initialize a non-critical system service */
 void service_init(int subsystem, char *fn)
 {
     char *cmd = fn;
@@ -590,7 +592,7 @@ void fs_init()
     // dynamic linker
     if(service_rtlink()) {
         // map initrd in "fs" task's memory
-        thread_mapbss(BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
+        vmm_mapbss(BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
@@ -613,6 +615,8 @@ void ui_init()
     }
     // map libc
     service_loadso("lib/libc.so");
+    // map window decorator
+//    service_loadso("lib/ui/decor.so");
     // dynamic linker
     if(service_rtlink()) {
         // allocate and map screen buffer B
@@ -623,7 +627,7 @@ void ui_init()
         if(display>=DSP_STEREO_MONO)
             i*=2;
         while(i-->0) {
-            thread_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            vmm_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             if(!screen[1]) {
                 screen[1]=pdpe;
             }
@@ -667,6 +671,6 @@ void syslog_init()
         services[-SRV_syslog] = pid;
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
     } else {
-        syslog_early("thread check failed for /sbin/syslog");
+        kprintf("WARNING thread check failed for /sbin/syslog\n");
     }
 }

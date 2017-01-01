@@ -86,9 +86,6 @@ extern void kprintf(char* fmt, ...);
 extern void kpanic(char *reason, ...);
 
 // ----- Platform -----
-/** Check CPU */
-extern void cpu_init();
-
 /** Parse configuration to get environment */
 extern void env_init();
 
@@ -101,8 +98,13 @@ extern void *pmm_alloc();
 /** Allocate a physical memory slot (2M) */
 extern void *pmm_allocslot();
 
+/** Map a specific memory area into thread's bss */
+extern void vmm_mapbss(virt_t bss, phy_t phys, size_t size, uint64_t access);
+
+
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
+extern void isr_tmrinit();
 extern void isr_enableirq(uint8_t irq);
 extern void isr_disableirq(uint8_t irq);
 extern void isr_gainentropy();
@@ -128,6 +130,7 @@ extern void *fs_locate(char *fn);
 
 // ----- Syslog interface -----
 /** Initialize user interface thread */
+extern void syslog_init();
 extern void syslog_early(char* fmt, ...);
 
 // ----- User interface -----
@@ -169,9 +172,6 @@ extern void kfree(void* ptr);
 extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
 // ----- Threads -----
-/** Map a specific memory area into user bss */
-extern void thread_mapbss(virt_t bss, phy_t phys, size_t size, uint64_t access);
-
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
 

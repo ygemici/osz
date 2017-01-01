@@ -11,12 +11,14 @@ Requirements
 Compilation
 -----------
 
-If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
-Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting. So
-I've added those images to the source. With those pre-built binaries you should be able to compile the source using
-only GNU toolchain, just don't forget to choose efi loader in Config.
+The make system is created in a way that you can say `make all` in
+almost every directory. If you do that in the top level directory,
+it will compile everything and will also build disk image for you.
 
-To compile, simply type
+For example if you enter `src/fs` and issue the command there, then only
+the filesystem subsystem will be recompiled.
+
+So to compile all the things, simply type
 
 ```shell
 $ make
@@ -84,10 +86,11 @@ Non-EFI loader
 --------------
 
 If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
-Unfortunately GAS is not clever enough to mix 16, 32 and 64 bit instuctions which is necessary for BIOS booting. So
-I've added the BIOS images to the source, and you should be able to compile OS/Z with GNU toolchain only.
+Unfortunately GAS is not good at mixing 16, 32 and 64 bit instuctions, which is necessary for BIOS booting. So
+I've added those images to the source. With those pre-built binaries you should be able to compile the source using
+GNU toolchain only.
 
-The `bootboot.bin` can be booted via 
- - `mbr.bin` in MBR or VBR
- - BIOS extension ROM (tested with bochs at 0D0000h)
- - GRUB using the MultiBoot protocol (not tested).
+The `loader/bootboot.bin` can be booted via 
+ - `loader/mbr.bin` installed in MBR or VBR (see [mkfs](https://github.com/bztsrc/osz/blob/master/tools/mkfs.c) utility)
+ - BIOS extension ROM (tested with qemu and bochs at 0D0000h)
+ - GRUB using the MultiBoot protocol (not tested, but should be fine).

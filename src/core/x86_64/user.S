@@ -40,7 +40,8 @@
 _init:
     ret
 
-/* normal user space entry point, so called _main() */
+/* normal user space entry point, so called _main(). The main()
+ * (without the underscore) holds the core startup code */
 _main:
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
@@ -76,7 +77,25 @@ _main:
 
     /* get work to do */
 getwork:
-    call    mq_recv
+1:  movq     $MQ_ADDRESS, %rbx
+    movq     8(%rbx), %rax
+    cmpq     (%rbx), %rax
+    jne      2f
+    movl     $0x76636572, %eax # 'recv'
+    /* block until we receive something */
+    syscall
+    /* failsafe, repeat if there's no message */
+    jmp      1b
+2:  /* must match sizeof(msg_t) */
+    shlq    $6, %rax
+    addq    %rbx, %rax
+    /* mqhdr->mq_end++ */
+    incq    8(%rbx)
+    movq    8(%rbx), %rcx
+    cmpq    16(%rbx), %rcx
+    jne     3f
+    movq    $1, 8(%rbx)
+3:
     /* MSG_FUNC(msg.evt) == SYS_swapbuf? */
     cmpw    $SYS_swapbuf, (%rax)
     jne     1f

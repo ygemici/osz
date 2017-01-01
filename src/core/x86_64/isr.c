@@ -42,9 +42,6 @@ extern uint64_t sys_getts(char *p);
 
 extern uint64_t core_mapping;
 extern uint64_t ioapic_addr;
-extern uint64_t freq;
-extern uint64_t fpsdiv;
-extern uint64_t quantumdiv;
 extern sysinfo_t *sysinfostruc;
 
 #if DEBUG
@@ -58,57 +55,13 @@ uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
 /* current fps counter and last sec value */
 uint64_t __attribute__ ((section (".data"))) isr_currfps;
 uint64_t __attribute__ ((section (".data"))) isr_lastfps;
+/* alarm queue stuff */
+uint64_t __attribute__ ((section (".data"))) freq;
+uint64_t __attribute__ ((section (".data"))) fpsdiv;
+uint64_t __attribute__ ((section (".data"))) quantumdiv;
+uint64_t __attribute__ ((section (".data"))) alarmstep;
+/* next task to schedule */
 uint64_t __attribute__ ((section (".data"))) isr_next;
-
-/* System call dispatcher for messages sent to SRV_core */
-bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)
-{
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
-    switch(MSG_FUNC(event)) {
-        /* case SYS_ack: in isr_syscall0 asm for performance */
-        /* case SYS_seterr: in isr_syscall0 asm for performance */
-        case SYS_exit:
-            break;
-
-        case SYS_sysinfo:
-            // dynamic fields in System Info Block
-            sysinfostruc->ticks[0] = isr_ticks[TICKS_LO];
-            sysinfostruc->ticks[1] = isr_ticks[TICKS_HI];
-            sysinfostruc->quantumcnt = isr_ticks[TICKS_QALL];
-            sysinfostruc->timestamp_s = isr_ticks[TICKS_TS];
-            sysinfostruc->timestamp_ns = isr_ticks[TICKS_NTS];
-            sysinfostruc->srand[0] = isr_entropy[0];
-            sysinfostruc->srand[1] = isr_entropy[1];
-            sysinfostruc->srand[2] = isr_entropy[2];
-            sysinfostruc->srand[3] = isr_entropy[3];
-            sysinfostruc->fps = isr_lastfps;
-            msg_send(tcb->mypid, MSG_PTRDATA | MSG_FUNC(SYS_ack),
-                (void*)sysinfostruc,
-                sizeof(sysinfo_t),
-                SYS_sysinfo);
-            break;
-
-        case SYS_swapbuf:
-            isr_currfps++;
-            /* TODO: map and swap screen[0] and screen[1] */
-            /* flush screen buffer to video memory */
-            msg_sends(services[-SRV_SYS], MSG_FUNC(SYS_swapbuf),0,0,0,0,0,0);
-            break;
-
-        case SYS_setbcddate:
-            /* set system time stamp (UTC) */
-            if(tcb->memroot == sys_mapping || thread_allowed("stime",FSZ_WRITE)) {
-                isr_ticks[TICKS_TS] = sys_getts((char*)&ptr);
-                isr_ticks[TICKS_NTS] = 0;
-            }
-            break;
-
-        default:
-            tcb->errno = EINVAL;
-            return false;
-    }
-    return true;
-}
 
 /* Initialize interrupts */
 void isr_init()
@@ -136,6 +89,43 @@ void isr_init()
     }
     // set up isr_syscall dispatcher and IDTR, also mask all IRQs
     isr_inithw(idt, &ccb);
+}
+
+/* initialize timer values */
+void isr_tmrinit()
+{
+        /* checks */
+        if(freq==0)
+            kpanic("unable to load timer driver");
+        if(freq<1000)       freq=1000;      //min 1000 interrupts per sec
+        if(freq>1000000000) freq=1000000000;//max 1GHz
+        if(quantum<10)      quantum=10;     //min 10 task switch per sec
+        if(quantum>freq/4)  quantum=freq/4; //max 1 switch per 4 interrupts
+        if(fps<5)           fps=5;          //min 5 frames per sec
+        if(fps>freq/16)     fps=freq/16;    //max 1 mem2vid per 16 interrupts
+        //calculate stepping in nanosec
+        alarmstep = 1000000000/freq;
+        //failsafes
+        if(alarmstep<1)     alarmstep=1;    //unit to add to nanosec per interrupt
+        quantumdiv = freq/quantum;          //number of ints to a task switch
+        fpsdiv = freq/fps;                  //number of ints to a mem2vid
+        if(quantumdiv*4 > fpsdiv)
+            fpsdiv = quantumdiv/4;
+
+        syslog_early("Timer: IRQ %d at %d Hz, step %d ns",
+            ISR_IRQTMR, freq, alarmstep
+        );
+        syslog_early("Timer: task %d ints, frame %d ints",
+            quantumdiv, fpsdiv
+        );
+        /* use bootboot.datetime and bootboot.timezone to calculate */
+        isr_ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
+        isr_ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
+        isr_ticks[TICKS_HI] = isr_ticks[TICKS_LO] = 0;
+        // set up system counters
+        isr_ticks[TICKS_SEC] = freq;
+        isr_ticks[TICKS_QUANTUM] = quantum;
+        isr_ticks[TICKS_FPS] = fpsdiv;
 }
 
 /* fallback exception handler */
