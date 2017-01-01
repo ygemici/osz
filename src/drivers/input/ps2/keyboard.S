@@ -1,5 +1,5 @@
 /*
- * drv/input/ps2/keyboard.S
+ * drivers/input/ps2/keyboard.S
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

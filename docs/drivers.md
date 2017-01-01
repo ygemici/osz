@@ -9,7 +9,7 @@ Supported devices
  * VESA2.0 VGA, GOP, UGA (set up by loader)
  * x86_64 syscall, NX protection
  * PIC / IOAPIC + APIC, x2APIC, see [ISRs](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh)
- * PS2 [keyboard](https://github.com/bztsrc/osz/blob/master/src/drv/input/ps2/keyboard.S) and [mouse](https://github.com/bztsrc/osz/blob/master/src/drv/input/ps2/mouse.S)
+ * PS2 [keyboard](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/keyboard.S) and [mouse](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/mouse.S)
 
 Planned drivers
 ---------------
@@ -20,7 +20,7 @@ Planned drivers
 Directories
 -----------
 
-Device drivers are located in [src/drv](https://github.com/bztsrc/osz/blob/master/src/drv), categorized:
+Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/master/src/drivers), categorized:
 
 | Class    | Description |
 | -------- | ----------- |
@@ -66,7 +66,7 @@ has special entries:
 
 | Entry | Description |
 | ----- | ----------- |
-| *     | Any, means the driver should be loaded regardless to bus enumeration. Such as ISA devices, like PS2 and file system drivers, like [vfat](https://github.com/bztsrc/osz/blob/master/src/drv/fs/vfat) |
+| *     | Any, means the driver should be loaded regardless to bus enumeration. Such as ISA devices, like PS2 and file system drivers, like [vfat](https://github.com/bztsrc/osz/blob/master/src/drivers/fs/vfat) |
 | isa   | ISA device drivers that you don't want to autoload, like Real Time Clock |
 | hpet  | High Precision Event Timer |
 | pciXXX:XXX | A PCI vendor and device id pair |

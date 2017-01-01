@@ -1,5 +1,5 @@
 /*
- * drv/proc/pitrtc.S
+ * drivers/proc/pitrtc.S
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
