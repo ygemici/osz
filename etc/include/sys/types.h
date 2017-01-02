@@ -80,6 +80,7 @@ typedef uint64_t blksize_t;
 typedef uint64_t blkcnt_t;	 /* Type to count number of disk blocks.  */
 typedef uint64_t fsblkcnt_t; /* Type to count file system blocks.  */
 typedef uint64_t fpos_t;
+typedef uint64_t evt_t;
 
 typedef struct {
 	uint32_t Data1;
@@ -91,7 +92,7 @@ typedef struct {
 
 // type returned by syscalls clcall() and clrecv()
 typedef struct {
-    uint64_t evt;
+    evt_t evt;
     uint64_t arg0;
     uint64_t arg1;
     uint64_t arg2;
@@ -103,8 +104,9 @@ typedef struct {
 // bits in evt: 63TTT..TTTPFFFFFFFFFFFFFFF0
 //  where T is a thread id or subsystem id, P true if message has a pointer,
 //  F is a function number from 1 to 32767. Function number 0 is reserved.
-#define MSG_SENDER(m) ((pid_t)((m)>>16))
-#define MSG_FUNC(m) ((uint16_t)((m)&0x7FFF))
+#define EVT_DEST(t) ((uint64_t)(t)<<16)
+#define EVT_SENDER(m) ((pid_t)((m)>>16))
+#define EVT_FUNC(m) ((uint16_t)((m)&0x7FFF))
 #define MSG_REGDATA (0)
 #define MSG_PTRDATA (0x8000)
 #define MSG_PTR(m) (m.arg0)
@@ -112,7 +114,6 @@ typedef struct {
 #define MSG_MAGIC(m) (m.arg2)
 #define MSG_ISREG(m) (!((m)&MSG_PTRDATA))
 #define MSG_ISPTR(m) ((m)&MSG_PTRDATA)
-#define MSG_DEST(t) ((uint64_t)(t)<<16)
 //eg.:
 //pid_t child = fork();
 //msg->evt = MSG_DEST(child) | MSG_FUNC(anynumber) | MSG_PTRDATA

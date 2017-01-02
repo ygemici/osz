@@ -42,10 +42,10 @@ extern uint64_t isr_lastfps;
 extern uint64_t isr_currfps;
 
 /* System call dispatcher for messages sent to SRV_core */
-bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_t magic)
+bool_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    switch(MSG_FUNC(event)) {
+    switch(EVT_FUNC(event)) {
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
         case SYS_exit:
@@ -63,7 +63,7 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
             sysinfostruc->srand[2] = isr_entropy[2];
             sysinfostruc->srand[3] = isr_entropy[3];
             sysinfostruc->fps = isr_lastfps;
-            msg_send(tcb->mypid, MSG_PTRDATA | MSG_FUNC(SYS_ack),
+            msg_send(EVT_DEST(tcb->mypid) | MSG_PTRDATA | EVT_FUNC(SYS_ack),
                 (void*)sysinfostruc,
                 sizeof(sysinfo_t),
                 SYS_sysinfo);
@@ -73,7 +73,7 @@ bool_t isr_syscall(pid_t thread, uint64_t event, void *ptr, size_t size, uint64_
             isr_currfps++;
             /* TODO: map and swap screen[0] and screen[1] */
             /* flush screen buffer to video memory */
-            msg_sends(SRV_CORE, MSG_FUNC(SYS_IRQ),ISR_NUMIRQ,0,0,0,0,0);
+            msg_sends(EVT_DEST(SRV_CORE) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
             break;
 
         case SYS_stime:

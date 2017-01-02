@@ -82,14 +82,10 @@ _start:
     xorq    %rbx, 8(%rdi)
     xorq    %rcx, 16(%rdi)
     xorq    %rdx, 24(%rdi)
-    /* minimum processor family */
+    /* minimum processor family 6 */
     movq    $0x796C696D6166, %rsi
     cmp     $0x0600, %ax
     jb      1f
-    /* SSE3 */
-    movq    $0x33455353, %rsi
-    bt      $0, %ecx
-    jnc     1f
     /* FXSR */
     movq    $0x52535846, %rsi
     bt      $24, %edx
@@ -106,6 +102,18 @@ _start:
     movq    $0x00544150, %rsi
     bt      $16, %edx
     jnc     1f
+#if ISR_CTRL == CTRL_x2APIC
+    /* x2APIC */
+    movq    $0x434950413278, %rsi
+    bt      $21, %ecx
+    jnc     1f
+#endif
+#if OPTIMIZE == 1
+    /* AVX */
+    movq    $0x00585641, %rsi
+    bt      $28, %ecx
+    jnc     1f
+#endif
 
     movl    $0x80000001, %eax
     cpuid

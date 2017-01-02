@@ -18,7 +18,10 @@ ata3: enabled=0
 optromimage1: file="loader/bootboot.bin", address=0xD0000
 pci: enabled=1, chipset=i440fx
 vga: extension=vbe, update_freq=50, realtime=1
-cpu: count=1:1:1, ips=4000000, model=corei5_lynnfield_750, reset_on_triple_fault=0, cpuid_limit_winnt=0, ignore_bad_msrs=1, mwait_is_nop=0
+#I was unable to turn on x2APIC for sandy bridge
+#cpu: count=1:1:1, ips=4000000, model=corei7_sandy_bridge_2600k, reset_on_triple_fault=0, cpuid_limit_winnt=0, ignore_bad_msrs=1, mwait_is_nop=0
+cpu: count=1:1:1, ips=4000000, model=corei7_ivy_bridge_3770k, reset_on_triple_fault=0, cpuid_limit_winnt=0, ignore_bad_msrs=1, mwait_is_nop=0
+cpuid: level=6, apic=x2apic, simd=avx, aes=1
 print_timestamps: enabled=0
 debugger_log: -
 magic_break: enabled=1

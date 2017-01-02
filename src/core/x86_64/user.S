@@ -44,34 +44,36 @@ _init:
  * (without the underscore) holds the core startup code */
 _main:
     /* get IRQ Routing Table */
-    movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
-    lodsq
+    movq    $TEXT_ADDRESS + __PAGESIZE, %rbx
+    movq    (%rbx), %rax
+    addq    $8, %rbx
     shlq    $3, %rax
-    xorq    %rdx, %rdx
+    xorq    %rsi, %rsi
     /* enable IRQs */
-1:  cmp     $0, (%rsi)
+1:  cmp     $0, (%rbx)
     jz      2f
     pushq   %rax
-    pushq   %rdx
+    pushq   %rbx
     pushq   %rsi
     xorq    %rdi, %rdi
-    xorq    %rsi, %rsi
-    movb    $SYS_ack, %sil
+    movb    $SYS_ack, %dil
     movl     $0x646E6573, %eax # 'send'
     syscall
     popq    %rsi
-    popq    %rdx
+    popq    %rbx
     popq    %rax
-2:  addq    %rax, %rsi
-    incb    %dl
-    cmpb    $ISR_NUMIRQ, %dl
+2:  addq    %rax, %rbx
+    incb    %sil
+    cmpb    $ISR_NUMIRQ, %sil
     jne     1b
     /* release interrupts */
     xorq    %rdi, %rdi
     xorq    %rsi, %rsi
-    movl    $0xB0070E01, %edx
-    movb    $SYS_ack, %sil
+    movl    $0xB0070E01, %esi
+    movb    $SYS_ack, %dil
+#if DEBUG
     xchg    %bx, %bx
+#endif
     movl     $0x646E6573, %eax # 'send'
     syscall
 
@@ -148,10 +150,9 @@ getwork:
     orb     %cl, %cl
     jnz     1b
     /* notify core to reenable IRQ */
-    movq    %rdi, %rdx
+    movq    %rdi, %rsi
     xorq    %rdi, %rdi
-    xorq    %rsi, %rsi
-    movb    $SYS_ack, %sil
+    movb    $SYS_ack, %dil
     movl     $0x646E6573, %eax # 'send'
     syscall
     /* loop forever */

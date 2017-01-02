@@ -1,7 +1,7 @@
 /*
- * core/pmm.c
+ * drivers/display/fb.S
  * 
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Physical Memory Manager architecture specific part
+ * @brief Frame buffer driver
  */
 
 #define _AS 1
@@ -31,4 +31,5 @@
 .global mem2vid
 
 mem2vid:
+xchg %bx, %bx
     ret

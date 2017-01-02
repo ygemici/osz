@@ -7,7 +7,7 @@ SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS =
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
-CFLAGS = -DDEBUG=$(DEBUG) -DOSZ_CORE=1 -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -Wall -fpic -ffreestanding -fvisibility=hidden -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_CORE=1 -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -Wall -fpic -ffreestanding -fvisibility=hidden -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 
 all: $(OBJS) $(BINTARGET)
 

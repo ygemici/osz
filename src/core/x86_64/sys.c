@@ -106,16 +106,30 @@ __inline__ void sys_enable()
 /* get system timestamp from a BCD date */
 uint64_t sys_getts(char *p)
 {
-    uint64_t j,r=0;
-    /* decode BCD */
-    uint64_t y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
-    uint64_t m = ((p[2]>>4)*10)+(p[2]&0x0F);
-    uint64_t d = ((p[3]>>4)*10)+(p[3]&0x0F);
-    uint64_t h = ((p[4]>>4)*10)+(p[4]&0x0F);
-    uint64_t i = ((p[5]>>4)*10)+(p[5]&0x0F);
-    uint64_t s = ((p[6]>>4)*10)+(p[6]&0x0F);
+    uint64_t j,r=0,y,m,d,h,i,s;
+    /* if timestamp given, 2017.jan.1-2599.jan.1 */
+    if(*((uint64_t*)p) > 1483228800 && *((uint64_t*)p) < 19849363200)
+        return *((uint64_t*)p);
+    /* if datetime given */
+    if(p[0]>=0x20 && p[0]<=0x25 && p[1]<=0x99 && p[2]>=0x01 && p[2]<=0x12) {
+        /* decode BCD */
+        y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
+        m = ((p[2]>>4)*10)+(p[2]&0x0F);
+        d = ((p[3]>>4)*10)+(p[3]&0x0F);
+        h = ((p[4]>>4)*10)+(p[4]&0x0F);
+        i = ((p[5]>>4)*10)+(p[5]&0x0F);
+        s = ((p[6]>>4)*10)+(p[6]&0x0F);
+    } else {
+        /* binary */
+        y = (p[1]<<8)+p[0];
+        m = p[2];
+        d = p[3];
+        h = p[4];
+        i = p[5];
+        s = p[6];
+    }
     uint64_t md[12] = {31,0,31,30,31,30,31,31,30,31,30,31};
-    /* is current year leap year? then tweak February */
+    /* is year leap year? then tweak February */
     md[1]=((y&3)!=0 ? 28 : ((y%100)==0 && (y%400)!=0?28:29));
 
     // get number of days since Epoch, cheating

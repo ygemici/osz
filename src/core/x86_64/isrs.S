@@ -633,7 +633,7 @@ isr_irq0:
     movb	$0, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -671,7 +671,7 @@ isr_irq1:
     movb	$1, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -709,7 +709,7 @@ isr_irq2:
     movb	$2, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -747,7 +747,7 @@ isr_irq3:
     movb	$3, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -785,7 +785,7 @@ isr_irq4:
     movb	$4, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -823,7 +823,7 @@ isr_irq5:
     movb	$5, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -861,7 +861,7 @@ isr_irq6:
     movb	$6, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -899,7 +899,7 @@ isr_irq7:
     movb	$7, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -937,7 +937,7 @@ isr_irq8:
     movb	$8, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -976,7 +976,7 @@ isr_irq9:
     movb	$9, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1015,7 +1015,7 @@ isr_irq10:
     movb	$10, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1054,7 +1054,7 @@ isr_irq11:
     movb	$11, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1093,7 +1093,7 @@ isr_irq12:
     movb	$12, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1132,7 +1132,7 @@ isr_irq13:
     movb	$13, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1171,7 +1171,7 @@ isr_irq14:
     movb	$14, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1210,7 +1210,7 @@ isr_irq15:
     movb	$15, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1249,7 +1249,7 @@ isr_irq16:
     movb	$16, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1288,7 +1288,7 @@ isr_irq17:
     movb	$17, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1327,7 +1327,7 @@ isr_irq18:
     movb	$18, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1366,7 +1366,7 @@ isr_irq19:
     movb	$19, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1405,7 +1405,7 @@ isr_irq20:
     movb	$20, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1444,7 +1444,7 @@ isr_irq21:
     movb	$21, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1483,7 +1483,7 @@ isr_irq22:
     movb	$22, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1522,7 +1522,7 @@ isr_irq23:
     movb	$23, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
@@ -1561,7 +1561,7 @@ isr_irq24:
     movb	$24, %dil
     pushq   %rdi
     call	isr_disableirq
-    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq    %rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi

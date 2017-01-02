@@ -44,8 +44,13 @@
 #define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
 #define ISR_IRQTMR 0        //irq to trigger preemption and alarm
+#if OPTIMIZE != 1
+/* you can change this, either PIC or APIC */
 #define ISR_CTRL CTRL_PIC
-/* if you change  one of this, you'll have to run isrs.sh */
+#else
+/* never change this */
+#define ISR_CTRL CTRL_PIC  //should be x2APIC, but kvm does not support it :-(
+#endif
 
 //isr_ticks indeces for counters
 #define TICKS_TS 0      //+00 timestamp sec counter

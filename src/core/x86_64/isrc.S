@@ -123,15 +123,17 @@ isr_syscall0:
     cmpl	$0x646E6573, %eax
     jne		1f
     /* if destination is SRV_core? */
-    orq		%rdi, %rdi
+    movq    %rdi, %rax
+    shrq    $16, %rax
+    orq		%rax, %rax
     jnz		4f
 
     /*** public syscalls ***/
     /* shortcut to seterr syscall */
-    cmpb	$SYS_seterr, %sil
+    cmpb	$SYS_seterr, %dil
     jne 	2f
-    /* tcb->errno = rdx */
-    movq	%rdx, 672
+    /* tcb->errno = rsi */
+    movq	%rsi, 672
     jmp		9f
 2:
     /*** "SYS" task only ***/
@@ -141,16 +143,16 @@ isr_syscall0:
     jne		3f
 
     /* shortcut to ack syscall */
-    cmpb	$SYS_ack, %sil
+    cmpb	$SYS_ack, %dil
     jne     3f
     /* drivers initialized, IRQs enabled acknowledge */
-    cmpl    $0xB0070E01, %edx
+    cmpl    $0xB0070E01, %esi
     jne     2f
     /* tcb->rflags |= 0x200; turn on interrupt flag */
     orl		$0x200, __PAGESIZE-24
     jmp     9f
     /* enable the given irq */
-2:  movq    %rdx, %rdi
+2:  movq    %rsi, %rdi
     call    isr_enableirq
     jmp     9f
 
@@ -168,7 +170,9 @@ isr_syscall0:
     call	sched_block
     call	isr_loadcontext
     /* if destination is SRV_core */
-    orq		%rdi, %rdi
+    movq    %rdi, %rax
+    shrq    $16, %rax
+    orq		%rax, %rax
     jnz		2f
     call	isr_syscall
     jmp		8f
@@ -291,10 +295,9 @@ isr_timer:
     /* switch to system task */
     movq	sys_mapping, %rax
     movq	%rax, %cr3
-    /* msg_sends(SRV_CORE, SYS_IRQ, ISR_NUMIRQ, 0,0,0,0); */
-    movq    $ISR_NUMIRQ, %rdx
-    xorq    %rcx, %rcx
+    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_swapbuf, 0,0,0,0,0); */
     xorq    %rsi, %rsi
+    movb    $SYS_swapbuf, %sil
     movq    $MQ_ADDRESS, %rdi
     call    ksend
 1:

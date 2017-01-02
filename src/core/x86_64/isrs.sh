@@ -70,13 +70,17 @@ isrexcmax=`grep "ISR_EXCMAX" isr.h|cut -d ' ' -f 3`
 isrirqmax=`grep "ISR_IRQMAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
 isrtimer=`grep "ISR_IRQTMR" isr.h|cut -d ' ' -f 3`
-ctrl=`grep "ISR_CTRL" isr.h|cut -d ' ' -f 3`
+ctrl=`grep "ISR_CTRL" isr.h|head -1|cut -d ' ' -f 3`
 idtsz=$[(($numirq*$numhnd*8+4095)/4096)*4096]
 DEBUG=`grep "DEBUG" ../../../Config |cut -d ' ' -f 3`
+OPTIMIZE=`grep "OPTIMIZE" ../../../Config |cut -d ' ' -f 3`
 if [ "$DEBUG" -eq "1" ]; then
     DBG="xchg %bx, %bx"
 else
     DBG=""
+fi
+if [ "$OPTIMIZE" -eq "1" -a "$ctrl" == "CTRL_APIC" ]; then
+    ctrl="CTRL_x2APIC"
 fi
 echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq (x$numhnd), idtsz $idtsz)"
 
@@ -555,7 +559,7 @@ do
 	    movb	\$$isr, %dil
 	    pushq   %rdi
 	    call	isr_disableirq
-	    /* msg_sends(SRV_core, SYS_IRQ, irq, 0,0,0,0); */
+	    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
 	    popq    %rdx
 	    xorq	%rcx, %rcx
 	    xorq	%rsi, %rsi

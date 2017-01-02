@@ -73,4 +73,4 @@ Similarly to executables, but the entry point is called `_init`. If not defined 
 
 ### Services
 
-Service's entry point is also called `_init`, which function must call either `mq_recv()` or `mq_dispath()`. If not defined, fallbacks to [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
+Service's entry point is also called `_init`, which function must call either `mq_recv()` or `mq_dispatch()`. If not defined, fallbacks to [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).

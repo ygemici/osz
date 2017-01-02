@@ -11,7 +11,7 @@ Memory Mapping
 --------------
 
 All processes have their own memory mappings. Some pages are different,
-some are shared. There's a special task, called "system" which has
+some are shared. There's a special task, called "SYS" which has
 a slightly different mapping than normal user tasks.
 
 System Task
@@ -22,12 +22,11 @@ System Task
 | -2^56 .. -512M-1 | global  | global shared memory space (user accessible, read/write) |
 | -512M .. 0      | global  | core memory (supervisor only) |
 |     0 .. 4096   | thread  | Thread Control Block (read only) |
-|  4096 .. 1M-1   | thread  | [Message Queue](https://github.com/bztsrc/osz/tree/master/docs/messages.md) (read/write) |
-|    1M .. x      | thread  | temporarily mapped message buffer (growing upwards) |
+|  4096 .. x      | thread  | [Message Queue](https://github.com/bztsrc/osz/tree/master/docs/messages.md) (read/write, growing upwards) |
 |     x .. 2M-1   | thread  | local stack (growing downwards) |
 |    2M .. 2M+1p-1| [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | [message queue dispatcher](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S), loaded from .text.user section |
-| 2M+1p .. 2M+1p-1| process | IRQ Routing Table |
-| 2M+2p .. 4G-1   | process | device drivers (shared objects) |
+| 2M+1p .. x      | process | IRQ Routing Table |
+|     x .. 4G-1   | process | device drivers (shared objects) |
 |    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings |
 
 The system task is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
@@ -50,9 +49,8 @@ User Tasks
 | -2^56 .. -512M-1 | global  | global shared memory space (user accessible, read/write) |
 | -512M .. 0      | global  | core memory (supervisor only) |
 |     0 .. 4096   | thread  | Thread Control Block (read-only) |
-|  4096 .. 1M-1   | thread  | Message Queue (read/write) |
-|    1M .. x      | thread  | temporarily mapped message buffer (growing upwards, read/write) |
-|     x .. 2M-1   | thread  | local stack (growing downwards, read/write) |
+|  4096 .. x      | thread  | Message Queue (read/write, growing upwards) |
+|     x .. 2M-1   | thread  | local stack (read/write, growing downwards) |
 |    2M .. x      | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment (read only) |
 |     x .. 4G-1   | process | shared libraries (read only / read/write) |
 |    4G .. 2^56   | process | dynamically allocated bss memory (growing upwards, read/write) |
@@ -61,7 +59,7 @@ Normal userspace processes do not have any MMIO, only physical RAM can be mapped
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.
 
 The maximum number of pending events in a queue is a boot time parameter and can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrmqmax". It's given
-in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/32 = up to 128 pending events.
+in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/64 = up to 64 pending events.
 
 Core Memory
 -----------
