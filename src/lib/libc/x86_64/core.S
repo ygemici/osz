@@ -1,7 +1,7 @@
 /*
  * libc/x86_64/core.S
  * 
- * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
+ * Copyright 2017 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:
@@ -42,57 +42,58 @@ dl:
     # dynamically link a shared object
     # rdi: pointer to .so file path
     # rsi: pointer to symbol name
-    movq    %rdi, %rdx
+    movq    %rsi, %rdx
+    movq    %rdi, %rsi
     xorq    %rdi, %rdi
-    movq    %rsi, %r8
-    movq    $SYS_dl, %rsi
-    movl     $0x646E6573, %eax # 'send'
+    movb    $SYS_dl, %dil
+    movl    $0x646E6573, %eax # 'send'
     syscall
     jmp     2f
 
 /* sysinfo_t *sysinfo() */
 sysinfo:
     xorq    %rdi, %rdi
-    movq    $SYS_sysinfo, %rsi
-    movl     $0x646E6573, %eax # 'send'
+    movb    $SYS_sysinfo, %dil
+    movl    $0x646E6573, %eax # 'send'
     syscall
+2:  call    mq_recv@PLT
+/*
 2:  movq    $MQ_ADDRESS, %rbx
-    movq     8(%rbx), %rax
-    /* must match sizeof(msg_t) */
+    movq    8(%rbx), %rax
     shlq    $6, %rax
     addq    %rbx, %rax
-    /* mqhdr->mq_end++ */
     incq    8(%rbx)
     movq    8(%rbx), %rcx
     cmpq    16(%rbx), %rcx
     jne     1f
     movq    $1, 8(%rbx)
-1:  mov     16(%rax), %rax
+1:
+*/
+    mov     16(%rax), %rax
     ret
 
 /* void yield() */
 yield:
-    movq    %rdi, %rdx
     xorq    %rdi, %rdi
-    movq    $SYS_sched_yield, %rsi
-    movl     $0x646E6573, %eax # 'send'
+    movb    $SYS_sched_yield, %dil
+    movl    $0x646E6573, %eax # 'send'
     syscall
     ret
 
 /* void seterr(uint64_t err) */
 seterr:
-    movq    %rdi, %rdx
+    movq    %rdi, %rsi
     xorq    %rdi, %rdi
-    movq    $SYS_sysinfo, %rsi
-    movl     $0x646E6573, %eax # 'send'
+    movb    $SYS_seterr, %dil
+    movl    $0x646E6573, %eax # 'send'
     syscall
     ret
 
 /* void swapbuf() */
 swapbuf:
-    movq    %rdi, %rdx
+    movq    %rdi, %rsi
     xorq    %rdi, %rdi
-    movq    $SYS_swapbuf, %rsi
-    movl     $0x646E6573, %eax # 'send'
+    movb    $SYS_swapbuf, %dil
+    movl    $0x646E6573, %eax # 'send'
     syscall
     ret

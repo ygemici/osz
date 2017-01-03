@@ -1,5 +1,5 @@
-#ifndef __CLC_CRC32C__
-#define __CLC_CRC32C__
+#ifndef _CRC32C__
+#define _CRC32C__
 
 //precalculated CRC32c lookup table for polynomial 0x1EDC6F41 (castagnoli-crc)
 unsigned long int crc32c_lookup[256]={

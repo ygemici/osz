@@ -25,7 +25,8 @@
  * @brief Mandatory include file for every OS/Z applications
  */
 
-#define _OSZ_ 1
+#ifndef _OS_Z_
+#define _OS_Z_ 1
 
 #include <features.h>
 #include <errno.h>
@@ -34,6 +35,7 @@
 #ifndef _AS
 # include <stdint.h>
 # include <sys/types.h>
+# include <sys/osZ.h>
 # ifndef OSZ_CORE
 #  include <stdio.h>
 #  include <stdlib.h>
@@ -41,3 +43,5 @@
 #endif
 
 #include <syscall.h>
+
+#endif /* osZ.h */

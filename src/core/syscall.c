@@ -1,7 +1,7 @@
 /*
- * core/x86_64/syscall.c
+ * core/syscall.c
  * 
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:
@@ -22,13 +22,11 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Syscall dispatcher
+ * @brief Platform independent syscall dispatcher. Called by isr_syscall0
  */
 
 
-#include "platform.h"
-#include "isr.h"
-#include "../env.h"
+#include "env.h"
 #include <fsZ.h>
 
 /* external resources */
@@ -71,15 +69,22 @@ bool_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
 
         case SYS_swapbuf:
             isr_currfps++;
-            /* TODO: map and swap screen[0] and screen[1] */
-            /* flush screen buffer to video memory */
-            msg_sends(EVT_DEST(SRV_CORE) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
+            /* TODO: swap and map screen[0] and screen[1] */
+            /* flush screen buffer to video memory. Note this is a different
+             * call than we're serving. We came here because
+             *  SRV_UI sent SYS_swapbuf to SRV_CORE
+             * And now
+             *  SRV_CORE sends SYS_swaobuf to SRV_SYS */
+            msg_sends(EVT_DEST(SRV_SYS) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
             break;
 
+        case SYS_stimebcd:
+            /* set system time stamp in BCD date format (local time) */
+            ptr = (void *)sys_getts((char*)&ptr);
         case SYS_stime:
-            /* set system time stamp (UTC) */
+            /* set system time stamp in uint64_t (UTC) */
             if(tcb->memroot == sys_mapping || thread_allowed("stime",FSZ_WRITE)) {
-                isr_ticks[TICKS_TS] = sys_getts((char*)&ptr);
+                isr_ticks[TICKS_TS] = (uint64_t)ptr;
                 isr_ticks[TICKS_NTS] = 0;
             }
             break;

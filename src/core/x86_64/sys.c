@@ -107,11 +107,12 @@ __inline__ void sys_enable()
 uint64_t sys_getts(char *p)
 {
     uint64_t j,r=0,y,m,d,h,i,s;
-    /* if timestamp given, 2017.jan.1-2599.jan.1 */
-    if(*((uint64_t*)p) > 1483228800 && *((uint64_t*)p) < 19849363200)
-        return *((uint64_t*)p);
-    /* if datetime given */
-    if(p[0]>=0x20 && p[0]<=0x25 && p[1]<=0x99 && p[2]>=0x01 && p[2]<=0x12) {
+    /* detect BCD and binary formats */
+    if(p[0]>=0x20 && p[0]<=0x30 && p[1]<=0x99 &&    //year
+       p[2]>=0x01 && p[2]<=0x12 &&                  //month
+       p[3]>=0x01 && p[3]<=0x31 &&                  //day
+       p[4]<=0x23 && p[5]<=0x59 && p[6]<=0x60       //hour, min, sec
+    ) {
         /* decode BCD */
         y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
         m = ((p[2]>>4)*10)+(p[2]&0x0F);
@@ -146,23 +147,29 @@ uint64_t sys_getts(char *p)
     // add time with timezone correction to get UTC timestamp
     r += h*60*60 + (bootboot.timezone + i)*60 + s;
     // we don't honor leap sec here, but this timestamp should
-    // be rewritten by a timer driver with more accurate value
+    // be overwritten by SYS_stime with a more accurate value
     return r;
 }
 
-/* Initialize the "SYS" task */
+/* Initialize the "SYS" task, a very special process in many ways:
+ *  1. it's text segment is loaded from .text.user section
+ *  2. there's an IRT after that
+ *  3. instead of libraries, it has drivers
+ *  4. lot of hardware specific initialization is executed here */
 void sys_init()
 {
     /* this code should go in service.c, but has platform dependent parts */
     uint64_t *paging = (uint64_t *)&tmpmap;
-    int i=0, s;
+    uint64_t i=0, s;
 
-    // get the physical page of _usercode segment
+    // get the physical page of .text.user section
     uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
+    // load driver database
     char *c, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
     char fn[256];
 
+    /*** Platform specific initialization ***/
     // CPU Control Block (TSS64 in kernel bss)
     kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
     ccb.magic = OSZ_CCB_MAGICH;
@@ -175,7 +182,7 @@ void sys_init()
 
     // parse MADT to get IOAPIC address
     acpi_early(NULL);
-    // interrupt service routines (idt)
+    // interrupt service routines (idt, pic, ioapic etc.)
     isr_init();
 
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
@@ -187,15 +194,13 @@ void sys_init()
 //    if(service_loadelf("sbin/system") == (void*)(-1))
 //        kpanic("unable to load ELF from /sbin/system");
 //    for(i=0;paging[i]!=0;i++);
-
-    /* map _usercode segment as the first page in text segment */
     paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
 #if DEBUG
     if(debug&DBG_ELF)
         kprintf("  map .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
 #endif
 
-    // allocate and map irq dispatcher table in user mode right after
+    // allocate and map IRQ Routing Table right after
     // the user mode dispatcher code
     irq_routing_table = NULL;
     s = ((ISR_NUMIRQ * nrirqmax * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
@@ -206,9 +211,9 @@ void sys_init()
     if(s>1)
         kprintf("WARNING irq_routing_table bigger than a page\n");
 #endif
-    // add extra space to allow expansion
+    // add extra space to allow dynamic expansion
     s++;
-    // allocate IRQ Routing Table
+    // allocate IRT
     while(s--) {
         uint64_t t = (uint64_t)pmm_alloc();
         if(irq_routing_table == NULL) {
@@ -216,6 +221,7 @@ void sys_init()
             irq_routing_table = (uint64_t*)t;
             irq_routing_table[0] = nrirqmax;
         }
+        // map IRT
         paging[i++] = t + PG_USER_RO;
     }
 
@@ -257,32 +263,56 @@ void sys_init()
         acpi_init();
         // enumerate PCI BUS
         pci_init();
+        // ...enumarate other system buses
+    }
+    // log loaded drivers
+    s = 0;
+    syslog_early("Loaded drivers");
+    for(i=0;i<__PAGESIZE/8;i++) {
+        if(drvptr[i]!=0 && drvptr[i] != s) {
+            syslog_early(" %4x %s", TEXT_ADDRESS + i*__PAGESIZE, drvptr[i]);
+            s = drvptr[i];
+        }
     }
     drvptr = NULL;
 
     // dynamic linker
     if(service_rtlink()) {
 
+        /*** Static fields in System Info Block (returned by a syscall) ***/
+        // calculate addresses for screen buffers
+        sysinfostruc->screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
+        sysinfostruc->fb_ptr = sysinfostruc->screen_ptr +
+            (((bootboot.fb_width * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE) *
+            __SLOTSIZE * (display>=DSP_STEREO_MONO?2:1));
+        sysinfostruc->fb_width = bootboot.fb_width;
+        sysinfostruc->fb_height = bootboot.fb_height;
+        sysinfostruc->fb_scanline = bootboot.fb_scanline;
+        sysinfostruc->quantum = quantum;
+        sysinfostruc->debug = debug;
+        sysinfostruc->display = display;
+        sysinfostruc->rescueshell = rescueshell;
+
         /*** Timer stuff ***/
         isr_tmrinit();
+        sysinfostruc->freq = freq;
         
         /*** Double Screen stuff ***/
         // allocate and map screen buffer A
-        phy_t bss = (phy_t)BSS_ADDRESS + ((phy_t)__SLOTSIZE * ((phy_t)__PAGESIZE / 8)), fbp=(phy_t)bootboot.fb_ptr;
-        i = (bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE;
-        if(display>=DSP_STEREO_MONO)
-            i*=2;
+        virt_t bss = sysinfostruc->screen_ptr;
+        phy_t fbp=(phy_t)bootboot.fb_ptr;
+        i = ((bootboot.fb_width * bootboot.fb_height * 4 +
+            __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);
         while(i-->0) {
             vmm_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            // save it for SYS_swapbuf
             if(!screen[0]) {
                 screen[0]=pdpe;
             }
             bss += __SLOTSIZE;
         }
         // map framebuffer
-        bss &= ~((__SLOTSIZE*(__PAGESIZE / 8))-1);
-        bss += __SLOTSIZE*(__PAGESIZE / 8);
+        bss = sysinfostruc->fb_ptr;
         i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
         while(i-->0) {
             vmm_mapbss(bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
@@ -293,7 +323,7 @@ void sys_init()
         /*** IRQ routing stuff ***/
         // don't link other elfs against irq_routing_table
         irq_routing_table = NULL;
-        // modify TCB for system task, platform specific part
+        // modify TCB for system task
         tcb->priority = PRI_SYS;
         //set IOPL=3 in rFlags to permit IO address space
         tcb->rflags |= (3<<12);
@@ -303,22 +333,13 @@ void sys_init()
         tcb->rflags &= ~(0x200);
         //start executing at the begining of the text segment
         tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
-    
-        // Static fields in System Info Block (returned by a syscall)
-        sysinfostruc->freq = freq;
-        sysinfostruc->quantum = quantum;
-        sysinfostruc->fb_width = bootboot.fb_width;
-        sysinfostruc->fb_height = bootboot.fb_height;
-        sysinfostruc->fb_scanline = bootboot.fb_scanline;
-        sysinfostruc->debug = debug;
-        sysinfostruc->display = display;
-        sysinfostruc->rescueshell = rescueshell;
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+        // register system service (subsystem)
         services[-SRV_SYS] = pid;
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_SYS,"SYS",pid);
     } else {
-        kpanic("unable to start system task");
+        kpanic("unable to start \"SYS\" task");
     }
 }

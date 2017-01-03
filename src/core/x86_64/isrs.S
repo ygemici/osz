@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Low level exception and Interrupt Service Routines
+ * @brief Interrupt Controller specific Interrupt Service Routines
  */
 #define _AS 1
 #include <errno.h>

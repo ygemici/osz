@@ -37,6 +37,7 @@ extern int kx;
 extern int fx;
 
 extern uchar *service_sym(virt_t addr);
+extern int kwaitkey();
 
 uint8_t __attribute__ ((section (".data"))) dbg_enabled;
 
@@ -60,8 +61,9 @@ void dbg_enable(uint64_t rip, char *reason)
         kprintf("OS/Z core debug: %s  \n", reason);
     }
     fx=kx=0; ky=2;
+
+    /* registers and stack dump */
     fg=0xCc6c4b; bg=0x200000;
-    /* registers */
     kprintf("[Registers]");
     kx = 44;
     kprintf("[Stack]\n");
@@ -78,6 +80,15 @@ void dbg_enable(uint64_t rip, char *reason)
     kprintf("r10=%8x r11=%8x \n",tcb->gpr+64,tcb->gpr+72);
     kprintf("r12=%8x r13=%8x \n",tcb->gpr+80,tcb->gpr+88);
     kprintf("r14=%8x r15=%8x \n",tcb->gpr+96,tcb->gpr+104);
+
+    /* print out current task */
+    kx=fx=44; ky++;
+    fg=0xCc6c4b; bg=0x200000;
+    kprintf("[Task]\n");
+    fg=0x9c3c1b; bg=0;
+    kprintf("%s\n\n", tcb->name);
+
+
     /* stack */
     ky=3; kx=fx=44;
     if((uint64_t)rsp<(uint64_t)TEXT_ADDRESS || (uint64_t)rsp>(uint64_t)((uint64_t)&environment+(uint64_t)__PAGESIZE)) {
@@ -90,7 +101,7 @@ void dbg_enable(uint64_t rip, char *reason)
             rsp++;
         }
         /* back trace */
-        ky+=2; kx=fx=0;
+        ky++; kx=fx=0;
         fg=0xCc6c4b; bg=0x200000;
         kprintf("[Back trace]\n");
         fg=0x9c3c1b; bg=0;
@@ -99,7 +110,7 @@ void dbg_enable(uint64_t rip, char *reason)
         kprintf("%8x: %s \n",
             tcb->rip, service_sym(tcb->rip)
         );
-        while(i++<64){
+        while(i++<2){
             if(((rsp[1]==0x23||rsp[1]==0x08) &&
                 (rsp[4]==0x1b||rsp[4]==0x18)) || tcb->rsp==__PAGESIZE-40) {
                 kprintf("%8x: %s \n  * interrupt * \n",tcb->rip, service_sym(tcb->rip));
@@ -120,6 +131,7 @@ void dbg_enable(uint64_t rip, char *reason)
     }
     /* TODO: debugger, disasm, step through */
     breakpoint;
+    kwaitkey();
     asm("cli;hlt");
 }
 

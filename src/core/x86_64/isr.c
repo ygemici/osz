@@ -42,7 +42,6 @@ extern uint64_t sys_getts(char *p);
 
 extern uint64_t core_mapping;
 extern uint64_t ioapic_addr;
-extern sysinfo_t *sysinfostruc;
 
 #if DEBUG
 extern void dbg_enable(uint64_t rip);

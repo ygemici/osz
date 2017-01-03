@@ -28,8 +28,41 @@
 #define _AS 1
 #include <osZ.h>
 
+.global _init
 .global mem2vid
+.global aaa
+.global printf
+
+_init:
+    call    printf@PLT
+    movq    aaa@GOTPCREL(%rip), %rax
+    xorq    %rdi, %rdi
+    movb    $SYS_sysinfo, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    call    mq_recv@PLT
+/*
+    movq    $MQ_ADDRESS, %rbx
+    movq    8(%rbx), %rax
+    shlq    $6, %rax
+    addq    %rbx, %rax
+    incq    8(%rbx)
+    movq    8(%rbx), %rcx
+    cmpq    16(%rbx), %rcx
+    jne     1f
+    movq    $1, 8(%rbx)
+1:  mov     8(%rax), %rax
+*/
+    ret
 
 mem2vid:
-xchg %bx, %bx
     ret
+
+.section .data
+screen:
+    .quad 0x123456
+fbuf:
+    .quad 0
+aaa:
+    .quad 0
+    

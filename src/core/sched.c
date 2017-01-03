@@ -1,7 +1,7 @@
 /*
  * core/x86_64/sched.c
  * 
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  * 
  * You are free to:

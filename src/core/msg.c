@@ -32,12 +32,9 @@
 extern sysinfo_t *sysinfostruc;
 extern uint64_t nrservices;
 extern pid_t *services;
+extern void isr_savecontext();
+extern void isr_loadcontext();
 
-/* send a message with scalar values */
-__attribute__ ((flatten)) bool_t msg_send(evt_t event, void *ptr, size_t size, uint64_t magic)
-{
-    return msg_sends(MSG_PTRDATA | event, (uint64_t)ptr, (uint64_t)size, magic, 0, 0, 0);
-}
 /* send a message with a memory reference. If given, magic is a type hint for ptr */
 __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
 {
@@ -46,8 +43,7 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
     msghdr_t *msghdr = (msghdr_t*)(&tmp2map);
     uint64_t *paging = (uint64_t*)(&tmpmap);
     uint64_t dstmemroot = 0, oldtcbphy = srctcb->mypid*__PAGESIZE;
-    int64_t thread = event/65536; //don't use EVT_SENDER here, will loose sign
-
+    int64_t thread = (int64_t)event/(int64_t)65536; //don't use EVT_SENDER here, will loose sign
     // only ISRs allowed to send SYS_IRQ message
     if(EVT_FUNC(event)==0) {
         srctcb->errno = EPERM;
@@ -67,9 +63,9 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
         kprintf(" msg pid %x sending to pid %x, event #%x",
             srctcb->mypid, thread, EVT_FUNC(event));
         if(event & MSG_PTRDATA)
-            kprintf(" %x *%x[%d]",arg2,arg0,arg1);
+            kprintf(" *%x[%d] (%x)",arg0,arg1,arg2);
         else
-            kprintf("(%x,%x,%x,%x) %x",arg0,arg1,arg2,arg3);
+            kprintf("(%x,%x,%x,%x)",arg0,arg1,arg2,arg3);
         kprintf("\n");
     }
 #endif
@@ -123,18 +119,18 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
             }
         }
     }
-    // switch task
+    // switch task (flush tlb)
     thread_map(dstmemroot);
     // map source tcb in tmpmap (we've switched address space, and we
     // need to access it to store errno)
     kmap((uint64_t)&tmpmap, (uint64_t)(oldtcbphy), PG_CORE_NOCACHE);
     // NOTE: swapped dsttcb and srctcb!!!
 
-    // send message to the mapped queue. Don't use EVT_FUNC, would loose
-    // MSG_PTRDATA flag
     dsttcb->errno = EBUSY;
+    // send message to the mapped queue. Don't use EVT_FUNC, would
+    // loose MSG_PTRDATA flag
     if(!ksend((msghdr_t*)MQ_ADDRESS,
-        EVT_DEST(thread) | (event&0xFFFF),
+        EVT_DEST((uint64_t)thread) | (event&0xFFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
         if(thread==0)

@@ -7,7 +7,7 @@ OS/Z - an operating system for hackers
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
-for those who like hacking with hobby OSes. It's aim is
+for those who like hacking with hobby OSes, like the good fellows on [OSDEV](http://forum.osdev.org/). It's aim is
 to be small, and to handle enormous amounts of data in
 a user friendly way. To achieve that goal, I've eliminated
 as many limits as possible by design.
@@ -34,7 +34,7 @@ Hardware Requirements
  - 3 Mb free disk space
  - 32 Mb RAM
  - 800 x 600 / ARGB display
- - x86_64 processor with SSE3
+ - x86_64 processor with AVX
 
 Testing
 -------
@@ -44,7 +44,8 @@ The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd
 ```shell
 qemu-system-x86_64 -hda bin/disk.dd
 ```
-For more options, see [Testing How To](https://github.com/bztsrc/osz/tree/master/docs/howto1-testing.md).
+For more options, see [Testing How To](https://github.com/bztsrc/osz/tree/master/docs/howto1-testing.md). I usually test the image
+with [qemu](www.qemu.org/), [bochs](bochs.sourceforge.net/) and [virtualbox](https://www.virtualbox.org/).
 
 License
 -------
@@ -52,7 +53,7 @@ License
 The boot loader and the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol are Public Domain.
 All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) filesystem) licensed under CC-by-nc-sa-4.0.
 
- Copyright 2016 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
+ Copyright 2017 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
  
 **You are free to**:
 

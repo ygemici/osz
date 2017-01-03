@@ -8,7 +8,7 @@ OBJS = $(TMP:.S=.o)
 LIBS += -lc
 
 CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_DRIVER=1
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/root/lib
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/root/lib -lc
 
 all: $(OBJS) $(BINTARGET)
 

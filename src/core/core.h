@@ -215,7 +215,8 @@ extern void service_init(int subsystem, char *fn);
 
 // ----- Message Queue -----
 /** normal message senders */
-extern bool_t msg_send(evt_t event, void *ptr, size_t size, uint64_t magic);
+/* send a message with scalar values */
+#define msg_send(event,ptr,size,magic) msg_sends(MSG_PTRDATA | event, (uint64_t)ptr, (uint64_t)size, magic, 0, 0, 0)
 extern bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /** low level message sender, called by senders above and IRQ ISRs */
 extern bool_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);

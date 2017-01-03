@@ -39,6 +39,7 @@ extern phy_t pdpe;
 extern uint64_t isr_entropy[4];
 extern uint64_t *syslog_buf;
 extern uint64_t freq;
+extern sysinfo_t *sysinfostruc;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -178,12 +179,10 @@ uchar *service_sym(virt_t addr)
         if(ptr==TEXT_ADDRESS && tcb->memroot == sys_mapping)
             return (uchar*)"_main (irq dispatcher)";
     }
-
     if(((uint64_t)ehdr < ((uint64_t)&environment+__PAGESIZE)) &&
        ((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
         return nosym;
     Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff+2*ehdr->e_phentsize);
-    Elf64_Dyn *dyn;
     Elf64_Sym *sym, *s;
     // the string table
     char *strtable, *last=NULL;
@@ -191,22 +190,16 @@ uchar *service_sym(virt_t addr)
 
     /* Dynamic header */
     Elf64_Dyn *d;
-    dyn = d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
+    d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
     while(d->d_tag != DT_NULL) {
         if(d->d_tag == DT_STRTAB) {
-            strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFFF);
+            strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFFFFF);
         }
         if(d->d_tag == DT_STRSZ) {
             strsz = d->d_un.d_val;
         }
-        /* move pointer to next dynamic entry */
-        d++;
-    }
-    /* dynamic table */
-    d = dyn;
-    while(d->d_tag != DT_NULL) {
         if(d->d_tag == DT_SYMTAB) {
-            sym = (Elf64_Sym *)(ehdr + (d->d_un.d_ptr&0xFFFFF));
+            sym = (Elf64_Sym *)((char*)ehdr + (d->d_un.d_ptr&0xFFFFFFF));
         }
         if(d->d_tag == DT_SYMENT) {
             syment = d->d_un.d_val;
@@ -271,9 +264,10 @@ bool_t service_rtlink()
         uint64_t got = 0;
         Elf64_Sym *sym, *s;
         Elf64_Rela *rela;
+        Elf64_Rela *relad;
         // the string table
         char *strtable;
-        int syment, relasz, relaent=24;
+        int syment, relasz=0, reladsz=0, relaent=24;
     
         if(j==0) {
             // record crt0 entry point at the begining of segment
@@ -308,6 +302,12 @@ bool_t service_rtlink()
                         case DT_PLTRELSZ:
                             relasz = d->d_un.d_val;
                             break;
+                        case DT_RELA:
+                            relad = (Elf64_Rela *)((uint8_t *)ehdr + d->d_un.d_ptr);
+                            break;
+                        case DT_RELASZ:
+                            reladsz = d->d_un.d_val;
+                            break;
                         case DT_RELAENT:
                             relaent = d->d_un.d_val;
                             break;
@@ -327,6 +327,28 @@ bool_t service_rtlink()
         }
     
         if(got) {
+           /* GOT data entries */
+            for(i = 0; i < reladsz / relaent; i++){
+                // failsafe
+                if(n >= 2*__PAGESIZE/sizeof(OSZ_rela))
+                    break;
+                s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(relad->r_info) * syment);
+                /* get the physical address and sym from stringtable */
+                uint64_t o = (uint64_t)((int64_t)relad->r_offset + j*__PAGESIZE + (int64_t)relad->r_addend);
+                /* because the thread is not mapped yet, we have to translate
+                 * address manually */
+                rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
+                rel->sym = strtable + s->st_name;
+#if DEBUG
+                if(debug&DBG_RTIMPORT)
+                    kprintf("    %x D %s +%x?\n", rel->offs,
+                        strtable + s->st_name, relad->r_addend
+                    );
+#endif
+                n++; rel++;
+                /* move pointer to next rela entry */
+                relad = (Elf64_Rela *)((uint8_t *)relad + relaent);
+            }
             /* GOT plt entries */
             for(i = 0; i < relasz / relaent; i++){
                 // failsafe
@@ -334,14 +356,14 @@ bool_t service_rtlink()
                     break;
                 s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(rela->r_info) * syment);
                 /* get the physical address and sym from stringtable */
-                uint64_t o =rela->r_offset + j*__PAGESIZE;
+                uint64_t o = (uint64_t)((int64_t)rela->r_offset + j*__PAGESIZE + (int64_t)rela->r_addend);
                 /* because the thread is not mapped yet, we have to translate
                  * address manually */
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
                 if(debug&DBG_RTIMPORT)
-                    kprintf("    %x %s +%x?\n", rel->offs,
+                    kprintf("    %x T %s +%x?\n", rel->offs,
                         strtable + s->st_name, rela->r_addend
                     );
 #endif
@@ -351,7 +373,6 @@ bool_t service_rtlink()
             }
         }
     }
-
 #if DEBUG
     if((debug&DBG_IRQ) && irq_routing_table!=NULL)
         kprintf("\nIRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
@@ -421,23 +442,23 @@ bool_t service_rtlink()
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_routing_table
-                if(irq_routing_table != NULL && !kmemcmp(strtable + s->st_name,"irq",3)) {
-                    //at least one number
-                    if(*(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
-                        //strlen() = 4 | 5 | 6
-                        (*(strtable + s->st_name + 4)==0 ||
-                        *(strtable + s->st_name + 5)==0 ||
-                        *(strtable + s->st_name + 6)==0)
-                    ) {
-                        env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
-                        service_installirq(k, offs);
-                    } else {
-                        // record the irq handler's offset for later, we cannot
-                        // install it yet. We'll have to autodetect the irq number
-                        ehdr->e_shoff = offs;
-                    }
-                }
                 if(irq_routing_table != NULL) {
+                    if(!kmemcmp(strtable + s->st_name,"irq",3)) {
+                        //at least one number
+                        if(*(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
+                            //strlen() = 4 | 5 | 6
+                            (*(strtable + s->st_name + 4)==0 ||
+                            *(strtable + s->st_name + 5)==0 ||
+                            *(strtable + s->st_name + 6)==0)
+                        ) {
+                            env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
+                            service_installirq(k, offs);
+                        } else {
+                            // record the irq handler's offset for later, we cannot
+                            // install it yet. We'll have to autodetect the irq number
+                            ehdr->e_shoff = offs;
+                        }
+                    }
                     if(!kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG
                         if(debug&DBG_IRQ)
@@ -621,11 +642,9 @@ void ui_init()
     if(service_rtlink()) {
         // allocate and map screen buffer B
         int i;
-        phy_t bss = (phy_t)BSS_ADDRESS + ((phy_t)__SLOTSIZE * ((phy_t)__PAGESIZE / 8));
-        i = (bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE;
-        if(display>=DSP_STEREO_MONO)
-            i*=2;
+        phy_t bss = sysinfostruc->screen_ptr;
+        i = ((bootboot.fb_width * bootboot.fb_height * 4 +
+            __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);
         while(i-->0) {
             vmm_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             if(!screen[1]) {

@@ -176,7 +176,7 @@ irq8:
     movb    %al, 6(%rbx)
 
     xorq    %rdi, %rdi
-    movb    $SYS_stime, %dil
+    movb    $SYS_stimebcd, %dil
     movq    (%rbx), %rsi
     movl     $0x646E6573, %eax # 'send'
     syscall

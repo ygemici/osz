@@ -117,12 +117,14 @@ isr_syscall0:
     movq	%rcx, __PAGESIZE-40
     /* tcp->rsp, save stack pointer and switch to core stack */
     movq	%rsp, __PAGESIZE-16
-    movq	$__PAGESIZE-40, %rsp
+    movq	safestack, %rsp
+    addq    1024, %rsp
+//movq $__PAGESIZE-40, %rsp
 
     /* 'send' */
     cmpl	$0x646E6573, %eax
     jne		1f
-    /* if destination is SRV_core? */
+    /* is destination SRV_CORE? */
     movq    %rdi, %rax
     shrq    $16, %rax
     orq		%rax, %rax
@@ -159,7 +161,7 @@ isr_syscall0:
 3:  call	isr_syscall
     jmp		9f
 4:  call	msg_sends
-    jmp		9f
+    jmp		8f
 
     /* 'call' */
 1:  cmpl	$0x6c6c6163, %eax
