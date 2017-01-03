@@ -59,7 +59,7 @@ OS/Z boot ends
 --------------
 
 The first intersting point is where the operating system was loaded, arranged
-it's memory and interrupts and is about to leave privileged mode.
+it's memory and interrupts and is about to leave privileged mode by executing the very first `iretq`.
 
 You must see "OS/Z ready." on the top left corner of your screen with
 white on black, and something similar to this on debug console:
@@ -71,7 +71,7 @@ Next at t=22187507
 <bochs:2>
 ```
 
-This is in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c) and it's
+This sys_enable() function is in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c) and it's
 job is to map the first task and start executing it.
 
 ### Get pid
@@ -111,6 +111,8 @@ For current task, use `x /5bc 0`.
  
 ### What will iret do?
 
+As the stack stores user mode segment selectors, the CPU will drop
+privileged mode, and normal user space execution began.
 ```
 <bochs:2> print-stack
 Stack address size 8
@@ -122,35 +124,33 @@ Stack address size 8
 <bochs:3> 
 
 ```
-As the stack stores user mode segment selectors, the CPU will drop
-privileged mode. We can see that the user mode code starts
-at 0x200000, and it's stack is right beneath it.
+We can see that the user mode code starts at 0x200000, and it's stack is right beneath it (which differs from IRQ handler's safe stack).
 
-By stepping through the instruction, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
+By stepping through the iret instruction with <kbd>s<kbd>, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
 will iterate through detected devices by calling their _init() method.
 
 Enabling Multitask
 ------------------
 
-At the third break point we can see that drivers finished, and core is
-about to enable interrupts. By doing so, it will unleash hell, as nobody
-will know for sure the order in which interrupts fire. Luckily the
-message queue is serialized, so there's no need for locking.
+At the third break point we can see that driver initialization finished, and "SYS" task is
+about to send a message to core to enable interrupts. By doing so, it will unleash hell, as nobody
+will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's
+no need for locking.
 
 ```
 (0) Magic breakpoint
 Next at t=22686813
-(0) [0x00000018104c] 0023:000000000020004c (_init+4c): mov eax, 0x646e6573       ; b873656e64
+(0) [0x00000018104c] 0023:000000000020004c (_init+4c): mov eax, 0x646e6573       ; b873656e64 'send'
 <bochs:8>
 ```
 
-You can count on me when I say we're on "SYS" task (if in doubt type `x /5bc 0`). So load
+You can count on me when I say we're still on "SYS" task (if in doubt type `x /5bc 0`). So load
 it's symbols, and check code.
 
 ```
 <bochs:8> ldsym global "bin/sys.sym"
 <bochs:9> u /8 rip
-0020004c: (            _init+4c): mov eax, 0x646e6573       ; b873656e64
+0020004c: (            _init+4c): mov eax, 0x646e6573       ; b873656e64 'send'
 00200051: (            _init+51): syscall                   ; 0f05
 00200053: (           getwork+0): call .+153                ; e899000000 call mq_recv
 00200058: (           getwork+5): cmp word ptr ds:[rax], 0x0000 ; 66833800
@@ -163,23 +163,9 @@ it's symbols, and check code.
 
 The execution stopped right before the kernel call. After that comes [getwork](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) function that calls mq_recv()
 to get some work. When there's no more messages left, it blocks and scheduler picks the next
-task to run, and thus enabling multitask. The OS will switch to the next task every time an interrupt fires.
+task to run. The OS will switch to the next task every time an interrupt fires or the current task blocks.
 
 Further break points
 --------------------
 
-The simulation will stop on every interrupt, for example:
-
-```
-<bochs:10> c
-00022900925e[CPU0  ] interrupt(): vector = 20, TYPE = 0, EXT = 1
-(0) Magic breakpoint
-Next at t=22900926
-(0) [0x000000172283] 0008:ffffffffffe09283 (isr_irq0+3): cli                       ; fa
-<bochs:11> c
-00022900972e[CPU0  ] interrupt(): vector = 28, TYPE = 0, EXT = 1
-(0) Magic breakpoint
-Next at t=22900997
-(0) [0x0000001726a8] 0008:ffffffffffe096a8 (isr_irq8+3): cli                       ; fa
-<bochs:12>
-```
+No more breakpoints (planned at least). Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console.

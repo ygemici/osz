@@ -85,6 +85,9 @@ Shared among threads, just as user bss.
 |    c ..         | libc's data segment, read-write |
 |    ...          | more libraries may follow |
 
+The elf's local data segment comes right after the text segment, so it can take advantage of
+rip-relative (position independent) addressing.
+
 Page Management
 ---------------
 

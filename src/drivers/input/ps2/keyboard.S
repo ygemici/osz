@@ -1,7 +1,7 @@
 /*
  * drivers/input/ps2/keyboard.S
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -65,7 +65,8 @@ irq1:
 1:  movb    kbd_prefix(%rip), %dh
     movb    $0, kbd_prefix(%rip)
     /* extended scancode in dx */
-    xorq    %rsi, %rsi
+    movq    $SRV_UI, %rdi
+    shlq    $16, %rdi
     bt      $7, %dx
     jnc     2f
     /* keyrelease */
@@ -75,17 +76,15 @@ irq1:
     cmpb    $2, kbd_pressed(%rip)
     jg      4f
     decb    kbd_pressed(%rip)
-    movw    $SYS_keyrelease, %si
+    movw    $SYS_keyrelease, %di
     /* clear release bit so that it won't mess up scancode */
     btr     $7, %dx
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
+    movw    $SYS_keypress, %di
 3:  /* send a key event to UI task */
     movq    %rdx, %rsi
-    movq    $SRV_UI, %rdi
-    shlq    $16, %rdi
-    movw    $SYS_keypress, %di
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret

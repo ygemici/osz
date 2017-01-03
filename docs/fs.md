@@ -1,15 +1,16 @@
 FS/Z File System
 ================
 
-It was designed to store unimagineable amounts of data. It's a classic UNIX type filesystem with inodes and superblock.
+It was designed to store unimagineable amounts of data. It's a classic UNIX type filesystem with inodes and superblock
+but without their limitations.
 
-Block size can be 2048, 4096, 8192... etc. The suggested sector size is 4096 which matches the TLB page size. That would
-ease the loading of sectors to memory.
+Block size can be 2048, 4096, 8192... etc. The suggested sector size is multiple of 4096 which matches the TLB page size.
+That would ease the loading of sectors to memory.
 
 For detailed specification, see [fsZ.h](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h).
 
-File paths
-----------
+Fully Qualified File Path
+-------------------------
 
 A fully qualified path looks like:
 
@@ -34,6 +35,51 @@ if such version is not found. For dates in the future the current version is use
 Offset part defaults to '#0' which is the beginning of the file. Positive numbers are offsets into the file, while negative
 ones are relative offsets from the end of the file.
 
+Super Block
+-----------
+
+The super block is the first sector of the media and repeated in the last sector. If the superblocks differ, they have
+checksums to decide which sector is correct.
+
+File ID
+-------
+
+The file id (fid in short) is a scalar logical sector number up to 2^128. It's only valid if the pointed sector holds an inode structure.
+In other words, the data must start with the bytes "FSIN".
+
+Inode
+-----
+
+The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's the first 1024 bytes of
+a sector. It can contain several versions thus allowing not only easy snapshot recovery, but per file recovery as well.
+
+FS/Z also stores meta information (like mime type and checksum) on the contents, and supports meta labels.
+
+Contents have their own address space (other than fids). To support that, FS/Z has two different fid translation mechanisms.
+The first one is similar to memory mapping, and the other stores variable sized areas, so called extents.
+
+Sector List
+-----------
+
+Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting fid and the number of sectors in that area.
+In list fids can go up to 2^96 and the maximum area size is 2^32*(sectorsize).
+
+Sector Directory
+----------------
+
+A sector that has (sectorsize)/16 fid entries. The building block of memory paging like translations. Unlike sector lists, sector directories can
+handle fids up to 2^128, but describe fix sized, continous areas on disk. Not to confuse with common directories which are used to assign names to fids.
+
+Directory
+---------
+
+Every directory have 128 bytes long entries which gives 2^121-1 as the maximum number of entries in one directory. The first entry is reserved for
+the directory header, the others are normal fid and name assignments. Entries are alphabetically ordered thus allowing fast O(log n) look ups.
+
+16 bytes go for the fid, 1 byte reserved for the number of characters (not bytes) in the filename. That gives 111 bytes for filename
+(maybe less in characters as UTF-8 is a variable length encoding). That's the hardest limitation in FS/Z, but let's face it
+most likely you've never seen a filename longer than 42 characters in your whole life.
+
 Mounts
 ------
 
@@ -57,45 +103,3 @@ is mounted on the root volume at /boot:
 
 It worth mentioning this allows automounting just by referring to a file on the device.
 
-Super Block
------------
-
-The super block is the first sector of the media and repeated in the last sector. If the superblocks differ, they have
-checksums to decide which sector is correct.
-
-File ID
--------
-
-The file id (fid in short) is a scalar logical sector number up to 2^128. It's only valid if the pointed sector holds an inode structure.
-In other words, the data must start with the bytes "FSIN".
-
-Inode
------
-
-The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's the first 1024 bytes of
-a sector. It can contain several versions thus allowing not only easy snapshot recovery, but per file recovery as well.
-
-Contents have their own address spaces (other than fids). To support that, FS/Z has two different fid translation mechanisms.
-The first one is similar to memory mapping, and the other stores variable sized areas.
-
-Sector List
------------
-
-Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting fid and the number of sectors in that area.
-In list fids can go up to 2^96 and the maximum area size is 2^32*(sectorsize).
-
-Sector Directory
-----------------
-
-A sector that has (sectorsize)/16 fid entries. The building block of memory like translations. Unlike sector lists, sector directories can
-handle fids up to 2^128, but describe fixed sized, continous areas. Not to confuse with common directories which are used to assign names to fids.
-
-Directory
----------
-
-Every directory have 128 bytes long entries which gives 2^121-1 as the maximum number of entries in one directory. The first entry is reserved for
-the directory header, the others are normal fid and name assignments.
-
-16 bytes go for the fid, 1 more byte for the number of characters in the filename. That makes filename up to 111 bytes long
-(maybe less in characters as UTF-8 is a variable length encoding). That's the hardest limitation in FS/Z, but let's face it
-most likely you've never seen a filename longer than 20 characters in your whole life.
