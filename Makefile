@@ -58,6 +58,11 @@ clean:
 	@make -e --no-print-directory -C tools clean
 	@make -e --no-print-directory -C tools imgclean
 
+debug:
+	qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+avx,+x2apic &
+	@gdb -w -x "etc/script.gdb"
+	@killall qemu-system-x86_64
+
 test: testq
 
 testefi:

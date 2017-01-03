@@ -8,6 +8,9 @@ OBJS = $(SRCS:.c=.o)
 LIBS =
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_CORE=1 -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -Wall -fpic -ffreestanding -fvisibility=hidden -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+ifeq ($(DEBUG),1)
+CFLAGS += -g
+endif
 
 all: $(OBJS) $(BINTARGET)
 
