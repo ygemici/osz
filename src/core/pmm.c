@@ -1,16 +1,16 @@
 /*
  * core/pmm.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -163,7 +163,6 @@ void pmm_init()
     pmm.entries = fmem = (OSZ_pmm_entry*)(&pmm_entries);
     pmm.bss     = (uint8_t*)&__bss_start;
     pmm.bss_end = (uint8_t*)&pmm_entries + (uint64_t)(__PAGESIZE * nrphymax);
-
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
     while(num>0) {
@@ -245,7 +244,7 @@ void pmm_init()
     //first real message
     syslog_early("Started uuid %4x-%2x-%2x-%8x",(uint32_t)isr_entropy[0],(uint16_t)isr_entropy[1],(uint16_t)isr_entropy[2],isr_entropy[3]);
     syslog_early("Frame buffer %d x %d @%x",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr);
-    
+
     //dump memory map to log
     num = (bootboot.size-128)/16;
     entry = (MMapEnt*)&bootboot.mmap;

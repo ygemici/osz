@@ -28,7 +28,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <syscall.h>
-#include "tcb.h"
+#include "platform.h"
 
 .section .text
 .global kpanic
@@ -38,6 +38,7 @@
 .global kmemvid
 .global kmap
 .global kmap_init
+.global kmap_mq
 .global kmap_getpte
 .global kstrcpy
 .global kstrlen
@@ -46,8 +47,9 @@
 .global kwaitkey
 .extern kmap_tmp
 .extern tmpctrl
+.extern tmpmqctrl
 .extern tmppte
-.extern tmppde
+.extern mq_mapping
 .extern kpanicprefix
 .extern kpanicsuffix
 .extern kpanicsuffix2
@@ -191,7 +193,7 @@ kmap_init:
     movq    %cr3, %rax
     andw    $0xF000, %ax
     add     %rax, %rbx
-    /* save core mappings pointer */
+    /* save core mapping pointer */
     addq    $__PAGESIZE-8, %rax
     movq    (%rax), %rax
     movq    %rax, core_mapping
@@ -211,6 +213,9 @@ kmap_init:
     andl    $0x1FF, %ebx
     shlq    $3, %rbx
     add     %rax, %rbx
+    /* save tmpmq mapping pointer */
+    movb    $PG_CORE_NOCACHE, %al
+    movq    %rax, %r8
     /* PTE */
     movq    (%rbx), %rax
     xorb    %al, %al
@@ -220,35 +225,42 @@ kmap_init:
     shlq    $3, %rbx
     add     %rax, %rbx
     /* map it at tmppte */
-    pushq   %rdi
     mov     %rbx, %rax
     addq    $8, %rax
     movq    %rax, %rdi
     andw    $0xF000, %ax
     incw    %ax
     mov     %rax, (%rbx)
-    /* clear the rest */
-    pushq   %rcx
-    pushq   %rax
-    xorq    %rax, %rax
-    movq    %rbx, %rcx
-    addq    $4095, %rcx
-    andw    $0xF000, %cx
-    subq    %rbx, %rcx
-    shrq    $3, %rcx
-    dec     %rcx
-    dec     %rcx
-    repnz   stosq
-    popq    %rax
-    popq    %rcx
-    popq    %rdi
-    /* record pointer */
-    subq    $16, %rbx
+    /* map tmpmq pde at tmpmqctrl */
+    addq    $8, %rbx
+    mov     %r8, (%rbx)
+    /* record pointer at kmap_tmp */
+    subq    $24, %rbx
     andq    $0x0FFF, %rbx
     addq    %rcx, %rbx
     movq    %rbx, %rax
     popq    %rcx
     popq    %rbx
+    ret
+
+/* map a message queue temporairly
+   IN rdi: tcb->self */
+kmap_mq:
+    pushq   %rdi
+    movb    $PG_CORE_NOCACHE, %dil
+    movq    $tmpmqctrl, %rax
+    addq    $__PAGESIZE-16, %rax
+    movq    %rdi, (%rax)
+    movq    $tmpmq, %rax
+    movw    nrmqmax, %cx
+1:  invlpg  (%rax)
+    addq    $__PAGESIZE, %rax
+    decw    %cx
+    jnz     1b
+    popq    %rsi
+    movq    $tmp2map, %rdi
+    movb    $PG_CORE_NOCACHE, %sil
+    call    kmap
     ret
 
 /* IN rdi: virtual address

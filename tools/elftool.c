@@ -1,6 +1,6 @@
 /*
  * tools/elftool.c
- * 
+ *
  * Copyright 2017 Public Domain bztsrc@github
  *
  * @brief Quick and dirty tool to dump dynamic linking info in ELF64 objects
@@ -118,8 +118,7 @@ int main(int argc,char** argv)
         // section header
         Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
         // string table and other section header entries
-        Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff+
-            ehdr->e_shstrndx*ehdr->e_shentsize);
+        Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
         Elf64_Shdr *rela_sh=NULL;
         Elf64_Shdr *relat_sh=NULL;
         Elf64_Shdr *dyn_sh=NULL;
@@ -131,9 +130,21 @@ int main(int argc,char** argv)
         // the string table
         strtable = elf + strt->sh_offset;
         int i;
-    
+
+        if(dump)
+            printf("Phdr %lx Shdr %lx Strt %lx Sstr %lx\n\nSections\n",
+                (uint64_t)ehdr->e_phoff,
+                (uint64_t)ehdr->e_shoff,
+                (uint64_t)strt-(uint64_t)ehdr,
+                (uint64_t)strt->sh_offset
+            );
+
         /* Section header */
         for(i = 0; i < ehdr->e_shnum; i++){
+            if(dump)
+                printf(" %2d %08lx %6ld %s\n",i,
+                    (uint64_t)shdr->sh_offset, (uint64_t)shdr->sh_size,
+                    strtable+shdr->sh_name);
             if(!strcmp(strtable+shdr->sh_name, ".rela.plt")){
                 rela_sh = shdr;
             }
@@ -180,9 +191,9 @@ int main(int argc,char** argv)
             dynstr_sh->sh_offset, (int)dynstr_sh->sh_size,
             dynsym_sh->sh_offset, (int)dynsym_sh->sh_size, (int)dynsym_sh->sh_entsize
         );
-    
+
         printf("--- IMPORT ---\n");
-    
+
         /* dynamic table */
         Elf64_Dyn *dyn = (Elf64_Dyn *)(elf + dyn_sh->sh_offset);
         printf("Dynamic %08lx (%d bytes, one entry %d):\n",
@@ -198,7 +209,7 @@ int main(int argc,char** argv)
             /* move pointer to next dynamic entry */
             dyn = (Elf64_Dyn *)((uint8_t *)dyn + dyn_sh->sh_entsize);
         }
-        
+
         /* GOT plt entries */
         if(got_sh)
             printf("\nGOT %08lx (%d bytes)",
@@ -209,7 +220,7 @@ int main(int argc,char** argv)
             printf(", Rela plt %08lx (%d bytes, one entry %d):\n",
                 rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
             );
-        
+
             for(i = 0; i < rela_sh->sh_size / rela_sh->sh_entsize; i++){
                 /* get symbol, this is a bit terrible, but basicly offset calculation */
                 Elf64_Sym *sym = (Elf64_Sym *)(
@@ -230,7 +241,7 @@ int main(int argc,char** argv)
             printf("\nRela text %08lx (%d bytes, one entry %d):\n",
                 rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
             );
-        
+
             for(i = 0; i < relat_sh->sh_size / relat_sh->sh_entsize; i++){
                 /* get symbol, this is a bit terrible, but basicly offset calculation */
                 Elf64_Sym *sym = (Elf64_Sym *)(
@@ -247,7 +258,7 @@ int main(int argc,char** argv)
             }
         }
         printf("\n--- EXPORT ---\n");
-    
+
         s = sym;
         for(i=0;i<(strtable-(char*)sym)/syment;i++) {
             if(s->st_name > strsz) break;
@@ -256,7 +267,7 @@ int main(int argc,char** argv)
         }
         return 0;
     }
-    
+
 output:
     if(strtable==NULL || sym==NULL) {
         printf("no symtab or strtab?\n");

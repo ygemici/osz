@@ -71,7 +71,7 @@ void dbg_enable(uint64_t rip, char *reason)
     /* registers and stack dump */
     fg=0xCc6c4b; bg=0x200000;
     kprintf("[Registers]");
-    kx = maxx-40;
+    kx = maxx-44;
     kprintf("[Stack %8x]\n",tcb->rsp);
 
     fg=0x9c3c1b; bg=0;
@@ -88,7 +88,7 @@ void dbg_enable(uint64_t rip, char *reason)
     kprintf("r14=%8x r15=%8x \n",*((uint64_t*)tcb->gpr+96),*((uint64_t*)tcb->gpr+104));
 
     /* print out current task and last message */
-    kx=fx=maxx-36; ky++;
+    kx=fx=maxx-40; ky++;
     fg=0xCc6c4b; bg=0x200000;
     kprintf("[Task]\n\n\n[Last message]\n");
     ky-=3;
@@ -103,7 +103,7 @@ void dbg_enable(uint64_t rip, char *reason)
         *((uint64_t*)(m+48)), *((uint64_t*)(m+56)));
 
     /* stack */
-    ky=3; kx=fx=maxx-40;
+    ky=3; kx=fx=maxx-44;
     dbg_pgfault = false;
     while(i++<11 && !dbg_pgfault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
         kprintf("rsp+%1x rbp-%1x: %8x \n",

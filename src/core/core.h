@@ -1,16 +1,16 @@
 /*
  * core/core.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -41,10 +41,12 @@
 extern BOOTBOOT bootboot;             // boot structure
 extern unsigned char environment[__PAGESIZE]; // configuration
 extern uint8_t fb;                    // framebuffer
+extern uint8_t tmpmq;                 // temporarily mapped message queue
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
 extern uint8_t tmpalarm;              // temporarily mapped tcb for alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
+extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
 extern uint8_t _usercode;             // user mode text start
 extern uint8_t _init;                 // user mode initialization code
 extern uint8_t _main;                 // user mode "main", irq dispatcher
@@ -54,6 +56,7 @@ extern uint8_t __bss_start;           // start of bss segment
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern uint64_t sys_mapping;          // paging tables for "system" task
 extern OSZ_pmm pmm;                   // Physical Memory Manager data
+extern int scry;                      // scroll counter
 
 /* see etc/include/syscall.h */
 extern pid_t *services;
@@ -141,8 +144,14 @@ extern void ui_init();
 /** Initialize kernel memory mapping */
 extern void *kmap_init();
 
+/** Map a physical page at a virtual address */
+extern void kmap(virt_t virt, phy_t phys, uint8_t access);
+
+/** temporarirly map a message queue at tmpmq */
+extern void kmap_mq(phy_t tcbself);
+
 /** return a pointer to PTE for virtual address */
-extern uint64_t *kmap_getpte(uint64_t virt);
+extern uint64_t *kmap_getpte(virt_t virt);
 
 /** Copy n bytes from src to desc */
 extern void kmemcpy(char *dest, char *src, int size);
@@ -167,9 +176,6 @@ extern void* kalloc(int pages);
 
 /** Free kernel bss */
 extern void kfree(void* ptr);
-
-/** Map a physical page at a virtual address */
-extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
 // ----- Threads -----
 /** Allocate and initialize thread structures */

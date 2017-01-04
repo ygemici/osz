@@ -1,16 +1,16 @@
 /*
  * core/x86_64/isrc.S
- * 
+ *
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -155,6 +155,8 @@ isr_syscall0:
     jmp     9f
     /* enable the given irq */
 2:  movq    %rsi, %rdi
+cmpb $1, %dil
+jne 9f
     call    isr_enableirq
     jmp     9f
 
@@ -179,7 +181,14 @@ isr_syscall0:
     call	isr_syscall
     jmp		8f
 2:  call	msg_sends
-    jmp		8f
+    /* map dest thread */
+    movq	isr_next, %rax
+    orq 	%rax, %rax
+    jz  	1f
+    movq	%rax, %cr3
+    xorq	%rax, %rax
+    movq	%rax, isr_next
+1:  jmp		8f
 
     /* 'recv' */
 1:  cmpl	$0x76636572, %eax
@@ -276,7 +285,7 @@ isr_timer:
     movq    %rax, isr_ticks + 40
     /* if(tcb->rip < 0) tcb->syscnt++; else tcb->billcnt++; */
     movq	$656, %rbx
-    movb	__PAGESIZE-33, %al   
+    movb	__PAGESIZE-33, %al
     cmpb	$0xFF, %al
     jne		1f
     addq	$8, %rbx

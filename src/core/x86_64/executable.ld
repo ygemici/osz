@@ -23,10 +23,10 @@ SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   PROVIDE (__executable_start = SEGMENT_START("text-segment", 0));
-  . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
-  PROVIDE (_code = .);
-  .text           :
+  . = SEGMENT_START("text-segment", 0);
+  .text SIZEOF_HEADERS : AT(SIZEOF_HEADERS)
   {
+    PROVIDE (_code = .);
     /* text segment must start with crt0 code */
     *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)

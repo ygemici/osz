@@ -30,7 +30,7 @@
 #include <syscall.h>
 #include "isr.h"
 
-.section .text.user0
+.section .text.user
 .global _init
 .global _main
 

@@ -1,16 +1,16 @@
 /*
  * core/msg.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -32,19 +32,24 @@
 extern sysinfo_t *sysinfostruc;
 extern uint64_t nrservices;
 extern pid_t *services;
-extern void isr_savecontext();
-extern void isr_loadcontext();
+extern pid_t isr_next;
 
-/* send a message with a memory reference. If given, magic is a type hint for ptr */
+/* pointer to PDE for tmpmq */
+phy_t __attribute__ ((section (".data"))) *mq_mapping;
+
+/* send a message */
 __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
 {
     OSZ_tcb *srctcb = (OSZ_tcb*)(0);
     OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmpmap);
-    msghdr_t *msghdr = (msghdr_t*)(&tmp2map);
-    uint64_t *paging = (uint64_t*)(&tmpmap);
-    uint64_t dstmemroot = 0, oldtcbphy = srctcb->mypid*__PAGESIZE;
-    int64_t thread = (int64_t)event/(int64_t)65536; //don't use EVT_SENDER here, will loose sign
-    // only ISRs allowed to send SYS_IRQ message
+    msghdr_t *msghdr = (msghdr_t*)(&tmpmq + MQ_ADDRESS);
+    uint64_t *paging = (uint64_t*)(&tmp2map);
+    // don't use EVT_SENDER() here, would loose sign. This can be
+    // negative pid if a service referenced.
+    int64_t thread = ((int64_t)(event&~0xFFFF)/(int64_t)65536);
+
+    // only ISRs allowed to send SYS_IRQ message, and it's send
+    // on a more efficient way
     if(EVT_FUNC(event)==0) {
         srctcb->errno = EPERM;
         return false;
@@ -58,23 +63,14 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
             return false;
         }
     }
-#if DEBUG
-    if(debug&DBG_MSG) {
-        kprintf(" msg pid %x sending to pid %x, event #%x",
-            srctcb->mypid, thread, EVT_FUNC(event));
-        if(event & MSG_PTRDATA)
-            kprintf(" *%x[%d] (%x)",arg0,arg1,arg2);
-        else
-            kprintf("(%x,%x,%x,%x)",arg0,arg1,arg2,arg3);
-        kprintf("\n");
-    }
-#endif
-    // map thread's message queue
-    kmap((uint64_t)&tmpmap, (uint64_t)(thread!=0?thread*__PAGESIZE:oldtcbphy), PG_CORE_NOCACHE);
-    dstmemroot = dsttcb->memroot;
-    kmap((uint64_t)&tmpmap, (uint64_t)(dsttcb->self), PG_CORE_NOCACHE);
-    kmap((uint64_t)&tmp2map, (uint64_t)(paging[MQ_ADDRESS/__PAGESIZE]), PG_CORE_NOCACHE);
+    /* mappings:
+     *  tmpmap: destination thread's tcb
+     *  tmp2map: destination thread's self (paging)
+     *  tmpmq: destination thread's self (message queue) */
 
+    // map thread's message queue
+    kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
+    kmap_mq(dsttcb->self);
 //    pde[DSTMQ_PDE] = dsttcb->self;
 //    __asm__ __volatile__ ( "invlpg (tmpmq)" : : :);
     // check if the dest is receiving from ANY (0) or from our pid
@@ -82,7 +78,12 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
         srctcb->errno = EAGAIN;
         return false;
     }
-// if destination's address space is different, map it
+    // if we're sending to the current task
+    if(srctcb->self==dsttcb->self) {
+        msghdr = (msghdr_t*)(MQ_ADDRESS);
+        isr_next = 0;
+    } else
+        isr_next = thread;
     phy_t pte;
     size_t s;
     int bs = 0;
@@ -119,26 +120,31 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
             }
         }
     }
-    // switch task (flush tlb)
-    thread_map(dstmemroot);
-    // map source tcb in tmpmap (we've switched address space, and we
-    // need to access it to store errno)
-    kmap((uint64_t)&tmpmap, (uint64_t)(oldtcbphy), PG_CORE_NOCACHE);
-    // NOTE: swapped dsttcb and srctcb!!!
+#if DEBUG
+    if(debug&DBG_MSG) {
+        kprintf(" msg pid %x sending to pid %x (%d), event #%x",
+            srctcb->mypid, thread, msghdr->mq_start, EVT_FUNC(event));
+        if(event & MSG_PTRDATA)
+            kprintf(" *%x[%d] (%x)",arg0,arg1,arg2);
+        else
+            kprintf("(%x,%x,%x,%x)",arg0,arg1,arg2,arg3);
+        kprintf("\n");
+    }
+#endif
 
-    dsttcb->errno = EBUSY;
+    srctcb->errno = EBUSY;
     // send message to the mapped queue. Don't use EVT_FUNC, would
     // loose MSG_PTRDATA flag
-    if(!ksend((msghdr_t*)MQ_ADDRESS,
+    if(!ksend(msghdr,
         EVT_DEST((uint64_t)thread) | (event&0xFFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
         if(thread==0)
-            dsttcb->errno = EAGAIN;
+            srctcb->errno = EAGAIN;
         else
             sched_block(dsttcb);
         return false;
     }else
-        dsttcb->errno = SUCCESS;
+        srctcb->errno = SUCCESS;
     return true;
 }

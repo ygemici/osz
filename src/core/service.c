@@ -1,16 +1,16 @@
 /*
  * core/service.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -168,45 +168,49 @@ uchar *service_sym(virt_t addr)
     uint64_t ptr;
     if(addr<TEXT_ADDRESS||(addr>=BSS_ADDRESS&&addr<(uint64_t)&bootboot))
         return nosym;
-    if((uint64_t)addr > ((uint64_t)&environment+__PAGESIZE)) {
-        ptr = (uint64_t)&environment+__PAGESIZE;
-    } else {
-        ptr = addr;
-        ptr &= ~(__PAGESIZE-1);
-        while(ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
-            ptr -= __PAGESIZE;
-        ehdr = (Elf64_Ehdr*)ptr;
-        if(ptr==TEXT_ADDRESS && tcb->memroot == sys_mapping)
-            return (uchar*)"_main (irq dispatcher)";
-    }
+    ptr = addr;
+    ptr &= ~(__PAGESIZE-1);
+    while(ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
+        ptr -= __PAGESIZE;
+    if(ptr==TEXT_ADDRESS && tcb->memroot == sys_mapping)
+        return (uchar*)"_main (irq dispatcher)";
+    ehdr = (Elf64_Ehdr*)ptr;
     if(((uint64_t)ehdr < ((uint64_t)&environment+__PAGESIZE)) &&
        ((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
         return nosym;
-    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff+2*ehdr->e_phentsize);
-    Elf64_Sym *sym, *s;
-    // the string table
+    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint64_t)ehdr->e_phoff);
+    Elf64_Sym *sym=NULL, *s;
+    // the string tables
     char *strtable, *last=NULL;
     int i, strsz, syment;
-
-    /* Dynamic header */
-    Elf64_Dyn *d;
-    d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
-    while(d->d_tag != DT_NULL) {
-        if(d->d_tag == DT_STRTAB) {
-            strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFFFFF);
+    /* Program Header */
+    for(i = 0; i < ehdr->e_phnum; i++){
+        /* we only need the Dynamic header */
+        if(phdr->p_type==PT_DYNAMIC) {
+            /* Dynamic header */
+            Elf64_Dyn *d;
+            d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
+            while(d->d_tag != DT_NULL) {
+                if(d->d_tag == DT_STRTAB) {
+                    strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFFFFF);
+                }
+                if(d->d_tag == DT_STRSZ) {
+                    strsz = d->d_un.d_val;
+                }
+                if(d->d_tag == DT_SYMTAB) {
+                    sym = (Elf64_Sym *)((uint8_t*)ehdr + (d->d_un.d_ptr&0xFFFFFFF));
+                }
+                if(d->d_tag == DT_SYMENT) {
+                    syment = d->d_un.d_val;
+                }
+                /* move pointer to next dynamic entry */
+                d++;
+            }
         }
-        if(d->d_tag == DT_STRSZ) {
-            strsz = d->d_un.d_val;
-        }
-        if(d->d_tag == DT_SYMTAB) {
-            sym = (Elf64_Sym *)((char*)ehdr + (d->d_un.d_ptr&0xFFFFFFF));
-        }
-        if(d->d_tag == DT_SYMENT) {
-            syment = d->d_un.d_val;
-        }
-        /* move pointer to next dynamic entry */
-        d++;
     }
+    if(sym==NULL)
+        return nosym;
+
     /* which symbol belongs to the address? */
     s=sym;
     for(i=0;i<(strtable-(char*)sym)/syment;i++) {
@@ -256,7 +260,7 @@ bool_t service_rtlink()
 
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
         Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
@@ -268,7 +272,7 @@ bool_t service_rtlink()
         // the string table
         char *strtable;
         int syment, relasz=0, reladsz=0, relaent=24;
-    
+
         if(j==0) {
             // record crt0 entry point at the begining of segment
             tcb->rip = (uint64_t)(TEXT_ADDRESS + ehdr->e_ehsize+ehdr->e_phnum*ehdr->e_phentsize);
@@ -325,7 +329,7 @@ bool_t service_rtlink()
             /* move pointer to next program header */
             phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
         }
-    
+
         if(got) {
            /* GOT data entries */
             for(i = 0; i < reladsz / relaent; i++){
@@ -382,7 +386,7 @@ bool_t service_rtlink()
 
     /*** resolve addresses ***/
     for(j=0; j<__PAGESIZE/8; j++) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
         Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
@@ -394,7 +398,7 @@ bool_t service_rtlink()
         // clear session header offset, we don't need it, so we can reuse it
         // to store irq handler's address
         ehdr->e_shoff = 0;
-    
+
         for(i = 0; i < ehdr->e_phnum; i++){
             if(phdr->p_type==PT_DYNAMIC) {
                 d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr->p_offset);
@@ -520,7 +524,7 @@ bool_t service_rtlink()
         stack_ptr--;
         tcb->rsp -= 8;
     } else {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG) || ehdr->e_phoff==ehdr->e_entry)
             kpanic("no executor?");
         *stack_ptr = ehdr->e_entry + TEXT_ADDRESS;
@@ -532,7 +536,7 @@ bool_t service_rtlink()
     // but skip the first ELF as executor's entry point is already
     // pushed on the stack
     for(j=__PAGESIZE/8-1; j>1; j--) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));    
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
         *stack_ptr = ehdr->e_entry + TEXT_ADDRESS + j*__PAGESIZE;
@@ -679,7 +683,7 @@ void syslog_init()
         paging[i+j] = (((uint64_t)kmap_getpte(
             (uint64_t)syslog_buf + j*__PAGESIZE))
             * ~(__PAGESIZE-1)) + PG_USER_RO;
-            
+
     // map libc
     service_loadso("lib/libc.so");
     // dynamic linker

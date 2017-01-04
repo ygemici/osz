@@ -23,9 +23,9 @@ SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
-  PROVIDE (_code = .);
-  .text           :
+  .text :
   {
+    PROVIDE (_code = .);
     /* text segment must start with crt0 */
     *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
@@ -80,7 +80,6 @@ SECTIONS
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
-  .cl             : { . = ALIGN(16); *(.cl) }
   .dynamic        : { *(.dynamic) } :data :dynamic
   . = ALIGN(8);
   .got            : { *(.got) *(.igot) } :data

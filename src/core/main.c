@@ -1,16 +1,16 @@
 /*
  * core/main.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -26,7 +26,7 @@
  *
  *   Memory map
  *       -512M framebuffer                      (0xFFFFFFFFE0000000)
- * 
+ *
  *       -2M core        bootboot[2] struct     (0xFFFFFFFFFFE00000)
  *         -2M + 1page   environment[3]         (0xFFFFFFFFFFE01000)
  *         -2M + 2page.. core text segment v    (0xFFFFFFFFFFE02000)
@@ -34,7 +34,7 @@
  *         ..0           core boot stack   ^    (0x0000000000000000)
 
  *       0-16G user      RAM identity mapped[4] (0x0000000000000000)
- * 
+ *
  *   [1] see msg_t in msg.h
  *   [2] see loader/bootboot.h
  *   [3] see etc/CONFIG and env.h. Plain ascii key=value pairs,
@@ -107,8 +107,10 @@ void main()
     kprintf_reset();
     kprintf("OS/Z ready. Allocated %d pages out of %d",
         pmm.totalpages - pmm.freepages, pmm.totalpages);
-    kprintf(", free %d.%d%%\n\n",
+    kprintf(", free %d.%d%%\n",
         pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
+    //disable scroll pause
+    scry = -1;
 #if DEBUG
     if(debug&DBG_LOG)
         kprintf(syslog_buf);

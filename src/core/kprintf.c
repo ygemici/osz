@@ -1,16 +1,16 @@
 /*
  * core/kprintf.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -274,32 +274,34 @@ void kprintf_scrollscr()
         }
         offs+=bootboot.fb_scanline;
     }
-    scry++;
-    // if we've scrolled the whole screen, stop
-    if(scry>=maxy-1) {
-        uint32_t oldfg = fg;
-        fg = 0xffffff;
-        // display a message
-        char *msg = " --- Press any key to continue --- ";
-        scry = kx = 0;
-        for(;*msg!=0;msg++) {
-                kprintf_putchar((int)(*msg));
-                kx++;
-        }
-        // wait for user input
-        kwaitkey();
-        // clear the message
-        for(y=0;y<font->height;y++){
-            line=tmp;
-            for(x=0;x<w;x++){
-                *((uint64_t*)(&fb + line)) = (uint64_t)0;
-                line+=8;
+    if(scry!=-1) {
+        scry++;
+        // if we've scrolled the whole screen, stop
+        if(scry>=maxy-1) {
+            uint32_t oldfg = fg;
+            fg = 0xffffff;
+            // display a message
+            char *msg = " --- Press any key to continue --- ";
+            scry = kx = 0;
+            for(;*msg!=0;msg++) {
+                    kprintf_putchar((int)(*msg));
+                    kx++;
             }
-            tmp+=bootboot.fb_scanline;
+            // wait for user input
+            kwaitkey();
+            // clear the message
+            for(y=0;y<font->height;y++){
+                line=tmp;
+                for(x=0;x<w;x++){
+                    *((uint64_t*)(&fb + line)) = (uint64_t)0;
+                    line+=8;
+                }
+                tmp+=bootboot.fb_scanline;
+            }
+            // restore color
+            fg = oldfg;
+            kx = fx;
         }
-        // restore color
-        fg = oldfg;
-        kx = fx;
     }
 }
 
