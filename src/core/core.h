@@ -53,6 +53,7 @@ extern unsigned char environment[__PAGESIZE]; // configuration
 
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
+extern uint8_t tmp3map;               // temporarily mapped page #3 (pmm_alloc)
 extern uint8_t tmpalarm;              // temporarily mapped tcb for alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page

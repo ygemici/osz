@@ -68,7 +68,12 @@ void* pmm_alloc()
         isr_entropy[(i+2)%4] ^= (uint64_t)fmem->base;
         isr_gainentropy();
         /* allocate page */
-        kmemset((char *)fmem->base, 0, __PAGESIZE);
+        if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
+            kmap((virt_t)&tmp2map, fmem->base, PG_CORE_NOCACHE);
+            kmemset((char *)&tmp2map, 0, __PAGESIZE);
+        } else {
+            kmemset((char *)fmem->base, 0, __PAGESIZE);
+        }
         fmem->base+=__PAGESIZE;
         fmem->size--;
         pmm.freepages--;

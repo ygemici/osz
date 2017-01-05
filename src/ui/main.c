@@ -11,9 +11,11 @@ public void openwrd(){}
 
 void _init()
 {
+    uint64_t bss = BSS_ADDRESS;
     uint64_t len;
     /* map keymap */
-    len = mapfile((void*)BSS_ADDRESS, "/etc/kbd/en");
-    len++;
+    len = mapfile((void*)bss, "/etc/kbd/en_us");
+    bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);
+
     mq_dispatch();
 }

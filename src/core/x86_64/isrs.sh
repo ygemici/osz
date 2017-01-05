@@ -491,10 +491,8 @@ do
 	    $EXCERR
 	    movq	(%rsp), %rax
 	    movq	%rax, __PAGESIZE-40
-/*
 	    movq	24(%rsp), %rax
 	    movq	%rax, __PAGESIZE-16
-*/
 	    xorq	%rdi, %rdi
 	    movq	__PAGESIZE-40, %rsi
 	    movb	\$$i, %dil

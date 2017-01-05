@@ -137,11 +137,9 @@ void dbg_enable(uint64_t rip, char *reason)
             continue;
         }
         if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
-           (*rsp>((uint64_t)&environment+(uint64_t)__PAGESIZE) &&
+           (*rsp>((uint64_t)CORE_ADDRESS) &&
            (uint64_t)*rsp<(uint64_t)&__bss_start)) {
-            kprintf("%8x: %s \n",
-                *rsp, service_sym(*rsp)
-            );
+            kprintf("%8x: %s \n", *rsp, service_sym(*rsp));
         }
         rsp++;
     }

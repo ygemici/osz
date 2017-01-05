@@ -38,7 +38,7 @@ SECTIONS
     } :text
     .dynamic : { *(.dynamic) } :text :dynamic
     /* GNU ld buf workaround. It refuses to place symtab and strtab in text */
-    . += 32768;
+    . += 65536;
 
     /* dynamically allocated/mapped data */
     __bss_start = .;
