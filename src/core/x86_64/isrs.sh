@@ -489,12 +489,12 @@ do
 	    cli
 	    callq	isr_savecontext
 	    $EXCERR
-
 	    movq	(%rsp), %rax
 	    movq	%rax, __PAGESIZE-40
+/*
 	    movq	24(%rsp), %rax
 	    movq	%rax, __PAGESIZE-16
-
+*/
 	    xorq	%rdi, %rdi
 	    movq	__PAGESIZE-40, %rsi
 	    movb	\$$i, %dil
@@ -538,7 +538,6 @@ do
 	    je		1f
 	    /* no, switch to system task */
 	    movq	sys_mapping, %rax
-xchg %bx, %bx
 	    movq	%rax, %cr3
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi

@@ -26,7 +26,7 @@
  *
  *   Memory map
  *       -512M framebuffer                      (0xFFFFFFFFE0000000)
- *
+ *       -4M tmpmq       message queue [1]      (0xFFFFFFFFFFC00000)
  *       -2M core        bootboot[2] struct     (0xFFFFFFFFFFE00000)
  *         -2M + 1page   environment[3]         (0xFFFFFFFFFFE01000)
  *         -2M + 2page.. core text segment v    (0xFFFFFFFFFFE02000)
@@ -35,7 +35,7 @@
 
  *       0-16G user      RAM identity mapped[4] (0x0000000000000000)
  *
- *   [1] see msg_t in msg.h
+ *   [1] see msg_t in etc/include/sys/types.h
  *   [2] see loader/bootboot.h
  *   [3] see etc/CONFIG and env.h. Plain ascii key=value pairs,
  *       separated by whitespace characters. Filled up with spaces

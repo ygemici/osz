@@ -214,12 +214,18 @@ uchar *service_sym(virt_t addr)
             }
         }
     }
+    /* fallback to sections if dynamic segment not found */
     if(sym==NULL) {
         // section header
         Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
         // string table and other section header entries
         Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
         char *shstr = (char*)ehdr + strt->sh_offset;
+        // failsafe
+        if((virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
+           (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
+        )
+            return nosym;
         /* Section header */
         for(i = 0; i < ehdr->e_shnum; i++){
             if(!kstrcmp(shstr+shdr->sh_name, ".symtab")){

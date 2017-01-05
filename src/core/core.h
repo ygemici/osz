@@ -51,7 +51,6 @@
 extern BOOTBOOT bootboot;                     // boot structure
 extern unsigned char environment[__PAGESIZE]; // configuration
 
-extern uint8_t tmpmq;                 // temporarily mapped message queue
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
 extern uint8_t tmpalarm;              // temporarily mapped tcb for alarm
@@ -160,7 +159,7 @@ extern void *kmap_init();
 /** Map a physical page at a virtual address */
 extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
-/** temporarirly map a message queue at tmpmq */
+/** temporarirly map a message queue at TMPQ_ADDRESS */
 extern void kmap_mq(phy_t tcbself);
 
 /** return a pointer to PTE for virtual address */

@@ -43,6 +43,9 @@ make vdi
 For this How To we are going to use bochs, as it would stop at predefined
 addresses.
 
+```sh
+make testb
+```
 
 First Break Point
 -----------------
@@ -53,7 +56,7 @@ Our jurney begins before the firmware takes control of the hardware.
 <bochs:1> c
 ```
 
-Just continue as we don't want to debug BIOS.
+Just continue as we are not interested in the BIOS.
 
 OS/Z boot ends
 --------------
@@ -169,3 +172,20 @@ Further break points
 --------------------
 
 No more breakpoints (planned at least). Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console.
+
+Debugging with GDB
+------------------
+
+First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting DEBUG = 1. Then
+
+```sh
+make debug
+```
+
+and then in another terminal, type
+
+```sh
+make gdb
+```
+
+to start the debugger and connect it to the running OS/Z instance.

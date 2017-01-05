@@ -28,11 +28,10 @@
 #include "platform.h"
 #include "../env.h"
 
-uint64_t __attribute__ ((section (".data"))) sys_mapping;
-uint64_t __attribute__ ((section (".data"))) core_mapping;
-uint64_t __attribute__ ((section (".data"))) *stack_ptr;
-/* page table pointer */
-//extern phy_t pt;
+phy_t __attribute__ ((section (".data"))) sys_mapping;
+phy_t __attribute__ ((section (".data"))) core_mapping;
+phy_t __attribute__ ((section (".data"))) identity_mapping;
+phy_t __attribute__ ((section (".data"))) *stack_ptr;
 
 /* create a thread, allocate memory for it and init TCB */
 pid_t thread_new(char *cmdline)

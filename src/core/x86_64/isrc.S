@@ -160,7 +160,6 @@ isr_syscall0:
     movq	isr_next, %rax
     orq 	%rax, %rax
     jz  	9f
-xchg %bx, %bx
     movq	%rax, %cr3
     xorq	%rax, %rax
     movq	%rax, isr_next
@@ -198,7 +197,6 @@ xchg %bx, %bx
     movq    isr_next, %rax
 3:  orq     %rax, %rax
     jz      1f
-xchg %bx, %bx
     movq    %rax, %cr3
     xorq    %rax, %rax
     movq    %rax, isr_next
@@ -319,7 +317,6 @@ isr_timer:
     /* build and send a mem2vid message */
     /* switch to system task */
     movq    sys_mapping, %rax
-xchg %bx, %bx
     movq    %rax, %cr3
     /* msg_sends(EVT_DEST(SRV_CORE) | SYS_swapbuf, 0,0,0,0,0); */
     xorq    %rsi, %rsi

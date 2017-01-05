@@ -40,7 +40,7 @@
 /* if you change  one of this, you'll have to run isrs.sh */
 #define ISR_NUMIRQ 24       //maximum number of IRQ lines
 #define ISR_NUMHANDLER 4    //maximum number of handlers per IRQ
-#define ISR_EXCMAX 128      //maximum code size of exception ISRs
+#define ISR_EXCMAX 64       //maximum code size of exception ISRs
 #define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
 #define ISR_IRQTMR 0        //irq to trigger preemption and alarm

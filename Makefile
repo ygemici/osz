@@ -59,9 +59,15 @@ clean:
 	@make -e --no-print-directory -C tools imgclean
 
 debug:
+ifeq ($(DEBUG),1)
 	qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+avx,+x2apic -monitor stdio
-	@#gdb -w -x "etc/script.gdb"
-	@#killall qemu-system-x86_64
+else
+	@echo Compiled without debugging symbols! Set DEBUG = 1 in Config and recompile.
+endif
+
+gdb:
+	@gdb -w -x "etc/script.gdb"
+	@killall qemu-system-x86_64
 
 test: testq
 

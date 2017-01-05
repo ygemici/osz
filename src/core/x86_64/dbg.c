@@ -1,16 +1,16 @@
 /*
  * core/x86_64/dbg.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -58,8 +58,8 @@ void dbg_enable(uint64_t rip, char *reason)
     uint64_t m;
 
     dbg_active = true;
-    __asm__ __volatile__ ( "movq %%cr2, %%rax; movq %%rax, %0" : "=r"(cr2) : : "%rax"); 
-    __asm__ __volatile__ ( "movq %%cr3, %%rax; movq %%rax, %0" : "=r"(cr3) : : "%rax"); 
+    __asm__ __volatile__ ( "movq %%cr2, %%rax; movq %%rax, %0" : "=r"(cr2) : : "%rax");
+    __asm__ __volatile__ ( "movq %%cr3, %%rax; movq %%rax, %0" : "=r"(cr3) : : "%rax");
     if(reason!=NULL&&*reason!=0) {
         kprintf_reset();
         fg = 0xFFDD33;
@@ -93,7 +93,10 @@ void dbg_enable(uint64_t rip, char *reason)
     kprintf("[Task]\n\n\n[Last message]\n");
     ky-=3;
     fg=0x9c3c1b; bg=0;
-    m = ((*((uint64_t*)MQ_ADDRESS) * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
+    m = *((uint64_t*)MQ_ADDRESS) - 1;
+    if(m==0)
+        m = *((uint64_t*)(MQ_ADDRESS+16)) - 1;
+    m = ((m * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
     kprintf("%s\n\n\n @%x\n%8x %8x\n", tcb->name, m,
         *((uint64_t*)m), *((uint64_t*)(m+8)));
     kprintf("%8x %8x\n%8x %8x\n",

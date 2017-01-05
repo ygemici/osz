@@ -26,7 +26,7 @@
  */
 
 #include "font.h"
-//#include "env.h"
+#include "env.h"
 
 /* re-entrant counter */
 char __attribute__ ((section (".data"))) reent;
@@ -236,7 +236,7 @@ void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
-//    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
+    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
     kprintf(" %d fps, ts %d ticks %d",isr_lastfps,isr_ticks[TICKS_TS],isr_ticks[TICKS_LO]);
     kx=ox; ky=oy;
     fg=of; bg=ob;

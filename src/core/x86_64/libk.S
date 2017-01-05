@@ -189,6 +189,7 @@ kmap_init:
     shlq    $3, %rbx
     movq    %cr3, %rax
     andw    $0xF000, %ax
+    movq    %rax, identity_mapping
     add     %rax, %rbx
     /* save core mapping pointer */
     addq    $__PAGESIZE-8, %rax
@@ -210,7 +211,7 @@ kmap_init:
     andl    $0x1FF, %ebx
     shlq    $3, %rbx
     add     %rax, %rbx
-    /* save tmpmq mapping pointer */
+    /* save TMPQ_ADDRESS mapping pointer */
     movb    $PG_CORE_NOCACHE, %al
     movq    %rax, %r8
     /* PTE */

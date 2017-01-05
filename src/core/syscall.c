@@ -38,11 +38,17 @@ extern uint64_t isr_ticks[8];
 extern uint64_t isr_entropy[4];
 extern uint64_t isr_lastfps;
 extern uint64_t isr_currfps;
+extern phy_t identity_mapping;
 
 /* System call dispatcher for messages sent to SRV_core */
-uint64_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
+uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
+    void *data;
+    uint64_t size;
+    phy_t memroot;
+
+    tcb->errno = SUCCESS;
     switch(EVT_FUNC(event)) {
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
@@ -70,21 +76,23 @@ uint64_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
         case SYS_swapbuf:
             isr_currfps++;
             /* TODO: swap and map screen[0] and screen[1] */
+
             /* flush screen buffer to video memory. Note this is a different
              * call than we're serving. We came here because
              *  SRV_UI sent SYS_swapbuf to SRV_CORE
              * And now
-             *  SRV_CORE sends SYS_swaobuf to SRV_SYS */
+             *  SRV_CORE sends SYS_swapbuf to SRV_SYS */
             msg_sends(EVT_DEST(SRV_SYS) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
             break;
 
         case SYS_stimebcd:
             /* set system time stamp in BCD date format (local time) */
-            ptr = (void *)sys_getts((char*)&ptr);
+            arg0 = sys_getts((char*)&arg0);
+            /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
-            if(tcb->memroot == sys_mapping || thread_allowed("stime",FSZ_WRITE)) {
-                isr_ticks[TICKS_TS] = (uint64_t)ptr;
+            if(tcb->memroot == sys_mapping || thread_allowed("stime",A_WRITE)) {
+                isr_ticks[TICKS_TS] = arg0;
                 isr_ticks[TICKS_NTS] = 0;
             }
             break;
@@ -92,14 +100,36 @@ uint64_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
         case SYS_regservice:
             /* only init subsystem allowed to register services */
             if(tcb->mypid == services[-SRV_init])
-                return (uint64_t)service_register((pid_t)ptr);
+                return (uint64_t)service_register((pid_t)arg0);
             tcb->errno = EACCES;
             break;
 
         case SYS_mapfile:
-kprintf("mapfile %x %s\n", ptr, (char*)size);
+            if(arg0<BSS_ADDRESS || arg0>=FBUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
+                tcb->errno = EINVAL;
+                return 0;
+            }
+            /* locate the file */
+            memroot = tcb->memroot;
+            thread_map(identity_mapping);
+            data = fs_locate((char*)arg1);
+            thread_map(memroot);
+            if(data==NULL) {
+                tcb->errno = ENOENT;
+                return 0;
+            }
+kprintf("mapfile %x %s %d\n", arg0, (char*)arg1, fs_size);
+            /* map */
+            size = (fs_size+__PAGESIZE-1)/__PAGESIZE;
+            do {
+                kmap((virt_t)arg0, (phy_t)data, PG_USER_RO);
+                data += __PAGESIZE;
+                arg0 += __PAGESIZE;
+                size--;
+            } while(size>0);
 breakpoint;
-            break;
+            /* return loaded file size */
+            return fs_size;
 
         default:
             tcb->errno = EINVAL;
