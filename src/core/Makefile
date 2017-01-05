@@ -6,16 +6,21 @@ BINTARGET = ../../bin/root/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS =
+LDFLAGS = -nostdlib -nodefaultlibs -nostartfiles
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
-CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_CORE=1 -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -Wall -fpic -ffreestanding -fvisibility=hidden -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' \
+ -fpic -nostdinc -I../../etc/include -I. -I./$(ARCH) -include ./$(ARCH)/platform.h \
+ -Wall -ffreestanding -fno-builtin -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 ifeq ($(DEBUG),1)
-CFLAGS += -g
+CFLAGS +=
+else
+LDFLAGS += -Xlinker -s
 endif
 
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@$(CC) -I../../etc/include -I. -I./$(ARCH) -include ./$(ARCH)/platform.h $(OPT) $(CFLAGS) -c $< -o $@
+	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 platform:
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
@@ -30,12 +35,12 @@ logo.o:
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
-	@$(CC) -nostdlib -nodefaultlibs -nostartfiles $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -Xlinker --build-id=none -Xlinker --nmagic -T $(ARCH)/supervisor.ld -o $(BINTARGET) $(LIBS)
+	@$(CC) $(LDFLAGS) $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -T $(ARCH)/supervisor.ld -Xlinker --build-id=none -Xlinker --nmagic -Xlinker -static -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
 	@echo "0000000000200000 _init" >../../bin/core.sym
 	@../../tools/elftool.o -s 0 $(BINTARGET) | sort >>../../bin/core.sym
 endif
-	@#strip -s -K fb -K bootboot -K environment $(BINTARGET)
+	@# avoid accidental execution of core
 	@#echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null
 	@echo -ne '\003' | dd conv=notrunc of=$(BINTARGET) bs=1 seek=16 1>/dev/null 2>/dev/null
 

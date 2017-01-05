@@ -11,5 +11,9 @@ public void openwrd(){}
 
 void _init()
 {
-	mq_dispatch();
+    uint64_t len;
+    /* map keymap */
+    len = mapfile((void*)BSS_ADDRESS, "/etc/kbd/en");
+    len++;
+    mq_dispatch();
 }

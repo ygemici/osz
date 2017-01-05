@@ -1,16 +1,16 @@
 /*
  * core/x86_64/sched.c
- * 
+ *
  * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -29,6 +29,7 @@
 
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
 extern uint64_t isr_ticks[8];   //ticks counter (128 bit)
+extern uint64_t isr_next;       //next thread to map when isr finishes
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
@@ -45,8 +46,6 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
     kmap((uint64_t)&tmpmap, (uint64_t)(thread * __PAGESIZE), PG_CORE_NOCACHE);
     return (OSZ_tcb*)(&tmpmap);
 }
-
-#define sched_yield() mq_recv()
 
 // block until alarm, add thread to ccb.hd_timerq list
 // note that isr_alarm() consumes threads from timer queue
@@ -112,6 +111,7 @@ void sched_awake(OSZ_tcb *tcb)
         tcb->blkcnt += tcb->blktime - isr_ticks[0];
     }
     tcb->state = tcb_state_running;
+    isr_next = tcb->memroot;
 }
 
 // add a thread to priority queue
@@ -176,9 +176,54 @@ void sched_block(OSZ_tcb *tcb)
     ccb.hd_blocked = pid;
 }
 
-// pick a thread and return it's memroot
-uint64_t sched_pick()
+/* pick a thread and return it's memroot */
+phy_t sched_pick()
 {
-    // uint64_t ptr = thread * __PAGESIZE;
-    return 0;
+    OSZ_tcb *tcb;
+    int i, nonempty = false;
+    /* iterate on priority queues. Note that this does not depend
+     * on number of tasks, so this is a O(1) scheduler algorithm */
+    for(i=PRI_RT; i<PRI_IDLE; i++) {
+        // skip empty queues
+        if(ccb.hd_active[i] == 0)
+            continue;
+        // we've found at least one non-empty queue
+        nonempty = true;
+        //if we're on the end of the list, go to head
+        if(ccb.cr_active[i] == 0) {
+            ccb.cr_active[i] = ccb.hd_active[i];
+            continue;
+        }
+        goto found;
+    }
+    /* we came here for two reasons:
+     * 1. all queues turned around
+     * 2. there are no threads to run
+     * in the first case we choose SYS task, in the second we
+     * step to IDLE queue */
+    if(!nonempty && ccb.hd_active[PRI_IDLE] != 0) {
+        i = PRI_IDLE;
+        //if we're on the end of the list, go to head
+        if(ccb.cr_active[i] == 0)
+            ccb.cr_active[i] = ccb.hd_active[i];
+        else
+            goto found;
+    }
+    /* nothing else left, give a chance to SYS, although it's
+     * not necessary as it's switched every time an IRQ occurs.
+     * But there can be other threads on PRI_SYS in case of emergency.
+     * Note that when a task is choosen from PRI_SYS, it won't be
+     * preempted, it has to block or yield. Also when we're at the
+     * end of the PRI_SYS queue, we don't skip as there's nowhere to. */
+    if(ccb.cr_active[PRI_SYS] == 0)
+        ccb.cr_active[PRI_SYS] = ccb.hd_active[PRI_SYS];
+    i = PRI_SYS;
+found:
+    tcb = sched_get_tcb(ccb.cr_active[i]);
+#if DEBUG
+    if(debug&DBG_SCHED)
+        kprintf("sched_pick()=%x\n", tcb->mypid);
+#endif
+    ccb.cr_active[i] = tcb->next;
+    return tcb->memroot;
 }

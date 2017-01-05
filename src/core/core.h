@@ -28,19 +28,29 @@
 #ifndef _OSZ_CORE_H
 #define _OSZ_CORE_H
 
-#include "../../etc/include/osZ.h"
-#include "../../etc/include/lastbuild.h"
+#include <errno.h>
+#include <limits.h>
+#ifndef _AS
+#include <stdint.h>
+#include <sys/types.h>
 #include "../../loader/bootboot.h"
-#include "pmm.h"
+#endif
+#include <syscall.h>
+#include "../../etc/include/lastbuild.h"
+
+#define FBUF_ADDRESS  0xffffffffe0000000
+#define TMPQ_ADDRESS  0xffffffffffc00000
+#define CORE_ADDRESS  0xffffffffffe02000
+
 #include "msg.h"
 
-#define USER_PROCESS SRV_init
-
 #ifndef _AS
+#include "pmm.h"
+
 // import virtual addresses from linker
-extern BOOTBOOT bootboot;             // boot structure
+extern BOOTBOOT bootboot;                     // boot structure
 extern unsigned char environment[__PAGESIZE]; // configuration
-extern uint8_t fb;                    // framebuffer
+
 extern uint8_t tmpmq;                 // temporarily mapped message queue
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
@@ -73,6 +83,9 @@ typedef struct {
 // kernel function routines
 
 // ----- Console -----
+/** wait for a key by polling keyboard */
+extern int kwaitkey();
+
 /** Initialize console printf for debugging and panicing */
 extern void kprintf_init();
 
@@ -154,10 +167,10 @@ extern void kmap_mq(phy_t tcbself);
 extern uint64_t *kmap_getpte(virt_t virt);
 
 /** Copy n bytes from src to desc */
-extern void kmemcpy(char *dest, char *src, int size);
+extern void kmemcpy(void *dest, void *src, int size);
 
 /** Set n bytes of memory to character */
-extern void kmemset(char *dest, int c, int size);
+extern void kmemset(void *dest, int c, int size);
 
 /** Compare n bytes of memory */
 extern int kmemcmp(void *dest, void *src, int size);
@@ -219,13 +232,16 @@ extern bool_t service_rtlink();
 /** Initialize a subsystem, a system service */
 extern void service_init(int subsystem, char *fn);
 
+/** Register a user service */
+extern uint64_t service_register(pid_t thread);
+
 // ----- Message Queue -----
 /** normal message senders */
 /* send a message with scalar values */
 #define msg_send(event,ptr,size,magic) msg_sends(MSG_PTRDATA | event, (uint64_t)ptr, (uint64_t)size, magic, 0, 0, 0)
-extern bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
+extern uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /** low level message sender, called by senders above and IRQ ISRs */
-extern bool_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);
+extern uint64_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);
 
 #if DEBUG
 extern void dbg_init();

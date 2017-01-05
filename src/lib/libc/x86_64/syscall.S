@@ -1,16 +1,16 @@
 /*
  * libc/x86_64/syscall.S
- * 
+ *
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -33,6 +33,12 @@
 .global mq_send
 .global mq_recv
 .global mq_ismsg
+.global dl
+.global sysinfo
+.global yield
+.global seterr
+.global swapbuf
+.global mapfile
 
 .section .text
 
@@ -48,6 +54,7 @@ mq_send:
 
 /* msg_t *mq_call(thread,event,arg0,arg1,arg2,arg3,arg4,arg5) */
 mq_call:
+mymq_call:
     # blocking, send a request and receive result
     # rdi: destination pid + message type
     /* must match OSZ_tcb, tcb->recvfrom */
@@ -62,10 +69,15 @@ mq_call:
     syscall
     /* unlock */
     movq     $0, MQ_ADDRESS + 24
-    /* fall into to mq_recv code */
+    /* receive result. Stupid GNU ld needs another label to avoid relocation
+       for in text segment calls... */
+    call    mymq_recv
+    movq    8(%rax), %rax
+    ret
 
 /* msg_t *mq_recv(from) */
 mq_recv:
+mymq_recv:
     # blocking receive message
 1:  movq     $MQ_ADDRESS, %rbx
     movq     8(%rbx), %rax
@@ -92,4 +104,74 @@ mq_ismsg:
     # non-blocking is there a message?
     movq     MQ_ADDRESS, %rax
     subq     MQ_ADDRESS+8, %rax
+    ret
+
+/* void *dl(so, sym) */
+dl:
+    # dynamically link a shared object
+    # rdi: pointer to .so file path
+    # rsi: pointer to symbol name
+    movq    %rsi, %rdx
+    movq    %rdi, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_dl, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    jmp     2f
+
+/* sysinfo_t *sysinfo() */
+sysinfo:
+    xorq    %rdi, %rdi
+    movb    $SYS_sysinfo, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+2:  call    mymq_recv
+    mov     16(%rax), %rax
+    ret
+
+/* void yield() */
+yield:
+    xorq    %rdi, %rdi
+    movb    $SYS_sched_yield, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* void seterr(uint64_t err) */
+seterr:
+    movq    %rdi, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_seterr, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* void swapbuf() */
+swapbuf:
+    movq    %rdi, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_swapbuf, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* uint64_t regservice(pid_t thread) */
+regservice:
+    movq    %rdi, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_regservice, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* size_t mapfile(void *bss, char *fn) */
+mapfile:
+    movq    %rsi, %rdx
+    movq    %rdi, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_mapfile, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    call    mymq_recv
+    mov     16(%rax), %rax
     ret

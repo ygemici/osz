@@ -90,17 +90,22 @@ void main()
         // initialize "sound" task to handle audio channels
         service_init(SRV_sound, "sbin/sound");
     }
+    // load screen saver
+//    service_init(SRV_USRLAST, "sbin/scrsvr");
 
     /* step 3: who am I */
     fs_locate("etc/hostname");
     if(identity || fs_size==0) {
         // start first time turn on's set up task
-        service_init(USER_PROCESS, "sbin/identity");
+        service_init(SRV_USRFIRST, "sbin/identity");
     }
 
     /* step 4: stand up and prosper. */
     // load "init" or "sh" process
-    service_init(USER_PROCESS, rescueshell ? "bin/sh" : "sbin/init");
+    if(rescueshell)
+        service_init(SRV_USRFIRST, "bin/sh");
+    else
+        service_init(SRV_init, "sbin/init");
 
     // The "ready" message. Cover out "starting" message
     syslog_early("Ready. %d of %d free.",pmm.totalpages - pmm.freepages, pmm.totalpages);
@@ -109,12 +114,12 @@ void main()
         pmm.totalpages - pmm.freepages, pmm.totalpages);
     kprintf(", free %d.%d%%\n",
         pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
-    //disable scroll pause
-    scry = -1;
 #if DEBUG
     if(debug&DBG_LOG)
         kprintf(syslog_buf);
 #endif
+    //disable scroll pause
+    scry = -1;
 
     // enable system task. That will initialize devices and then blocks.
     // When that happens, scheduler will choose a task to run and...

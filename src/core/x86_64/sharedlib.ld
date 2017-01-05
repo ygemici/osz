@@ -77,6 +77,8 @@ SECTIONS
     *(.data .data.* .gnu.linkonce.d.*)
     *(.bss .bss.* .gnu.linkonce.b.*)
     SORT(CONSTRUCTORS)
+    *(COMMON)
+    . = ALIGN(. != 0 ? 64 / 8 : 1);
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }

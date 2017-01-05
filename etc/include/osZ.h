@@ -1,16 +1,16 @@
 /*
  * osZ.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -28,17 +28,16 @@
 #ifndef _OS_Z_
 #define _OS_Z_ 1
 
-#include <features.h>
 #include <errno.h>
 #include <limits.h>
 
 #ifndef _AS
 # include <stdint.h>
 # include <sys/types.h>
-# include <sys/osZ.h>
 # ifndef OSZ_CORE
 #  include <stdio.h>
 #  include <stdlib.h>
+#  include <string.h>
 # endif
 #endif
 

@@ -1,16 +1,16 @@
 /*
  * fsZ.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -104,7 +104,8 @@ typedef struct {
     uint8_t access;
 } __attribute__((packed)) FSZ_Access;
 
-//access rights are stored in the last byte
+//access rights are stored in the last byte. Make sure this matches
+//the system access flags A_* in sys/types.h
 #define FSZ_READ    (1<<0)
 #define FSZ_WRITE   (1<<1)
 #define FSZ_EXEC    (1<<2)          // execute or search

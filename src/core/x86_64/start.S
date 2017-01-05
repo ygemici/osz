@@ -176,7 +176,7 @@ nocpu:
 .asciz "CPU feature %a not supported"
     .align  16
 gdt64:
-    .word   gdt64_end-gdt64_start-1
+    .word   1f-gdt64_start-1
     .quad   gdt64_start
     .align  64
 gdt64_start:
@@ -188,4 +188,4 @@ gdt64_start:
 gdt64_tss:
     .quad 0x0000890000000068    /* 28 tss */
     .quad 0x0000000000000000
-gdt64_end:
+1:

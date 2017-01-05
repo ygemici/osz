@@ -22,6 +22,23 @@
 #ifndef _STDINT_H
 #define _STDINT_H	1
 
+typedef struct
+  {
+    int quot;			/* Quotient.  */
+    int rem;			/* Remainder.  */
+  } div_t;
+
+typedef struct
+  {
+    long int quot;		/* Quotient.  */
+    long int rem;		/* Remainder.  */
+  } ldiv_t;
+
+typedef struct
+  {
+    long long int quot;		/* Quotient.  */
+    long long int rem;		/* Remainder.  */
+  } lldiv_t;
 /* Exact integral types.  */
 
 /* Signed.  */

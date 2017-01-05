@@ -27,11 +27,8 @@
 
 #include <osZ.h>
 
-private void mq_dispatch()
+/* GNU ld can't set mq_dispatch() as entry point, we must use _init() */
+public void _init()
 {
-    while(1) {
-        /* get work */
-        msg_t *msg = mq_recv();
-    }
+    mq_dispatch();
 }
-

@@ -186,8 +186,13 @@ int main(int argc,char** argv)
         if(!dump) {
             goto output;
         }
+        if(dynstr_sh==NULL)
+            dynstr_sh=str_sh;
+        if(dynsym_sh==NULL)
+            dynsym_sh=sym_sh;
+
         /* dynstr table */
-        printf("Stringtable %08lx (%d bytes), symbols %08lx (%d bytes, one entry %d)\n\n",
+        printf("\nStringtable %08lx (%d bytes), symbols %08lx (%d bytes, one entry %d)\n\n",
             dynstr_sh->sh_offset, (int)dynstr_sh->sh_size,
             dynsym_sh->sh_offset, (int)dynsym_sh->sh_size, (int)dynsym_sh->sh_entsize
         );
@@ -195,66 +200,68 @@ int main(int argc,char** argv)
         printf("--- IMPORT ---\n");
 
         /* dynamic table */
-        Elf64_Dyn *dyn = (Elf64_Dyn *)(elf + dyn_sh->sh_offset);
-        printf("Dynamic %08lx (%d bytes, one entry %d):\n",
-            dyn_sh->sh_offset, (int)dyn_sh->sh_size, (int)dyn_sh->sh_entsize
-        );
-        for(i = 0; i < dyn_sh->sh_size / dyn_sh->sh_entsize; i++){
-            /* is it a needed record? */
-            if(dyn->d_tag == DT_NEEDED) {
-                printf("%3d. /lib/%s\n", i,
-                    ((char*)elf + (uint)dynstr_sh->sh_offset + (uint)dyn->d_un.d_ptr)
-                );
+        if(dyn_sh!=NULL) {
+            Elf64_Dyn *dyn = (Elf64_Dyn *)(elf + dyn_sh->sh_offset);
+            printf("Dynamic %08lx (%d bytes, one entry %d):\n",
+                dyn_sh->sh_offset, (int)dyn_sh->sh_size, (int)dyn_sh->sh_entsize
+            );
+            for(i = 0; i < dyn_sh->sh_size / dyn_sh->sh_entsize; i++){
+                /* is it a needed record? */
+                if(dyn->d_tag == DT_NEEDED) {
+                    printf("%3d. /lib/%s\n", i,
+                        ((char*)elf + (uint)dynstr_sh->sh_offset + (uint)dyn->d_un.d_ptr)
+                    );
+                }
+                /* move pointer to next dynamic entry */
+                dyn = (Elf64_Dyn *)((uint8_t *)dyn + dyn_sh->sh_entsize);
             }
-            /* move pointer to next dynamic entry */
-            dyn = (Elf64_Dyn *)((uint8_t *)dyn + dyn_sh->sh_entsize);
-        }
 
-        /* GOT plt entries */
-        if(got_sh)
-            printf("\nGOT %08lx (%d bytes)",
-                got_sh->sh_offset, (int)got_sh->sh_size
-            );
-        if(rela_sh) {
-            Elf64_Rela *rela=(Elf64_Rela *)(elf + rela_sh->sh_offset);
-            printf(", Rela plt %08lx (%d bytes, one entry %d):\n",
-                rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
-            );
+            /* GOT plt entries */
+            if(got_sh)
+                printf("\nGOT %08lx (%d bytes)",
+                    got_sh->sh_offset, (int)got_sh->sh_size
+                );
+            if(rela_sh) {
+                Elf64_Rela *rela=(Elf64_Rela *)(elf + rela_sh->sh_offset);
+                printf(", Rela plt %08lx (%d bytes, one entry %d):\n",
+                    rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
+                );
 
-            for(i = 0; i < rela_sh->sh_size / rela_sh->sh_entsize; i++){
-                /* get symbol, this is a bit terrible, but basicly offset calculation */
-                Elf64_Sym *sym = (Elf64_Sym *)(
-                    elf + dynsym_sh->sh_offset +                        //base address
-                    ELF64_R_SYM(rela->r_info) * dynsym_sh->sh_entsize   //offset
-                );
-                /* get the string from stringtable for sym */
-                char *symbol = (elf + dynstr_sh->sh_offset + sym->st_name);
-                printf("%3d. %08lx +%lx %s\n", i, rela->r_offset,
-                    rela->r_addend, symbol
-                );
-                /* move pointer to next rela entry */
-                rela = (Elf64_Rela *)((uint8_t *)rela + rela_sh->sh_entsize);
+                for(i = 0; i < rela_sh->sh_size / rela_sh->sh_entsize; i++){
+                    /* get symbol, this is a bit terrible, but basicly offset calculation */
+                    Elf64_Sym *sym = (Elf64_Sym *)(
+                        elf + dynsym_sh->sh_offset +                        //base address
+                        ELF64_R_SYM(rela->r_info) * dynsym_sh->sh_entsize   //offset
+                    );
+                    /* get the string from stringtable for sym */
+                    char *symbol = (elf + dynstr_sh->sh_offset + sym->st_name);
+                    printf("%3d. %08lx +%lx %s\n", i, rela->r_offset,
+                        rela->r_addend, symbol
+                    );
+                    /* move pointer to next rela entry */
+                    rela = (Elf64_Rela *)((uint8_t *)rela + rela_sh->sh_entsize);
+                }
             }
-        }
-        if(relat_sh) {
-            Elf64_Rela *rela=(Elf64_Rela *)(elf + relat_sh->sh_offset);
-            printf("\nRela text %08lx (%d bytes, one entry %d):\n",
-                rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
-            );
+            if(relat_sh) {
+                Elf64_Rela *rela=(Elf64_Rela *)(elf + relat_sh->sh_offset);
+                printf("\nRela text %08lx (%d bytes, one entry %d):\n",
+                    rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
+                );
 
-            for(i = 0; i < relat_sh->sh_size / relat_sh->sh_entsize; i++){
-                /* get symbol, this is a bit terrible, but basicly offset calculation */
-                Elf64_Sym *sym = (Elf64_Sym *)(
-                    elf + dynsym_sh->sh_offset +                        //base address
-                    ELF64_R_SYM(rela->r_info) * dynsym_sh->sh_entsize   //offset
-                );
-                /* get the string from stringtable for sym */
-                char *symbol = (elf + dynstr_sh->sh_offset + sym->st_name);
-                printf("%3d. %08lx +%lx %s\n", i, rela->r_offset,
-                    rela->r_addend, symbol
-                );
-                /* move pointer to next rela entry */
-                rela = (Elf64_Rela *)((uint8_t *)rela + relat_sh->sh_entsize);
+                for(i = 0; i < relat_sh->sh_size / relat_sh->sh_entsize; i++){
+                    /* get symbol, this is a bit terrible, but basicly offset calculation */
+                    Elf64_Sym *sym = (Elf64_Sym *)(
+                        elf + dynsym_sh->sh_offset +                        //base address
+                        ELF64_R_SYM(rela->r_info) * dynsym_sh->sh_entsize   //offset
+                    );
+                    /* get the string from stringtable for sym */
+                    char *symbol = (elf + dynstr_sh->sh_offset + sym->st_name);
+                    printf("%3d. %08lx +%lx %s\n", i, rela->r_offset,
+                        rela->r_addend, symbol
+                    );
+                    /* move pointer to next rela entry */
+                    rela = (Elf64_Rela *)((uint8_t *)rela + relat_sh->sh_entsize);
+                }
             }
         }
         printf("\n--- EXPORT ---\n");
@@ -312,7 +319,9 @@ output:
         if( s->st_value && *(strtable + s->st_name)!=0 && *(strtable + s->st_name)!='_' ) {
             if(reloc!=-1)
                 printf("%08lx %s\n", s->st_value+reloc, strtable + s->st_name);
-            else if(s->st_size)
+            else
+            /* don't include entry point... GNU ld can't set private entry points */
+            if(s->st_size && strcmp(strtable + s->st_name, "mq_dispatch"))
                 printf("#define SYS_%s\t(%3d)\n", strtable + s->st_name, i);
         }
         s++;

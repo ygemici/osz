@@ -1,7 +1,7 @@
 /*
  * core/x86_64/libk.S
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -25,9 +25,6 @@
  * @brief low level kernel routines for the core
  */
 #define _AS 1
-#include <limits.h>
-#include <errno.h>
-#include <syscall.h>
 #include "platform.h"
 
 .section .text
@@ -231,7 +228,7 @@ kmap_init:
     andw    $0xF000, %ax
     incw    %ax
     mov     %rax, (%rbx)
-    /* map tmpmq pde at tmpmqctrl */
+    /* map TMPQ_ADDRESS pde at tmpmqctrl */
     addq    $8, %rbx
     mov     %r8, (%rbx)
     /* record pointer at kmap_tmp */
@@ -251,7 +248,7 @@ kmap_mq:
     movq    $tmpmqctrl, %rax
     addq    $__PAGESIZE-16, %rax
     movq    %rdi, (%rax)
-    movq    $tmpmq, %rax
+    movq    $TMPQ_ADDRESS, %rax
     movw    nrmqmax, %cx
 1:  invlpg  (%rax)
     addq    $__PAGESIZE, %rax
@@ -393,7 +390,6 @@ ksend:
     ret
 4:  xorq    %rax, %rax
     ret
-
 
 /* an early implementation, called by kprintf */
 kwaitkey:

@@ -32,7 +32,7 @@
 
 .global _init
 .global irq0
-.global irq8
+/*.global irq8*/
 .global tmrfreq
 
 _init:
@@ -91,7 +91,7 @@ irq0:
     /* nothing to do, but we still need a stub function */
     ret
 
-irq8:
+sirq8:
     /* acknowledge irq8 in RTC */
     movb    $0x0C, %al
     outb    %al, $0x70

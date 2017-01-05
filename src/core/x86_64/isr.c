@@ -1,16 +1,16 @@
 /*
  * core/x86_64/isr.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -60,7 +60,7 @@ uint64_t __attribute__ ((section (".data"))) fpsdiv;
 uint64_t __attribute__ ((section (".data"))) quantumdiv;
 uint64_t __attribute__ ((section (".data"))) alarmstep;
 /* next task to schedule */
-uint64_t __attribute__ ((section (".data"))) isr_next;
+extern uint64_t isr_next;
 
 /* Initialize interrupts */
 void isr_init()
@@ -134,6 +134,7 @@ void excabort(uint64_t excno, uint64_t rip, uint64_t errcode)
 }
 
 /* exception specific code */
+
 void exc00divzero(uint64_t excno, uint64_t rip)
 {
     kpanic("divzero %d",excno);

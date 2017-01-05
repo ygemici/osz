@@ -1,16 +1,16 @@
 /*
  * core/sprintf.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -30,7 +30,7 @@
 /* re-entrant counter */
 extern char reent;
 /* for temporary strings */
-extern char tmp[33];
+extern char tmpstr[33];
 /* argument */
 extern uint8_t cnt;
 extern char nullstr[];
@@ -43,43 +43,43 @@ char *sprintf(char *dst,char* fmt, ...);
 
 char *sprintf_putascii(char *dst, int64_t c)
 {
-    kmemcpy((void*)&tmp[0],(void*)&c, 8);
+    kmemcpy((void*)&tmpstr[0],(void*)&c, 8);
     if(cnt>8) cnt=8;
-    tmp[cnt+1]=0;
-    return sprintf(dst,&tmp[0]);
+    tmpstr[cnt+1]=0;
+    return sprintf(dst,&tmpstr[0]);
 }
 
 char *sprintf_putdec(char *dst, int64_t c)
 {
     int i=12;
-    tmp[i]=0;
+    tmpstr[i]=0;
     do {
-        tmp[--i]='0'+(c%10);
+        tmpstr[--i]='0'+(c%10);
         c/=10;
     } while(c!=0&&i>0);
     if(cnt>0&&cnt<10) {
         while(i>12-cnt) {
-            tmp[--i]=' ';
+            tmpstr[--i]=' ';
         }
     }
-    return sprintf(dst,&tmp[i]);
+    return sprintf(dst,&tmpstr[i]);
 }
 
 char *sprintf_puthex(char *dst, int64_t c)
 {
     int i=16;
-    tmp[i]=0;
+    tmpstr[i]=0;
     do {
         char n=c & 0xf;
-        tmp[--i]=n<10?'0'+n:'A'+n-10;
+        tmpstr[--i]=n<10?'0'+n:'A'+n-10;
         c>>=4;
     } while(c!=0&&i>0);
     if(cnt>0&&cnt<=8) {
         while(i>16-cnt*2) {
-            tmp[--i]='0';
+            tmpstr[--i]='0';
         }
     }
-    return sprintf(dst,&tmp[i]);
+    return sprintf(dst,&tmpstr[i]);
 }
 
 char *sprintf(char *dst,char* fmt, ...)

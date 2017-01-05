@@ -1,16 +1,16 @@
 /*
  * core/x86_64/isr.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -40,7 +40,7 @@
 /* if you change  one of this, you'll have to run isrs.sh */
 #define ISR_NUMIRQ 24       //maximum number of IRQ lines
 #define ISR_NUMHANDLER 4    //maximum number of handlers per IRQ
-#define ISR_EXCMAX 128       //maximum code size of exception ISRs
+#define ISR_EXCMAX 128      //maximum code size of exception ISRs
 #define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
 #define ISR_IRQTMR 0        //irq to trigger preemption and alarm

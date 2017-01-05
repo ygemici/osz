@@ -125,6 +125,7 @@ cat >isrs.S <<EOF
 .global isr_irq0
 .global isr_enableirq
 .global isr_disableirq
+.global isr_next
 
 .extern isr_ticks
 .extern isr_gainentropy
@@ -488,10 +489,12 @@ do
 	    cli
 	    callq	isr_savecontext
 	    $EXCERR
+
 	    movq	(%rsp), %rax
 	    movq	%rax, __PAGESIZE-40
 	    movq	24(%rsp), %rax
 	    movq	%rax, __PAGESIZE-16
+
 	    xorq	%rdi, %rdi
 	    movq	__PAGESIZE-40, %rsi
 	    movb	\$$i, %dil
@@ -535,6 +538,7 @@ do
 	    je		1f
 	    /* no, switch to system task */
 	    movq	sys_mapping, %rax
+xchg %bx, %bx
 	    movq	%rax, %cr3
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi
@@ -549,14 +553,7 @@ do
 	    call	ksend
 	    call	isr_gainentropy
 	    $EOI
-	    /* switch task */
-	    movq	isr_next, %rax
-	    orq 	%rax, %rax
-	    jz  	1f
-	    movq	%rax, %cr3
-	    xorq	%rax, %rax
-	    movq	%rax, isr_next
-	1:  call	isr_loadcontext
+	  call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90
 

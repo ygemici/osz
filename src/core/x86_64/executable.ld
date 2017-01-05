@@ -77,6 +77,9 @@ SECTIONS
   {
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
+   *(.bss .bss.* .gnu.linkonce.b.*)
+   *(COMMON)
+   . = ALIGN(. != 0 ? 64 / 8 : 1);
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
@@ -89,14 +92,6 @@ SECTIONS
   .bss            :
   {
    *(.dynbss)
-   *(.bss .bss.* .gnu.linkonce.b.*)
-   *(COMMON)
-   /* Align here to ensure that the .bss section occupies space up to
-      _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.
-      FIXME: Why do we need it? When there is no .bss section, we don't
-      pad the .data section.  */
-   . = ALIGN(. != 0 ? 64 / 8 : 1);
   }
   _end = .;
   . = DATA_SEGMENT_END (.);

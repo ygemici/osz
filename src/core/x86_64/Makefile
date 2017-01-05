@@ -8,9 +8,9 @@ LIBS =
 
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_CORE=1 -Wall -fpic -ffreestanding
 
-all: isrs.S $(OBJS) ok
+all: $(OBJS) ok
 
-isrs.S: isr.h isrs.sh
+isrs.S: isr.h isrs.sh isr.c
 	@./isrs.sh $(ARCH) 2>/dev/null || true
 
 ok:

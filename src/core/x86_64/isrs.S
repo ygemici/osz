@@ -38,6 +38,7 @@
 .global isr_irq0
 .global isr_enableirq
 .global isr_disableirq
+.global isr_next
 
 .extern isr_ticks
 .extern isr_gainentropy
@@ -176,10 +177,12 @@ isr_exc00divzero:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$0, %dil
@@ -194,10 +197,12 @@ isr_exc01debug:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$1, %dil
@@ -212,10 +217,12 @@ isr_exc02nmi:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$2, %dil
@@ -230,10 +237,12 @@ isr_exc03chkpoint:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$3, %dil
@@ -248,10 +257,12 @@ isr_exc04overflow:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$4, %dil
@@ -266,10 +277,12 @@ isr_exc05bound:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$5, %dil
@@ -284,10 +297,12 @@ isr_exc06invopcode:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$6, %dil
@@ -302,10 +317,12 @@ isr_exc07devunavail:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$7, %dil
@@ -320,10 +337,12 @@ isr_exc08dblfault:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$8, %dil
@@ -338,10 +357,12 @@ isr_exc09coproc:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$9, %dil
@@ -356,10 +377,12 @@ isr_exc10invtss:
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$10, %dil
@@ -374,10 +397,12 @@ isr_exc11segfault:
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$11, %dil
@@ -392,10 +417,12 @@ isr_exc12stackfault:
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$12, %dil
@@ -410,10 +437,12 @@ isr_exc13genprot:
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$13, %dil
@@ -428,10 +457,12 @@ isr_exc14pagefault:
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$14, %dil
@@ -446,10 +477,12 @@ isr_exc15unknown:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$15, %dil
@@ -464,10 +497,12 @@ isr_exc16float:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$16, %dil
@@ -482,10 +517,12 @@ isr_exc17alignment:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$17, %dil
@@ -500,10 +537,12 @@ isr_exc18machinecheck:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$18, %dil
@@ -518,10 +557,12 @@ isr_exc19double:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$19, %dil
@@ -536,10 +577,12 @@ isr_exc20:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$20, %dil
@@ -554,10 +597,12 @@ isr_exc21:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$21, %dil
@@ -572,10 +617,12 @@ isr_exc22:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$22, %dil
@@ -590,10 +637,12 @@ isr_exc23:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$23, %dil
@@ -608,10 +657,12 @@ isr_exc24:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$24, %dil
@@ -626,10 +677,12 @@ isr_exc25:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$25, %dil
@@ -644,10 +697,12 @@ isr_exc26:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$26, %dil
@@ -662,10 +717,12 @@ isr_exc27:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$27, %dil
@@ -680,10 +737,12 @@ isr_exc28:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$28, %dil
@@ -698,10 +757,12 @@ isr_exc29:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$29, %dil
@@ -716,10 +777,12 @@ isr_exc30:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$30, %dil
@@ -734,10 +797,12 @@ isr_exc31:
     callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, 680
+
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
     movq	%rax, __PAGESIZE-16
+
     xorq	%rdi, %rdi
     movq	__PAGESIZE-40, %rsi
     movb	$31, %dil
@@ -760,6 +825,7 @@ isr_irq0:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -776,14 +842,7 @@ isr_irq0:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -798,6 +857,7 @@ isr_irq1:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -814,14 +874,7 @@ isr_irq1:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -836,6 +889,7 @@ isr_irq2:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -852,14 +906,7 @@ isr_irq2:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -874,6 +921,7 @@ isr_irq3:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -890,14 +938,7 @@ isr_irq3:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -912,6 +953,7 @@ isr_irq4:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -928,14 +970,7 @@ isr_irq4:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -950,6 +985,7 @@ isr_irq5:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -966,14 +1002,7 @@ isr_irq5:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -988,6 +1017,7 @@ isr_irq6:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1004,14 +1034,7 @@ isr_irq6:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1026,6 +1049,7 @@ isr_irq7:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1042,14 +1066,7 @@ isr_irq7:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1064,6 +1081,7 @@ isr_irq8:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1081,14 +1099,7 @@ isr_irq8:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1103,6 +1114,7 @@ isr_irq9:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1120,14 +1132,7 @@ isr_irq9:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1142,6 +1147,7 @@ isr_irq10:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1159,14 +1165,7 @@ isr_irq10:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1181,6 +1180,7 @@ isr_irq11:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1198,14 +1198,7 @@ isr_irq11:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1220,6 +1213,7 @@ isr_irq12:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1237,14 +1231,7 @@ isr_irq12:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1259,6 +1246,7 @@ isr_irq13:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1276,14 +1264,7 @@ isr_irq13:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1298,6 +1279,7 @@ isr_irq14:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1315,14 +1297,7 @@ isr_irq14:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1337,6 +1312,7 @@ isr_irq15:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1354,14 +1330,7 @@ isr_irq15:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1376,6 +1345,7 @@ isr_irq16:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1393,14 +1363,7 @@ isr_irq16:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1415,6 +1378,7 @@ isr_irq17:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1432,14 +1396,7 @@ isr_irq17:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1454,6 +1411,7 @@ isr_irq18:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1471,14 +1429,7 @@ isr_irq18:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1493,6 +1444,7 @@ isr_irq19:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1510,14 +1462,7 @@ isr_irq19:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1532,6 +1477,7 @@ isr_irq20:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1549,14 +1495,7 @@ isr_irq20:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1571,6 +1510,7 @@ isr_irq21:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1588,14 +1528,7 @@ isr_irq21:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1610,6 +1543,7 @@ isr_irq22:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1627,14 +1561,7 @@ isr_irq22:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1649,6 +1576,7 @@ isr_irq23:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1666,14 +1594,7 @@ isr_irq23:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1688,6 +1609,7 @@ isr_irq24:
     je		1f
     /* no, switch to system task */
     movq	sys_mapping, %rax
+xchg %bx, %bx
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1705,14 +1627,7 @@ isr_irq24:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	1f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
-1:  call	isr_loadcontext
+  call	isr_loadcontext
     iretq
 .align 128, 0x90
 

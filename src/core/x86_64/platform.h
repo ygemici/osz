@@ -1,16 +1,16 @@
 /*
  * core/x86_64/platform.h
- * 
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ *
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -25,18 +25,19 @@
  * @brief Platform dependent headers
  */
 
+#include <errno.h>
+#include <limits.h>
 #ifndef _AS
-#include "../../etc/include/osZ.h"
+#include <stdint.h>
+#include <sys/types.h>
+typedef uint64_t phy_t;
+typedef uint64_t virt_t;
 #endif
-#include "../../etc/include/limits.h"
+#include <syscall.h>
 #include "tcb.h"
 #include "ccb.h"
 #include "isr.h"
-#ifndef _AS
-typedef uint64_t phy_t;
-typedef uint64_t virt_t;
-# include "../core.h"
-#endif
+#include "../core.h"
 
 #define thread_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
 #define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)

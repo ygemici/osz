@@ -1,16 +1,16 @@
 /*
  * sys/core.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -37,13 +37,15 @@
 #define SYS_exit 6
 #define SYS_sysinfo 7
 #define SYS_swapbuf 8
-#define SYS_stimebcd 9
-#define SYS_stime 10
-#define SYS_alarm 11
-#define SYS_mmap 12
-#define SYS_munmap 13
-#define SYS_fork 14
-#define SYS_exec 15
+#define SYS_regservice 9
+#define SYS_stimebcd 10
+#define SYS_stime 11
+#define SYS_alarm 12
+#define SYS_mmap 13
+#define SYS_munmap 14
+#define SYS_mapfile 15
+#define SYS_fork 16
+#define SYS_exec 17
 
 #ifndef _AS
 void *dl(uchar *sopath, uchar *sym);
@@ -52,6 +54,8 @@ void seterr(int errno);
 void exit(int err);
 sysinfo_t *sysinfo();
 void swapbuf();
+size_t mapfile(void *bss, char *fn);
+uint64_t regservice(pid_t thread);
 pid_t fork();
 void exec(uchar *cmd);
 #endif

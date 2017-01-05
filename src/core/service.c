@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief System service loader
+ * @brief System service loader and ELF parser
  */
 
 #include <elf.h>
@@ -137,6 +137,8 @@ void *service_loadelf(char *fn)
 
     /* allocate data segment, page aligned */
     size=(fs_size+__PAGESIZE-1)/__PAGESIZE;
+    /* GNU ld bug workaround: keep symtab and strtab */
+    size++;
     while(size--) {
         void *pm = pmm_alloc();
         kmemcpy(pm,(char *)elf + (i-ret)*__PAGESIZE,__PAGESIZE);
@@ -146,6 +148,7 @@ void *service_loadelf(char *fn)
             drvptr[i] = (uint64_t)name;
         i++;
     }
+
     /* return start offset within text segment */
     return (void*)((uint64_t)ret * __PAGESIZE);
 }
@@ -166,17 +169,20 @@ uchar *service_sym(virt_t addr)
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
     uint64_t ptr;
-    if(addr<TEXT_ADDRESS||(addr>=BSS_ADDRESS&&addr<(uint64_t)&bootboot))
+    /* rule out non text address ranges */
+    if(addr < TEXT_ADDRESS || (addr >= BSS_ADDRESS && addr < (virt_t)CORE_ADDRESS))
         return nosym;
+    /* find the elf header for the address */
     ptr = addr;
     ptr &= ~(__PAGESIZE-1);
     while(ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
         ptr -= __PAGESIZE;
-    if(ptr==TEXT_ADDRESS && tcb->memroot == sys_mapping)
+    /* one special case which does not have an elf header */
+    if(ptr == TEXT_ADDRESS && tcb->memroot == sys_mapping)
         return (uchar*)"_main (irq dispatcher)";
     ehdr = (Elf64_Ehdr*)ptr;
-    if(((uint64_t)ehdr < ((uint64_t)&environment+__PAGESIZE)) &&
-       ((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
+    /* failsafe */
+    if(((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
         return nosym;
     Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint64_t)ehdr->e_phoff);
     Elf64_Sym *sym=NULL, *s;
@@ -208,15 +214,39 @@ uchar *service_sym(virt_t addr)
             }
         }
     }
+    if(sym==NULL) {
+        // section header
+        Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
+        // string table and other section header entries
+        Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
+        char *shstr = (char*)ehdr + strt->sh_offset;
+        /* Section header */
+        for(i = 0; i < ehdr->e_shnum; i++){
+            if(!kstrcmp(shstr+shdr->sh_name, ".symtab")){
+                sym = (Elf64_Sym *)((uint8_t*)ehdr + (shdr->sh_offset));
+                syment = (int)shdr->sh_entsize;
+            }
+            if(!kstrcmp(shstr+shdr->sh_name, ".strtab")){
+                strtable = (char*)ehdr + shdr->sh_offset;
+                strsz = (int)shdr->sh_size;
+            }
+            /* move pointer to next section header */
+            shdr = (Elf64_Shdr *)((uint8_t *)shdr + ehdr->e_shentsize);
+        }
+    }
     if(sym==NULL)
         return nosym;
 
-    /* which symbol belongs to the address? */
+    /* find the closest symbol to the address */
     s=sym;
+    ptr = 0;
     for(i=0;i<(strtable-(char*)sym)/syment;i++) {
         if(s->st_name > strsz) break;
-        if(s->st_value < addr)
+        if((virt_t)s->st_value <= (virt_t)addr &&
+           (virt_t)s->st_value > ptr) {
             last = strtable + s->st_name;
+            ptr = s->st_value;
+        }
         s++;
     }
     return last!=NULL && last[0]!=0 ? (uchar*)last : (uchar*)nosym;
@@ -564,11 +594,20 @@ void service_init(int subsystem, char *fn)
     service_loadso("lib/libc.so");
     // dynamic linker
     if(service_rtlink()) {
+        //set priority for the task
+        if(subsystem == SRV_USRFIRST)
+            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // rescue shell
+        else if(subsystem == SRV_USRLAST)
+            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_IDLE;   // screen saver
+        else
+            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;    // everything else
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
-        services[-subsystem] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
+        if(subsystem > SRV_USRFIRST) {
+            services[-subsystem] = pid;
+            syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
+        }
     } else {
         syslog_early("WARNING thread check failed for %s", fn);
     }
@@ -620,6 +659,7 @@ void fs_init()
         vmm_mapbss(BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
         // add to queue so that scheduler will know about this thread
+        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_FS] = pid;
@@ -658,6 +698,7 @@ void ui_init()
         }
 
         // add to queue so that scheduler will know about this thread
+        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_UI] = pid;
@@ -689,6 +730,7 @@ void syslog_init()
     // dynamic linker
     if(service_rtlink()) {
         // add to queue so that scheduler will know about this thread
+        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_syslog] = pid;

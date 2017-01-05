@@ -1,16 +1,16 @@
 /*
  * core/x86_64/thread.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -51,7 +51,7 @@ pid_t thread_new(char *cmdline)
     kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE);
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->state = tcb_state_running;
-    tcb->priority = PRI_SRV;
+    tcb->priority = PRI_APP;
     self = (uint64_t)ptr;
     tcb->mypid = (pid_t)(self/__PAGESIZE);
     tcb->allocmem = 8 + nrmqmax;

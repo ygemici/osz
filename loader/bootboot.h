@@ -1,11 +1,11 @@
 /*
  * loader/bootboot.h
- * 
+ *
  * Copyright 2016 Public Domain BOOTBOOT bztsrc@github
- * 
+ *
  * This file is part of the BOOTBOOT Protocol package.
  * @brief The BOOTBOOT structure
- * 
+ *
  */
 
 #ifndef _BOOTBOOT_H_
@@ -85,13 +85,6 @@ typedef struct {
 
 #define LOADER_BIOS 0
 #define LOADER_UEFI 1
-
-#ifndef _BOOTBOOT_LOADER
-// import virtual addresses from linker
-extern BOOTBOOT bootboot;
-extern unsigned char environment[4096];
-extern uint8_t fb;
-#endif
 
 #ifdef  __cplusplus
 }

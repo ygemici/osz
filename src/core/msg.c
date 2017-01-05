@@ -34,15 +34,15 @@ extern uint64_t nrservices;
 extern pid_t *services;
 extern pid_t isr_next;
 
-/* pointer to PDE for tmpmq */
+/* pointer to PDE for TMPQ_ADDRESS */
 phy_t __attribute__ ((section (".data"))) *mq_mapping;
 
 /* send a message */
-__inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
+uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
 {
     OSZ_tcb *srctcb = (OSZ_tcb*)(0);
-    OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmpmap);
-    msghdr_t *msghdr = (msghdr_t*)(&tmpmq + MQ_ADDRESS);
+    OSZ_tcb *dsttcb = (OSZ_tcb*)(TMPQ_ADDRESS);
+    msghdr_t *msghdr = (msghdr_t*)(TMPQ_ADDRESS + MQ_ADDRESS);
     uint64_t *paging = (uint64_t*)(&tmp2map);
     // don't use EVT_SENDER() here, would loose sign. This can be
     // negative pid if a service referenced.
@@ -66,23 +66,21 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
     /* mappings:
      *  tmpmap: destination thread's tcb
      *  tmp2map: destination thread's self (paging)
-     *  tmpmq: destination thread's self (message queue) */
+     *  TMPQ_ADDRESS: destination thread's self (message queue) */
 
     // map thread's message queue
     kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
     kmap_mq(dsttcb->self);
-//    pde[DSTMQ_PDE] = dsttcb->self;
-//    __asm__ __volatile__ ( "invlpg (tmpmq)" : : :);
+
     // check if the dest is receiving from ANY (0) or from our pid
     if(msghdr->mq_recvfrom != 0 && msghdr->mq_recvfrom != srctcb->mypid) {
         srctcb->errno = EAGAIN;
         return false;
     }
     // if we're sending to the current task
-    if(srctcb->self==dsttcb->self) {
+    if(srctcb->self==dsttcb->self)
         msghdr = (msghdr_t*)(MQ_ADDRESS);
-        isr_next = 0;
-    } else
+    else
         isr_next = thread;
     phy_t pte;
     size_t s;
@@ -97,7 +95,7 @@ __inline__ inline bool_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, ui
             msghdr->mq_buffstart = (nrmqmax + 1)*__PAGESIZE;
         // core memory cannot be sent in range -512M..0
         if(arg0!=(uint64_t)sysinfostruc &&
-            (int64_t)p < 0 && (uint64_t)p > (uint64_t)(&fb)) {
+            (int64_t)p < 0 && (uint64_t)p > FBUF_ADDRESS) {
             srctcb->errno = EACCES;
             return false;
         }

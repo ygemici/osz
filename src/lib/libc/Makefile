@@ -6,7 +6,8 @@ SRCS = $(filter-out service.c,$(wildcard *.c))
 OBJS = $(SRCS:.c=.o)
 LIBS =
 
-CFLAGS = -Wall -fPIC -ffreestanding
+# without the -no flags, gcc generates extra, unwanted xmm code in printf...
+CFLAGS = -Wall -fPIC -ffreestanding -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 
 all: $(OBJS) $(BINTARGET)
 

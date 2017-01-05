@@ -1,19 +1,29 @@
-/* Copyright (C) 1991-2016 Free Software Foundation, Inc.
-   This file is part of the GNU C Library.
-
-   The GNU C Library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Lesser General Public
-   License as published by the Free Software Foundation; either
-   version 2.1 of the License, or (at your option) any later version.
-
-   The GNU C Library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   Lesser General Public License for more details.
-
-   You should have received a copy of the GNU Lesser General Public
-   License along with the GNU C Library; if not, see
-   <http://www.gnu.org/licenses/>.  */
+/*
+ * osZ.h
+ *
+ * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * https://creativecommons.org/licenses/by-nc-sa/4.0/
+ *
+ * You are free to:
+ *
+ * - Share — copy and redistribute the material in any medium or format
+ * - Adapt — remix, transform, and build upon the material
+ *     The licensor cannot revoke these freedoms as long as you follow
+ *     the license terms.
+ *
+ * Under the following terms:
+ *
+ * - Attribution — You must give appropriate credit, provide a link to
+ *     the license, and indicate if changes were made. You may do so in
+ *     any reasonable manner, but not in any way that suggests the
+ *     licensor endorses you or your use.
+ * - NonCommercial — You may not use the material for commercial purposes.
+ * - ShareAlike — If you remix, transform, or build upon the material,
+ *     you must distribute your contributions under the same license as
+ *     the original.
+ *
+ * @brief ISO C99 Standard: 7.21 String handling
+ */
 
 /*
  *	ISO C99 Standard: 7.21 String handling	<string.h>
@@ -25,79 +35,66 @@
 #include <osZ.h>
 
 /* Copy N bytes of SRC to DEST.  */
-extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
-		     size_t __n);
+#define memcpy(d,s,n) memmove(d,s,n)
 /* Copy N bytes of SRC to DEST, guaranteeing
    correct behavior for overlapping strings.  */
-extern void *memmove (void *__dest, const void *__src, size_t __n);
+extern void *memmove (void *dest, void *src, size_t n);
 /* Set N bytes of S to C.  */
-extern void *memset (void *__s, int __c, size_t __n);
+extern void *memset (void *s, int c, size_t n);
 
 /* Compare N bytes of S1 and S2.  */
-extern int memcmp (const void *__s1, const void *__s2, size_t __n);
-
-extern void *memchr (void *__s, int __c, size_t __n);
-
-/* Copy SRC to DEST.  */
-extern char *strcpy (char *__restrict __dest, const char *__restrict __src);
-/* Copy no more than N characters of SRC to DEST.  */
-extern char *strncpy (char *__restrict __dest,
-		      const char *__restrict __src, size_t __n);
-
-/* Append SRC onto DEST.  */
-extern char *strcat (char *__restrict __dest, const char *__restrict __src);
-/* Append no more than N characters from SRC onto DEST.  */
-extern char *strncat (char *__restrict __dest, const char *__restrict __src,
-		      size_t __n);
-
-/* Compare S1 and S2.  */
-extern int strcmp (const char *__s1, const char *__s2);
-/* Compare N characters of S1 and S2.  */
-extern int strncmp (const char *__s1, const char *__s2, size_t __n);
-
-/* Duplicate S, returning an identical malloc'd string.  */
-extern char *strdup (const char *__s);
-extern char *strndup (const char *__string, size_t __n);
-extern char *strchr (char *__s, int __c);
-extern const char *strchr (const char *__s, int __c);
-extern char *strrchr (char *__s, int __c);
-extern const char *strrchr (const char *__s, int __c);
-extern char *strpbrk (char *__s, const char *__accept);
-extern const char *strpbrk (const char *__s, const char *__accept);
-extern char *strstr (char *__haystack, const char *__needle);
-extern const char *strstr (const char *__haystack, const char *__needle);
-/* Divide S into tokens separated by characters in DELIM.  */
-extern char *strtok (char *__restrict __s, const char *__restrict __delim);
-extern char *strtok_r (char *__restrict __s, const char *__restrict __delim,
-		       char **__restrict __save_ptr);
-/* Similar to `strstr' but this function ignores the case of both strings.  */
-extern char *strcasestr (char *__haystack, const char *__needle);
-extern const char *strcasestr (const char *__haystack,
-				     const char *__needle);
+extern int memcmp (void *s1, void *s2, size_t n);
+extern void *memchr (void *s, int c, size_t n);
 /* Find the first occurrence of NEEDLE in HAYSTACK.
    NEEDLE is NEEDLELEN bytes long;
    HAYSTACK is HAYSTACKLEN bytes long.  */
-extern void *memmem (const void *__haystack, size_t __haystacklen,
-		     const void *__needle, size_t __needlelen);
+extern void *memmem (void *haystack, size_t haystacklen, void *needle, size_t needlelen);
 
-extern size_t strlen (const char *__s);
-extern size_t strnlen (const char *__string, size_t __maxlen);
+/* Copy SRC to DEST.  */
+extern char *strcpy (char *dest, char *src);
+/* Copy no more than N characters of SRC to DEST.  */
+extern char *strncpy (char *dest, char *src, size_t n);
+
+/* Append SRC onto DEST.  */
+extern char *strcat (char *dest, char *src);
+/* Append no more than N characters from SRC onto DEST.  */
+extern char *strncat (char *dest, char *src, size_t n);
+
+/* Compare S1 and S2.  */
+extern int strcmp (char *s1, char *s2);
+/* Compare N characters of S1 and S2.  */
+extern int strncmp (char *s1, char *s2, size_t n);
+
+/* Duplicate S, returning an identical malloc'd string.  */
+extern char *strdup (char *s);
+extern char *strndup (char *s, size_t n);
+extern char *strchr (char *s, int c);
+extern char *strrchr (char *s, int c);
+extern char *strpbrk (char *s, char *accept);
+extern char *strstr (char *haystack, char *needle);
+/* Divide S into tokens separated by characters in DELIM.  */
+extern char *strtok (char *s, char *delim);
+extern char *strtok_r (char *s, char *delim, char **ptr);
+/* Similar to `strstr' but this function ignores the case of both strings.  */
+extern char *strcasestr (char *haystack, char *needle);
+
+extern size_t strlen (char *s);
+extern size_t strnlen (char *s, size_t maxlen);
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
-extern char *strerror (int __errnum);
+extern char *strerror (int errnum);
 /* Return the position of the first bit set in I, or 0 if none are set.
    The least-significant bit is position 1, the most-significant 64.  */
-extern uint64_t ffs (uint64_t __i);
+extern uint64_t ffs (uint64_t i);
 /* Compare S1 and S2, ignoring case.  */
-extern int strcasecmp (const char *__s1, const char *__s2);
+extern int strcasecmp (char *s1, char *s2);
 /* Compare no more than N chars of S1 and S2, ignoring case.  */
-extern int strncasecmp (const char *__s1, const char *__s2, size_t __n);
+extern int strncasecmp (char *s1, char *s2, size_t n);
 /* Return the next DELIM-delimited token from *STRINGP,
    terminating it with a '\0', and update *STRINGP to point past it.  */
-extern char *strsep (char **__restrict __stringp,
-		     const char *__restrict __delim);
+extern char *strsep (char **stringp, char *delim);
 /* Return a string describing the meaning of the signal number in SIG.  */
-extern char *strsignal (int __sig);
-extern char *basename (char *__filename);
-extern char *dirname (char *__filename);
+extern char *strsignal (int sig);
+extern char *basename (char *filename);
+extern char *dirname (char *filename);
 
 #endif /* string.h  */

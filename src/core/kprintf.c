@@ -26,12 +26,12 @@
  */
 
 #include "font.h"
-#include "env.h"
+//#include "env.h"
 
 /* re-entrant counter */
 char __attribute__ ((section (".data"))) reent;
 /* for temporary strings */
-char __attribute__ ((section (".data"))) tmp[33];
+char __attribute__ ((section (".data"))) tmpstr[33];
 /* first position in line, used by carridge return */
 int __attribute__ ((section (".data"))) fx;
 /* current cursor position */
@@ -50,37 +50,32 @@ uint32_t __attribute__ ((section (".data"))) bg;
 /* argument */
 uint8_t __attribute__ ((section (".data"))) cnt;
 
-/* ascii arts */
-char __attribute__ ((section (".data"))) kpanicprefix[] =
-    "OS/Z core panic: ";
-char __attribute__ ((section (".data"))) kpanicrip[] =
-    " @%x ";
-char __attribute__ ((section (".data"))) kpanicsym[] =
-    "%s  ";
-char __attribute__ ((section (".data"))) kpanictlb[] =
-    "paging error resolving %8x at step %d. ";
-char __attribute__ ((section (".data"))) kpanicsuffix[] =
+/* string constants and ascii arts */
+char kpanicprefix[] = "OS/Z core panic: ";
+char kpanicrip[] = " @%x ";
+char kpanicsym[] = "%s  ";
+char kpanictlb[] = "paging error resolving %8x at step %d. ";
+char kpanicsuffix[] =
     "                                                      \n"
     "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
     "  (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
     " \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n";
-char __attribute__ ((section (".data"))) kpanicsuffix2[] =
+char kpanicsuffix2[] =
     "                                                      \n"
     "                       KEEP CALM                      \n"
     "               AND RESTART YOUR COMPUTER              \n"
     "                                                      ";
-char __attribute__ ((section (".data"))) poweroffprefix[] =
+char poweroffprefix[] =
     "OS/Z shutdown finished.\n";
-char __attribute__ ((section (".data"))) poweroffsuffix[] =
+char poweroffsuffix[] =
     "TURN OFF YOUR COMPUTER.";
-char __attribute__ ((section (".data"))) nullstr[] = "(null)";
+char nullstr[] = "(null)";
 
 typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
 extern char _binary_logo_tga_start;
-extern void kwaitkey();
 extern uint64_t isr_entropy[4];
 extern uint64_t isr_ticks[8];
 extern uint64_t isr_currfps;
@@ -109,7 +104,7 @@ void kprintf_init()
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
         for(x=0;x<bootboot.fb_width;x++){
-            *((uint32_t*)(&fb + line))=(uint32_t)0;
+            *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)0;
             line+=4;
         }
         offs+=bootboot.fb_scanline;
@@ -129,12 +124,12 @@ void kprintf_init()
         for(x=0;x<64;x++){
             if(data[0]!=0) {
                 // make it darker as normal
-                *((uint32_t*)(&fb + line))=(uint32_t)(
+                *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)(
                     (((uint8_t)palette[(uint8_t)data[0]*3+0]>>3)<<0)+
                     (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
                     (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
                 );
-                isr_entropy[((uint64_t)data)%4] ^= (uint64_t)data;
+//                isr_entropy[((uint64_t)data)%4] ^= (uint64_t)data;
             }
             data++;
             line+=4;
@@ -156,7 +151,7 @@ void kprintf_putlogo()
         for(x=0;x<64;x++){
             if(data[0]!=0) {
                 // make it red instead of blue
-                *((uint32_t*)(&fb + line))=(uint32_t)(
+                *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)(
                     (((uint8_t)data[2]>>4)<<0)+
                     (((uint8_t)data[1]>>2)<<8)+
                     (((uint8_t)data[0]>>0)<<16)
@@ -184,65 +179,64 @@ void kprintf_putchar(int c)
         line=offs;
         mask=1<<(font->width-1);
         for(x=0;x<font->width;x++){
-            *((uint32_t*)(&fb + line))=((int)*glyph) & (mask)?fg:bg;
+            *((uint32_t*)(FBUF_ADDRESS + line))=((int)*glyph) & (mask)?fg:bg;
             mask>>=1;
             line+=4;
         }
-        *((uint32_t*)(&fb + line))=bg;
+        *((uint32_t*)(FBUF_ADDRESS + line))=bg;
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
-    isr_entropy[offs%4] += (uint64_t)c;
-    isr_entropy[(offs+1)%4] -= (uint64_t)glyph;
+//    isr_entropy[offs%4] += (uint64_t)c;
+//    isr_entropy[(offs+1)%4] -= (uint64_t)glyph;
 }
 
 void kprintf_putascii(int64_t c)
 {
-	uint64_t *t = (uint64_t*)&tmp;
-    int i;
-    for(i=0;i<9;i++) tmp[i]=0;
-	*t = c;
-    kprintf(&tmp[0]);
+    uint64_t *t = (uint64_t*)&tmpstr;
+    *t = c;
+    tmpstr[8]=0;
+    kprintf(&tmpstr[0]);
 }
 
 void kprintf_putdec(int64_t c)
 {
     int i=12;
-    tmp[i]=0;
+    tmpstr[i]=0;
     do {
-        tmp[--i]='0'+(c%10);
+        tmpstr[--i]='0'+(c%10);
         c/=10;
     } while(c!=0&&i>0);
     if(cnt>0&&cnt<10) {
         while(i>12-cnt) {
-            tmp[--i]=' ';
+            tmpstr[--i]=' ';
         }
     }
-    kprintf(&tmp[i]);
+    kprintf(&tmpstr[i]);
 }
 
 void kprintf_puthex(int64_t c)
 {
     int i=16;
-    tmp[i]=0;
+    tmpstr[i]=0;
     do {
         char n=c & 0xf;
-        tmp[--i]=n<10?'0'+n:'A'+n-10;
+        tmpstr[--i]=n<10?'0'+n:'A'+n-10;
         c>>=4;
     } while(c!=0&&i>0);
     if(cnt>0&&cnt<=8) {
         while(i>16-cnt*2) {
-            tmp[--i]='0';
+            tmpstr[--i]='0';
         }
     }
-    kprintf(&tmp[i]);
+    kprintf(&tmpstr[i]);
 }
 
 void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
-    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
+//    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
     kprintf(" %d fps, ts %d ticks %d",isr_lastfps,isr_ticks[TICKS_TS],isr_ticks[TICKS_LO]);
     kx=ox; ky=oy;
     fg=of; bg=ob;
@@ -258,8 +252,8 @@ void kprintf_scrollscr()
     for(y=0;y<(maxy-1)*font->height;y++){
         line=offs;
         for(x=0;x<w;x++){
-            *((uint64_t*)(&fb + line)) =
-                *((uint64_t*)(&fb + line + shift));
+            *((uint64_t*)(FBUF_ADDRESS + line)) =
+                *((uint64_t*)(FBUF_ADDRESS + line + shift));
             line+=8;
         }
         offs+=bootboot.fb_scanline;
@@ -269,7 +263,7 @@ void kprintf_scrollscr()
     for(y=0;y<font->height;y++){
         line=offs;
         for(x=0;x<w;x++){
-            *((uint64_t*)(&fb + line)) = (uint64_t)0;
+            *((uint64_t*)(FBUF_ADDRESS + line)) = (uint64_t)0;
             line+=8;
         }
         offs+=bootboot.fb_scanline;
@@ -288,12 +282,12 @@ void kprintf_scrollscr()
                     kx++;
             }
             // wait for user input
-            kwaitkey();
+            //kwaitkey();
             // clear the message
             for(y=0;y<font->height;y++){
                 line=tmp;
                 for(x=0;x<w;x++){
-                    *((uint64_t*)(&fb + line)) = (uint64_t)0;
+                    *((uint64_t*)(FBUF_ADDRESS + line)) = (uint64_t)0;
                     line+=8;
                 }
                 tmp+=bootboot.fb_scanline;

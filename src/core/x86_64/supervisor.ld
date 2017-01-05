@@ -1,24 +1,17 @@
 /* kernel space addresses */
-FBUF_ADDRESS  = 0xffffffffe0000000;
-TMPQ_ADDRESS    = 0xffffffffffc00000;
-CORE_ADDRESS  = 0xffffffffffe00000;
+CORE_ADDRESS  = 0xffffffffffe02000;
 
 ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
 PHDRS
 {
-  text PT_LOAD FILEHDR PHDRS ;
+  text PT_LOAD FILEHDR PHDRS FLAGS(5);
+  dynamic PT_DYNAMIC;
 }
 SECTIONS
 {
-    /* framebuffer address */
-    . = FBUF_ADDRESS;
-        fb = .;
-    /* temporary message queue address */
-    . = TMPQ_ADDRESS;
-        tmpmq = .;
     /* make sure it starts with bootboot */
-    . = CORE_ADDRESS;
+    . = CORE_ADDRESS - 8192;
         bootboot = .;
         . += 4096;
         environment = .;
@@ -26,7 +19,7 @@ SECTIONS
 
     /* put headers in load segment so that we won't have to copy
         text segment on loading as it will be aligned */
-    .text CORE_ADDRESS + SIZEOF_HEADERS + (8192): AT(ADDR(.text) - CORE_ADDRESS + SIZEOF_HEADERS)
+    .text CORE_ADDRESS + SIZEOF_HEADERS : AT(ADDR(.text) - CORE_ADDRESS + SIZEOF_HEADERS)
     {
         /* code */
         PROVIDE(_code = .);
@@ -36,15 +29,19 @@ SECTIONS
         PROVIDE(_data = .);
         *(.rodata)
         *(.data)
-        *(.bss)
+        *(.got*)
         . = ALIGN(4096);
         /* user mode code */
         PROVIDE(_usercode = .);
         *(.text.user)
+        . = ALIGN(4096);
     } :text
-    . = ALIGN(4096);
-    /* uninitialized data */
-    PROVIDE(__bss_start = .);
+    .dynamic : { *(.dynamic) } :text :dynamic
+    /* GNU ld buf workaround. It refuses to place symtab and strtab in text */
+    . += 32768;
+
+    /* dynamically allocated/mapped data */
+    __bss_start = .;
     /* mappings hack */
     tmpctrl = .;
     . += 4096;

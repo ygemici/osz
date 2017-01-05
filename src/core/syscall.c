@@ -1,16 +1,16 @@
 /*
  * core/syscall.c
- * 
+ *
  * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -40,7 +40,7 @@ extern uint64_t isr_lastfps;
 extern uint64_t isr_currfps;
 
 /* System call dispatcher for messages sent to SRV_core */
-bool_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
+uint64_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     switch(EVT_FUNC(event)) {
@@ -89,9 +89,21 @@ bool_t isr_syscall(evt_t event, void *ptr, size_t size, uint64_t magic)
             }
             break;
 
+        case SYS_regservice:
+            /* only init subsystem allowed to register services */
+            if(tcb->mypid == services[-SRV_init])
+                return (uint64_t)service_register((pid_t)ptr);
+            tcb->errno = EACCES;
+            break;
+
+        case SYS_mapfile:
+kprintf("mapfile %x %s\n", ptr, (char*)size);
+breakpoint;
+            break;
+
         default:
             tcb->errno = EINVAL;
-            return false;
+            return (uint64_t)false;
     }
-    return true;
+    return (uint64_t)true;
 }
