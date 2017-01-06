@@ -85,21 +85,29 @@ int main(int argc,char** argv)
     char *strtable = NULL;
 
     /* Program header */
+    if(dump)
+        printf("Segments\n");
     for(i = 0; i < ehdr->e_phnum; i++){
+        if(dump)
+            printf(" %2d %08lx %6ld %s\n",(int)phdr->p_type,phdr->p_offset,phdr->p_filesz,
+                (phdr->p_type==PT_LOAD?"load":(phdr->p_type==PT_DYNAMIC?"dynamic":"")));
         /* we only need the Dynamic header */
         if(phdr->p_type==PT_DYNAMIC) {
             /* read entries in Dynamic section */
             Elf64_Dyn *d;
             d = (Elf64_Dyn *)(elf + phdr->p_offset);
             while(d->d_tag != DT_NULL) {
+                if(dump && d->d_tag<1000)
+                    printf("     %3d %08lx %s\n",(int)d->d_tag,d->d_un.d_ptr,
+                        (d->d_tag==DT_STRTAB?"strtab":(d->d_tag==DT_SYMTAB?"symtab":"")));
                 if(d->d_tag == DT_STRTAB) {
-                    strtable = elf + (d->d_un.d_ptr&0xFFFF);
+                    strtable = elf + (d->d_un.d_ptr&0xFFFFFF);
                 }
                 if(d->d_tag == DT_STRSZ) {
                     strsz = d->d_un.d_val;
                 }
                 if(d->d_tag == DT_SYMTAB) {
-                    sym = (Elf64_Sym *)(elf + (d->d_un.d_ptr&0xFFFF));
+                    sym = (Elf64_Sym *)(elf + (d->d_un.d_ptr&0xFFFFFF));
                 }
                 if(d->d_tag == DT_SYMENT) {
                     syment = d->d_un.d_val;
@@ -132,7 +140,7 @@ int main(int argc,char** argv)
         int i;
 
         if(dump)
-            printf("Phdr %lx Shdr %lx Strt %lx Sstr %lx\n\nSections\n",
+            printf("\nPhdr %lx Shdr %lx Strt %lx Sstr %lx\n\nSections\n",
                 (uint64_t)ehdr->e_phoff,
                 (uint64_t)ehdr->e_shoff,
                 (uint64_t)strt-(uint64_t)ehdr,

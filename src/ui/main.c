@@ -15,6 +15,7 @@ void _init()
     uint64_t len;
     /* map keymap */
     len = mapfile((void*)bss, "/etc/kbd/en_us");
+asm("xchg %%bx,%%bx":::);
     bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);
 
     mq_dispatch();

@@ -222,7 +222,7 @@ found:
     tcb = sched_get_tcb(ccb.cr_active[i]);
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_pick()=%x\n", tcb->mypid);
+        kprintf("sched_pick()=%x  \n", tcb->mypid);
 #endif
     ccb.cr_active[i] = tcb->next;
     return tcb->memroot;

@@ -1,16 +1,16 @@
 /*
  * core/x86_64/vmm.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -50,11 +50,10 @@ void exc14pagefault(uint64_t excno, uint64_t rip)
 }
 
 /* map memory into thread's address space */
-void vmm_mapbss(virt_t bss, phy_t phys, size_t size, uint64_t access)
+void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access)
 {
     if(size==0)
         return;
-    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i;
     kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE);

@@ -265,7 +265,7 @@ kmap_mq:
  * OUT rax: address of page entry in PT */
 kmap_getpte:
     /* we have tmpctrl, so we can map PTE */
-    movq    kmap_tmp, %rbx
+    movq    kmap_tmp, %r10
     xorq    %r9, %r9
     /* PML4 */
     movq    %rdi, %rax
@@ -275,7 +275,7 @@ kmap_getpte:
     movq    %cr3, %rdx
     andw    $0xF000, %dx
     incw    %dx
-    movq    %rdx, (%rbx)
+    movq    %rdx, (%r10)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
     incb    %r9b
@@ -289,7 +289,7 @@ kmap_getpte:
     orq     %rdx, %rdx
     jz      1f
     incw    %dx
-    movq    %rdx, (%rbx)
+    movq    %rdx, (%r10)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
     incb    %r9b
@@ -303,8 +303,7 @@ kmap_getpte:
     orq     %rdx, %rdx
     jz      1f
     incw    %dx
-    movq    %rdx, (%rbx)
-    invlpg  (%rbx)
+    movq    %rdx, (%r10)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
     incb    %r9b
@@ -318,7 +317,7 @@ kmap_getpte:
     orq     %rdx, %rdx
     jz      1f
     incw    %dx
-    movq    %rdx, (%rbx)
+    movq    %rdx, (%r10)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax
     ret

@@ -304,7 +304,7 @@ void sys_init()
         i = ((bootboot.fb_width * bootboot.fb_height * 4 +
             __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);
         while(i-->0) {
-            vmm_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             // save it for SYS_swapbuf
             if(!screen[0]) {
                 screen[0]=pdpe;
@@ -315,7 +315,7 @@ void sys_init()
         bss = sysinfostruc->fb_ptr;
         i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
         while(i-->0) {
-            vmm_mapbss(bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
+            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
             bss += __SLOTSIZE;
             fbp += __SLOTSIZE;
         }

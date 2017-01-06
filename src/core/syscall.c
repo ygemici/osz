@@ -45,8 +45,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     void *data;
-    char fn[256];
-    uint64_t size;
+    char fn[128];
     phy_t tmp;
 
     tcb->errno = SUCCESS;
@@ -69,7 +68,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             sysinfostruc->srand[3] = isr_entropy[3];
             sysinfostruc->fps = isr_lastfps;
             msg_send(EVT_DEST(tcb->mypid) | MSG_PTRDATA | EVT_FUNC(SYS_ack),
-                (void*)sysinfostruc,
+                (virt_t)sysinfostruc,
                 sizeof(sysinfo_t),
                 SYS_sysinfo);
             break;
@@ -117,31 +116,24 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             kstrcpy((char*)&fn,(char*)arg1);
             thread_map(identity_mapping);
             data = fs_locate(fn);
-kprintf("mapfile %x %s %x:%d\n", arg0, fn, data, fs_size);
             thread_map(tmp);
             if(data==NULL) {
                 tcb->errno = ENOENT;
                 return 0;
             }
-breakpoint;
             /* data inlined in inode? */
             if(data!=NULL && ((phy_t)data & (__PAGESIZE-1))!=0) {
+                /* copy to a new empty page */
                 tmp = (phy_t)pmm_alloc();
                 tcb->allocmem++;
+                tcb->linkmem--;
                 kmap((virt_t)&tmpmap, (phy_t)data & ~(__PAGESIZE-1), PG_CORE_NOCACHE);
-                kmap((virt_t)arg0, tmp, PG_CORE_NOCACHE);
-                kmemcpy((char*)arg0, &tmpmap + ((phy_t)data & (__PAGESIZE-1)), fs_size);
-                return fs_size;
+                kmap((virt_t)&tmp2map, tmp, PG_CORE_NOCACHE);
+                kmemcpy((char*)&tmp2map, &tmpmap + ((phy_t)data & (__PAGESIZE-1)), fs_size);
+                data = (void*)tmp;
             }
             /* map */
-            size = (fs_size+__PAGESIZE-1)/__PAGESIZE;
-            do {
-                kmap((virt_t)arg0, (phy_t)data, PG_USER_RO);
-                tcb->linkmem++;
-                data += __PAGESIZE;
-                arg0 += __PAGESIZE;
-                size--;
-            } while(size>0);
+            vmm_mapbss(tcb,(virt_t)arg0, (phy_t)data, fs_size, PG_USER_RO);
             /* return loaded file size */
             return fs_size;
 

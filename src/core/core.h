@@ -115,7 +115,7 @@ extern void *pmm_alloc();
 extern void *pmm_allocslot();
 
 /** Map a specific memory area into thread's bss */
-extern void vmm_mapbss(virt_t bss, phy_t phys, size_t size, uint64_t access);
+extern void vmm_mapbss(OSZ_tcb *tcb,virt_t bss, phy_t phys, size_t size, uint64_t access);
 
 
 /** Initialize Interrupt Service Routines */

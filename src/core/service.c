@@ -184,7 +184,9 @@ uchar *service_sym(virt_t addr)
     /* failsafe */
     if(((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
         return nosym;
-    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint64_t)ehdr->e_phoff);
+    if(addr<FBUF_ADDRESS)
+        addr -= (virt_t)ehdr;
+    Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
     Elf64_Sym *sym=NULL, *s;
     // the string tables
     char *strtable, *last=NULL;
@@ -195,16 +197,16 @@ uchar *service_sym(virt_t addr)
         if(phdr->p_type==PT_DYNAMIC) {
             /* Dynamic header */
             Elf64_Dyn *d;
-            d = (Elf64_Dyn *)((uint64_t)phdr->p_offset+(uint64_t)ehdr);
+            d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
             while(d->d_tag != DT_NULL) {
                 if(d->d_tag == DT_STRTAB) {
-                    strtable = (char*)ehdr + (d->d_un.d_ptr&0xFFFFFFF);
+                    strtable = (char*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF);
                 }
                 if(d->d_tag == DT_STRSZ) {
                     strsz = d->d_un.d_val;
                 }
                 if(d->d_tag == DT_SYMTAB) {
-                    sym = (Elf64_Sym *)((uint8_t*)ehdr + (d->d_un.d_ptr&0xFFFFFFF));
+                    sym = (Elf64_Sym *)((uint8_t*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF));
                 }
                 if(d->d_tag == DT_SYMENT) {
                     syment = d->d_un.d_val;
@@ -213,6 +215,8 @@ uchar *service_sym(virt_t addr)
                 d++;
             }
         }
+        /* move pointer to next section header */
+        phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
     }
     /* fallback to sections if dynamic segment not found */
     if(sym==NULL) {
@@ -220,7 +224,7 @@ uchar *service_sym(virt_t addr)
         Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
         // string table and other section header entries
         Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
-        char *shstr = (char*)ehdr + strt->sh_offset;
+        char *shstr = (char*)ehdr + (uint32_t)strt->sh_offset;
         // failsafe
         if((virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
            (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
@@ -228,12 +232,12 @@ uchar *service_sym(virt_t addr)
             return nosym;
         /* Section header */
         for(i = 0; i < ehdr->e_shnum; i++){
-            if(!kstrcmp(shstr+shdr->sh_name, ".symtab")){
-                sym = (Elf64_Sym *)((uint8_t*)ehdr + (shdr->sh_offset));
+            if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".symtab")){
+                sym = (Elf64_Sym *)((uint8_t*)ehdr + (uint32_t)shdr->sh_offset);
                 syment = (int)shdr->sh_entsize;
             }
-            if(!kstrcmp(shstr+shdr->sh_name, ".strtab")){
-                strtable = (char*)ehdr + shdr->sh_offset;
+            if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".strtab")){
+                strtable = (char*)ehdr + (uint32_t)shdr->sh_offset;
                 strsz = (int)shdr->sh_size;
             }
             /* move pointer to next section header */
@@ -250,7 +254,7 @@ uchar *service_sym(virt_t addr)
         if(s->st_name > strsz) break;
         if((virt_t)s->st_value <= (virt_t)addr &&
            (virt_t)s->st_value > ptr) {
-            last = strtable + s->st_name;
+            last = strtable + (uint32_t)s->st_name;
             ptr = s->st_value;
         }
         s++;
@@ -662,7 +666,7 @@ void fs_init()
     // dynamic linker
     if(service_rtlink()) {
         // map initrd in "fs" task's memory
-        vmm_mapbss(BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
+        vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
         // add to queue so that scheduler will know about this thread
         ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
@@ -696,7 +700,7 @@ void ui_init()
         i = ((bootboot.fb_width * bootboot.fb_height * 4 +
             __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);
         while(i-->0) {
-            vmm_mapbss(bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             if(!screen[1]) {
                 screen[1]=pdpe;
             }
@@ -727,12 +731,13 @@ void syslog_init()
     // map early syslog buffer
     for(i=0;paging[i]!=0;i++);
     for(j=0;j<nrlogmax;j++)
-        paging[i+j] = (((uint64_t)kmap_getpte(
-            (uint64_t)syslog_buf + j*__PAGESIZE))
-            * ~(__PAGESIZE-1)) + PG_USER_RO;
+        paging[i+j] = ((*((uint64_t*)kmap_getpte(
+            (uint64_t)syslog_buf + j*__PAGESIZE)))
+            & ~(__PAGESIZE-1)) + PG_USER_RO;
 
     // map libc
     service_loadso("lib/libc.so");
+
     // dynamic linker
     if(service_rtlink()) {
         // add to queue so that scheduler will know about this thread
