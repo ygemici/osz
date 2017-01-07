@@ -25,6 +25,7 @@
  * @brief Thread scheduler
  */
 
+#include <sys/sysinfo.h>
 #include "env.h"
 
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)

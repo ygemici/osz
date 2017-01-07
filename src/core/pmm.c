@@ -25,6 +25,7 @@
  * @brief Physical Memory Manager architecture specific part
  */
 
+#include <sys/sysinfo.h>
 #include "env.h"
 
 /* get addresses from linker script */

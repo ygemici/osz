@@ -8,7 +8,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS =
 LDFLAGS = -nostdlib -nodefaultlibs -nostartfiles
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
-CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' \
+CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DARCH='"$(ARCH)"' \
  -fpic -nostdinc -I../../etc/include -I. -I./$(ARCH) -include ./$(ARCH)/platform.h \
  -Wall -ffreestanding -fno-builtin -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 ifeq ($(DEBUG),1)

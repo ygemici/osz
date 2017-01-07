@@ -1,16 +1,16 @@
 /*
  * core/syslog.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -44,7 +44,7 @@ extern char *sprintf_puthex(char *dst, int64_t c);
 char __attribute__ ((section (".data"))) *syslog_buf;
 char __attribute__ ((section (".data"))) *syslog_ptr;
 char __attribute__ ((section (".data"))) syslog_header[] =
-    OSZ_NAME " " OSZ_VER "-" OSZ_ARCH " (build " OSZ_BUILD ")\n"
+    OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"
     "Copyright 2017 CC-by-nc-sa bztsrc@github\nUse is subject to license terms.\n\n";
 
 /* early RFC5424 compatible logger */

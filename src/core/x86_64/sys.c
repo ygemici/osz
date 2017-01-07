@@ -27,6 +27,7 @@
 
 #include "platform.h"
 #include "../env.h"
+#include "../../../loader/bootboot.h"
 #include "acpi.h"
 
 /* external resources */
@@ -41,6 +42,8 @@ extern uint64_t isr_ticks[];
 extern uint64_t isr_lastfps;
 extern uint64_t isr_currfps;
 extern uint64_t freq;
+extern uint64_t hpet_addr;
+extern uint64_t lapic_addr;
 
 extern void kprintf_center(int w, int h);
 extern void isr_initirq();
@@ -53,19 +56,17 @@ extern void pci_init();
 uint64_t __attribute__ ((section (".data"))) *drivers;
 uint64_t __attribute__ ((section (".data"))) *drvptr;
 char __attribute__ ((section (".data"))) *drvnames;
+char __attribute__ ((section (".data"))) *drvs;
+char __attribute__ ((section (".data"))) *drvs_end;
 uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
-
-char *sys_getdriver(char *device, char *drvs, char *drvs_end)
-{
-    return NULL;
-}
+char __attribute__ ((section (".data"))) fn[256];
 
 /* turn off computer */
 void sys_disable()
 {
-    // APCI poweroff
+    //Poweroff platform
     acpi_poweroff();
     // if it didn't work, show a message and freeze.
     kprintf_init();
@@ -165,9 +166,10 @@ void sys_init()
     // get the physical page of .text.user section
     uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
     // load driver database
-    char *c, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
-    char *drvs_end = drvs + fs_size;
-    char fn[256];
+    char *c, *f;
+    drvs = (char *)fs_locate("etc/sys/drivers");
+    drvs_end = drvs + fs_size;
+    kmemcpy(&fn[0], "lib/sys/", 8);
 
     /*** Platform specific initialization ***/
     // CPU Control Block (TSS64 in kernel bss)
@@ -236,6 +238,7 @@ void sys_init()
 #if DEBUG
         kprintf("WARNING missing /etc/sys/drivers\n");
 #endif
+        syslog_early("WARNING missing /etc/sys/drivers\n");
         // hardcoded legacy devices if driver list not found
         service_loadso("lib/sys/input/ps2.so");
         service_loadso("lib/sys/display/fb.so");
@@ -248,7 +251,6 @@ void sys_init()
             if(f[0]=='*' && f[1]==9 && (f[2]!='f' || f[3]!='s')) {
                 f+=2;
                 if(c-f<255-8) {
-                    kmemcpy(&fn[0], "lib/sys/", 8);
                     kmemcpy(&fn[8], f, c-f);
                     fn[c-f+8]=0;
                     service_loadso(fn);
@@ -292,6 +294,13 @@ void sys_init()
         sysinfostruc->debug = debug;
         sysinfostruc->display = display;
         sysinfostruc->rescueshell = rescueshell;
+        //system tables
+        sysinfostruc->systables[systable_acpi_ptr] = bootboot.acpi_ptr;
+        sysinfostruc->systables[systable_smbi_ptr] = bootboot.smbi_ptr;
+        sysinfostruc->systables[systable_efi_ptr]  = bootboot.efi_ptr;
+        sysinfostruc->systables[systable_mp_ptr]   = bootboot.mp_ptr;
+        sysinfostruc->systables[systable_apic_ptr] = lapic_addr;
+        sysinfostruc->systables[systable_hpet_ptr] = hpet_addr;
 
         /*** Timer stuff ***/
         isr_tmrinit();

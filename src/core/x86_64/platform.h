@@ -30,9 +30,8 @@
 #ifndef _AS
 #include <stdint.h>
 #include <sys/types.h>
-typedef uint64_t phy_t;
-typedef uint64_t virt_t;
 #endif
+#include <sys/sysinfo.h>
 #include <syscall.h>
 #include "tcb.h"
 #include "ccb.h"

@@ -24,10 +24,10 @@
  *
  * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG)
  */
-#define _ENV_C_ 1
-#include "env.h"
 
-// parsed values
+#include <sys/sysinfo.h>
+
+/*** parsed values ***/
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
 uint64_t __attribute__ ((section (".data"))) nrirqmax;
@@ -43,7 +43,7 @@ uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
 
-// for overriding default or autodetected values
+/*** for overriding default or autodetected values ***/
 extern uint64_t hpet_addr;
 extern uint64_t lapic_addr;
 extern uint64_t ioapic_addr;
@@ -132,8 +132,10 @@ unsigned char *env_debug(unsigned char *s)
             { s++; continue; }
         // terminators
         if(((s[0]=='f'||s[0]=='F')&&(s[1]=='a'||s[1]=='A')) ||
-           ((s[0]=='n'||s[0]=='N')&&(s[1]=='o'||s[1]=='O')))
+           ((s[0]=='n'||s[0]=='N')&&(s[1]=='o'||s[1]=='O'))) {
+            debug = 0;
             break;
+        }
         // debug flags
         if(s[0]=='m' && s[1]=='m')              debug |= DBG_MEMMAP;
         if(s[0]=='M' && s[1]=='M')              debug |= DBG_MEMMAP;
@@ -161,10 +163,11 @@ unsigned char *env_debug(unsigned char *s)
 }
 #endif
 
+/*** initialize environment ***/
 void env_init()
 {
     unsigned char *env = environment;
-    int i = __PAGESIZE;
+    unsigned char *env_end = environment+__PAGESIZE;
 
     // set up defaults
     networking = sound = true;
@@ -178,17 +181,17 @@ void env_init()
     display = DSP_MONO_COLOR;
     debug = DBG_NONE;
 
-    //parse ascii text
-    while(i-->0 && *env!=0) {
+    // parse ascii text
+    while(env < env_end && *env!=0) {
         // skip comments
         if((env[0]=='/'&&env[1]=='/') || env[0]=='#') {
             while(env[0]!=0 && env[0]!='\n')
-                { i--; env++; }
+                env++;
         }
         if(env[0]=='/'&&env[1]=='*') {
             env+=2;
             while(env[0]!=0 && env[-1]!='*' && env[0]!='/')
-                { i--; env++; }
+                env++;
         }
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {

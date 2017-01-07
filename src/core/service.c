@@ -26,6 +26,7 @@
  */
 
 #include <elf.h>
+#include <sys/sysinfo.h>
 #include "env.h"
 
 /* external resources */

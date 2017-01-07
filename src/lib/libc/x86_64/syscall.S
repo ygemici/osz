@@ -40,6 +40,9 @@
 .global swapbuf
 .global mapfile
 
+/* don't use directly, use mq_dispatch() instead */
+.global mq_dispatchcall
+
 .section .text
 
 /* dest: pid_t<<16 + msg type */
@@ -99,11 +102,20 @@ mymq_recv:
     movq    $1, 8(%rbx)
 3:  ret
 
-/* uint64_t mq_ismsg() */
+/* bool_t mq_ismsg() */
 mq_ismsg:
     # non-blocking is there a message?
     movq     MQ_ADDRESS, %rax
     subq     MQ_ADDRESS+8, %rax
+    ret
+
+/* uint64_t mq_displatchcall(Elf64_Sym *symtable, msg_t msg); */
+mq_dispatchcall:
+    /* TODO: rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
+    xorq    %rax, %rax
+    /* tcb->errno = rax */
+    movq    $6, %rdx
+    movw    %ax, (%rdx)
     ret
 
 /* void *dl(so, sym) */

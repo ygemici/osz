@@ -25,9 +25,10 @@
  * @brief Message sender routines
  */
 
-#include "env.h"
 #include <errno.h>
 #include <syscall.h>
+#include <sys/sysinfo.h>
+#include "env.h"
 
 extern sysinfo_t *sysinfostruc;
 extern uint64_t nrservices;

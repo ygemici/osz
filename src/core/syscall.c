@@ -26,8 +26,9 @@
  */
 
 
-#include "env.h"
 #include <fsZ.h>
+#include <sys/sysinfo.h>
+#include "env.h"
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
@@ -56,10 +57,10 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         case SYS_sysinfo:
-            // dynamic fields in System Info Block
+            // update dynamic fields in System Info Block
             sysinfostruc->ticks[0] = isr_ticks[TICKS_LO];
             sysinfostruc->ticks[1] = isr_ticks[TICKS_HI];
-            sysinfostruc->quantumcnt = isr_ticks[TICKS_QALL];
+            sysinfostruc->quantum_cnt = isr_ticks[TICKS_QALL];
             sysinfostruc->timestamp_s = isr_ticks[TICKS_TS];
             sysinfostruc->timestamp_ns = isr_ticks[TICKS_NTS];
             sysinfostruc->srand[0] = isr_entropy[0];
@@ -67,6 +68,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             sysinfostruc->srand[2] = isr_entropy[2];
             sysinfostruc->srand[3] = isr_entropy[3];
             sysinfostruc->fps = isr_lastfps;
+            // reply with ptr message to map sysinfostruc in userspace
             msg_send(EVT_DEST(tcb->mypid) | MSG_PTRDATA | EVT_FUNC(SYS_ack),
                 (virt_t)sysinfostruc,
                 sizeof(sysinfo_t),

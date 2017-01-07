@@ -26,7 +26,6 @@
  */
 
 #ifndef _AS
-#ifndef _ENV_C_
 extern uint64_t nrphymax;   // number of hysical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
 extern uint64_t nrirqmax;   // number of interrupt routing pages
@@ -41,22 +40,3 @@ extern uint64_t quantum;    // max CPU allocation time: 1/quantum sec
 extern uint64_t fps;        // max frame per sec
 extern uint64_t display;    // see below
 #endif
-#endif
-
-/* debug levels */
-#define DBG_NONE 0          // none, false
-#define DBG_MEMMAP 1        // mm
-#define DBG_THREADS 2       // th
-#define DBG_ELF 4           // el
-#define DBG_RTIMPORT 8      // ri
-#define DBG_RTEXPORT 16     // re
-#define DBG_IRQ 32          // ir
-#define DBG_DEVICES 64      // de
-#define DBG_SCHED 128       // sc
-#define DBG_MSG 256         // ms
-#define DBG_LOG 512         // lo
-
-/* display options */
-#define DSP_MONO_COLOR 1    // flat 2D color
-#define DSP_STEREO_MONO 2   // grayscale red-cyan 3D anaglyph
-#define DSP_STEREO_COLOR 3  // anything (polarized glass, VR helmet etc.)

@@ -1,16 +1,16 @@
 /*
  * syscall.h
- * 
+ *
  * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -49,15 +49,15 @@
 
 #ifndef _AS
 /* async, send a message (non-blocking, except dest queue is full) */
-bool_t mq_send(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+bool_t mq_send(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* sync, send a message and receive result (blocking) */
-msg_t *mq_call(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2);
+msg_t *mq_call(pid_t dst, uint64_t func, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* async, is there a message? (non-blocking) */
 bool_t mq_ismsg();
 /* sync, wait until there's a message (blocking) */
 msg_t *mq_recv();
-/* sync, dispatch events (blocking, noreturn) */
-void mq_dispatch();
+/* sync, dispatch events (blocking, noreturn unless error) */
+uint64_t mq_dispatch();
 #endif
 
 #endif

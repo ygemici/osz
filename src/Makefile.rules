@@ -17,7 +17,7 @@ endif
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@$(CC) -I../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+	@$(CC) -nostdinc -I../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"

@@ -7,16 +7,16 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS += -lc
 
-CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_DRIVER=1
+CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_DRIVER=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH)
 LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/root/lib -lc
 
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.S
-	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET):
 	@echo "  src		$(TARGET)"

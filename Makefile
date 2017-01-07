@@ -24,7 +24,7 @@ loader/bootboot.efi:
 
 util: tools
 	@date +'#define OSZ_BUILD "%Y-%m-%d %H:%M:%S UTC"' >etc/include/lastbuild.h
-	@echo '#define OSZ_ARCH "$(ARCH)"' >>etc/include/lastbuild.h
+	@echo '#define OSZ_ARCH_$(ARCH) 1' >>etc/include/lastbuild.h
 	@echo "TOOLS"
 	@make --no-print-directory -e -C tools all | grep -v 'Nothing to be done' || true
 

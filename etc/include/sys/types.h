@@ -30,9 +30,11 @@
 
 #include <stdint.h>
 
+/*** visibility ***/
 #define public __attribute__ ((__visibility__("default")))
 #define private __attribute__ ((__visibility__("hidden")))
 
+/*** common defines ***/
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
@@ -57,6 +59,16 @@
 #define false 0
 #endif
 
+/*** Access bits in uuid.Data4[7] ***/
+#define A_READ    (1<<0)
+#define A_WRITE   (1<<1)
+#define A_EXEC    (1<<2)          // execute or search
+#define A_APPEND  (1<<3)
+#define A_DELETE  (1<<4)
+#define A_SUID    (1<<6)          // Set user id on execution
+#define A_SGID    (1<<7)          // Inherit ACL, no set group per se in OS/Z
+
+/*** libc ***/
 #ifndef _AS
 #include <stdint.h>
 
@@ -65,7 +77,7 @@ typedef unsigned char uchar;
 typedef unsigned int uint;
 typedef uint8_t bool_t;
 typedef uint64_t size_t;
-typedef uint64_t loff_t;
+typedef uint64_t fid_t;
 typedef uint64_t ino_t;
 typedef uint64_t dev_t;
 typedef uint64_t gid_t;
@@ -86,6 +98,8 @@ typedef uint64_t fpos_t;
 #define c_assert(c) extern char cassert[(c)?0:-1]
 
 typedef uint64_t evt_t;
+typedef uint64_t phy_t;
+typedef uint64_t virt_t;
 
 typedef struct {
 	uint32_t Data1;
@@ -94,26 +108,19 @@ typedef struct {
 	uint8_t Data4[8];
 } __attribute__((packed)) uuid_t;
 #define UUID_ACCESS(a) (a.Data4[7])
-#define A_READ    (1<<0)
-#define A_WRITE   (1<<1)
-#define A_EXEC    (1<<2)          // execute or search
-#define A_APPEND  (1<<3)
-#define A_DELETE  (1<<4)
-#define A_SUID    (1<<6)          // Set user id on execution
-#define A_SGID    (1<<7)          // Inherit ACL, no set group per se in OS/Z
 
-// type returned by syscalls clcall() and clrecv()
+// type returned by syscalls mq_call() and mq_recv()
 typedef struct {
-    evt_t evt;
-    uint64_t arg0;
-    uint64_t arg1;
-    uint64_t arg2;
+    evt_t evt;     //MSG_DEST(pid) | MSG_FUNC(funcnumber) | MSG_PTRDATA
+    uint64_t arg0; //Buffer address if MSG_PTRDATA, otherwise undefined
+    uint64_t arg1; //Buffer size if MSG_PTRDATA
+    uint64_t arg2; //Buffer type if MSG_PTRDATA
     uint64_t arg3;
     uint64_t arg4;
     uint64_t arg5;
-    uint64_t ts;
+    uint64_t ts;   //UTC timestamp of event
 } __attribute__((packed)) msg_t;
-// bits in evt: 63TTT..TTTPFFFFFFFFFFFFFFF0
+// bits in evt: (63)TTT..TTT P FFFFFFFFFFFFFFF(0)
 //  where T is a thread id or subsystem id, P true if message has a pointer,
 //  F is a function number from 1 to 32767. Function number 0 is reserved.
 #define EVT_DEST(t) ((uint64_t)(t)<<16)
@@ -126,66 +133,6 @@ typedef struct {
 #define MSG_MAGIC(m) (m.arg2)
 #define MSG_ISREG(m) (!((m)&MSG_PTRDATA))
 #define MSG_ISPTR(m) ((m)&MSG_PTRDATA)
-//eg.:
-//pid_t child = fork();
-//msg->evt = MSG_DEST(child) | MSG_FUNC(anynumber) | MSG_PTRDATA
-
-typedef struct {
-    uint64_t screen_ptr;    // screen virtual address ("SYS" and "UI")
-    uint64_t fb_ptr;        // framebuffer virtual address ("SYS" only)
-    uint64_t fb_width;      // framebuffer width
-    uint64_t fb_height;     // framebuffer height
-    uint64_t fb_scanline;   // framebuffer line size
-    uint64_t quantum;       // max time a task can allocate CPU 1/quantum
-    uint64_t quantumcnt;    // total number of task switches
-    uint64_t freq;          // timer freqency, task switch at freq/quantum
-    uint64_t ticks[2];      // overall jiffies counter
-    uint64_t timestamp_s;   // UTC timestamp
-    uint64_t timestamp_ns;  // UTC timestamp nanosec fraction
-    uint64_t srand[4];      // random seed bits
-    uint64_t debug;         // debug flags (see env.h)
-    uint8_t display;        // display type (see env.h)
-    uint8_t fps;            // maximum frame per second
-    uint8_t rescueshell;    // rescue shell requested flag
-} __attribute__((packed)) sysinfo_t;
 #endif
 
-#define sysinfo_screen 0
-#define sysinfo_fbuf 8
-#define sysinfo_fb_w 16
-#define sysinfo_fb_h 24
-#define sysinfo_fb_s 32
-
 #endif /* sys/types.h */
-/*
- * types.h
- *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
- * https://creativecommons.org/licenses/by-nc-sa/4.0/
- *
- * You are free to:
- *
- * - Share — copy and redistribute the material in any medium or format
- * - Adapt — remix, transform, and build upon the material
- *     The licensor cannot revoke these freedoms as long as you follow
- *     the license terms.
- *
- * Under the following terms:
- *
- * - Attribution — You must give appropriate credit, provide a link to
- *     the license, and indicate if changes were made. You may do so in
- *     any reasonable manner, but not in any way that suggests the
- *     licensor endorses you or your use.
- * - NonCommercial — You may not use the material for commercial purposes.
- * - ShareAlike — If you remix, transform, or build upon the material,
- *     you must distribute your contributions under the same license as
- *     the original.
- *
- * @brief System types
- */
-
-#ifndef	_TYPES_H
-#define	_TYPES_H	1
-
-
-#endif /* types.h */

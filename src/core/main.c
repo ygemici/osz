@@ -44,6 +44,7 @@
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
+#include <sys/sysinfo.h>
 #include "env.h"
 
 #if DEBUG

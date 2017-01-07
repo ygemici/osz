@@ -28,9 +28,11 @@
 #ifndef _SYS_CORE_H
 #define _SYS_CORE_H 1
 
-#define SYS_IRQ 0
-#define SYS_ack 1
-#define SYS_nack 2
+/*** low level codes in rdi for syscall instruction ***/
+// rdi: 00000000000xxxx Memory and threading
+#define SYS_IRQ 0           // CORE sends it to SYS, disables IRQ
+#define SYS_ack 1           // SYS to CORE, re-enable IRQ
+#define SYS_nack 2          // negative acknowledge
 #define SYS_dl 3
 #define SYS_sched_yield 4
 #define SYS_seterr 5
@@ -38,7 +40,7 @@
 #define SYS_sysinfo 7
 #define SYS_swapbuf 8
 #define SYS_regservice 9
-#define SYS_stimebcd 10
+#define SYS_stimebcd 10     // SYS to CORE, cmos local date
 #define SYS_stime 11
 #define SYS_alarm 12
 #define SYS_mmap 13
@@ -47,17 +49,57 @@
 #define SYS_fork 16
 #define SYS_exec 17
 
+// rdi: FFFFFFFFFFFFxxxx File system services
+// see sys/fs.h
+// rdi: FFFFFFFFFFFExxxx User Interface services
+// see sys/ui.h
+// rdi: FFFFFFFFFFFDxxxx Syslog services
+// see sys/syslog.h
+// rdi: FFFFFFFFFFFCxxxx Networking services
+// see sys/net.h
+// rdi: FFFFFFFFFFFBxxxx Audio services
+// see sys/sound.h
+
+/*** libc implementation prototypes */
 #ifndef _AS
-void *dl(uchar *sopath, uchar *sym);
-void yield();
-void seterr(int errno);
-void exit(int err);
-sysinfo_t *sysinfo();
-void swapbuf();
-size_t mapfile(void *bss, char *fn);
-uint64_t regservice(pid_t thread);
-pid_t fork();
-void exec(uchar *cmd);
+#include <sys/stat.h>
+
+// Memory and threading
+void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
+void yield();                           // give up CPU time
+void seterr(int errno);                 // set libc errno
+void exit(int err);                     // exit task
+//see sys/sysinfo.h
+void swapbuf();                         // flush screen to framebuffer
+uint64_t regservice(pid_t thread);      // register service (init only)
+void stime(uint64_t utctimestamp);      // set system time
+void alarm(uint64_t nanosec);           // sleep the thread for nanosec
+virt_t mmap(virt_t bss, phy_t addr, size_t size); // map physical address
+void munmap(virt_t bss, size_t size);   // unmap bss (free physical pages)
+size_t mapfile(void *bss, char *fn);    // map a file on initrd
+pid_t fork();                           // fork thread
+pid_t exec(uchar *cmd);                 // start a new process in the background
+
+//File System
+size_t read(fid_t fid, void *buf, size_t size);
+fid_t dup2(fid_t oldfd, fid_t newfd);
+size_t write(void *buf, size_t size, fid_t fid);
+fpos_t seek(fid_t fid, fpos_t offset, int whence);
+fid_t dup(fid_t oldfd);
+int stat(fid_t fd, stat_t *buf);
+//see stdio.h
+
+//User interface
+//see ui.h
+
+//Syslog interface
+//see syslog.h
+
+//Networking services
+//see sys/net.h
+// rdi: FFFFFFFFFFFBxxxx Audio services
+// see sys/sound.h
+
 #endif
 
 /*

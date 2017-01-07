@@ -27,19 +27,17 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslog.h	8.1 (Berkeley) 6/2/93
+ *	@(#)syslog.h	modifications for OS/Z 1/7/2017
  */
 
 #ifndef _SYSLOG_H
 #define _SYSLOG_H 1
 
-#include <features.h>
-
 /*
  * priorities/facilities are encoded into a single 32-bit quantity, where the
  * bottom 3 bits are the priority (0-7) and the top 28 bits are the facility
  * (0-big number).  Both the priorities and the facilities map roughly
- * one-to-one to strings in the syslogd(8) source code.  This mapping is
- * included in this file.
+ * one-to-one to strings defined in this file.
  *
  * priorities (these are ordered)
  */
@@ -61,6 +59,10 @@
 #define	INTERNAL_NOPRI	0x10	/* the "no priority" priority */
 				/* mark "facility" */
 #define	INTERNAL_MARK	LOG_MAKEPRI(LOG_NFACILITIES << 3, 0)
+				/* system trace "facility" */
+#define	INTERNAL_STRACE	LOG_MAKEPRI(15 << 3, 0)
+
+#ifndef _AS
 typedef struct _code {
 	char	*c_name;
 	int	c_val;
@@ -83,20 +85,22 @@ CODE prioritynames[] =
     { NULL, -1 }
   };
 #endif
+#endif
 
 /* facility codes */
 #define	LOG_KERN	(0<<3)	/* kernel messages */
 #define	LOG_USER	(1<<3)	/* random user-level messages */
-#define	LOG_MAIL	(2<<3)	/* mail system */
-#define	LOG_DAEMON	(3<<3)	/* system daemons */
+#define	LOG_MAIL	(2<<3)	/* mail subsystem */
+#define	LOG_SOUND	(3<<3)	/* sound subsystem */
 #define	LOG_AUTH	(4<<3)	/* security/authorization messages */
-#define	LOG_SYSLOG	(5<<3)	/* messages generated internally by syslogd */
-#define	LOG_LPR		(6<<3)	/* line printer subsystem */
-#define	LOG_NEWS	(7<<3)	/* network news subsystem */
-#define	LOG_UUCP	(8<<3)	/* UUCP subsystem */
+#define	LOG_SYSLOG	(5<<3)	/* messages generated internally by syslog task */
+#define	LOG_LPR		(6<<3)	/* printer subsystem */
+#define	LOG_NET		(7<<3)	/* network subsystem */
+#define	LOG_HTTP	(8<<3)	/* Webserver messages */
 #define	LOG_CRON	(9<<3)	/* clock daemon */
 #define	LOG_AUTHPRIV	(10<<3)	/* security/authorization messages (private) */
 #define	LOG_FTP		(11<<3)	/* ftp daemon */
+#define	LOG_STRACE	(15<<3)	/* system call trace */
 
 	/* other codes through 15 reserved for system use */
 #define	LOG_LOCAL0	(16<<3)	/* reserved for local use */
@@ -114,22 +118,23 @@ CODE prioritynames[] =
 #define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
 
 #ifdef SYSLOG_NAMES
+#ifndef _AS
 CODE facilitynames[] =
   {
     { "auth", LOG_AUTH },
     { "authpriv", LOG_AUTHPRIV },
+    { "core", LOG_KERN },
     { "cron", LOG_CRON },
-    { "daemon", LOG_DAEMON },
+    { "sound", LOG_SOUND },
     { "ftp", LOG_FTP },
-    { "kern", LOG_KERN },
-    { "lpr", LOG_LPR },
+    { "prn", LOG_LPR },
     { "mail", LOG_MAIL },
     { "mark", INTERNAL_MARK },		/* INTERNAL */
     { "news", LOG_NEWS },
-    { "security", LOG_AUTH },		/* DEPRECATED */
+    { "strace", INTERNAL_STRACE },	/* INTERNAL */
     { "syslog", LOG_SYSLOG },
     { "user", LOG_USER },
-    { "uucp", LOG_UUCP },
+    { "http", LOG_HTTP },
     { "local0", LOG_LOCAL0 },
     { "local1", LOG_LOCAL1 },
     { "local2", LOG_LOCAL2 },
@@ -140,6 +145,7 @@ CODE facilitynames[] =
     { "local7", LOG_LOCAL7 },
     { NULL, -1 }
   };
+#endif
 #endif
 
 /*
@@ -161,42 +167,21 @@ CODE facilitynames[] =
 #define	LOG_NOWAIT	0x10	/* don't wait for console forks: DEPRECATED */
 #define	LOG_PERROR	0x20	/* log to stderr as well */
 
-__BEGIN_DECLS
-
-/* Close descriptor used to write to system logger.
-
-   This function is a possible cancellation point and therefore not
-   marked with __THROW.  */
+#ifndef _AS
+/* Close descriptor used to write to system logger. */
 extern void closelog (void);
 
-/* Open connection to system logger.
-
-   This function is a possible cancellation point and therefore not
-   marked with __THROW.  */
-extern void openlog (const char *__ident, int __option, int __facility);
+/* Open connection to system logger. */
+extern void openlog (char *ident, int option, int facility);
 
 /* Set the log mask level.  */
-extern int setlogmask (int __mask) __THROW;
+extern int setlogmask (int mask);
 
-/* Generate a log message using FMT string and option arguments.
+/* Generate a log message using FMT string and option arguments. */
+extern void syslog (int pri, char *fmt, ...);
 
-   This function is a possible cancellation point and therefore not
-   marked with __THROW.  */
-extern void syslog (int __pri, const char *__fmt, ...)
-     __attribute__ ((__format__ (__printf__, 2, 3)));
-
-#ifdef __USE_MISC
-/* Generate a log message using FMT and using arguments pointed to by AP.
-
-   This function is not part of POSIX and therefore no official
-   cancellation point.  But due to similarity with an POSIX interface
-   or due to the implementation it is a cancellation point and
-   therefore not marked with __THROW.  */
-extern void vsyslog (int __pri, const char *__fmt, va_list __ap)
-     __attribute__ ((__format__ (__printf__, 2, 0)));
+/* Generate a log message using FMT and using arguments pointed to by AP. */
+extern void vsyslog (int pri, char *fmt, va_list ap);
 #endif
-
-
-__END_DECLS
 
 #endif /* syslog.h */
