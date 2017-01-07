@@ -105,6 +105,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         case SYS_mapfile:
+kprintf("mapfile arg0 %x arg1 %s: ",arg0,arg1);
             if(arg0<BSS_ADDRESS || arg0>=FBUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
                 tcb->errno = EINVAL;
                 return 0;
@@ -117,12 +118,14 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             thread_map(identity_mapping);
             data = fs_locate(fn);
             thread_map(tmp);
+kprintf("data %x ",data);
             if(data==NULL) {
                 tcb->errno = ENOENT;
                 return 0;
             }
             /* data inlined in inode? */
             if(data!=NULL && ((phy_t)data & (__PAGESIZE-1))!=0) {
+kprintf("inline ");
                 /* copy to a new empty page */
                 tmp = (phy_t)pmm_alloc();
                 tcb->allocmem++;
@@ -132,6 +135,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
                 kmemcpy((char*)&tmp2map, &tmpmap + ((phy_t)data & (__PAGESIZE-1)), fs_size);
                 data = (void*)tmp;
             }
+kprintf("map data %x %d\n",data,fs_size);
             /* map */
             vmm_mapbss(tcb,(virt_t)arg0, (phy_t)data, fs_size, PG_USER_RO);
             /* return loaded file size */

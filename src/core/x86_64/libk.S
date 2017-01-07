@@ -360,7 +360,7 @@ ksend:
 2:  /* replace destination pid with sender's */
     andq    $0xFFFF, %rsi
     /* tcb.mypid<<16 */
-    movq    OSZ_tcb_mypid, %rax
+    movq    tcb_mypid, %rax
     shlq    $16, %rax
     orq     %rax, %rsi
     /* copy message */

@@ -176,7 +176,7 @@ isr_exc00divzero:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -194,7 +194,7 @@ isr_exc01debug:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -212,7 +212,7 @@ isr_exc02nmi:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -230,7 +230,7 @@ isr_exc03chkpoint:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -248,7 +248,7 @@ isr_exc04overflow:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -266,7 +266,7 @@ isr_exc05bound:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -284,7 +284,7 @@ isr_exc06invopcode:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -302,7 +302,7 @@ isr_exc07devunavail:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -320,7 +320,7 @@ isr_exc08dblfault:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -338,7 +338,7 @@ isr_exc09coproc:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -356,7 +356,7 @@ isr_exc10invtss:
     cli
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
-    popq	680
+    popq	tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -374,7 +374,7 @@ isr_exc11segfault:
     cli
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
-    popq	680
+    popq	tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -392,7 +392,7 @@ isr_exc12stackfault:
     cli
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
-    popq	680
+    popq	tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -410,7 +410,7 @@ isr_exc13genprot:
     cli
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
-    popq	680
+    popq	tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -428,7 +428,7 @@ isr_exc14pagefault:
     cli
     callq	isr_savecontext
     /* tcb->excerr = errcode; */
-    popq	680
+    popq	tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -446,7 +446,7 @@ isr_exc15unknown:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -464,7 +464,7 @@ isr_exc16float:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -482,7 +482,7 @@ isr_exc17alignment:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -500,7 +500,7 @@ isr_exc18machinecheck:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -518,7 +518,7 @@ isr_exc19double:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -536,7 +536,7 @@ isr_exc20:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -554,7 +554,7 @@ isr_exc21:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -572,7 +572,7 @@ isr_exc22:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -590,7 +590,7 @@ isr_exc23:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -608,7 +608,7 @@ isr_exc24:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -626,7 +626,7 @@ isr_exc25:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -644,7 +644,7 @@ isr_exc26:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -662,7 +662,7 @@ isr_exc27:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -680,7 +680,7 @@ isr_exc28:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -698,7 +698,7 @@ isr_exc29:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -716,7 +716,7 @@ isr_exc30:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -734,7 +734,7 @@ isr_exc31:
     cli
     callq	isr_savecontext
     /* tcb->excerr = 0; */
-    movq	$0, 680
+    movq	$0, tcb_excerr
     movq	(%rsp), %rax
     movq	%rax, __PAGESIZE-40
     movq	24(%rsp), %rax
@@ -756,11 +756,10 @@ isr_irq0:
     /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
     call	isr_timer
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -777,7 +776,7 @@ isr_irq0:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -787,11 +786,10 @@ isr_irq1:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -808,7 +806,7 @@ isr_irq1:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -818,11 +816,10 @@ isr_irq2:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -839,7 +836,7 @@ isr_irq2:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -849,11 +846,10 @@ isr_irq3:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -870,7 +866,7 @@ isr_irq3:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -880,11 +876,10 @@ isr_irq4:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -901,7 +896,7 @@ isr_irq4:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -911,11 +906,10 @@ isr_irq5:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -932,7 +926,7 @@ isr_irq5:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -942,11 +936,10 @@ isr_irq6:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -963,7 +956,7 @@ isr_irq6:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -973,11 +966,10 @@ isr_irq7:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -994,7 +986,7 @@ isr_irq7:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1004,11 +996,10 @@ isr_irq8:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1026,7 +1017,7 @@ isr_irq8:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1036,11 +1027,10 @@ isr_irq9:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1058,7 +1048,7 @@ isr_irq9:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1068,11 +1058,10 @@ isr_irq10:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1090,7 +1079,7 @@ isr_irq10:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1100,11 +1089,10 @@ isr_irq11:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1122,7 +1110,7 @@ isr_irq11:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1132,11 +1120,10 @@ isr_irq12:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1154,7 +1141,7 @@ isr_irq12:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1164,11 +1151,10 @@ isr_irq13:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1186,7 +1172,7 @@ isr_irq13:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1196,11 +1182,10 @@ isr_irq14:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1218,7 +1203,7 @@ isr_irq14:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1228,11 +1213,10 @@ isr_irq15:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1250,7 +1234,7 @@ isr_irq15:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1260,11 +1244,10 @@ isr_irq16:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1282,7 +1265,7 @@ isr_irq16:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1292,11 +1275,10 @@ isr_irq17:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1314,7 +1296,7 @@ isr_irq17:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1324,11 +1306,10 @@ isr_irq18:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1346,7 +1327,7 @@ isr_irq18:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1356,11 +1337,10 @@ isr_irq19:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1378,7 +1358,7 @@ isr_irq19:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1388,11 +1368,10 @@ isr_irq20:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1410,7 +1389,7 @@ isr_irq20:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1420,11 +1399,10 @@ isr_irq21:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1442,7 +1420,7 @@ isr_irq21:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1452,11 +1430,10 @@ isr_irq22:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1474,7 +1451,7 @@ isr_irq22:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1484,11 +1461,10 @@ isr_irq23:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1506,7 +1482,7 @@ isr_irq23:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 
@@ -1516,11 +1492,10 @@ isr_irq24:
     call	isr_savecontext
     
     /* tcb->memroot == sys_mapping? */
-    movq	%cr3, %rax
-    cmpq	sys_mapping, %rax
+    movq	sys_mapping, %rax
+    cmpq	%rax, tcb_memroot
     je		1f
     /* no, switch to system task */
-    movq	sys_mapping, %rax
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
@@ -1538,7 +1513,7 @@ isr_irq24:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-  call	isr_loadcontext
+    call	isr_loadcontext
     iretq
 .align 128, 0x90
 

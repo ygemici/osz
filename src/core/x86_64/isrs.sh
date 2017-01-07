@@ -475,12 +475,12 @@ do
 	if [ $i -ge 10 -a $i -le 14 ]; then
 		read -r -d '' EXCERR <<-EOF
 		    /* tcb->excerr = errcode; */
-		    popq	680
+		    popq	tcb_excerr
 		EOF
 	else
 		read -r -d '' EXCERR <<-EOF
 		    /* tcb->excerr = 0; */
-		    movq	\$0, 680
+		    movq	\$0, tcb_excerr
 		EOF
 	fi
 	cat >>isrs.S <<-EOF
@@ -531,11 +531,10 @@ do
 	    call	isr_savecontext
 	    $TIMER
 	    /* tcb->memroot == sys_mapping? */
-	    movq	%cr3, %rax
-	    cmpq	sys_mapping, %rax
+	    movq	sys_mapping, %rax
+	    cmpq	%rax, tcb_memroot
 	    je		1f
 	    /* no, switch to system task */
-	    movq	sys_mapping, %rax
 	    movq	%rax, %cr3
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi
@@ -550,7 +549,7 @@ do
 	    call	ksend
 	    call	isr_gainentropy
 	    $EOI
-	  call	isr_loadcontext
+	    call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90
 

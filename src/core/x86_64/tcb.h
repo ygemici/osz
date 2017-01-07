@@ -1,16 +1,16 @@
 /*
  * core/x86_64/tcb.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -28,10 +28,12 @@
 #include <limits.h>
 
 /* WARNING: must match tcb struct, for asm */
-#define OSZ_tcb_gpr   8
-#define OSZ_tcb_fx  128
-#define OSZ_tcb_mypid 640
-#define OSZ_tcb_memroot 648
+#define tcb_errno 6
+#define tcb_gpr   8
+#define tcb_fx  128
+#define tcb_mypid 640
+#define tcb_memroot 648
+#define tcb_excerr 680
 
 /* platform specific TCB flags */
 #define tcb_flag_needsxsave     128
@@ -53,14 +55,14 @@ typedef struct {
     uint32_t magic;     // Thread Control Block magic, must be 'THRD'
     uint8_t priority;   // thread priority
     uint8_t state;      // thread state and flags
-    uint16_t cpu;       // APIC ID of cpu on which this thread runs
+    uint16_t errno;     // thread safe libc errno            tcb+   6
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128
     pid_t mypid;        // thread's pid at                   tcb+ 640
     uint64_t memroot;   // memory mapping root at            tcb+ 648
     uint64_t billcnt;   // ticks thread spent in ring 3      tcb+ 656
     uint64_t syscnt;    // ticks thread spent in ring 0      tcb+ 664
-    uint64_t errno;     // thread safe libc errno            tcb+ 672
+    uint64_t cpu;       // APIC ID of executor cpu           tcb+ 672
     uint64_t excerr;    // exception error code              tcb+ 680
     pid_t sendto;       // destination thread                tcb+ 688
     pid_t blksend;      // head of threads waiting to send   tcb+ 696

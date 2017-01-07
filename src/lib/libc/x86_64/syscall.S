@@ -172,6 +172,4 @@ mapfile:
     movb    $SYS_mapfile, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
-    call    mymq_recv
-    mov     16(%rax), %rax
     ret

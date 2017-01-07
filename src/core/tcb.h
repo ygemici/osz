@@ -1,16 +1,16 @@
 /*
  * core/tcb.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -34,6 +34,7 @@
 #define TCB_STATE(s) ((s)&0x7)
 #define tcb_flag_alarm 8
 #define tcb_flag_io 16
+#define tcb_flag_strace 32
 
 // index to hd_active and cr_active queues, priority levels
 // priority 0, system, non-interruptible

@@ -52,40 +52,40 @@
 
 /* store thread's context into Thread Control Block */
 isr_savecontext:
-    movq    %rax, OSZ_tcb_gpr +   0
-    movq    %rbx, OSZ_tcb_gpr +   8
-    movq    %rcx, OSZ_tcb_gpr +  16
-    movq    %rdx, OSZ_tcb_gpr +  24
-    movq    %rsi, OSZ_tcb_gpr +  32
-    movq    %rdi, OSZ_tcb_gpr +  40
-    movq    %r8,  OSZ_tcb_gpr +  48
-    movq    %r9,  OSZ_tcb_gpr +  56
-    movq    %r10, OSZ_tcb_gpr +  64
-    movq    %r11, OSZ_tcb_gpr +  72
-    movq    %r12, OSZ_tcb_gpr +  80
-    movq    %r13, OSZ_tcb_gpr +  88
-    movq    %r14, OSZ_tcb_gpr +  96
-    movq    %r15, OSZ_tcb_gpr + 104
-    movq    %rbp, OSZ_tcb_gpr + 112
+    movq    %rax, tcb_gpr +   0
+    movq    %rbx, tcb_gpr +   8
+    movq    %rcx, tcb_gpr +  16
+    movq    %rdx, tcb_gpr +  24
+    movq    %rsi, tcb_gpr +  32
+    movq    %rdi, tcb_gpr +  40
+    movq    %r8,  tcb_gpr +  48
+    movq    %r9,  tcb_gpr +  56
+    movq    %r10, tcb_gpr +  64
+    movq    %r11, tcb_gpr +  72
+    movq    %r12, tcb_gpr +  80
+    movq    %r13, tcb_gpr +  88
+    movq    %r14, tcb_gpr +  96
+    movq    %r15, tcb_gpr + 104
+    movq    %rbp, tcb_gpr + 112
     ret
 
 /* restore thread's context from Thread Control Block */
 isr_loadcontext:
-    movq    OSZ_tcb_gpr +   0, %rax
-    movq    OSZ_tcb_gpr +   8, %rbx
-    movq    OSZ_tcb_gpr +  16, %rcx
-    movq    OSZ_tcb_gpr +  24, %rdx
-    movq    OSZ_tcb_gpr +  32, %rsi
-    movq    OSZ_tcb_gpr +  40, %rdi
-    movq    OSZ_tcb_gpr +  48, %r8
-    movq    OSZ_tcb_gpr +  56, %r9
-    movq    OSZ_tcb_gpr +  64, %r10
-    movq    OSZ_tcb_gpr +  72, %r11
-    movq    OSZ_tcb_gpr +  80, %r12
-    movq    OSZ_tcb_gpr +  88, %r13
-    movq    OSZ_tcb_gpr +  96, %r14
-    movq    OSZ_tcb_gpr + 104, %r15
-    movq    OSZ_tcb_gpr + 112, %rbp
+    movq    tcb_gpr +   0, %rax
+    movq    tcb_gpr +   8, %rbx
+    movq    tcb_gpr +  16, %rcx
+    movq    tcb_gpr +  24, %rdx
+    movq    tcb_gpr +  32, %rsi
+    movq    tcb_gpr +  40, %rdi
+    movq    tcb_gpr +  48, %r8
+    movq    tcb_gpr +  56, %r9
+    movq    tcb_gpr +  64, %r10
+    movq    tcb_gpr +  72, %r11
+    movq    tcb_gpr +  80, %r12
+    movq    tcb_gpr +  88, %r13
+    movq    tcb_gpr +  96, %r14
+    movq    tcb_gpr + 104, %r15
+    movq    tcb_gpr + 112, %rbp
     ret
 
 /* shuffle bits of random seed */
@@ -135,13 +135,17 @@ isr_syscall0:
     cmpb    $SYS_seterr, %dil
     jne     2f
     /* tcb->errno = rsi */
-    movq    %rsi, 672
+    movw    %si, tcb_errno
     jmp     9f
+2:
+    /* shortcut for yield */
+    cmpb    $SYS_sched_yield, %dil
+    je      7f
 2:
     /*** "SYS" task only ***/
     /* tcb->memroot == sys_mapping? */
     movq    sys_mapping, %rcx
-    cmpq    %rcx, 648
+    cmpq    %rcx, tcb_memroot
     jne     3f
 
     /* shortcut to ack syscall */
@@ -156,13 +160,8 @@ isr_syscall0:
     /* enable the given irq */
 2:  movq    %rsi, %rdi
     call    isr_enableirq
-    /* switch task */
-    movq	isr_next, %rax
-    orq 	%rax, %rax
-    jz  	9f
-    movq	%rax, %cr3
-    xorq	%rax, %rax
-    movq	%rax, isr_next
+    cmpq    $0, isr_next
+    jnz     7f
     jmp     9f
 
 3:  call    isr_syscall
@@ -177,30 +176,24 @@ isr_syscall0:
     call    isr_savecontext
     xorq    %rdi, %rdi
     call    sched_block
-    xorq    %rax, %rax
-    movq    %rax, isr_next
+    call    sched_pick
     call    isr_loadcontext
     /* if destination is SRV_core */
     movq    %rdi, %rax
     shrq    $16, %rax
     orq     %rax, %rax
     jnz     2f
-    /* shortcut for yield */
-    cmpb    $SYS_sched_yield, %dil
-    je      3f
     call    isr_syscall
-    jmp     8f
-3:  call    sched_pick
-    jmp     3f
+    jmp     7f
 2:  call    msg_sends
     /* map dest thread */
-    movq    isr_next, %rax
-3:  orq     %rax, %rax
-    jz      1f
+7:  movq    isr_next, %rax
+    orq     %rax, %rax
+    jz      8f
     movq    %rax, %cr3
     xorq    %rax, %rax
     movq    %rax, isr_next
-1:  jmp     8f
+    jmp     8f
 
     /* 'recv' */
 1:  cmpl    $0x76636572, %eax
@@ -210,13 +203,16 @@ isr_syscall0:
     /* never block system thread */
     movq    sys_mapping, %rcx
     /* tcb->memroot == sys_mapping? */
-    cmpq    %rcx, 648
+    cmpq    %rcx, tcb_memroot
     je      8f
     xorq    %rdi, %rdi
     call    sched_block
-    jmp     8f
+    call    sched_pick
+    jmp     7b
+
     /* tcb->errno = EINVAL */
-1:  movq    $EINVAL, 672
+1:  movw    $EINVAL, tcb_errno
+
 8:  call    isr_loadcontext
 9:  movq    __PAGESIZE-24, %r11
     movq    __PAGESIZE-40, %rcx
@@ -312,8 +308,6 @@ isr_timer:
     jnz     1f
     mov     fpsdiv, %rax
     movq    %rax, isr_ticks+48
-    /* increase fps counter */
-    incq    isr_currfps
     /* build and send a mem2vid message */
     /* switch to system task */
     movq    sys_mapping, %rax
