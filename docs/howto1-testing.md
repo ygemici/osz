@@ -176,7 +176,7 @@ No more breakpoints (planned at least). Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to in
 Debugging with GDB
 ------------------
 
-First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting DEBUG = 1. Then
+First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting `DEBUG = 1`. Then
 
 ```sh
 make debug

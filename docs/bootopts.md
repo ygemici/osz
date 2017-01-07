@@ -20,7 +20,7 @@ Boot Parameters
 | width     | 800    | number | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
 | height    | 600    | number | loader |  -II-  |
 | kernel    | lib/sys/core | string | loader | the name of kernel executable on initrd |
-| debug     | 0      | decimal | core | specifies which debug information to show (if compiled with debugging, see below) |
+| debug     | 0      | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
 | hpet      | -      | hexdec | core | override autodetected HPET address |
 | apic      | -      | hexdec | core | override autodetected LAPIC address |
 | ioapic    | -      | hexdec | core | override autodetected IOAPIC address |
@@ -42,27 +42,31 @@ The available values for debug parameter and display can be found in [core/env.h
 Debugging
 ---------
 
-| Value | Define | Description |
-| ----: | ------ | ----------- |
-| 0     | DBG_NONE | no debug information |
-| 1     | DBG_MEMMAP | dump memory map (either E820 or EFI) |
-| 2     | DBG_THREADS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
-| 4     | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
-| 8     | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/service.c) imported values |
-| 16    | DBG_RTEXPORT | debug run-time linker exported values |
-| 32    | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
-| 64    | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pci.c) |
-| 128   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
-| 256   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
-| 512   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
+This can be a numeric value, or a comma separated list of flags.
+
+| Value | Flag | Define | Description |
+| ----: | ---- | ------ | ----------- |
+| 0     |      | DBG_NONE | no debug information |
+| 1     | me   | DBG_MEMMAP | dump memory map (either E820 or EFI) |
+| 2     | th   | DBG_THREADS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
+| 4     | el   | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
+| 8     | ri   | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/service.c) imported values |
+| 16    | re   | DBG_RTEXPORT | debug run-time linker exported values |
+| 32    | ir   | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
+| 64    | de   | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pci.c) |
+| 128   | sc   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
+| 256   | ms   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
+| 512   | lo   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
 
 Display
 -------
 
-| Value | Define | Description |
-| ----: | ------ | ----------- |
-| 0     | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32xRGB0 color pixels |
-| 1     | DSP_STEREO_MONO | two 2D pixelbuffers*, they are converted grayscale and a red-cyan filtering applied |
-| 2     | DSP_STEREO_COLOR | two 2D pixelbuffers*, the way of combining left and right eye's view is 100% driver specific |
+A numeric value or exactly one flag.
 
-(* the two buffers are concatenated in a one big buffer of double the height)
+| Value | Flag | Define | Description |
+| ----: | ---- | ------ | ----------- |
+| 0     | mc   | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32xRGB0 color pixels |
+| 1     | sm,an | DSP_STEREO_MONO | two 2D pixelbuffers*, they are converted grayscale and a red-cyan filtering applied, anaglyph |
+| 2     | sc,re | DSP_STEREO_COLOR | two 2D pixelbuffers*, the way of combining left and right eye's view is 100% driver specific, real 3D |
+
+(* the two buffers are concatenated in a one big double heighted buffer)
