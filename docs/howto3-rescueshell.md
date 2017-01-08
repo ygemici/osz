@@ -5,7 +5,7 @@ Preface
 -------
 
 In the first two tutorials, we took a look at how to [test](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md)
-and [debug](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md), which are quite developer oriented tutorials. In this episode we'll take a system administator's approach, and we'll see how to use the rescue shell OS/Z.
+and [debug](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md), which are quite developer oriented tutorials. In this episode we'll take a system administator's approach, and we'll see how to use the rescue shell on OS/Z.
 
 Activating Rescue Shell
 -----------------------

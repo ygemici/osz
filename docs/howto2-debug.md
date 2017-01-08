@@ -101,7 +101,7 @@ If debugging enabled, press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> to inv
 
 ### Debugger commands
 
-It's enough to enter commands until it's unique, in most cases that's one letter only.
+It's enough to enter commands until it's obvious, in most cases that's the first letter only.
 
 | Command  | Description |
 | -------- | ----------- |
