@@ -109,13 +109,10 @@ mq_ismsg:
     subq     MQ_ADDRESS+8, %rax
     ret
 
-/* uint64_t mq_displatchcall(Elf64_Sym *symtable, msg_t msg); */
+/* uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,r10 func); */
 mq_dispatchcall:
-    /* TODO: rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
-    xorq    %rax, %rax
-    /* tcb->errno = rax */
-    movq    $6, %rdx
-    movw    %ax, (%rdx)
+    /* rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
+    callq   *%r10
     ret
 
 /* void *dl(so, sym) */
@@ -151,6 +148,7 @@ yield:
 
 /* void seterr(uint64_t err) */
 seterr:
+myseterr:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
     movb    $SYS_seterr, %dil

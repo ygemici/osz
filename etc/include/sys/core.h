@@ -64,6 +64,9 @@
 #ifndef _AS
 #include <sys/stat.h>
 
+//thread-safe libc errno at an absolute address (in TCB)
+extern uint16_t errno;
+
 // Memory and threading
 void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
 void yield();                           // give up CPU time

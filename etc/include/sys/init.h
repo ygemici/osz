@@ -27,5 +27,5 @@
 
 #define SYS_stop	(  4)
 #define SYS_start	(  6)
-#define SYS_restart	(  7)
-#define SYS_status	(  8)
+#define SYS_restart	(  8)
+#define SYS_status	(  9)

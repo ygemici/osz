@@ -21,6 +21,7 @@ PHDRS
 
 SECTIONS
 {
+  errno = 6;
   /* Read-only sections, merged into text segment: */
   . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
   .text :

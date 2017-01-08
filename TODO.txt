@@ -1,6 +1,5 @@
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:21:    // TODO: debug why this isn't working. No errors, no output
 ./src/lib/libc/exit.c:6:    /* TODO: call atexit handlers and dtors */
-./src/lib/libc/x86_64/syscall.S:114:    /* TODO: rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
 ./src/core/sched.c:96:    /* TODO: ccb.hd_blocked -> swap */
 ./src/core/sched.c:108:        /* TODO: swap -> ccb.hd_active */
 ./src/core/sched.c:111:        /* TODO: ccb.hd_blocked -> ccb.hd_active */
