@@ -168,6 +168,9 @@ extern uint64_t *kmap_getpte(virt_t virt);
 /** Copy n bytes from src to desc */
 extern void kmemcpy(void *dest, void *src, int size);
 
+/** Copy n bytes from src to desc, other direction */
+extern void kmemmove(void *dest, void *src, int size);
+
 /** Set n bytes of memory to character */
 extern void kmemset(void *dest, int c, int size);
 

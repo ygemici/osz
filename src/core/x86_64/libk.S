@@ -24,12 +24,11 @@
  *
  * @brief low level kernel routines for the core
  */
-#define _AS 1
-#include "platform.h"
 
 .section .text
 .global kpanic
 .global kmemcpy
+.global kmemmove
 .global kmemset
 .global kmemcmp
 .global kmemvid
@@ -112,6 +111,15 @@ kpanic:
 kmemcpy:
     movq    %rdx, %rcx
     repnz   movsb
+    ret
+
+kmemmove:
+    addq    %rcx, %rdi
+    addq    %rcx, %rsi
+    movq    %rdx, %rcx
+    std
+    repnz   movsb
+    cld
     ret
 
 kmemset:

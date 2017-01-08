@@ -25,9 +25,6 @@
  * @brief Thread functions platform dependent code
  */
 
-#include "platform.h"
-#include "../env.h"
-
 phy_t __attribute__ ((section (".data"))) sys_mapping;
 phy_t __attribute__ ((section (".data"))) core_mapping;
 phy_t __attribute__ ((section (".data"))) identity_mapping;

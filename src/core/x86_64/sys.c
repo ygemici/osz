@@ -25,10 +25,9 @@
  * @brief System Task, IRQ event dispatcher
  */
 
-#include "platform.h"
-#include "../env.h"
 #include "../../../loader/bootboot.h"
 #include "acpi.h"
+#include "pci.h"
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block

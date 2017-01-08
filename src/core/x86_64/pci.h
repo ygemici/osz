@@ -1,5 +1,5 @@
 /*
- * core/x86_64/pci.c
+ * core/x86_64/pci.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,39 +22,8 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief PCI functions and enumeration
+ * @brief PCI addresses and structures plus function prototypes
  */
 
-extern char *drvs;
-extern char *drvs_end;
-extern char fn[];
-
-char *pci_getdriver(char *device)
-{
-    char *c, *f;
-    int d = kstrlen(device);
-    for(c=drvs;c<drvs_end;) {
-        f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
-        // skip filesystem drivers
-        if(f[0]=='p' && f[1]=='c' && (f[2]!='i')) {
-            f+=3;
-            if(c-f<255-8 && *(f+d)==9 && !kstrcmp(device,f)) {
-                f += d+1;
-                kmemcpy(&fn[8], f, c-f);
-                fn[c-f+8]=0;
-                return fn;
-            }
-            continue;
-        }
-        // failsafe
-        if(c>=drvs_end || *c==0) break;
-        if(*c=='\n') c++;
-    }
-    return NULL;
-}
-
-
-void pci_init()
-{
-// TODO:  service_installirq(irq, ehdr->e_shoff);
-}
+#ifndef _AS
+#endif

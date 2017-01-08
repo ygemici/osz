@@ -13,16 +13,16 @@ LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/root
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.S
-	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
+	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
+	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET):
 	@echo "  src		$(TARGET)"
 	@mkdir -p ../../../../bin/root/lib/sys/$(firstword $(subst /, ,$(TARGET)))
 	@../../../../tools/drivers.sh $(TARGET)
-	@$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	$(O)$(CC) $(LDFLAGS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

@@ -20,22 +20,22 @@ endif
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
+	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 platform:
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 
 font.o:
 	@cp ../../etc/system.8x16.psf ./font
-	@objcopy -O elf64-x86-64 -B i386 -I binary font font.o
+	$(O)objcopy -O elf64-x86-64 -B i386 -I binary font font.o
 	@rm font
 
 logo.o:
-	@objcopy -O elf64-x86-64 -B i386 -I binary logo.tga logo.o
+	$(O)objcopy -O elf64-x86-64 -B i386 -I binary logo.tga logo.o
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  src		$(TARGET) ($(ARCH))"
-	@$(CC) $(LDFLAGS) $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -T $(ARCH)/supervisor.ld -Xlinker --build-id=none -Xlinker --nmagic -Xlinker -static -o $(BINTARGET) $(LIBS)
+	$(O)$(CC) $(LDFLAGS) $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -T $(ARCH)/supervisor.ld -Xlinker --build-id=none -Xlinker --nmagic -Xlinker -static -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
 	@echo "0000000000200000 _init" >../../bin/core.sym
 	@../../tools/elftool.o -s 0 $(BINTARGET) | sort >>../../bin/core.sym

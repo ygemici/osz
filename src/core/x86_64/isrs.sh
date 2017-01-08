@@ -111,12 +111,10 @@ cat >isrs.S <<EOF
  *
  * @brief Interrupt Controller specific Interrupt Service Routines
  */
-#define _AS 1
 #include <errno.h>
 #include <syscall.h>
 #include <limits.h>
 #include "isr.h"
-#include "platform.h"
 #include "ccb.h"
 #include "tcb.h"
 

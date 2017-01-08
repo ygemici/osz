@@ -25,9 +25,6 @@
  * @brief Virtual Memory Manager, on-demand paging
  */
 
-#include "platform.h"
-#include "../env.h"
-
 //phy_t __attribute__ ((section (".data"))) pt;
 phy_t __attribute__ ((section (".data"))) pdpe;
 

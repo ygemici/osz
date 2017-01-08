@@ -1,12 +1,14 @@
 include ../../../Config
 
-SRCS = $(wildcard *.c)
+SRCS = $(filter-out dbg.c disasm.c,$(wildcard *.c))
+#ifeq $($(DEBUG),1)
+SRCS += dbg.c disasm.c
+#endif
 SRCS+= $(wildcard *.S)
 TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
-LIBS =
-
-CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_CORE=1 -Wall -fpic -ffreestanding
+CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DARCH='"$(ARCH)"' \
+ -Wall -fpic -ffreestanding -nostdinc -I ../../../etc/include -include platform.h -include ../env.h
 
 all: $(OBJS) ok
 
@@ -17,10 +19,10 @@ ok:
 	@true
 
 %.o: %.S
-	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+	$(O)$(CC) -D_AS=1 $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	@$(CC) -I../../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 clean:
 	@rm *.o 2>/dev/null || true

@@ -1,4 +1,5 @@
 include Config
+export O = @
 
 all: clrdd todogen util boot system apps images
 

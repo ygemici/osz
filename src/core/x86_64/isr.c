@@ -26,10 +26,8 @@
  */
 
 
-#include "platform.h"
-#include "isr.h"
-#include "../env.h"
 #include <fsZ.h>
+#include "isr.h"
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block

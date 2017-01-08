@@ -25,7 +25,6 @@
  * @brief User mode IRQ dispatcher
  */
 
-#define _AS 1
 #include <limits.h>
 #include <syscall.h>
 #include "isr.h"

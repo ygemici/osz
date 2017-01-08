@@ -17,11 +17,11 @@ endif
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@$(CC) -nostdinc -I../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+	$(O)$(CC) -nostdinc -I../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
-	@$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+	$(O)$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 ifeq ($(LINKER),sharedlib)
 ifneq ($(TARGET),sbin/sys)
 	@../../tools/elftool.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h

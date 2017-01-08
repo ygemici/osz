@@ -62,6 +62,9 @@ uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_USRFIRST;
 uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
 /* dynsym */
 unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no symbol)";
+#if DEBUG
+virt_t __attribute__ ((section (".data"))) lastsym;
+#endif
 
 /* register a user mode service for pid translation */
 uint64_t service_register(pid_t thread)
@@ -171,6 +174,10 @@ uchar *service_sym(virt_t addr)
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
     uint64_t ptr;
+
+#if DEBUG
+    lastsym = TEXT_ADDRESS;
+#endif
     /* rule out non text address ranges */
     if(addr < TEXT_ADDRESS || (addr >= BSS_ADDRESS && addr < (virt_t)CORE_ADDRESS))
         return nosym;
@@ -194,6 +201,7 @@ uchar *service_sym(virt_t addr)
     // the string tables
     char *strtable, *last=NULL;
     int i, strsz, syment;
+
     /* Program Header */
     for(i = 0; i < ehdr->e_phnum; i++){
         /* we only need the Dynamic header */
@@ -256,8 +264,14 @@ uchar *service_sym(virt_t addr)
     for(i=0;i<(strtable-(char*)sym)/syment;i++) {
         if(s->st_name > strsz) break;
         if((virt_t)s->st_value <= (virt_t)addr &&
-           (virt_t)s->st_value > ptr) {
+           (virt_t)s->st_value > ptr &&
+           (char*)(strtable + (uint32_t)s->st_name)!=0 &&
+           ELF64_ST_TYPE(s->st_info) == STT_FUNC)
+        {
             last = strtable + (uint32_t)s->st_name;
+#if DEBUG
+            lastsym = (uint64_t)((uint8_t*)ehdr + (uint32_t)s->st_value);
+#endif
             ptr = s->st_value;
         }
         s++;

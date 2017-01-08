@@ -1,16 +1,16 @@
 /*
  * core/x86_64/acpi.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -25,8 +25,6 @@
  * @brief ACPI table parser
  */
 
-#include "platform.h"
-#include "../env.h"
 #include "acpi.h"
 #include "isr.h"
 
@@ -253,7 +251,7 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
 void acpi_init()
 {
     SLP_EN = PM1a_CNT = 0;
-    
+
     if(bootboot.acpi_ptr==0 ||
         ((char)(*((uint64_t*)bootboot.acpi_ptr))!='R' &&
         (char)(*((uint64_t*)bootboot.acpi_ptr))!='X')
