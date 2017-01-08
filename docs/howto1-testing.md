@@ -138,4 +138,4 @@ Further Break Points
 No more breakpoints (no more planned break points that is).
 Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console any time you want.
 
-If you are interested in debugging, read the [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
+If you are interested in debugging, read the [next tutorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
