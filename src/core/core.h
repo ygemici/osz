@@ -36,7 +36,6 @@
 #include "../../loader/bootboot.h"
 #endif
 #include <syscall.h>
-#include "../../etc/include/lastbuild.h"
 
 #define FBUF_ADDRESS  0xffffffffe0000000
 #define TMPQ_ADDRESS  0xffffffffffc00000

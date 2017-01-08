@@ -40,15 +40,15 @@ To convert the raw disk image to something that VirtualBox can be fed with:
 make vdi
 ```
 
+First Break Point - Booting starts
+----------------------------------
+
 For this How To we are going to use bochs, as it would stop at predefined
 addresses.
 
 ```sh
 make testb
 ```
-
-First Break Point
------------------
 
 Our jurney begins before the firmware takes control of the hardware.
 ```
@@ -58,14 +58,14 @@ Our jurney begins before the firmware takes control of the hardware.
 
 Just continue as we are not interested in the BIOS.
 
-OS/Z boot ends
---------------
+Second Break Point - OS/Z boot ends
+-----------------------------------
 
 The first intersting point is where the operating system was loaded, arranged
 it's memory and interrupts and is about to leave privileged mode by executing the very first `iretq`.
 
-You must see "OS/Z ready." on the top left corner of your screen with
-white on black, and something similar to this on debug console:
+You must see white on black "OS/Z ready." text on the top left corner of your screen,
+and something similar to this on debug console:
 
 ```
 (0) Magic breakpoint
@@ -124,16 +124,16 @@ Stack address size 8
  | STACK 0x0000000000000fe8 [0x00000000:0x00003002]
  | STACK 0x0000000000000ff0 [0x00000000:0x001fffa0]
  | STACK 0x0000000000000ff8 [0x00000000:0x0000001b]
-<bochs:3> 
+<bochs:3> s
 
 ```
 We can see that the user mode code starts at 0x200000, and it's stack is right beneath it (which differs from IRQ handler's safe stack).
 
-By stepping through the iret instruction with <kbd>s<kbd>, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
+By stepping through the iret instruction with <kbd>s</kbd>, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
 will iterate through detected devices by calling their _init() method.
 
-Enabling Multitask
-------------------
+Third Break Point - Enabling Multitask
+--------------------------------------
 
 At the third break point we can see that driver initialization finished, and "SYS" task is
 about to send a message to core to enable interrupts. By doing so, it will unleash hell, as nobody
@@ -168,10 +168,11 @@ The execution stopped right before the kernel call. After that comes [getwork](h
 to get some work. When there's no more messages left, it blocks and scheduler picks the next
 task to run. The OS will switch to the next task every time an interrupt fires or the current task blocks.
 
-Further break points
+Further Break Points
 --------------------
 
-No more breakpoints (planned at least). Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console.
+No more breakpoints (no more planned break points that is).
+Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console any time you want.
 
 Debugging with GDB
 ------------------

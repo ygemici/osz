@@ -41,6 +41,7 @@
 # endif
 #endif
 
+#include <lastbuild.h>
 #include <syscall.h>
 
 #endif /* osZ.h */
