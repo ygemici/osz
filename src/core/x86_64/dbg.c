@@ -564,7 +564,7 @@ help:
                     "  step - step instruction                             \n"
                     "  continue - continue execution                       \n"
                     "  reset, reboot - reboot computer                     \n"
-                    "  halt - poser off computer                           \n"
+                    "  halt - power off computer                           \n"
                     "  help - this help                                    \n"
                     "  prev - switch to previous task                      \n"
                     "  next - switch to next task                          \n"

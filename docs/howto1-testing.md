@@ -77,42 +77,6 @@ Next at t=22187507
 This sys_enable() function is in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c) and it's
 job is to map the first task and start executing it.
 
-### Get pid
-
-To obtain your current pid, you'll type simply `page 0`.
-
-<pre>
-&lt;bochs:2> page 0
-PML4: 0x0000000000033007    ps         a pcd pwt U W P
-PDPE: 0x0000000000034007    ps         a pcd pwt U W P
- PDE: 0x8000000000035007 XD ps         a pcd pwt U W P
- PTE: 0x8000000000031005 XD    g pat d a pcd pwt U R P
-linear page 0x0000000000000000 maps to physical page 0x<i><b>000000031</b></i>000
-&lt;bochs:3>
-</pre>
-
-And look for the last number on output. Forget the last three zeros, and there's your pid. It's `0x31` in our case.
-
-### Checking pid
-
-You can check the validity of a pid anytime with:
-
-```
-<bochs:3> xp /5bc 0x31000
-[bochs]:
-0x0000000000031000 <bogus+       0>:  T    H    R    D   \0  
-<bochs:4>
-```
-
-Here we can see that the page starts with the magic `'THRD'` so identifies as a Thread Control Block. The
-number tells us that it's priority. In our case it's `priority queue 0`, meaning it's "SYS" task we're watching.
-
-Save the first 8 bytes, the actual bitfields of this TCB page is platform specific as it's holding a copy of the CPU state as well.
-Each struct definition can be found in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).
-
-For current task, use `x /5bc 0`.
- 
-### What will iret do?
 
 As the stack stores user mode segment selectors, the CPU will drop
 privileged mode, and normal user space execution began.
@@ -174,19 +138,4 @@ Further Break Points
 No more breakpoints (no more planned break points that is).
 Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console any time you want.
 
-Debugging with GDB
-------------------
-
-First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting `DEBUG = 1`. Then
-
-```sh
-make debug
-```
-
-and then in another terminal, type
-
-```sh
-make gdb
-```
-
-to start the debugger and connect it to the running OS/Z instance.
+If you are interested in debugging, read the [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
