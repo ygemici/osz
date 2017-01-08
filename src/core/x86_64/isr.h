@@ -26,7 +26,9 @@
  */
 
 // IDT constants
-#define IDT_EXC 0x8F010008
+// 1ddd0tttt0000iiiissssssssssssssss
+// d: dpl, t: F trap, E int, i: ist, s: code selector
+#define IDT_EXC 0xEF010008
 #define IDT_NMI 0x8F020008
 #define IDT_INT 0x8E010008
 #define IDT_GATE_LO(type,offset) ((uint64_t)((((uint64_t)(offset)>>16)&(uint64_t)0xFFFF)<<48) | (uint64_t)((uint64_t)(type)<<16) | ((uint64_t)(offset) & (uint64_t)0xFFFF))

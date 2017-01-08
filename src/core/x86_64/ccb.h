@@ -1,16 +1,16 @@
 /*
  * core/x86_64/ccb.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -48,7 +48,7 @@ typedef struct {
     uint64_t ist3;      // +34 exception stack
     uint64_t ist4;      // +3C not used at the moment
     uint64_t ist5;      // +44 not used at the moment
-    uint64_t excerr;    // +4C exception error code
+    uint64_t ist6;      // +4C not used at the moment
     pid_t    lastxreg;  // +54 thread that last used media registers
     uint32_t mutex[3];  // +5C
     uint16_t iomapbase; // +66 IO permission map base, not used

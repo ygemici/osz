@@ -39,6 +39,7 @@ extern int maxx;
 extern int maxy;
 extern int scry;
 extern OSZ_ccb ccb;
+extern OSZ_pmm pmm;
 extern uint64_t *safestack;
 extern uint8_t sys_pgfault;
 extern uint64_t lastsym;
@@ -46,36 +47,52 @@ extern uint64_t lastsym;
 extern uchar *service_sym(virt_t addr);
 extern void kprintf_putchar(int c);
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
-extern virt_t disasm(virt_t rip, uchar *str);
+extern virt_t disasm(virt_t rip, char *str);
 
 uint8_t __attribute__ ((section (".data"))) dbg_enabled;
 uint8_t __attribute__ ((section (".data"))) dbg_active;
 uint8_t __attribute__ ((section (".data"))) dbg_tab;
+uint8_t __attribute__ ((section (".data"))) dbg_inst;
 uint64_t __attribute__ ((section (".data"))) cr2;
 uint64_t __attribute__ ((section (".data"))) cr3;
-uchar __attribute__ ((section (".data"))) dbg_instruction[64];
+char __attribute__ ((section (".data"))) dbg_instruction[128];
+virt_t __attribute__ ((section (".data"))) dbg_comment;
+virt_t __attribute__ ((section (".data"))) dbg_next;
+virt_t __attribute__ ((section (".data"))) dbg_start;
 
 enum {
-    tab_tcb,
     tab_code,
-    tab_data,
+    tab_tcb,
+    tab_msg,
+    tab_queues,
+    tab_ram,
 
     tab_last
+};
+
+char __attribute__ ((section (".data"))) *prio[] = {
+    "SYSTEM   ",
+    "RealTime ",
+    "Driver   ",
+    "Server   ",
+    "Important",
+    "Normal   ",
+    "Low prio ",
+    "IDLE ONLY"
 };
 
 void dbg_tcb()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    char *prio[] = { "SYSTEM", "RealTime", "Driver", "Server", "Important", "Normal", "Low", "Idle" };
     char *states[] = { "hybernated", "blocked", "running" };
 
     fg=0xCc6c4b;
     kprintf("[Thread State]\n");
     fg=0x9c3c1b;
-    kprintf("pid: %x, name: %s, cpu core: %x\n",tcb->mypid, tcb->name, tcb->cpu);
-    kprintf("priority: %d (%s), state: %1x (%s) ",
-        tcb->priority, prio[tcb->priority],
-        TCB_STATE(tcb->state), states[ TCB_STATE(tcb->state)]
+    kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
+    kprintf("priority: %s (%d), state: %s (%1x) ",
+        prio[tcb->priority], tcb->priority,
+        states[ TCB_STATE(tcb->state)], TCB_STATE(tcb->state)
     );
     if(tcb->state & tcb_flag_alarm)
         kprintf("alarm ");
@@ -98,8 +115,11 @@ void dbg_tcb()
         kprintf("\n[Scheduler]\n");
         fg=0x9c3c1b;
         kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, tcb->blkcnt);
+        kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
         if(TCB_STATE(tcb->state)==tcb_state_blocked) {
+            kprintf("next task in alarm queue: %4x, alarm at: %d.%d\nblocked since: %d", tcb->alarm, tcb->alarmsec, tcb->alarmns, tcb->blktime);
         }
+        kprintf("\n");
     }
 }
 
@@ -107,7 +127,7 @@ void dbg_code(uint64_t rip)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     uchar *symstr;
-    virt_t ptr;
+    virt_t ptr, dmp, lastsymsave;
     int i=0;
     uint64_t j, *rsp=(uint64_t*)tcb->rsp;
 
@@ -184,7 +204,7 @@ void dbg_code(uint64_t rip)
     fg=0xCc6c4b;
     sys_pgfault = false;
     symstr = service_sym(rip);
-    kprintf("[Disassemble %x: ", rip);
+    kprintf("[Code %x: ", rip);
     if(sys_pgfault) {
         kprintf("unknown]\n");
         sys_pgfault = false;
@@ -195,7 +215,8 @@ void dbg_code(uint64_t rip)
     /* disassemble instructions */
     fg=0x9c3c1b;
     /* find a start position */
-    j=rip-16;
+    j=dbg_start? dbg_start : rip-16;
+    dbg_start = 0;
     if(j < lastsym)
         j = lastsym;
     i = 0;
@@ -212,38 +233,146 @@ void dbg_code(uint64_t rip)
         }
         j++;
     }
-    sys_pgfault = false;
+    dbg_next = disasm(ptr, NULL);
     while(ky < maxy-2) {
         fg= ptr==rip?0xFFDD33:0x9c3c1b;
         kprintf("%2x: ",(uint64_t)ptr-lastsym);
+        dbg_comment = 0;
+        dmp = ptr;
+        lastsymsave = lastsym;
+        sys_pgfault = false;
         ptr = disasm((virt_t)ptr, dbg_instruction);
         if(sys_pgfault) {
             kprintf(" * page fault *");
             return;
         }
-        kprintf("%s\n", dbg_instruction);
+        if(dbg_inst) {
+            kprintf("%s", dbg_instruction);
+        } else {
+            for(;dmp<ptr;dmp++)
+                kprintf("%1x ",*((uchar*)dmp));
+        }
+        if(dbg_comment) {
+            fg=0x4c1c0b;
+            kx=maxx/2;
+            sys_pgfault = false;
+            symstr = service_sym(dbg_comment);
+            if(!sys_pgfault && symstr!=NULL && symstr[0]!='(')
+                kprintf("%s +%x", symstr, dbg_comment-lastsym);
+        }
+        lastsym = lastsymsave;
+        kx=fx; ky++;
     }
 }
 
-void dbg_data()
+void dbg_msg()
 {
-    uint64_t m;
+    uint64_t m, i;
 
     /* print out last message */
     fg=0xCc6c4b;
-    kprintf("[Last message]\n");
+    kprintf("[Queue Header]\n");
     fg=0x9c3c1b;
-    m = *((uint64_t*)MQ_ADDRESS) - 1;
-    if(m==0)
-        m = *((uint64_t*)(MQ_ADDRESS+16)) - 1;
-    m = ((m * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
-    kprintf(" @%x\n%8x %8x ", m,
-        *((uint64_t*)m), *((uint64_t*)(m+8)));
-    kprintf("%8x %8x\n%8x %8x ",
-        *((uint64_t*)(m+16)), *((uint64_t*)(m+24)),
-        *((uint64_t*)(m+32)), *((uint64_t*)(m+40)));
-    kprintf("%8x %8x\n",
-        *((uint64_t*)(m+48)), *((uint64_t*)(m+56)));
+    kprintf("msg in: %3d, msg out: %3d, msg max: %3d, recv from: %x\n",
+        *((uint64_t*)(MQ_ADDRESS)), *((uint64_t*)(MQ_ADDRESS+8)),
+        *((uint64_t*)(MQ_ADDRESS+16)),*((uint64_t*)(MQ_ADDRESS+24)));
+    kprintf("buf in: %3d, buf out: %3d, buf max: %3d, buf min: %3d\n",
+        *((uint64_t*)(MQ_ADDRESS+32)), *((uint64_t*)(MQ_ADDRESS+40)),
+        *((uint64_t*)(MQ_ADDRESS+48)),*((uint64_t*)(MQ_ADDRESS+56)));
+    fg=0xCc6c4b;
+    kprintf("\n[Messages]");
+    i = *((uint64_t*)MQ_ADDRESS) - 1;
+    if(i==0)
+        i = *((uint64_t*)(MQ_ADDRESS+16)) - 1;
+    do {
+        fg = i==*((uint64_t*)MQ_ADDRESS)? 0xFFDD33 : 0x9c3c1b;
+        m = ((i * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
+        kprintf("\n @%2x %8x %8x ", m,
+            *((uint64_t*)m), *((uint64_t*)(m+8)));
+        kprintf("%8x %8x\n       %8x %8x ",
+            *((uint64_t*)(m+16)), *((uint64_t*)(m+24)),
+            *((uint64_t*)(m+32)), *((uint64_t*)(m+40)));
+        kprintf("%8x %8x\n",
+            *((uint64_t*)(m+48)), *((uint64_t*)(m+56)));
+        i++;
+        if(i>=*((uint64_t*)(MQ_ADDRESS+16))-1)
+            i=1;
+    } while (i!=*((uint64_t*)(MQ_ADDRESS+8)) && ky<maxy-3);
+}
+
+void dbg_queues()
+{
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    int i, j;
+    pid_t n;
+
+    fg=0xCc6c4b;
+    kprintf("[CPU Control Block]\n");
+    fg=0x9c3c1b;
+    kprintf("Cpu real id: %d, logical id: %d, ",ccb.realid, ccb.id, ccb.ist1, ccb.ist2);
+    kprintf("last xreg: %4x, mutex: %4x%4x%4x\n", ccb.lastxreg, ccb.mutex[0], ccb.mutex[1], ccb.mutex[2]);
+    fg=0xCc6c4b;
+    kprintf("\n[Blocked Task Queues]\n");
+    fg=0x9c3c1b;
+    j=0;
+    if(ccb.hd_blocked) {
+        n = ccb.hd_blocked;
+        do {
+            j++;
+            kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+            n = tcbq->next;
+        } while(n!=0);
+    }
+    kprintf("timerq head: %4x (awake at %d.%d)\niowait head: %4x, %d task(s)\n",
+        ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns, ccb.hd_blocked, j);
+    fg=0xCc6c4b;
+    kprintf("\n[Active Task Queues]\n No Queue     Head      Current   #Tasks\n");
+    fg=0x9c3c1b;
+    for(i=0;i<8;i++) {
+        j=0;
+        if(ccb.hd_active[i]) {
+            n = ccb.hd_active[i];
+            do {
+                j++;
+                kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+                n = tcbq->next;
+            } while(n!=0);
+        }
+        kprintf(" %d. %s %4x, %4x, %6d\n", i, prio[i], ccb.hd_active[i], ccb.cr_active[i],j);
+    }
+}
+
+void dbg_ram()
+{
+    OSZ_pmm_entry *fmem = pmm.entries;
+    int i = pmm.size;
+
+    fg=0xCc6c4b;
+    kprintf("[Physical Memory Manager]\n");
+    fg=0x9c3c1b;
+    kprintf("Core bss: %8x - %8x\nNumber of free memory fragments: %d\n\n", pmm.bss, pmm.bss_end,pmm.size);
+    kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
+        pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
+    );
+    bg = 0x400000;
+    for(i=0;i<(pmm.totalpages-pmm.freepages)*(maxx-12)/(pmm.totalpages+1);i++) {
+        kprintf_putchar(' '); kx++;
+    }
+    bg = 0x100000;
+    for(;i<(maxx-12);i++) {
+        kprintf_putchar(' '); kx++;
+    }
+    bg = 0x200000;
+    kprintf(" %d.%d%%\n",
+        (pmm.totalpages-pmm.freepages)*100/(pmm.totalpages+1), ((pmm.totalpages-pmm.freepages)*1000/(pmm.totalpages+1))%10
+    );
+    fg=0xCc6c4b;
+    kprintf("\n[Free Memory Fragments]\nAddress           Num pages\n");
+    fg=0x9c3c1b;
+    for(i=pmm.size;i>0;i--) {
+        kprintf("%8x, %9d\n",fmem->base, fmem->size);
+        fmem++;
+    }
 }
 
 void dbg_switchprev()
@@ -264,7 +393,7 @@ void dbg_enable(uint64_t rip, char *reason)
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     uint64_t scancode = 0, offs, line, x, y;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
-    char *tabs[] = { "TCB", "Code", "Messages" };
+    char *tabs[] = { "Code", "TCB", "Messages", "CCB", "RAM" };
     char cmd[64], c;
     int cmdidx=0,cmdlast=0;
 
@@ -276,6 +405,8 @@ void dbg_enable(uint64_t rip, char *reason)
 
     if(rip!=tcb->rip)
         rip=tcb->rip;
+
+    dbg_next = dbg_start = 0;
 
     if(reason!=NULL&&*reason!=0) {
         kprintf_reset();
@@ -294,6 +425,7 @@ void dbg_enable(uint64_t rip, char *reason)
     }
 
     dbg_tab = tab_code;
+    dbg_inst = 1;
     /* redraw and get command */
     while(1) {
 redraw:
@@ -324,9 +456,11 @@ redraw:
         // draw tab
         fx=kx=2; ky=3;
         __asm__ __volatile__ ("pushq %%rdi":::"%rdi");
-        if(dbg_tab==tab_tcb) dbg_tcb(); else
         if(dbg_tab==tab_code) dbg_code(rip); else
-        if(dbg_tab==tab_data) dbg_data();
+        if(dbg_tab==tab_tcb) dbg_tcb(); else
+        if(dbg_tab==tab_msg) dbg_msg(); else
+        if(dbg_tab==tab_queues) dbg_queues(); else
+        if(dbg_tab==tab_ram) dbg_ram();
         __asm__ __volatile__ ("popq %%rdi":::"%rdi");
         offs = (maxy-1)*font->height*bootboot.fb_scanline;
         // debugger command line
@@ -388,7 +522,7 @@ getcmd:
             // Backspace
             case 14: {
                 if(cmdidx==0)
-                    break;
+                    goto getcmd;
                 cmdidx--;
                 kmemcpy(&cmd[cmdidx],&cmd[cmdidx+1],cmdlast-cmdidx+1);
                 cmdlast--;
@@ -397,10 +531,14 @@ getcmd:
             // Delete
             case 339: {
                 if(cmdidx==cmdlast)
-                    break;
+                    goto getcmd;
                 kmemcpy(&cmd[cmdidx],&cmd[cmdidx+1],cmdlast-cmdidx+1);
                 cmdlast--;
                 goto getcmd;
+            }
+            case 29: {
+                dbg_inst = 1-dbg_inst;
+                goto redraw;
             }
             // F1
             case 59: {
@@ -420,6 +558,7 @@ help:
                     "  Left - (with command) move cursor                   \n"
                     "  Right - (with empty command) switch to next task    \n"
                     "  Right - (with command) move cursor                  \n"
+                    "  Ctrl - toggle instruction disassemble               \n"
                     "                                                      \n"
                     " Commands                                             \n"
                     "  step - step instruction                             \n"
@@ -431,6 +570,9 @@ help:
                     "  next - switch to next task                          \n"
                     "  tcb - examine current task's Thread Control Block   \n"
                     "  messages - examine message queue                    \n"
+                    "  queues - examine task queues                        \n"
+                    "  ram - examine RAM allocation                        \n"
+                    "  instruction - toggle instruction disassemble        \n"
                     "  goto X - go to address X                            \n"
                     "                                                      \n"
                 );
@@ -451,7 +593,7 @@ help:
                     return;
                 }
                 // reset, reboot
-                if(cmd[0]=='r'){
+                if(cmd[0]=='r' && cmd[1]=='e'){
                     __asm__ __volatile__ ("movb $0xFE, %%al;outb %%al, $0x64;hlt":::);
                 }
                 // halt
@@ -489,7 +631,28 @@ help:
                 if(cmd[0]=='m'){
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
-                    dbg_tab = tab_data;
+                    dbg_tab = tab_msg;
+                    goto redraw;
+                }
+                // queues
+                if(cmd[0]=='q'){
+                    cmdidx = cmdlast = 0;
+                    cmd[cmdidx]=0;
+                    dbg_tab = tab_queues;
+                    goto redraw;
+                }
+                // ram
+                if(cmd[0]=='r'){
+                    cmdidx = cmdlast = 0;
+                    cmd[cmdidx]=0;
+                    dbg_tab = tab_ram;
+                    goto redraw;
+                }
+                // instruction
+                if(cmd[0]=='i'){
+                    cmdidx = cmdlast = 0;
+                    cmd[cmdidx]=0;
+                    dbg_inst = 1-dbg_inst;
                     goto redraw;
                 }
                 // goto
@@ -497,14 +660,30 @@ help:
                     x=0; while(x<cmdlast && cmd[x]!=' ') x++;
                     if(cmd[x]==' ') {
                         while(x<cmdlast && cmd[x]==' ') x++;
-                        rip = 0;
-                        env_hex((unsigned char*)&cmd[x], (uint64_t*)&rip, 0, 0);
+                        if(cmd[x]=='-'||cmd[x]=='+') x++;
+                        y = 0;
+                        env_hex((unsigned char*)&cmd[x], (uint64_t*)&y, 0, 0);
+                        if(y==0) {
+                            rip = tcb->rip;
+                            cmdidx = cmdlast = 0;
+                            cmd[cmdidx]=0;
+                        } else {
+                            if(cmd[x-1]=='-')
+                                rip -= y;
+                            else if(cmd[x-1]=='+')
+                                rip += y;
+                            else
+                                rip = y;
+                        }
+                    } else {
+                        rip = disasm(rip, NULL);
+                        dbg_start = dbg_next;
                     }
+                    /* don't clear the command */
                     goto redraw;
                 }
-                cmdidx = cmdlast = 0;
-                cmd[cmdidx]=0;
-                goto redraw;
+                /* unknown command, do nothing */
+                goto getcmd;
             }
             default: {
                 if(cmdlast>=sizeof(cmd)-1)
@@ -514,7 +693,7 @@ help:
                         cmd[x]=cmd[x-1];
                 }
                 if(scancode>=2&&scancode<=13) {
-                    c = "1234567890-="[scancode-2];
+                    c = "1234567890-+"[scancode-2];
                 } else
                 if(scancode>=16 && scancode<=27) {
                     c = "qwertyuiop[]"[scancode-16];
@@ -533,7 +712,7 @@ help:
                     cmdlast++;
                     cmd[cmdidx++] = c;
                 }
-                break;
+                goto getcmd;
             }
         }
     }

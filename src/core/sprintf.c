@@ -89,7 +89,9 @@ char *sprintf(char *dst,char* fmt, ...)
     uint64_t arg;
     char *p;
 
-    if(fmt==NULL)
+    if(dst==NULL)
+        return NULL;
+    if(fmt==NULL || (((virt_t)fmt>>32)!=0 && ((virt_t)fmt>>32)!=0xffffffff))
         fmt=nullstr;
 
     while(fmt[0]!=0) {

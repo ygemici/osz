@@ -187,9 +187,18 @@ uchar *service_sym(virt_t addr)
     sys_pgfault = false;
     while(!sys_pgfault && ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
         ptr -= __PAGESIZE;
-    /* one special case which does not have an elf header */
-    if(ptr == TEXT_ADDRESS && tcb->memroot == sys_mapping)
-        return (uchar*)"_main (irq dispatcher)";
+    /* one special case, SYS task, which does not have an elf header */
+    if(ptr == TEXT_ADDRESS && tcb->memroot == sys_mapping) {
+        if(addr<TEXT_ADDRESS+__PAGESIZE)
+            return (uchar*)"_main (irq dispatcher)";
+        if(addr>=TEXT_ADDRESS+__PAGESIZE && addr<=TEXT_ADDRESS+3*__PAGESIZE) {
+#if DEBUG
+            lastsym = TEXT_ADDRESS + __PAGESIZE;
+#endif
+            return (uchar*)"irt";
+        }
+        return nosym;
+    }
     ehdr = (Elf64_Ehdr*)ptr;
     /* failsafe */
     if(sys_pgfault || (uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
@@ -265,8 +274,7 @@ uchar *service_sym(virt_t addr)
         if(s->st_name > strsz) break;
         if((virt_t)s->st_value <= (virt_t)addr &&
            (virt_t)s->st_value > ptr &&
-           (char*)(strtable + (uint32_t)s->st_name)!=0 &&
-           ELF64_ST_TYPE(s->st_info) == STT_FUNC)
+           (char*)(strtable + (uint32_t)s->st_name)!=0)
         {
             last = strtable + (uint32_t)s->st_name;
 #if DEBUG

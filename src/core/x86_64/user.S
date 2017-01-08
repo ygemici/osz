@@ -42,7 +42,7 @@ _init:
 /* normal user space entry point, so called _main(). The main()
  * (without the underscore) holds the core startup code */
 _main:
-int $0
+int $1
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rbx
     movq    (%rbx), %rax

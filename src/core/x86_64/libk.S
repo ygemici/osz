@@ -68,9 +68,6 @@ kpanic:
     popq    %rdi
     addq    $8, %rsp
     call    kprintf
-#if DEBUG
-    cmpb    $0, dbg_enabled
-    jz      1f
     movq    __PAGESIZE-40, %rsi
     movq    $kpanicrip, %rdi
     call    kprintf
@@ -79,6 +76,9 @@ kpanic:
     mov     %rax, %rsi
     movq    $kpanicsym, %rdi
     call    kprintf
+#if DEBUG
+    cmpb    $0, dbg_enabled
+    jz      1f
     movq    $kpanicrip, %rdi
     xorq    %rsi, %rsi
     call    dbg_enable
