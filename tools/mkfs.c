@@ -1,16 +1,16 @@
 /*
  * tools/mkfs.c
- * 
+ *
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -26,7 +26,9 @@
  *
  *  Compile: gcc mkfs.c -o mkfs
  *  Usage:
- *  ./mkfs create (file) (dir) - creates a new FS/Z image file
+ *  ./mkfs (file) (dir) - creates a new FS/Z image file
+ *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
+ *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
  *  ./mkfs disk - assembles partition images into one GPT disk
  *
  * It's a minimal implementation, has several limitations compared to
@@ -413,7 +415,7 @@ int createdisk()
     loader[0x1F2]='Z';                          //type
     setint(((gs+es+us)/512)+1,loader+0x1F6);    //start lba
     setint(((gs+es+us+vs)/512),loader+0x1FA);   //end lba
-*/    
+*/
     // magic
     loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
 
@@ -448,7 +450,7 @@ int createdisk()
     setint((gs/512)+1,gpt+544);                     //startlba
     setint(((gs+es)/512),gpt+552);                  //endlba
     memcpy(gpt+568,L"EFI System Partition",42);     //name
-    
+
     // GPT, OS/Z System Partition (mounted at /usr)
     memcpy(gpt+512+128,"OS/Z",4);                   //entrytype, magic
     setint(256,gpt+516+128);                        //version 1.0, no flags
@@ -634,14 +636,14 @@ int main(int argc, char **argv)
         createdisk();
     } else
     if(argc>1){
-        if(!strcmp(argv[2],"cat")) {
+        if(!strcmp(argv[2],"cat") && argc>2) {
             cat(argc,argv);
         } else
-        if(!strcmp(argv[2],"ls")) {
+        if(!strcmp(argv[2],"ls") && argc>=2) {
             ls(argc,argv);
         } else
-        if(argc>2) {
-            createimage(argv[2],argv[3]);
+        if(argc>1) {
+            createimage(argv[1],argv[2]);
         } else {
             printf("mkfs: unknown command.\n");
         }

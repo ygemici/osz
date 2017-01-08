@@ -9,3 +9,4 @@
 ./src/core/x86_64/dbg.c:588:                        /* TODO: set up debug registers on next instruction */
 ./src/core/syscall.c:80:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/msg.c:107:    /* TODO: use mq_buffstart properly as a circular buffer */
+./docs/howto3-rescueshell.md:19:TODO: write howto

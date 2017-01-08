@@ -6,10 +6,18 @@ Preface
 
 Last time we've checked how to [test OS/Z](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md) in a virtual machine. In this episode we'll take a look on how to debug OS/Z.
 
+First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting `DEBUG = 1`
+and recompile.
+
+Debug messages
+--------------
+
+If you want to see debug messages during boot, you can use the `debug` boot option in [FS0:\BOOTBOOT\CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG). For available flags see [boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
+
 Debugging with GDB
 ------------------
 
-First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting `DEBUG = 1`. Then
+Start a virtual machine in standby mode with
 
 ```sh
 make debug
@@ -21,7 +29,7 @@ and then in another terminal, type
 make gdb
 ```
 
-to start the debugger and connect it to the running OS/Z instance. Type <kbd>c</kbd> and <kbd>Enter</kbd> to start simulation.
+to start [GDB](https://www.sourceware.org/gdb/) and connect it to the running OS/Z instance. Type <kbd>c</kbd> and <kbd>Enter</kbd> to start simulation.
 
 Debugging with bochs
 --------------------
@@ -72,7 +80,8 @@ For current task, use `x /5bc 0`.
 Debugging with Internal Debugger
 --------------------------------
 
-If debugging enabled, press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> to invoke debugger.
+If debugging enabled, you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
+internal debugger.
 
 ### Panels (tabs)
 

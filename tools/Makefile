@@ -46,12 +46,12 @@ endif
 
 initrd:
 	@echo "  mkfs		initrd"
-	@./mkfs.o create $(INITRD) ../bin/root
+	@./mkfs.o $(INITRD) ../bin/root
 
 usr:
 	@echo "  mkfs		usr"
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
-	@./mkfs.o create $(USRFILE) ../bin/usr
+	@./mkfs.o $(USRFILE) ../bin/usr
 
 var:
 	@echo "  mkfs		var"
