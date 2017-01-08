@@ -43,6 +43,7 @@ _init:
 /* normal user space entry point, so called _main(). The main()
  * (without the underscore) holds the core startup code */
 _main:
+int $0
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rbx
     movq    (%rbx), %rax
@@ -101,7 +102,7 @@ getwork:
     /* MSG_FUNC(msg.evt) == SYS_swapbuf? */
     cmpw    $SYS_swapbuf, (%rax)
     jne     1f
-    movq    $TEXT_ADDRESS + __PAGESIZE + (ISR_NUMIRQ*ISR_NUMHANDLER+1)*8, %rsi
+    /* movq    $TEXT_ADDRESS + __PAGESIZE + (ISR_NUMIRQ*ISR_NUMHANDLER+1)*8, %rsi */
     /* get IRQ Routing Table */
     movq    $TEXT_ADDRESS + __PAGESIZE, %rsi
     /* rax = irt[ISR_NUMIRQ*irt[0]+1] */
@@ -149,7 +150,7 @@ getwork:
     decb    %cl
     orb     %cl, %cl
     jnz     1b
-    /* notify core to reenable IRQ */
+    /* notify core to re-enable IRQ */
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
     movb    $SYS_ack, %dil

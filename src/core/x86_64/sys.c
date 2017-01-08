@@ -62,6 +62,7 @@ uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
 char __attribute__ ((section (".data"))) fn[256];
+uint8_t __attribute__ ((section (".data"))) sys_pgfault;
 
 /* turn off computer */
 void sys_disable()
@@ -179,8 +180,6 @@ void sys_init()
     ccb.ist1 = __PAGESIZE;
     //nmi stack (separate page in kernel space)
     ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
-    //exception stack (separate page in kernel space)
-    ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE-256;
 
     // parse MADT to get IOAPIC address
     acpi_early(NULL);

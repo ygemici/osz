@@ -28,21 +28,12 @@
 #include "platform.h"
 #include "../env.h"
 
-#if DEBUG
-extern uint8_t dbg_active;
-extern uint8_t dbg_pgfault;
-#endif
-
 //phy_t __attribute__ ((section (".data"))) pt;
 phy_t __attribute__ ((section (".data"))) pdpe;
 
 void exc14pagefault(uint64_t excno, uint64_t rip)
 {
 #if DEBUG
-    if(dbg_active) {
-        dbg_pgfault = false;
-        return;
-    }
     dbg_enable(rip,"page fault");
 #else
     kpanic("page fault %d",excno);

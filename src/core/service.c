@@ -41,6 +41,7 @@ extern uint64_t isr_entropy[4];
 extern uint64_t *syslog_buf;
 extern uint64_t freq;
 extern sysinfo_t *sysinfostruc;
+extern uint8_t sys_pgfault;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -176,14 +177,15 @@ uchar *service_sym(virt_t addr)
     /* find the elf header for the address */
     ptr = addr;
     ptr &= ~(__PAGESIZE-1);
-    while(ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
+    sys_pgfault = false;
+    while(!sys_pgfault && ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
         ptr -= __PAGESIZE;
     /* one special case which does not have an elf header */
     if(ptr == TEXT_ADDRESS && tcb->memroot == sys_mapping)
         return (uchar*)"_main (irq dispatcher)";
     ehdr = (Elf64_Ehdr*)ptr;
     /* failsafe */
-    if(((uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)))
+    if(sys_pgfault || (uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
         return nosym;
     if(addr<FBUF_ADDRESS)
         addr -= (virt_t)ehdr;

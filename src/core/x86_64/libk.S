@@ -50,6 +50,7 @@
 .extern kpanicprefix
 .extern kpanicsuffix
 .extern kpanicsuffix2
+.extern sys_pgfault
 
 /* kernel panic */
 kpanic:
@@ -100,8 +101,10 @@ kpanic:
     addl    $46, kx
     addl    $1, ky
     call    kprintf_putlogo
-2:  call    kwaitkey
-    mov     $0xFE, %al
+    /* wait for user input */
+    call    kwaitkey
+    /* reboot computer */
+2:  mov     $0xFE, %al
     out     %al, $0x64
     hlt
 
@@ -118,22 +121,28 @@ kmemset:
     ret
 
 kmemcmp:
+    pushq   %rdi
     xorq    %rax, %rax
     incl    %edx
 1:  decl    %edx
     jz      3f
     lodsb
+    cmpb    $0, sys_pgfault
+    jnz     3f
     or      %al, %al
     jnz     2f
     cmpb    $0, (%rdi)
     je      3f
+    cmpb    $0, sys_pgfault
+    jnz     3f
     incb    %al
     jmp     3f
 2:  subb    (%rdi), %al
     incq    %rdi
     or      %al, %al
     jz      1b
-3:  ret
+3:  popq    %rdi
+    ret
 
 kstrcpy:
 1:  lodsb
@@ -393,21 +402,39 @@ ksend:
 
 /* an early implementation, called by kprintf */
 kwaitkey:
+    xorq    %rdx, %rdx
     /* is there a key waiting? */
 1:  inb     $0x64, %al
     andb    $1, %al
     jnz     2f
     jmp     1b
-    /* yes, acknowledge */
+    /* yes, read the scancode */
 2:  inb     $0x60, %al
     movb    %al, %dl
-    andb    $0x80, %dl
+    /* acknowledge */
     inb     $0x61, %al
     outb    %al, $0x61
-3:  inb     $0x64, %al
-    andb    $1, %al
-    jz      2f
-    jmp     3b
-2:  or      %dl, %dl
-    jz      1b
+    /* check extended scancode */
+    cmpb    $0xE0, %dl
+    jne     1f
+    movb    $1, 9f
+    jmp     kwaitkey
+1:  cmpb    $0xE1, %dl
+    jne     1f
+    movb    $2, 9f
+    jmp     kwaitkey
+1:  cmpb    $0xFF, %dl
+    jne     1f
+    movb    $3, 9f
+    jmp     kwaitkey
+1:  xorq    %rax, %rax
+    movb    9f, %ah
+    movb    $0, 9f
+    movb    %dl, %al
+    bt      $7, %ax
+    jnc     kwaitkey
+    andb    $0x7F, %al
+    /* extended scancode in ax */
     ret
+9:
+    .byte 0

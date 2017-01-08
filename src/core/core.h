@@ -83,7 +83,7 @@ typedef struct {
 
 // ----- Console -----
 /** wait for a key by polling keyboard */
-extern int kwaitkey();
+extern uint64_t kwaitkey();
 
 /** Initialize console printf for debugging and panicing */
 extern void kprintf_init();

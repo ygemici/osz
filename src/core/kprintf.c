@@ -84,7 +84,7 @@ extern uint64_t isr_lastfps;
 void kprintf_reset()
 {
     kx = ky = fx = 0;
-    scry = maxy - 2;
+    scry = maxy - 1;
     reent = 0;
     fg = 0xC0C0C0;
     bg = 0;
@@ -245,45 +245,30 @@ void kprintf_putfps()
 void kprintf_scrollscr()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
-    int offs = 0, tmp;
+    int offs = 0, tmp = (maxy-1)*font->height*bootboot.fb_scanline;
     int x,y, line, shift=font->height*bootboot.fb_scanline;
     int w = maxx*(font->width+1)/2;
-    // scroll the screen, two pixels at once
-    for(y=0;y<(maxy-1)*font->height;y++){
-        line=offs;
-        for(x=0;x<w;x++){
-            *((uint64_t*)(FBUF_ADDRESS + line)) =
-                *((uint64_t*)(FBUF_ADDRESS + line + shift));
-            line+=8;
-        }
-        offs+=bootboot.fb_scanline;
-    }
-    // clear the last row
-    tmp = offs;
-    for(y=0;y<font->height;y++){
-        line=offs;
-        for(x=0;x<w;x++){
-            *((uint64_t*)(FBUF_ADDRESS + line)) = (uint64_t)0;
-            line+=8;
-        }
-        offs+=bootboot.fb_scanline;
-    }
+    // pause
     if(scry!=-1) {
         scry++;
         // if we've scrolled the whole screen, stop
-        if(scry>=maxy-1) {
+        if(scry>=maxy-2) {
+            scry = 0;
             uint32_t oldfg = fg;
             fg = 0xffffff;
             // display a message
             char *msg = " --- Press any key to continue --- ";
-            scry = kx = 0;
+            kx = 0; ky=maxy-1;
             for(;*msg!=0;msg++) {
                     kprintf_putchar((int)(*msg));
                     kx++;
             }
+            // restore color
+            fg = oldfg;
+            kx = fx; ky--;
             // wait for user input
-            //kwaitkey();
-            // clear the message
+            kwaitkey();
+            // clear the last row
             for(y=0;y<font->height;y++){
                 line=tmp;
                 for(x=0;x<w;x++){
@@ -292,10 +277,17 @@ void kprintf_scrollscr()
                 }
                 tmp+=bootboot.fb_scanline;
             }
-            // restore color
-            fg = oldfg;
-            kx = fx;
         }
+    }
+    // scroll the screen, two pixels at once
+    for(y=0;y<maxy*font->height;y++){
+        line=offs;
+        for(x=0;x<w;x++){
+            *((uint64_t*)(FBUF_ADDRESS + line)) =
+                *((uint64_t*)(FBUF_ADDRESS + line + shift));
+            line+=8;
+        }
+        offs+=bootboot.fb_scanline;
     }
 }
 
@@ -404,7 +396,7 @@ nextchar:   kx++;
             if(kx>=maxx) {
 newline:        kx=fx;
                 ky++;
-                if(ky>=maxy) {
+                if(ky>=maxy-1) {
                     ky--;
                     kprintf_scrollscr();
                 }

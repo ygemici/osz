@@ -41,7 +41,7 @@ public uint64_t mq_dispatch()
     Elf64_Phdr *phdr = (Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
     Elf64_Sym *sym = NULL, *sym_end = NULL;
     uint64_t i, maxfunc, syment = 0;
-
+i/=0;
     /* Program Header */
     for(i = 0; i < ehdr->e_phnum; i++){
         /* we only need the Dynamic header */
