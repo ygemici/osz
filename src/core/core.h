@@ -247,7 +247,7 @@ extern uint64_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1
 
 #if DEBUG
 extern void dbg_init();
-extern void dbg_enable();
+extern void kdbg(uint64_t rip, char *reason, ...);
 #endif
 
 #endif

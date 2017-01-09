@@ -140,13 +140,19 @@ void exc00divzero(uint64_t excno, uint64_t rip)
 
 void exc01debug(uint64_t excno, uint64_t rip)
 {
-    kpanic("debug %d",excno);
+#if DEBUG
+    kdbg(rip,"debug 1");
+#else
+    kpanic("debug %d", excno);
+#endif
 }
 
 void exc03chkpoint(uint64_t excno, uint64_t rip)
 {
 #if DEBUG
-    dbg_enable(rip);
+    kdbg(rip,"debug 3");
+#else
+    kpanic("debug %d", excno);
 #endif
 }
 

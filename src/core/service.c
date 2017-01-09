@@ -41,7 +41,7 @@ extern uint64_t isr_entropy[4];
 extern uint64_t *syslog_buf;
 extern uint64_t freq;
 extern sysinfo_t *sysinfostruc;
-extern uint8_t sys_pgfault;
+extern uint8_t sys_fault;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -184,8 +184,8 @@ uchar *service_sym(virt_t addr)
     /* find the elf header for the address */
     ptr = addr;
     ptr &= ~(__PAGESIZE-1);
-    sys_pgfault = false;
-    while(!sys_pgfault && ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
+    sys_fault = false;
+    while(!sys_fault && ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
         ptr -= __PAGESIZE;
     /* one special case, SYS task, which does not have an elf header */
     if(ptr == TEXT_ADDRESS && tcb->memroot == sys_mapping) {
@@ -201,7 +201,7 @@ uchar *service_sym(virt_t addr)
     }
     ehdr = (Elf64_Ehdr*)ptr;
     /* failsafe */
-    if(sys_pgfault || (uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+    if(sys_fault || (uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
         return nosym;
     if(addr<FBUF_ADDRESS)
         addr -= (virt_t)ehdr;

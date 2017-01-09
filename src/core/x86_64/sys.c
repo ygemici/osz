@@ -61,7 +61,7 @@ uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
 char __attribute__ ((section (".data"))) fn[256];
-uint8_t __attribute__ ((section (".data"))) sys_pgfault;
+uint8_t __attribute__ ((section (".data"))) sys_fault;
 
 /* turn off computer */
 void sys_disable()
@@ -87,6 +87,7 @@ __inline__ void sys_enable()
     // initialize debugger, it can be used only with thread mappings
     dbg_init();
 #endif
+    sys_fault = false;
 
     // map "SYS" task's TCB
     kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_SYS]*__PAGESIZE), PG_CORE_NOCACHE);
@@ -98,7 +99,7 @@ __inline__ void sys_enable()
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
-        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp;\n#if DEBUG\nxchg %%bx, %%bx;\n#endif\n iretq" :
         :
         "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );

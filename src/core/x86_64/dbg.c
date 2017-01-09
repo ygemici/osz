@@ -41,7 +41,7 @@ extern int scry;
 extern OSZ_ccb ccb;
 extern OSZ_pmm pmm;
 extern uint64_t *safestack;
-extern uint8_t sys_pgfault;
+extern uint8_t sys_fault;
 extern uint64_t lastsym;
 
 extern uchar *service_sym(virt_t addr);
@@ -59,6 +59,10 @@ char __attribute__ ((section (".data"))) dbg_instruction[128];
 virt_t __attribute__ ((section (".data"))) dbg_comment;
 virt_t __attribute__ ((section (".data"))) dbg_next;
 virt_t __attribute__ ((section (".data"))) dbg_start;
+char __attribute__ ((section (".data"))) *dbg_err;
+uint32_t __attribute__ ((section (".data"))) *dbg_theme;
+uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x200000,0x400000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
+uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000010,0x000020,0x000040,0x1b3c9c,0x4b6ccc,0x6b8cec} ;
 
 enum {
     tab_code,
@@ -86,9 +90,9 @@ void dbg_tcb()
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     char *states[] = { "hybernated", "blocked", "running" };
 
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("[Thread State]\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
     kprintf("priority: %s (%d), state: %s (%1x) ",
         prio[tcb->priority], tcb->priority,
@@ -101,19 +105,19 @@ void dbg_tcb()
     if(tcb->state & tcb_flag_strace)
         kprintf("strace ");
     if(TCB_STATE(tcb->state)==tcb_state_hybernated) {
-        fg=0xCc6c4b;
+        fg=dbg_theme[4];
         kprintf("\n[Hybernation info]\n");
-        fg=0x9c3c1b;
+        fg=dbg_theme[3];
         kprintf("swapped to: %x\n", tcb->swapminor);
     } else {
         kprintf("\nerrno: %d, exception error code: %d\n", tcb->errno, tcb->excerr);
-        fg=0xCc6c4b;
+        fg=dbg_theme[4];
         kprintf("\n[Memory]\n");
-        fg=0x9c3c1b;
+        fg=dbg_theme[3];
         kprintf("memory root: %x, allocated pages: %d, linked pages: %d\n", tcb->memroot, tcb->allocmem, tcb->linkmem);
-        fg=0xCc6c4b;
+        fg=dbg_theme[4];
         kprintf("\n[Scheduler]\n");
-        fg=0x9c3c1b;
+        fg=dbg_theme[3];
         kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, tcb->blkcnt);
         kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
         if(TCB_STATE(tcb->state)==tcb_state_blocked) {
@@ -123,25 +127,25 @@ void dbg_tcb()
     }
 }
 
-void dbg_code(uint64_t rip)
+void dbg_code(uint64_t rip, uint64_t rs)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     uchar *symstr;
     virt_t ptr, dmp, lastsymsave;
     int i=0;
-    uint64_t j, *rsp=(uint64_t*)tcb->rsp;
+    uint64_t j, *rsp=(uint64_t*)(rs!=0?rs:tcb->rsp);
 
     /* registers and stack dump */
     fx = 2;
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("[Registers]");
     kx = maxx-43;
-    kprintf("[Stack %8x]\n",tcb->rsp);
+    kprintf("[Stack %8x]\n",rsp);
 
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     kprintf("cs=%4x rip=%8x \n",tcb->cs,tcb->rip);
     kprintf("rflags=%8x excerr=%4x \n",tcb->rflags,tcb->excerr);
-    kprintf("cr2=%8x cr3=%8x \n\n",cr2,cr3);
+    kprintf("cr2=%8x cr3=%8x \n\n",cr2,tcb->memroot);
     kprintf("rax=%8x rbx=%8x \n",*((uint64_t*)tcb->gpr),*((uint64_t*)tcb->gpr+8));
     kprintf("rcx=%8x rdx=%8x \n",*((uint64_t*)tcb->gpr+16),*((uint64_t*)tcb->gpr+24));
     kprintf("rsi=%8x rdi=%8x \n",*((uint64_t*)tcb->gpr+32),*((uint64_t*)tcb->gpr+40));
@@ -153,8 +157,8 @@ void dbg_code(uint64_t rip)
 
     /* stack */
     ky=4; kx=fx=maxx-43;
-    sys_pgfault = false;
-    while(i++<11 && !sys_pgfault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+    sys_fault = false;
+    while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
         kprintf("rsp+%1x rbp-%1x: %8x \n",
             (uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
             (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp),
@@ -162,35 +166,35 @@ void dbg_code(uint64_t rip)
         );
         rsp++;
     }
-    kprintf(sys_pgfault?"  * page fault *\n":"  * end *\n");
+    kprintf(sys_fault?"  * page fault *\n":"  * end *\n");
 
     /* back trace */
     ky=17; kx=fx=2;
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("[Back trace]\n");
-    fg=0x9c3c1b;
-    rsp=(uint64_t*)tcb->rsp;
+    fg=dbg_theme[3];
+    rsp=(uint64_t*)(rs!=0?rs:tcb->rsp);
     i=0;
     kprintf("%8x: %s \n",
         tcb->rip, service_sym(tcb->rip)
     );
-    sys_pgfault = false;
-    while(i++<4 && !sys_pgfault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+    sys_fault = false;
+    while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
         if((((rsp[1]==0x23||rsp[1]==0x08) &&
-            (rsp[4]==0x1b||rsp[4]==0x18)) || tcb->rsp==__PAGESIZE-40) && !sys_pgfault) {
+            (rsp[4]==0x1b||rsp[4]==0x18)) || tcb->rsp==__PAGESIZE-40) && !sys_fault) {
             kprintf("%8x: %s \n  * interrupt * \n",tcb->rip, service_sym(tcb->rip));
             rsp=(uint64_t*)rsp[3];
             continue;
         }
-        if(sys_pgfault)
+        if(sys_fault)
             break;
         if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
            (*rsp>((uint64_t)CORE_ADDRESS) &&
            (uint64_t)*rsp<(uint64_t)&__bss_start)) {
-            if(sys_pgfault)
+            if(sys_fault)
                 break;
             symstr = service_sym(*rsp);
-            if(sys_pgfault)
+            if(sys_fault)
                 break;
             if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
                 (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata"))
@@ -201,19 +205,18 @@ void dbg_code(uint64_t rip)
 
     /* disassemble block */
     kx=fx=2; ky++;
-    fg=0xCc6c4b;
-    sys_pgfault = false;
+    fg=dbg_theme[4];
+    sys_fault = false;
     symstr = service_sym(rip);
     kprintf("[Code %x: ", rip);
-    if(sys_pgfault) {
+    if(sys_fault) {
         kprintf("unknown]\n");
-        sys_pgfault = false;
+        sys_fault = false;
         return;
     } else
         kprintf("%s +%2x]\n", symstr, rip-lastsym);
-    fg=0x9c3c1b;
     /* disassemble instructions */
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     /* find a start position */
     j=dbg_start? dbg_start : rip-16;
     dbg_start = 0;
@@ -222,8 +225,8 @@ void dbg_code(uint64_t rip)
     i = 0;
     while(!i && j<=rip) {
         ptr = j;
-        sys_pgfault = false;
-        while(ky < maxy-2 && !sys_pgfault) {
+        sys_fault = false;
+        while(ky < maxy-2 && !sys_fault) {
             if(ptr == rip) {
                 i = 1;
                 ptr = j;
@@ -235,14 +238,14 @@ void dbg_code(uint64_t rip)
     }
     dbg_next = disasm(ptr, NULL);
     while(ky < maxy-2) {
-        fg= ptr==rip?0xFFDD33:0x9c3c1b;
+        fg= ptr==rip?0xFFDD33:dbg_theme[3];
         kprintf("%2x: ",(uint64_t)ptr-lastsym);
         dbg_comment = 0;
         dmp = ptr;
         lastsymsave = lastsym;
-        sys_pgfault = false;
+        sys_fault = false;
         ptr = disasm((virt_t)ptr, dbg_instruction);
-        if(sys_pgfault) {
+        if(sys_fault) {
             kprintf(" * page fault *");
             return;
         }
@@ -253,11 +256,11 @@ void dbg_code(uint64_t rip)
                 kprintf("%1x ",*((uchar*)dmp));
         }
         if(dbg_comment) {
-            fg=0x4c1c0b;
+            fg=dbg_theme[2];
             kx=maxx/2;
-            sys_pgfault = false;
+            sys_fault = false;
             symstr = service_sym(dbg_comment);
-            if(!sys_pgfault && symstr!=NULL && symstr[0]!='(')
+            if(!sys_fault && symstr!=NULL && symstr[0]!='(')
                 kprintf("%s +%x", symstr, dbg_comment-lastsym);
         }
         lastsym = lastsymsave;
@@ -270,22 +273,22 @@ void dbg_msg()
     uint64_t m, i;
 
     /* print out last message */
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("[Queue Header]\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     kprintf("msg in: %3d, msg out: %3d, msg max: %3d, recv from: %x\n",
         *((uint64_t*)(MQ_ADDRESS)), *((uint64_t*)(MQ_ADDRESS+8)),
         *((uint64_t*)(MQ_ADDRESS+16)),*((uint64_t*)(MQ_ADDRESS+24)));
     kprintf("buf in: %3d, buf out: %3d, buf max: %3d, buf min: %3d\n",
         *((uint64_t*)(MQ_ADDRESS+32)), *((uint64_t*)(MQ_ADDRESS+40)),
         *((uint64_t*)(MQ_ADDRESS+48)),*((uint64_t*)(MQ_ADDRESS+56)));
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("\n[Messages]");
     i = *((uint64_t*)MQ_ADDRESS) - 1;
     if(i==0)
         i = *((uint64_t*)(MQ_ADDRESS+16)) - 1;
     do {
-        fg = i==*((uint64_t*)MQ_ADDRESS)? 0xFFDD33 : 0x9c3c1b;
+        fg = i==*((uint64_t*)MQ_ADDRESS)? 0xFFDD33 : dbg_theme[3];
         m = ((i * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
         kprintf("\n @%2x %8x %8x ", m,
             *((uint64_t*)m), *((uint64_t*)(m+8)));
@@ -306,14 +309,14 @@ void dbg_queues()
     int i, j;
     pid_t n;
 
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("[CPU Control Block]\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     kprintf("Cpu real id: %d, logical id: %d, ",ccb.realid, ccb.id, ccb.ist1, ccb.ist2);
     kprintf("last xreg: %4x, mutex: %4x%4x%4x\n", ccb.lastxreg, ccb.mutex[0], ccb.mutex[1], ccb.mutex[2]);
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("\n[Blocked Task Queues]\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     j=0;
     if(ccb.hd_blocked) {
         n = ccb.hd_blocked;
@@ -325,9 +328,9 @@ void dbg_queues()
     }
     kprintf("timerq head: %4x (awake at %d.%d)\niowait head: %4x, %d task(s)\n",
         ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns, ccb.hd_blocked, j);
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("\n[Active Task Queues]\n No Queue     Head      Current   #Tasks\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     for(i=0;i<8;i++) {
         j=0;
         if(ccb.hd_active[i]) {
@@ -347,45 +350,105 @@ void dbg_ram()
     OSZ_pmm_entry *fmem = pmm.entries;
     int i = pmm.size;
 
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("[Physical Memory Manager]\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     kprintf("Core bss: %8x - %8x\nNumber of free memory fragments: %d\n\n", pmm.bss, pmm.bss_end,pmm.size);
     kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
         pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
     );
-    bg = 0x400000;
+    bg = dbg_theme[2];
     for(i=0;i<(pmm.totalpages-pmm.freepages)*(maxx-12)/(pmm.totalpages+1);i++) {
         kprintf_putchar(' '); kx++;
     }
-    bg = 0x100000;
+    bg = dbg_theme[0];
     for(;i<(maxx-12);i++) {
         kprintf_putchar(' '); kx++;
     }
-    bg = 0x200000;
+    bg = dbg_theme[1];
     kprintf(" %d.%d%%\n",
         (pmm.totalpages-pmm.freepages)*100/(pmm.totalpages+1), ((pmm.totalpages-pmm.freepages)*1000/(pmm.totalpages+1))%10
     );
-    fg=0xCc6c4b;
+    fg=dbg_theme[4];
     kprintf("\n[Free Memory Fragments]\nAddress           Num pages\n");
-    fg=0x9c3c1b;
+    fg=dbg_theme[3];
     for(i=pmm.size;i>0;i--) {
         kprintf("%8x, %9d\n",fmem->base, fmem->size);
         fmem++;
     }
 }
 
-void dbg_switchprev()
+void dbg_switchprev(virt_t *rip)
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    pid_t p = tcb->prev;
+    int i;
+
+    if(p == 0) {
+        if(TCB_STATE(tcb->state) == tcb_state_blocked) {
+            for(i=PRI_IDLE;i>0 && !p;i--)
+                p = ccb.hd_active[i];
+        } else {
+            /* find the next non empty higher priority queue */
+            if(tcb->priority>0)
+                for(i=tcb->priority-1;i>=0 && !p;i--)
+                    p = ccb.hd_active[i];
+            if(!p)
+                p = ccb.hd_blocked;
+            /* find the last non empty queue */
+            if(!p)
+                for(i=PRI_IDLE;i>0 && !p;i--)
+                    p = ccb.hd_active[i];
+        }
+        /* find the last entry in the list */
+        do {
+            kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
+            p = tcbq->next;
+        } while(p != 0);
+        p = tcbq->mypid;
+    }
+    if(p) {
+        kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
+        tcb->rip = *rip;
+        thread_map(tcbq->memroot);
+        *rip = tcb->rip;
+    }
 }
 
-void dbg_switchnext()
+void dbg_switchnext(virt_t *rip)
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    pid_t n = tcb->next;
+    int i;
+    if(n == 0) {
+        if(TCB_STATE(tcb->state) == tcb_state_blocked) {
+            n = ccb.hd_active[PRI_SYS];
+        } else {
+            n = 0;
+            /* find the next non empty lower priority queue */
+            if(tcb->priority<7)
+                for(i=tcb->priority+1;i<=7 && !n;i++) {
+                    n = ccb.hd_active[i];
+            }
+            if(i>7 || !n)
+                n = ccb.hd_blocked ? ccb.hd_blocked : ccb.hd_active[PRI_SYS];
+        }
+    }
+    if(n) {
+        kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+        tcb->rip = *rip;
+        thread_map(tcbq->memroot);
+        *rip = tcb->rip;
+    }
 }
 
 void dbg_init()
 {
     dbg_enabled = 1;
+    dbg_err = NULL;
+    dbg_theme = theme_debug;
 }
 
 void dbg_enable(uint64_t rip, char *reason)
@@ -432,20 +495,18 @@ redraw:
         fx=kx=0; ky=1;
         for(x=0;x<tab_last;x++) {
             kx+=2;
-            bg= dbg_tab==x ? 0x200000 : 0;
-            fg= dbg_tab==x ? 0xCc6c4b : 0x400000;
+            bg= dbg_tab==x ? dbg_theme[1] : 0;
+            fg= dbg_tab==x ? dbg_theme[5] : dbg_theme[2];
             kprintf_putchar(' ');
             kx++;
             kprintf(tabs[x]);
             kprintf_putchar(' ');
             kx++;
         }
-        fg = 0x404040; bg=0; kx = maxx-8-kstrlen((char*)tcb->name);
-        kprintf("(%x) %s", tcb->mypid, tcb->name);
         // clear tab
-        bg=0x200000;
+        bg=dbg_theme[1];
         offs = font->height*bootboot.fb_scanline*2;
-        for(y=font->height;y<(maxy-1)*font->height;y++){
+        for(y=font->height;y<(maxy-2)*font->height;y++){
             line=offs;
             for(x=0;x<bootboot.fb_width;x++){
                 *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)bg;
@@ -456,12 +517,13 @@ redraw:
         // draw tab
         fx=kx=2; ky=3;
         __asm__ __volatile__ ("pushq %%rdi":::"%rdi");
-        if(dbg_tab==tab_code) dbg_code(rip); else
+        if(dbg_tab==tab_code) dbg_code(rip, tcb->rsp); else
         if(dbg_tab==tab_tcb) dbg_tcb(); else
         if(dbg_tab==tab_msg) dbg_msg(); else
         if(dbg_tab==tab_queues) dbg_queues(); else
         if(dbg_tab==tab_ram) dbg_ram();
         __asm__ __volatile__ ("popq %%rdi":::"%rdi");
+getcmd:
         offs = (maxy-1)*font->height*bootboot.fb_scanline;
         // debugger command line
         for(y=(maxy-1)*font->height;y<bootboot.fb_height;y++){
@@ -472,25 +534,57 @@ redraw:
             }
             offs+=bootboot.fb_scanline;
         }
-getcmd:
         fx=kx=0; ky=maxy-1; fg=0x808080; bg=0;
         cmd[cmdlast]=0;
-        kprintf("dbg> %s  ",cmd);
+        kprintf("dbg> %s",cmd);
+        x = kx;
+        fg = 0x404040; bg=0;
+        kx = maxx-3 - (tcb->mypid>0xff?(tcb->mypid>0xffff?8:2):1) - kstrlen((char*)tcb->name);
+        kprintf("%s %x", tcb->name, tcb->mypid);
+        if(dbg_err != NULL) {
+            kx = x;
+            fg=0x800000;
+            kprintf("  %s", dbg_err);
+            dbg_err = NULL;
+            fg=0x808080;
+        }
         fg=0; bg=0x404040;
         kx=5+cmdidx;
         x = cmdidx==cmdlast||cmd[cmdidx]==0?' ':cmd[cmdidx];
         kprintf_putchar(x);
+/*
         if(scancode) {
             kx=maxx-4; fg=0x101010; bg=0;
             kprintf("%d",scancode);
         }
+*/
         scancode = kwaitkey();
         switch(scancode){
             // ESC
             case 1: {
-                dbg_active = false;
-                ccb.ist1 = __PAGESIZE;
-                return;
+                if(cmdlast != 0) {
+                    cmdidx = cmdlast = 0;
+                    cmd[cmdidx]=0;
+                    goto getcmd;
+                } else {
+end:
+                    dbg_active = false;
+                    ccb.ist1 = __PAGESIZE;
+                    // clear screen
+                    offs = 0;
+                    for(y=0;y<bootboot.fb_height;y++){
+                        line=offs;
+                        for(x=0;x<bootboot.fb_width;x+=2){
+                            *((uint64_t*)(FBUF_ADDRESS + line))=(uint64_t)0;
+                            line+=8;
+                        }
+                        offs+=bootboot.fb_scanline;
+                    }
+                    kprintf_reset();
+                    scry = -1;
+                    __asm__ __volatile__ ( "movq %0, %%rax; movq %%rax, %%cr3" : : "r"(cr3) : "%rax");
+                    return;
+                }
             }
             // Tab
             case 15: {
@@ -502,7 +596,7 @@ getcmd:
             // Left
             case 331: {
                 if(cmdlast==0) {
-                    dbg_switchprev();
+                    dbg_switchprev(&rip);
                     goto redraw;
                 }
                 if(cmdidx>0)
@@ -512,7 +606,7 @@ getcmd:
             // Right
             case 333: {
                 if(cmdlast==0) {
-                    dbg_switchnext();
+                    dbg_switchnext(&rip);
                     goto redraw;
                 }
                 if(cmdidx<cmdlast)
@@ -543,15 +637,16 @@ getcmd:
             // F1
             case 59: {
 help:
-                fx = kx = (maxx-54)/2; ky = 4; fg=0x9c3c1b; bg=0;
+                fx = kx = (maxx-54)/2; ky = 3; fg=dbg_theme[5]; bg=dbg_theme[3];
                 kprintf(
                     "                                                      \n"
                     " OS/Z " ARCH " Debugger (build " OSZ_BUILD ") \n"
                     "                                                      \n"
                     " Shortcuts                                            \n"
                     "  F1 - this help                                      \n"
-                    "  Esc - exit debugger (continue or reboot)            \n"
                     "  Tab - switch panels                                 \n"
+                    "  Esc - (without command) exit debugger               \n"
+                    "  Esc - (with command) clear command                  \n"
                     "  Enter - (with empty command) step instruction       \n"
                     "  Enter - (with command) execute command              \n"
                     "  Left - (with empty command) switch to previous task \n"
@@ -588,9 +683,7 @@ help:
                         /* TODO: set up debug registers on next instruction */
                         rip = disasm(rip, NULL);
                     }
-                    dbg_active = false;
-                    ccb.ist1 = __PAGESIZE;
-                    return;
+                    goto end;
                 }
                 // reset, reboot
                 if(cmd[0]=='r' && cmd[1]=='e'){
@@ -610,14 +703,14 @@ help:
                 if(cmd[0]=='p'){
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
-                    dbg_switchprev();
+                    dbg_switchprev(&rip);
                     goto redraw;
                 }
                 // next
                 if(cmd[0]=='n'){
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
-                    dbg_switchnext();
+                    dbg_switchnext(&rip);
                     goto redraw;
                 }
                 // tcb
@@ -683,11 +776,14 @@ help:
                     goto redraw;
                 }
                 /* unknown command, do nothing */
+                dbg_err = "Unkown command";
                 goto getcmd;
             }
             default: {
-                if(cmdlast>=sizeof(cmd)-1)
-                    break;
+                if(cmdlast>=sizeof(cmd)-1) {
+                    dbg_err = "Buffer full";
+                    goto getcmd;
+                }
                 if(cmdidx<cmdlast) {
                     for(x=cmdlast;x>cmdidx;x--)
                         cmd[x]=cmd[x-1];

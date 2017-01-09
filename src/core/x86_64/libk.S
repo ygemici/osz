@@ -27,6 +27,9 @@
 
 .section .text
 .global kpanic
+#if DEBUG
+.global kdbg
+#endif
 .global kmemcpy
 .global kmemmove
 .global kmemset
@@ -49,7 +52,7 @@
 .extern kpanicprefix
 .extern kpanicsuffix
 .extern kpanicsuffix2
-.extern sys_pgfault
+.extern sys_fault
 
 /* kernel panic */
 kpanic:
@@ -79,9 +82,10 @@ kpanic:
 #if DEBUG
     cmpb    $0, dbg_enabled
     jz      1f
+    movq    $theme_panic, dbg_theme
     movq    $kpanicrip, %rdi
     xorq    %rsi, %rsi
-    call    dbg_enable
+    call    kdbg
     jmp     2f
 1:
 #endif
@@ -106,6 +110,17 @@ kpanic:
 2:  mov     $0xFE, %al
     out     %al, $0x64
     hlt
+
+#if DEBUG
+kdbg:
+    movq    %rsp, 1f
+    movq    safestack, %rsp
+    addq    $__PAGESIZE/2, %rsp
+    call    dbg_enable
+    movq    1f, %rsp
+    ret
+1:  .quad 0
+#endif
 
 /* misc memory functions */
 kmemcpy:
@@ -135,13 +150,13 @@ kmemcmp:
 1:  decl    %edx
     jz      3f
     lodsb
-    cmpb    $0, sys_pgfault
+    cmpb    $0, sys_fault
     jnz     3f
     or      %al, %al
     jnz     2f
     cmpb    $0, (%rdi)
     je      3f
-    cmpb    $0, sys_pgfault
+    cmpb    $0, sys_fault
     jnz     3f
     incb    %al
     jmp     3f

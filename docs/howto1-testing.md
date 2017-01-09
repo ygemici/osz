@@ -102,7 +102,7 @@ Third Break Point - Enabling Multitask
 At the third break point we can see that driver initialization finished, and "SYS" task is
 about to send a message to core to enable interrupts. By doing so, it will unleash hell, as nobody
 will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's
-no need for locking.
+no need for locking. This breakpoint also triggers the [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
 
 ```
 (0) Magic breakpoint

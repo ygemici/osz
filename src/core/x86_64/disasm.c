@@ -30,7 +30,7 @@
 extern uchar *service_sym(virt_t addr);
 extern char *sprintf(char *dst,char* fmt, ...);
 extern virt_t dbg_comment;
-extern uint8_t sys_pgfault;
+extern uint8_t sys_fault;
 char __attribute__ ((section (".data"))) *disasm_str = NULL;
 
 /*
@@ -1005,13 +1005,12 @@ db_print_address(char *seg, int size, struct i_addr *addrp)
     if (seg)
         disasm_str=sprintf(disasm_str,"%s:", seg);
 
-    sys_pgfault = false;
+    sys_fault = false;
     symstr = service_sym((virt_t)addrp->disp);
-    if(!sys_pgfault && symstr!=NULL && symstr[0]!='(')
+    if(!sys_fault && symstr!=NULL && symstr[0]!='(')
         disasm_str=sprintf(disasm_str,"%s",symstr);
     else if(addrp->disp!=0)
         disasm_str=sprintf(disasm_str,"%x",addrp->disp);
-    sys_pgfault = false;
 
     if (addrp->base != 0 || addrp->index != 0) {
         disasm_str=sprintf(disasm_str,"(");

@@ -80,8 +80,11 @@ For current task, use `x /5bc 0`.
 Debugging with Internal Debugger
 --------------------------------
 
-If debugging enabled, you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
-internal debugger.
+If debugging enabled, boot will stop at the point where the system is about to release interrupts.
+Hit <kbd>Enter</kbd> to start simulation.
+
+Later you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
+the internal debugger again.
 
 ### Panels (tabs)
 

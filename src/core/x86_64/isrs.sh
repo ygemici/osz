@@ -135,7 +135,7 @@ cat >isrs.S <<EOF
 .extern gdt64_tss
 .extern excabort
 .extern pmm
-.extern sys_pgfault
+.extern sys_fault
 
 .section .data
     .align	16
@@ -482,25 +482,20 @@ do
 		    movq	\$0, tcb_excerr
 		EOF
 	fi
-	if [ $i -eq 14 ]; then
-		read -r -d '' ISPGFAULT <<-EOF
-		    /* page fault in core */
-		    cmpq    \$CORE_ADDRESS, 8(%rsp)
-		    jb      1f
-		    incb    sys_pgfault
-		    xorq    %rdi, %rdi
-		    addq    \$8, %rsp
-		    iretq
-		    1:
-		EOF
-	else
-		ISPGFAULT=""
-	fi
 	cat >>isrs.S <<-EOF
 	isr_$isr:
 	    $DBG
 	    cli
-	    $ISPGFAULT
+	#if DEBUG || $isr == 14
+	    /* fault in core */
+	    cmpq    \$CORE_ADDRESS, 8(%rsp)
+	    jb      1f
+	    incb    sys_fault
+	    xorq    %rdi, %rdi
+	    addq    \$8, %rsp
+	    iretq
+	1:
+	#endif
 	    callq	isr_savecontext
 	    $EXCERR
 	    xorq	%rdi, %rdi

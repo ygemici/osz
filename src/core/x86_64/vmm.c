@@ -31,7 +31,7 @@ phy_t __attribute__ ((section (".data"))) pdpe;
 void exc14pagefault(uint64_t excno, uint64_t rip)
 {
 #if DEBUG
-    dbg_enable(rip,"page fault");
+    kdbg(rip,"page fault");
 #else
     kpanic("page fault %d",excno);
 #endif
