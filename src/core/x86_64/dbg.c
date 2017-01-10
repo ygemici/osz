@@ -175,7 +175,9 @@ void dbg_code(uint64_t rip, uint64_t rs)
         );
         rsp++;
     }
-    kprintf(sys_fault?"  * page fault *\n":"  * end *\n");
+    fg = dbg_theme[2];
+    kprintf(sys_fault?"  * not mapped *\n":"  * end *\n");
+    fg = dbg_theme[3];
 
     /* back trace */
     ky=17; kx=fx=2;
@@ -255,7 +257,9 @@ void dbg_code(uint64_t rip, uint64_t rs)
         sys_fault = false;
         ptr = disasm((virt_t)ptr, dbg_instruction);
         if(sys_fault) {
-            kprintf(" * page fault *");
+            fg = dbg_theme[2];
+            kprintf(" * not mapped *");
+            fg = dbg_theme[3];
             return;
         }
         if(dbg_inst) {
@@ -286,61 +290,79 @@ void dbg_data(uint64_t ptr)
         kx=1;
         kprintf("%8x: ",ptr);
         sys_fault = false;
+        __asm__ __volatile__ ("movq %0, %%rdi;movb (%%rdi), %%al"::"m"(ptr):"%rax","%rdi");
+        if(sys_fault) {
+            fg = dbg_theme[2];
+            kprintf(" * not mapped *");
+            fg = dbg_theme[3];
+        }
         switch(dbg_unit) {
             case 4:
-                kx = 19; kprintf("%8x",*((uint64_t*)ptr));
-                kx = 70;
-                kprintf_putchar(*((uint8_t*)ptr)); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+4))); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
-                kprintf_putchar(*((uint8_t*)(ptr+7)));
+                if(!sys_fault) {
+                    kx = 19; kprintf("%8x",*((uint64_t*)ptr));
+                    kx = 70;
+                    kprintf_putchar(*((uint8_t*)ptr)); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+4))); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
+                    kprintf_putchar(*((uint8_t*)(ptr+7)));
+                }
                 ptr+=8;
                 break;
             case 3:
-                for(i=0;!sys_fault && i<2;i++) {
-                    kx = 17*i+19; kprintf("%8x",*((uint64_t*)ptr));
-                    kx = 9*i+70;
-                    kprintf_putchar(*((uint8_t*)(ptr+7))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+4))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
-                    kprintf_putchar(*((uint8_t*)ptr));
+                for(i=0;i<2;i++) {
+                    if(!sys_fault) {
+                        kx = 17*i+19; kprintf("%8x",*((uint64_t*)ptr));
+                        kx = 9*i+70;
+                        kprintf_putchar(*((uint8_t*)(ptr+7))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+4))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
+                        kprintf_putchar(*((uint8_t*)ptr));
+                    }
                     ptr+=8;
                 }
                 break;
             case 2:
-                for(i=0;!sys_fault && i<4;i++) {
-                    kx = 9*i+19; kprintf("%4x",*((uint32_t*)ptr));
-                    kx = 5*i+68;
-                    kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
-                    kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
-                    kprintf_putchar(*((uint8_t*)ptr));
+                for(i=0;i<4;i++) {
+                    if(!sys_fault) {
+                        kx = 9*i+19; kprintf("%4x",*((uint32_t*)ptr));
+                        kx = 5*i+68;
+                        kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
+                        kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
+                        kprintf_putchar(*((uint8_t*)ptr));
+                    }
                     ptr+=4;
                 }
                 break;
             case 1:
-                for(i=0;!sys_fault && i<8;i++) {
-                    kx = 5*i+19; kprintf("%2x",*((uint16_t*)ptr));
-                    kx = 3*i+64;
-                    kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
-                    kprintf_putchar(*((uint8_t*)ptr));
+                j=18;
+                for(i=0;i<8;i++) {
+                    if(i%4==0) j++;
+                    if(!sys_fault) {
+                        kx = 5*i+j; kprintf("%2x",*((uint16_t*)ptr));
+                        kx = 3*i+64;
+                        kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
+                        kprintf_putchar(*((uint8_t*)ptr));
+                    }
                     ptr+=2;
                 }
                 break;
             default:
                 j=18;
-                for(i=0;!sys_fault && i<16;i++) {
+                for(i=0;i<16;i++) {
                     if(i%4==0) j++;
-                    kx = 3*i+j; kprintf("%1x",*((uint8_t*)ptr));
-                    kx = i+71; kprintf_putchar(*((uint8_t*)ptr));
+                    if(!sys_fault) {
+                        kx = 3*i+j; kprintf("%1x",*((uint8_t*)ptr));
+                        kx = i+71; kprintf_putchar(*((uint8_t*)ptr));
+                    }
                     ptr++;
                 }
                 break;
@@ -932,7 +954,7 @@ help:
                         while(x<cmdlast && cmd[x]!=' ') x++;
                         while(x<cmdlast && cmd[x]==' ') x++;
                     } else if(x==cmdlast) {
-                            rsp = tcb->rsp;
+                        rsp = tcb->rsp;
                     }
                     if(x<cmdlast) {
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
@@ -940,6 +962,8 @@ help:
                         env_hex((unsigned char*)&cmd[x], (uint64_t*)&y, 0, 0);
                         if(y==0 && cmd[x]!='0'){
                             rsp = tcb->rsp;
+                            cmdidx = cmdlast = 0;
+                            cmd[cmdidx]=0;
                         } else {
                             if(cmd[x-1]=='-')
                                 rsp -= y;
@@ -948,9 +972,11 @@ help:
                             else
                                 rsp = y;
                         }
+                        /* don't clear the command */
+                    } else {
+                        cmdidx = cmdlast = 0;
+                        cmd[cmdidx]=0;
                     }
-                    cmdidx = cmdlast = 0;
-                    cmd[cmdidx]=0;
                     dbg_tab = tab_data;
                     goto redraw;
                 }
