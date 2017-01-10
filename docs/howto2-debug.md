@@ -86,14 +86,19 @@ Hit <kbd>Enter</kbd> to start simulation.
 Later you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
 the internal debugger again.
 
+### Checking pid
+
+It's on the right bottom corner of the screen.
+
 ### Panels (tabs)
 
 | Name | Description |
 | ---- | ----------- |
 | Code | Register dump and code disassembly |
-| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | Dump the current task's control block |
+| Data | Memory or stack dump |
 | [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | Dump task's message queue |
-| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | Dump CPU COntrol Block (task queues) |
+| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | Dump the current task's control block |
+| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | Dump CPU COntrol Block (task priority queues) |
 | [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | Dump physical memory manager |
 
 ### Keyboard Shortcuts
@@ -101,7 +106,8 @@ the internal debugger again.
 | Key   | Description |
 | ----- | ----------- |
 | F1    | displays help |
-| Esc   | exit debugger (continue or reboot in case of panic) |
+| Esc   | (with empty command) exit debugger, continue or reboot in case of panic |
+| Esc   | (with command) clear command |
 | Tab   | switch panels |
 | Enter | (with empty command) step instruction |
 | Enter | (with command) execute command |
@@ -117,19 +123,21 @@ It's enough to enter commands until it's obvious, in most cases that's the first
 
 | Command  | Description |
 | -------- | ----------- |
-| `step`     | step instruction |
-| `continue` | continue execution |
-| `reset`, `reboot` | reboot computer |
-| `halt`     | power off computer |
-| `help`     | displays help |
-| `prev`     | switch to previous task |
-| `next`     | switch to next task |
-| `tcb`      | examine current task's Thread Control Block |
-| `messages` | examine message queue |
-| `queues`   | examine task queues |
-| `ram`      | examine RAM allocation |
-| `instruction` | toggle instruction disassemble (bytes / mnemonics) |
-| `goto X`   | go to address X |
+| `Step`     | step instruction |
+| `Continue` | continue execution |
+| `REset`, `REboot` | reboot computer |
+| `HAlt`     | power off computer |
+| `Help`     | displays help |
+| `Pid X`    | switch to task |
+| `Prev`     | switch to previous task |
+| `Next`     | switch to next task |
+| `Tcb`      | examine current task's Thread Control Block |
+| `Messages` | examine message queue |
+| `Queues, CCb`   | examine task priority queues and CPU Control Block |
+| `Ram`      | examine RAM allocation, dump physical memory manager's data |
+| `Instruction`, `Disasm` | instruction disassemble (or toggle bytes / mnemonics) |
+| `Goto X`   | go to address X |
+| `eXamine [/bwqds] X`   | examine memory at X in byte, word, dword, qword or stack units |
 
 Goto has an argument, entered in hexadecimal (prefix 0x is optional). Can be:
  * (empty) if not given, it will go to the next instruction
@@ -137,5 +145,31 @@ Goto has an argument, entered in hexadecimal (prefix 0x is optional). Can be:
  * `+X`, `-X` set up rip relative address
  * `X` go to absolute address
 
-The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md) is more user friendly as it's about
-how to use the rescue shell.
+Examine may have two arguments, a flag and an address. Address is the same as in goto, expect it sets rsp instead of rip.
+ * (empty) return to the original stack
+ * `+X`, `-X` set up rsp relative address
+ * `X` go to absolute address
+
+When flag given, the command can be omitted. The flag can be one of:
+ * 1,b - 16 bytes in a row
+ * 2,w - 8 words in a row
+ * 4,d - 4 double words in a row
+ * 8,q - 2 quad words in a row
+ * s   - single quad word in a row (stack view)
+
+#### Examples
+
+```
+p               switch to previous thread
+p 29            switch to thread that's pid is 29
+g               go to next instruction (in view)
+g rip           view the original instruction
+g +7F           move disassembler window forward by 127 bytes
+x 1234          dump memory at 0x1234
+x /q            dump in quad words
+x /s rsp        print stack
+/b              switch units to bytes
+i               go back to disassemble instructions tab
+```
+
+The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md) is more user than developer oriented as it's about how to use the rescue shell.

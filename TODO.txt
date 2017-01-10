@@ -6,7 +6,7 @@
 ./src/core/x86_64/pci.c:59:// TODO:  service_installirq(irq, ehdr->e_shoff);
 ./src/core/x86_64/disasm.c:1418:            /* TODO: this is not 100% */
 ./src/core/x86_64/acpi.c:157:        // TODO: get values for poweroff
-./src/core/x86_64/dbg.c:683:                        /* TODO: set up debug registers on next instruction */
+./src/core/x86_64/dbg.c:797:                        /* TODO: set up debug registers on next instruction */
 ./src/core/syscall.c:80:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/msg.c:107:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./docs/howto3-rescueshell.md:19:TODO: write howto

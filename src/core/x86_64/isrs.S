@@ -178,7 +178,7 @@ isr_exc00divzero:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -202,7 +202,7 @@ isr_exc01debug:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -226,7 +226,7 @@ isr_exc02nmi:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -250,7 +250,7 @@ isr_exc03chkpoint:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -274,7 +274,7 @@ isr_exc04overflow:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -298,7 +298,7 @@ isr_exc05bound:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -322,7 +322,7 @@ isr_exc06invopcode:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -346,7 +346,7 @@ isr_exc07devunavail:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -370,7 +370,7 @@ isr_exc08dblfault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -394,7 +394,7 @@ isr_exc09coproc:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -418,7 +418,7 @@ isr_exc10invtss:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -442,7 +442,7 @@ isr_exc11segfault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -466,7 +466,7 @@ isr_exc12stackfault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -490,7 +490,7 @@ isr_exc13genprot:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -514,7 +514,7 @@ isr_exc14pagefault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -538,7 +538,7 @@ isr_exc15unknown:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -562,7 +562,7 @@ isr_exc16float:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -586,7 +586,7 @@ isr_exc17alignment:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -610,7 +610,7 @@ isr_exc18machinecheck:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -634,7 +634,7 @@ isr_exc19double:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -658,7 +658,7 @@ isr_exc20:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -682,7 +682,7 @@ isr_exc21:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -706,7 +706,7 @@ isr_exc22:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -730,7 +730,7 @@ isr_exc23:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -754,7 +754,7 @@ isr_exc24:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -778,7 +778,7 @@ isr_exc25:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -802,7 +802,7 @@ isr_exc26:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -826,7 +826,7 @@ isr_exc27:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -850,7 +850,7 @@ isr_exc28:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -874,7 +874,7 @@ isr_exc29:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -898,7 +898,7 @@ isr_exc30:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -922,7 +922,7 @@ isr_exc31:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    xorq    %rdi, %rdi
+    movq    $-8, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -946,6 +946,7 @@ isr_irq0:
     call	isr_savecontext
     /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
     call	isr_timer
+    jmp		2f
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -963,7 +964,7 @@ isr_irq0:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -993,7 +994,7 @@ isr_irq1:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1023,7 +1024,7 @@ isr_irq2:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1053,7 +1054,7 @@ isr_irq3:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1083,7 +1084,7 @@ isr_irq4:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1113,7 +1114,7 @@ isr_irq5:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1143,7 +1144,7 @@ isr_irq6:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1173,7 +1174,7 @@ isr_irq7:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1203,7 +1204,7 @@ isr_irq8:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1234,7 +1235,7 @@ isr_irq9:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1265,7 +1266,7 @@ isr_irq10:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1296,7 +1297,7 @@ isr_irq11:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1327,7 +1328,7 @@ isr_irq12:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1358,7 +1359,7 @@ isr_irq13:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1389,7 +1390,7 @@ isr_irq14:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1420,7 +1421,7 @@ isr_irq15:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1451,7 +1452,7 @@ isr_irq16:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1482,7 +1483,7 @@ isr_irq17:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1513,7 +1514,7 @@ isr_irq18:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1544,7 +1545,7 @@ isr_irq19:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1575,7 +1576,7 @@ isr_irq20:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1606,7 +1607,7 @@ isr_irq21:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1637,7 +1638,7 @@ isr_irq22:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1668,7 +1669,7 @@ isr_irq23:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1699,7 +1700,7 @@ isr_irq24:
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
-    call	isr_gainentropy
+2:  call	isr_gainentropy
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE

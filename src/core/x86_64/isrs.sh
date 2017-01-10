@@ -491,7 +491,7 @@ do
 	    cmpq    \$CORE_ADDRESS, 8(%rsp)
 	    jb      1f
 	    incb    sys_fault
-	    xorq    %rdi, %rdi
+	    movq    \$-8, %rdi
 	    addq    \$8, %rsp
 	    iretq
 	1:
@@ -525,6 +525,7 @@ do
 		read -r -d '' TIMER <<-EOF
 		    /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
 		    call	isr_timer
+		    jmp		2f
 		EOF
 	else
 		TIMER="";
@@ -552,7 +553,7 @@ do
 	    xorq	%rsi, %rsi
 	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend
-	    call	isr_gainentropy
+	2:  call	isr_gainentropy
 	    $EOI
 	    call	isr_loadcontext
 	    iretq
