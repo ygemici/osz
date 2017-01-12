@@ -64,7 +64,7 @@ virt_t __attribute__ ((section (".data"))) dbg_next;
 virt_t __attribute__ ((section (".data"))) dbg_start;
 char __attribute__ ((section (".data"))) *dbg_err;
 uint32_t __attribute__ ((section (".data"))) *dbg_theme;
-uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x200000,0x400000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
+uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x400000,0x800000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
 uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000020,0x000040,0x101080,0x3e32a2,0x7c71da,0x867ade} ;
 //uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000010,0x000020,0x000040,0x1b3c9c,0x4b6ccc,0x6b8cec} ;
 
@@ -219,13 +219,12 @@ void dbg_code(uint64_t rip, uint64_t rs)
     fg=dbg_theme[4];
     sys_fault = false;
     symstr = service_sym(rip);
-    kprintf("[Code %x: ", rip);
     if(sys_fault) {
-        kprintf("unknown]\n");
+        kprintf("[Code %x: unknown]\n", rip);
         sys_fault = false;
         return;
     } else
-        kprintf("%s +%2x]\n", symstr, rip-lastsym);
+        kprintf("[Code %s +%2x]\n", symstr, rip-lastsym);
     /* disassemble instructions */
     fg=dbg_theme[3];
     /* find a start position */

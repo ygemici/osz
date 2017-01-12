@@ -27,448 +27,117 @@
 
 #if DEBUG
 
-extern uchar *service_sym(virt_t addr);
+/* this function is used to print to a string */
 extern char *sprintf(char *dst,char* fmt, ...);
+/* this variable is set if the instruction has a symbol */
 extern virt_t dbg_comment;
+/* this variable should be set by page fault handler if address is unavailable */
 extern uint8_t sys_fault;
-char __attribute__ ((section (".data"))) *disasm_str = NULL;
 
-/*
- * Size attributes
+enum {
+    DA_BYTE,
+    DA_WORD,
+    DA_LONG,
+    DA_QUAD,
+    DA_SNGL,
+    DA_DBLR,
+    DA_EXTR,
+    DA_SDEP,
+    DA_NONE,
+    DA_MODRM=0x80
+};
+
+enum {
+    DA_INVALID,
+    DA_E,
+    DA_EInd,
+    DA_Ew,
+    DA_Eb,
+    DA_R,
+    DA_Rw,
+    DA_Ri,
+    DA_S,
+    DA_Si,
+    DA_A,
+    DA_BX,
+    DA_CL,
+    DA_DX,
+    DA_SI,
+    DA_DI,
+    DA_CR,
+    DA_DR,
+    DA_TR,
+    DA_I,
+    DA_Is,
+    DA_Ib,
+    DA_Ibs,
+    DA_Iw,
+    DA_Iq,
+    DA_O,
+    DA_Db,
+    DA_Dl,
+    DA_o1,
+    DA_o3,
+    DA_OS,
+    DA_ST,
+    DA_STI,
+    DA_X,
+    DA_XA,
+    DA_Ril,
+    DA_Iba,
+    DA2_A_Ri  = DA_A*256+DA_Ri,
+    DA2_I_Ri  = DA_I*256+DA_Ri,
+    DA2_Ib_Ri = DA_Ib*256+DA_Ri,
+    DA2_Iq_Ib = DA_Iq*256+DA_Ib,
+    DA2_E_R   = DA_E*256+DA_R,
+    DA2_E_A   = DA_E*256+DA_A,
+    DA2_O_A   = DA_O*256+DA_A,
+    DA2_A_O   = DA_A*256+DA_O,
+    DA2_Eb_R  = DA_Eb*256+DA_R,
+    DA2_Ew_R  = DA_Ew*256+DA_R,
+    DA2_CL_E  = DA_CL*256+DA_E,
+    DA2_R_E   = DA_R*256+DA_E,
+    DA2_I_E   = DA_I*256+DA_E,
+    DA2_Ib_E  = DA_Ib*256+DA_E,
+    DA2_I_EInd= DA_I*256+DA_EInd,
+    DA2_I_A   = DA_I*256+DA_A,
+    DA2_Ib_A  = DA_Ib*256+DA_A,
+    DA2_A_Ib  = DA_A*256+DA_Ib,
+    DA2_DX_A  = DA_DX*256+DA_A,
+    DA2_A_DX  = DA_A*256+DA_DX,
+    DA2_CR_E  = DA_CR*256+DA_E,
+    DA2_DR_E  = DA_DR*256+DA_E,
+    DA2_TR_E  = DA_DR*256+DA_E,
+    DA2_E_CR  = DA_E*256+DA_CR,
+    DA2_E_DR  = DA_E*256+DA_DR,
+    DA2_E_TR  = DA_E*256+DA_TR,
+    DA2_S_Ew  = DA_S*256+DA_Ew,
+    DA2_Ew_S  = DA_Ew*256+DA_S,
+    DA2_STI_ST= DA_STI*256+DA_ST,
+    DA2_ST_STI= DA_ST*256+DA_STI,
+    DA2_SI_DI = DA_SI*256+DA_DI,
+    DA2_DX_DI = DA_DX*256+DA_DI,
+    DA2_SI_DX = DA_SI*256+DA_DX,
+    DA2_o1_E  = DA_o1*256+DA_E,
+    DA3_Ib_R_E= DA_Ib*65536+DA_R*256+DA_E,
+    DA3_CL_R_E= DA_CL*65536+DA_R*256+DA_E,
+    DA3_Ib_E_R= DA_Ib*65536+DA_E*256+DA_R,
+    DA3_CL_E_R= DA_CL*65536+DA_E*256+DA_R,
+    DA3_I_E_R = DA_I*65536+DA_E*256+DA_R
+};
+
+/* opcodes
+ *  1 byte: inst_tbl
+ *  2 bytes: first byte 0f, inst_tbl0f -> inst0fX
  */
-#define BYTE    0
-#define WORD    1
-#define LONG    2
-#define QUAD    3
-#define SNGL    4
-#define DBLR    5
-#define EXTR    6
-#define SDEP    7
-#define NONE    8
-#define RDEP    9
+typedef struct {
+    char *name;
+    uint8_t size;
+    uint32_t mode;
+    void *ext;
+} instdesc;
 
-/*
- * Addressing modes
- */
-#define E   1           /* general effective address */
-#define Eind    2           /* indirect address (jump, call) */
-#define Ew  3           /* address, word size */
-#define Eb  4           /* address, byte size */
-#define R   5           /* register, in 'reg' field */
-#define Rw  6           /* word register, in 'reg' field */
-#define Ri  7           /* register in instruction */
-#define S   8           /* segment reg, in 'reg' field */
-#define Si  9           /* segment reg, in instruction */
-#define A   10          /* accumulator */
-#define BX  11          /* (bx) */
-#define CL  12          /* cl, for shifts */
-#define DX  13          /* dx, for IO */
-#define SI  14          /* si */
-#define DI  15          /* di */
-#define CR  16          /* control register */
-#define DR  17          /* debug register */
-#define TR  18          /* test register */
-#define I   19          /* immediate, unsigned */
-#define Is  20          /* immediate, signed */
-#define Ib  21          /* byte immediate, unsigned */
-#define Ibs 22          /* byte immediate, signed */
-#define Iw  23          /* word immediate, unsigned */
-#define Iq  24          /* quad immediate, unsigned */
-#define O   25          /* direct address */
-#define Db  26          /* byte displacement from EIP */
-#define Dl  27          /* long displacement from EIP */
-#define o1  28          /* constant 1 */
-#define o3  29          /* constant 3 */
-#define OS  30          /* immediate offset/segment */
-#define ST  31          /* FP stack top */
-#define STI 32          /* FP stack */
-#define X   33          /* extended FP op */
-#define XA  34          /* for 'fstcw %ax' */
-#define Ril 36          /* long register in instruction */
-#define Iba 37          /* byte immediate, don't print if 0xa */
-#define MEx 38          /* memory, or an extension op */
-
-struct inst {
-    char *  i_name;         /* name */
-    short   i_has_modrm;        /* has regmodrm byte */
-    short   i_size;         /* operand size */
-    int i_mode;         /* addressing modes */
-    void *  i_extra;        /* pointer to extra opcode table */
-};
-
-#define op1(x)      (x)
-#define op2(x,y)    ((x)|((y)<<8))
-#define op3(x,y,z)  ((x)|((y)<<8)|((z)<<16))
-
-struct finst {
-    char *  f_name;         /* name for memory instruction */
-    int f_size;         /* size for memory instruction */
-    int f_rrmode;       /* mode for rr instruction */
-    void *  f_rrname;       /* name for rr instruction
-                       (or pointer to table) */
-};
-
-char __attribute__ ((section (".data"))) *  db_Grp6[] = {
-    "sldt",     "str",      "lldt",     "ltr",
-    "verr",     "verw",     "",     ""
-};
-
-struct inst __attribute__ ((section (".data"))) db_Grp7[] = {
-    { "sgdt",   FALSE, NONE, op1(E),     0 },
-    { "sidt",   FALSE, NONE, op2(MEx,4), "monitor\0mwait\0clac\0stac"},
-    { "lgdt",   FALSE, NONE, op2(MEx,2), "xgetbv\0xsetbv" },
-    { "lidt",   FALSE, NONE, op1(E),     0 },
-    { "smsw",   FALSE, NONE, op1(E),     0 },
-    { "",       FALSE, NONE, 0,          0 },
-    { "lmsw",   FALSE, NONE, op1(E),     0 },
-    { "invlpg", FALSE, NONE, op2(MEx,2), "swapgs\0rdtscp" },
-};
-
-char __attribute__ ((section (".data"))) *  db_Grp8[] = {
-    "",     "",     "",     "",
-    "bt",       "bts",      "btr",      "btc"
-};
-
-struct inst __attribute__ ((section (".data"))) db_Grp9[] = {
-    { "fxsave",   FALSE, NONE, op2(MEx,1), "rdfsbase" },
-    { "fxrstor",  FALSE, NONE, op2(MEx,1), "rdgsbase" },
-    { "ldmxcsr",  FALSE, NONE, op2(MEx,1), "wrfsbase" },
-    { "stmxcsr",  FALSE, NONE, op2(MEx,1), "wrgsbase" },
-    { "xsave",    FALSE, NONE, op1(E),     0 },
-    { "xrstor",   FALSE, NONE, op2(MEx,1), "lfence" },
-    { "xsaveopt", FALSE, NONE, op2(MEx,1), "mfence" },
-    { "clflush",  FALSE, NONE, op2(MEx,1), "sfence" },
-};
-
-char __attribute__ ((section (".data"))) *  db_GrpA[] = {
-    "",     "cmpxchg8b",    "",     "",
-    "",     "",     "rdrand",   "rdseed"
-};
-
-char __attribute__ ((section (".data"))) *  db_GrpB[] = {
-    "xstore-rng",   "xcrypt-ecb",   "xcrypt-cbc",   "xcrypt-ctr",
-    "xcrypt-cfb",   "xcrypt-ofb",   "",     ""
-};
-
-char __attribute__ ((section (".data"))) * db_GrpC[] = {
-    "montmul",  "xsha1",    "xsha256",  "",
-    "",     "",     "",     ""
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0f0x[] = {
-/*00*/  { NULL,    TRUE,  NONE,  op1(Ew),     db_Grp6 },
-/*01*/  { "",      TRUE,  RDEP,  0,           db_Grp7 },
-/*02*/  { "lar",   TRUE,  LONG,  op2(E,R),    0 },
-/*03*/  { "lsl",   TRUE,  LONG,  op2(E,R),    0 },
-/*04*/  { "",      FALSE, NONE,  0,       0 },
-/*05*/  { "",      FALSE, NONE,  0,       0 },
-/*06*/  { "clts",  FALSE, NONE,  0,       0 },
-/*07*/  { "",      FALSE, NONE,  0,       0 },
-
-/*08*/  { "invd",  FALSE, NONE,  0,       0 },
-/*09*/  { "wbinvd",FALSE, NONE,  0,       0 },
-/*0a*/  { "",      FALSE, NONE,  0,       0 },
-/*0b*/  { "",      FALSE, NONE,  0,       0 },
-/*0c*/  { "",      FALSE, NONE,  0,       0 },
-/*0d*/  { "",      FALSE, NONE,  0,       0 },
-/*0e*/  { "",      FALSE, NONE,  0,       0 },
-/*0f*/  { "",      FALSE, NONE,  0,       0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0f2x[] = {
-/*20*/  { "mov",   TRUE,  LONG,  op2(CR,E),   0 }, /* use E for reg */
-/*21*/  { "mov",   TRUE,  LONG,  op2(DR,E),   0 }, /* since mod == 11 */
-/*22*/  { "mov",   TRUE,  LONG,  op2(E,CR),   0 },
-/*23*/  { "mov",   TRUE,  LONG,  op2(E,DR),   0 },
-/*24*/  { "mov",   TRUE,  LONG,  op2(TR,E),   0 },
-/*25*/  { "",      FALSE, NONE,  0,       0 },
-/*26*/  { "mov",   TRUE,  LONG,  op2(E,TR),   0 },
-/*27*/  { "",      FALSE, NONE,  0,       0 },
-
-/*28*/  { "",      FALSE, NONE,  0,       0 },
-/*29*/  { "",      FALSE, NONE,  0,       0 },
-/*2a*/  { "",      FALSE, NONE,  0,       0 },
-/*2b*/  { "",      FALSE, NONE,  0,       0 },
-/*2c*/  { "",      FALSE, NONE,  0,       0 },
-/*2d*/  { "",      FALSE, NONE,  0,       0 },
-/*2e*/  { "",      FALSE, NONE,  0,       0 },
-/*2f*/  { "",      FALSE, NONE,  0,       0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0f3x[] = {
-/*30*/  { "wrmsr", FALSE, NONE,  0,           0 },
-/*31*/  { "rdtsc", FALSE, NONE,  0,           0 },
-/*32*/  { "rdmsr", FALSE, NONE,  0,           0 },
-/*33*/  { "rdpmc", FALSE, NONE,  0,           0 },
-/*34*/  { "",      FALSE, NONE,  0,           0 },
-/*35*/  { "",      FALSE, NONE,  0,           0 },
-/*36*/  { "",      FALSE, NONE,  0,           0 },
-/*37*/  { "",      FALSE, NONE,  0,           0 },
-
-/*38*/  { "",      FALSE, NONE,  0,           0 },
-/*39*/  { "",      FALSE, NONE,  0,           0 },
-/*3a*/  { "",      FALSE, NONE,  0,           0 },
-/*3b*/  { "",      FALSE, NONE,  0,           0 },
-/*3c*/  { "",      FALSE, NONE,  0,           0 },
-/*3d*/  { "",      FALSE, NONE,  0,           0 },
-/*3e*/  { "",      FALSE, NONE,  0,           0 },
-/*3f*/  { "",      FALSE, NONE,  0,           0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0f8x[] = {
-/*80*/  { "jo",    FALSE, NONE,  op1(Dl),     0 },
-/*81*/  { "jno",   FALSE, NONE,  op1(Dl),     0 },
-/*82*/  { "jb",    FALSE, NONE,  op1(Dl),     0 },
-/*83*/  { "jnb",   FALSE, NONE,  op1(Dl),     0 },
-/*84*/  { "jz",    FALSE, NONE,  op1(Dl),     0 },
-/*85*/  { "jnz",   FALSE, NONE,  op1(Dl),     0 },
-/*86*/  { "jbe",   FALSE, NONE,  op1(Dl),     0 },
-/*87*/  { "jnbe",  FALSE, NONE,  op1(Dl),     0 },
-
-/*88*/  { "js",    FALSE, NONE,  op1(Dl),     0 },
-/*89*/  { "jns",   FALSE, NONE,  op1(Dl),     0 },
-/*8a*/  { "jp",    FALSE, NONE,  op1(Dl),     0 },
-/*8b*/  { "jnp",   FALSE, NONE,  op1(Dl),     0 },
-/*8c*/  { "jl",    FALSE, NONE,  op1(Dl),     0 },
-/*8d*/  { "jnl",   FALSE, NONE,  op1(Dl),     0 },
-/*8e*/  { "jle",   FALSE, NONE,  op1(Dl),     0 },
-/*8f*/  { "jnle",  FALSE, NONE,  op1(Dl),     0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0f9x[] = {
-/*90*/  { "seto",  TRUE,  NONE,  op1(Eb),     0 },
-/*91*/  { "setno", TRUE,  NONE,  op1(Eb),     0 },
-/*92*/  { "setb",  TRUE,  NONE,  op1(Eb),     0 },
-/*93*/  { "setnb", TRUE,  NONE,  op1(Eb),     0 },
-/*94*/  { "setz",  TRUE,  NONE,  op1(Eb),     0 },
-/*95*/  { "setnz", TRUE,  NONE,  op1(Eb),     0 },
-/*96*/  { "setbe", TRUE,  NONE,  op1(Eb),     0 },
-/*97*/  { "setnbe",TRUE,  NONE,  op1(Eb),     0 },
-
-/*98*/  { "sets",  TRUE,  NONE,  op1(Eb),     0 },
-/*99*/  { "setns", TRUE,  NONE,  op1(Eb),     0 },
-/*9a*/  { "setp",  TRUE,  NONE,  op1(Eb),     0 },
-/*9b*/  { "setnp", TRUE,  NONE,  op1(Eb),     0 },
-/*9c*/  { "setl",  TRUE,  NONE,  op1(Eb),     0 },
-/*9d*/  { "setnl", TRUE,  NONE,  op1(Eb),     0 },
-/*9e*/  { "setle", TRUE,  NONE,  op1(Eb),     0 },
-/*9f*/  { "setnle",TRUE,  NONE,  op1(Eb),     0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0fax[] = {
-/*a0*/  { "push",  FALSE, QUAD,  op1(Si),     0 },
-/*a1*/  { "pop",   FALSE, QUAD,  op1(Si),     0 },
-/*a2*/  { "cpuid", FALSE, NONE,  0,       0 },
-/*a3*/  { "bt",    TRUE,  LONG,  op2(R,E),    0 },
-/*a4*/  { "shld",  TRUE,  LONG,  op3(Ib,R,E), 0 },
-/*a5*/  { "shld",  TRUE,  LONG,  op3(CL,R,E), 0 },
-/*a6*/  { NULL,    TRUE,  NONE,  0,       db_GrpC },
-/*a7*/  { NULL,    TRUE,  NONE,  0,       db_GrpB },
-
-/*a8*/  { "push",  FALSE, QUAD,  op1(Si),     0 },
-/*a9*/  { "pop",   FALSE, QUAD,  op1(Si),     0 },
-/*aa*/  { "",      FALSE, NONE,  0,       0 },
-/*ab*/  { "bts",   TRUE,  LONG,  op2(R,E),    0 },
-/*ac*/  { "shrd",  TRUE,  LONG,  op3(Ib,E,R), 0 },
-/*ad*/  { "shrd",  TRUE,  LONG,  op3(CL,E,R), 0 },
-/*ae*/  { "",      TRUE,  RDEP,  op1(E),      db_Grp9 },
-/*af*/  { "imul",  TRUE,  LONG,  op2(E,R),    0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0fbx[] = {
-/*b0*/  { "cmpxchg",TRUE, BYTE,  op2(R, E),   0 },
-/*b1*/  { "cmpxchg",TRUE, LONG,  op2(R, E),   0 },
-/*b2*/  { "lss",   TRUE,  LONG,  op2(E, R),   0 },
-/*b3*/  { "btr",   TRUE,  LONG,  op2(R, E),   0 },
-/*b4*/  { "lfs",   TRUE,  LONG,  op2(E, R),   0 },
-/*b5*/  { "lgs",   TRUE,  LONG,  op2(E, R),   0 },
-/*b6*/  { "movzb", TRUE,  LONG,  op2(Eb, R),  0 },
-/*b7*/  { "movzw", TRUE,  LONG,  op2(Ew, R),  0 },
-
-/*b8*/  { "",      FALSE, NONE,  0,       0 },
-/*b9*/  { "",      FALSE, NONE,  0,       0 },
-/*ba*/  { NULL,    TRUE,  LONG,  op2(Ib, E),  db_Grp8 },
-/*bb*/  { "btc",   TRUE,  LONG,  op2(R, E),   0 },
-/*bc*/  { "bsf",   TRUE,  LONG,  op2(E, R),   0 },
-/*bd*/  { "bsr",   TRUE,  LONG,  op2(E, R),   0 },
-/*be*/  { "movsb", TRUE,  LONG,  op2(Eb, R),  0 },
-/*bf*/  { "movsw", TRUE,  LONG,  op2(Ew, R),  0 },
-};
-
-struct inst __attribute__ ((section (".data"))) db_inst_0fcx[] = {
-/*c0*/  { "xadd",  TRUE,  BYTE,  op2(R, E),   0 },
-/*c1*/  { "xadd",  TRUE,  LONG,  op2(R, E),   0 },
-/*c2*/  { "",      FALSE, NONE,  0,       0 },
-/*c3*/  { "",      FALSE, NONE,  0,       0 },
-/*c4*/  { "",      FALSE, NONE,  0,       0 },
-/*c5*/  { "",      FALSE, NONE,  0,       0 },
-/*c6*/  { "",      FALSE, NONE,  0,       0 },
-/*c7*/  { NULL,    TRUE,  NONE,  op1(E),      db_GrpA },
-
-/*c8*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*c9*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*ca*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*cb*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*cc*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*cd*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*ce*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-/*cf*/  { "bswap", FALSE, LONG,  op1(Ril),    0 },
-};
-
-struct inst __attribute__ ((section (".data"))) *db_inst_0f[] = {
-    db_inst_0f0x,
-    NULL,
-    db_inst_0f2x,
-    db_inst_0f3x,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    db_inst_0f8x,
-    db_inst_0f9x,
-    db_inst_0fax,
-    db_inst_0fbx,
-    db_inst_0fcx,
-    NULL,
-    NULL,
-    NULL
-};
-
-char __attribute__ ((section (".data"))) *  db_Esc92[] = {
-    "fnop",     "",     "",     "",
-    "",     "",     "",     ""
-};
-char __attribute__ ((section (".data"))) *  db_Esc94[] = {
-    "fchs",     "fabs",     "",     "",
-    "ftst",     "fxam",     "",     ""
-};
-char __attribute__ ((section (".data"))) *  db_Esc95[] = {
-    "fld1",     "fldl2t",   "fldl2e",   "fldpi",
-    "fldlg2",   "fldln2",   "fldz",     ""
-};
-char __attribute__ ((section (".data"))) *  db_Esc96[] = {
-    "f2xm1",    "fyl2x",    "fptan",    "fpatan",
-    "fxtract",  "fprem1",   "fdecstp",  "fincstp"
-};
-char __attribute__ ((section (".data"))) *  db_Esc97[] = {
-    "fprem",    "fyl2xp1",  "fsqrt",    "fsincos",
-    "frndint",  "fscale",   "fsin",     "fcos"
-};
-
-char __attribute__ ((section (".data"))) *  db_Esca5[] = {
-    "",     "fucompp",  "",     "",
-    "",     "",     "",     ""
-};
-
-char __attribute__ ((section (".data"))) *  db_Escb4[] = {
-    "fneni",    "fndisi",       "fnclex",   "fninit",
-    "fsetpm",   "",     "",     ""
-};
-
-char __attribute__ ((section (".data"))) *  db_Esce3[] = {
-    "",     "fcompp",   "",     "",
-    "",     "",     "",     ""
-};
-
-char __attribute__ ((section (".data"))) *  db_Escf4[] = {
-    "fnstsw",   "",     "",     "",
-    "",     "",     "",     ""
-};
-
-struct finst __attribute__ ((section (".data"))) db_Esc8[] = {
-/*0*/   { "fadd",   SNGL,  op2(STI,ST), 0 },
-/*1*/   { "fmul",   SNGL,  op2(STI,ST), 0 },
-/*2*/   { "fcom",   SNGL,  op2(STI,ST), 0 },
-/*3*/   { "fcomp",  SNGL,  op2(STI,ST), 0 },
-/*4*/   { "fsub",   SNGL,  op2(STI,ST), 0 },
-/*5*/   { "fsubr",  SNGL,  op2(STI,ST), 0 },
-/*6*/   { "fdiv",   SNGL,  op2(STI,ST), 0 },
-/*7*/   { "fdivr",  SNGL,  op2(STI,ST), 0 },
-};
-
-struct finst __attribute__ ((section (".data"))) db_Esc9[] = {
-/*0*/   { "fld",    SNGL,  op1(STI),    0 },
-/*1*/   { "",       NONE,  op1(STI),    "fxch" },
-/*2*/   { "fst",    SNGL,  op1(X),  db_Esc92 },
-/*3*/   { "fstp",   SNGL,  op1(X),  0 },
-/*4*/   { "fldenv", NONE,  op1(X),  db_Esc94 },
-/*5*/   { "fldcw",  NONE,  op1(X),  db_Esc95 },
-/*6*/   { "fnstenv",NONE,  op1(X),  db_Esc96 },
-/*7*/   { "fnstcw", NONE,  op1(X),  db_Esc97 },
-};
-
-struct finst __attribute__ ((section (".data"))) db_Esca[] = {
-/*0*/   { "fiadd",  LONG,  0,       0 },
-/*1*/   { "fimul",  LONG,  0,       0 },
-/*2*/   { "ficom",  LONG,  0,       0 },
-/*3*/   { "ficomp", LONG,  0,       0 },
-/*4*/   { "fisub",  LONG,  op1(X),  0 },
-/*5*/   { "fisubr", LONG,  0,       0 },
-/*6*/   { "fidiv",  LONG,  0,       0 },
-/*7*/   { "fidivr", LONG,  0,       0 }
-};
-
-struct finst __attribute__ ((section (".data"))) db_Escb[] = {
-/*0*/   { "fild",   LONG,  0,       0 },
-/*1*/   { "",       NONE,  0,       0 },
-/*2*/   { "fist",   LONG,  0,       0 },
-/*3*/   { "fistp",  LONG,  0,       0 },
-/*4*/   { "",       WORD,  op1(X),  db_Escb4 },
-/*5*/   { "fld",    EXTR,  0,       0 },
-/*6*/   { "",       WORD,  0,       0 },
-/*7*/   { "fstp",   EXTR,  0,       0 },
-};
-
-struct finst __attribute__ ((section (".data"))) db_Escc[] = {
-/*0*/   { "fadd",   DBLR,  op2(ST,STI), 0 },
-/*1*/   { "fmul",   DBLR,  op2(ST,STI), 0 },
-/*2*/   { "fcom",   DBLR,  0,       0 },
-/*3*/   { "fcomp",  DBLR,  0,       0 },
-/*4*/   { "fsub",   DBLR,  op2(ST,STI), "fsubr" },
-/*5*/   { "fsubr",  DBLR,  op2(ST,STI), "fsub" },
-/*6*/   { "fdiv",   DBLR,  op2(ST,STI), "fdivr" },
-/*7*/   { "fdivr",  DBLR,  op2(ST,STI), "fdiv" },
-};
-
-struct finst __attribute__ ((section (".data"))) db_Escd[] = {
-/*0*/   { "fld",    DBLR,  op1(STI),    "ffree" },
-/*1*/   { "",       NONE,  0,       0 },
-/*2*/   { "fst",    DBLR,  op1(STI),    0 },
-/*3*/   { "fstp",   DBLR,  op1(STI),    0 },
-/*4*/   { "frstor", NONE,  op1(STI),    "fucom" },
-/*5*/   { "",       NONE,  op1(STI),    "fucomp" },
-/*6*/   { "fnsave", NONE,  0,       0 },
-/*7*/   { "fnstsw", NONE,  0,       0 },
-};
-
-struct finst __attribute__ ((section (".data"))) db_Esce[] = {
-/*0*/   { "fiadd",  WORD,  op2(ST,STI), "faddp" },
-/*1*/   { "fimul",  WORD,  op2(ST,STI), "fmulp" },
-/*2*/   { "ficom",  WORD,  0,       0 },
-/*3*/   { "ficomp", WORD,  op1(X),  db_Esce3 },
-/*4*/   { "fisub",  WORD,  op2(ST,STI), "fsubrp" },
-/*5*/   { "fisubr", WORD,  op2(ST,STI), "fsubp" },
-/*6*/   { "fidiv",  WORD,  op2(ST,STI), "fdivrp" },
-/*7*/   { "fidivr", WORD,  op2(ST,STI), "fdivp" },
-};
-
-struct finst __attribute__ ((section (".data"))) db_Escf[] = {
-/*0*/   { "fild",   WORD,  0,       0 },
-/*1*/   { "",       WORD,  0,       0 },
-/*2*/   { "fist",   WORD,  0,       0 },
-/*3*/   { "fistp",  WORD,  0,       0 },
-/*4*/   { "fbld",   NONE,  op1(XA), db_Escf4 },
-/*5*/   { "fild",   QUAD,  0,       0 },
-/*6*/   { "fbstp",  NONE,  0,       0 },
-/*7*/   { "fistp",  QUAD,  0,       0 },
-};
-
-struct finst __attribute__ ((section (".data"))) *db_Esc_inst[] = {
-    db_Esc8, db_Esc9, db_Esca, db_Escb,
-    db_Escc, db_Escd, db_Esce, db_Escf
-};
-
-char __attribute__ ((section (".data"))) *  db_Grp1[] = {
+char __attribute__ ((section (".data"))) *grp1[] = {
     "add",
     "or",
     "adc",
@@ -479,7 +148,7 @@ char __attribute__ ((section (".data"))) *  db_Grp1[] = {
     "cmp"
 };
 
-char __attribute__ ((section (".data"))) *  db_Grp2[] = {
+char __attribute__ ((section (".data"))) *grp2[] = {
     "rol",
     "ror",
     "rcl",
@@ -490,1018 +159,1245 @@ char __attribute__ ((section (".data"))) *  db_Grp2[] = {
     "sar"
 };
 
-struct inst __attribute__ ((section (".data"))) db_Grp3[] = {
-    { "test",  TRUE, NONE, op2(I,E), 0 },
-    { "test",  TRUE, NONE, op2(I,E), 0 },
-    { "not",   TRUE, NONE, op1(E),   0 },
-    { "neg",   TRUE, NONE, op1(E),   0 },
-    { "mul",   TRUE, NONE, op2(E,A), 0 },
-    { "imul",  TRUE, NONE, op2(E,A), 0 },
-    { "div",   TRUE, NONE, op2(E,A), 0 },
-    { "idiv",  TRUE, NONE, op2(E,A), 0 },
+instdesc __attribute__ ((section (".data"))) grp3[] = {
+    { "test",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
+    { "test",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
+    { "not",    DA_NONE+DA_MODRM, DA_E, 0 },
+    { "neg",    DA_NONE+DA_MODRM, DA_E, 0 },
+    { "mul",    DA_NONE+DA_MODRM, DA2_I_E, 0 },
+    { "imul",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
+    { "div",    DA_NONE+DA_MODRM, DA2_I_E, 0 },
+    { "idiv",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
 };
 
-struct inst __attribute__ ((section (".data"))) db_Grp4[] = {
-    { "inc",   TRUE, BYTE, op1(E),   0 },
-    { "dec",   TRUE, BYTE, op1(E),   0 },
-    { "",      TRUE, NONE, 0,    0 },
-    { "",      TRUE, NONE, 0,    0 },
-    { "",      TRUE, NONE, 0,    0 },
-    { "",      TRUE, NONE, 0,    0 },
-    { "",      TRUE, NONE, 0,    0 },
-    { "",      TRUE, NONE, 0,    0 }
+instdesc __attribute__ ((section (".data"))) grp4[] = {
+    { "inc",    DA_BYTE+DA_MODRM, DA_E, 0 },
+    { "dec",    DA_BYTE+DA_MODRM, DA_E, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 }
 };
 
-struct inst __attribute__ ((section (".data"))) db_Grp5[] = {
-    { "inc",   TRUE, LONG, op1(E),   0 },
-    { "dec",   TRUE, LONG, op1(E),   0 },
-    { "call",  TRUE, QUAD, op1(Eind),0 },
-    { "lcall", TRUE, NONE, op1(Eind),0 },
-    { "jmp",   TRUE, NONE, op1(Eind),0 },
-    { "ljmp",  TRUE, NONE, op1(Eind),0 },
-    { "push",  TRUE, QUAD, op1(E),   0 },
-    { "",      TRUE, NONE, 0,    0 }
+instdesc __attribute__ ((section (".data"))) grp5[] = {
+    { "inc",    DA_LONG+DA_MODRM, DA_E, 0 },
+    { "dec",    DA_LONG+DA_MODRM, DA_E, 0 },
+    { "call",   DA_QUAD+DA_MODRM, DA_EInd, 0 },
+    { "lcall",  DA_NONE+DA_MODRM, DA_EInd, 0 },
+    { "jmp",    DA_NONE+DA_MODRM, DA_EInd, 0 },
+    { "ljmp",   DA_NONE+DA_MODRM, DA_EInd, 0 },
+    { "push",   DA_QUAD+DA_MODRM, DA_E, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, 0 }
 };
 
-struct inst __attribute__ ((section (".data"))) db_inst_table[256] = {
-/*00*/  { "add",   TRUE,  BYTE,  op2(R, E),  0 },
-/*01*/  { "add",   TRUE,  LONG,  op2(R, E),  0 },
-/*02*/  { "add",   TRUE,  BYTE,  op2(E, R),  0 },
-/*03*/  { "add",   TRUE,  LONG,  op2(E, R),  0 },
-/*04*/  { "add",   FALSE, BYTE,  op2(I, A),  0 },
-/*05*/  { "add",   FALSE, LONG,  op2(Is, A), 0 },
-/*06*/  { "",      FALSE, NONE,  op1(Si),    0 },
-/*07*/  { "",      FALSE, NONE,  op1(Si),    0 },
-
-/*08*/  { "or",    TRUE,  BYTE,  op2(R, E),  0 },
-/*09*/  { "or",    TRUE,  LONG,  op2(R, E),  0 },
-/*0a*/  { "or",    TRUE,  BYTE,  op2(E, R),  0 },
-/*0b*/  { "or",    TRUE,  LONG,  op2(E, R),  0 },
-/*0c*/  { "or",    FALSE, BYTE,  op2(I, A),  0 },
-/*0d*/  { "or",    FALSE, LONG,  op2(I, A),  0 },
-/*0e*/  { "",      FALSE, NONE,  op1(Si),    0 },
-/*0f*/  { "",      FALSE, NONE,  0,      0 },
-
-/*10*/  { "adc",   TRUE,  BYTE,  op2(R, E),  0 },
-/*11*/  { "adc",   TRUE,  LONG,  op2(R, E),  0 },
-/*12*/  { "adc",   TRUE,  BYTE,  op2(E, R),  0 },
-/*13*/  { "adc",   TRUE,  LONG,  op2(E, R),  0 },
-/*14*/  { "adc",   FALSE, BYTE,  op2(I, A),  0 },
-/*15*/  { "adc",   FALSE, LONG,  op2(Is, A), 0 },
-/*16*/  { "",      FALSE, NONE,  op1(Si),    0 },
-/*17*/  { "",      FALSE, NONE,  op1(Si),    0 },
-
-/*18*/  { "sbb",   TRUE,  BYTE,  op2(R, E),  0 },
-/*19*/  { "sbb",   TRUE,  LONG,  op2(R, E),  0 },
-/*1a*/  { "sbb",   TRUE,  BYTE,  op2(E, R),  0 },
-/*1b*/  { "sbb",   TRUE,  LONG,  op2(E, R),  0 },
-/*1c*/  { "sbb",   FALSE, BYTE,  op2(I, A),  0 },
-/*1d*/  { "sbb",   FALSE, LONG,  op2(Is, A), 0 },
-/*1e*/  { "",      FALSE, NONE,  op1(Si),    0 },
-/*1f*/  { "",      FALSE, NONE,  op1(Si),    0 },
-
-/*20*/  { "and",   TRUE,  BYTE,  op2(R, E),  0 },
-/*21*/  { "and",   TRUE,  LONG,  op2(R, E),  0 },
-/*22*/  { "and",   TRUE,  BYTE,  op2(E, R),  0 },
-/*23*/  { "and",   TRUE,  LONG,  op2(E, R),  0 },
-/*24*/  { "and",   FALSE, BYTE,  op2(I, A),  0 },
-/*25*/  { "and",   FALSE, LONG,  op2(I, A),  0 },
-/*26*/  { "",      FALSE, NONE,  0,      0 },
-/*27*/  { "",      FALSE, NONE,  0,      0 },
-
-/*28*/  { "sub",   TRUE,  BYTE,  op2(R, E),  0 },
-/*29*/  { "sub",   TRUE,  LONG,  op2(R, E),  0 },
-/*2a*/  { "sub",   TRUE,  BYTE,  op2(E, R),  0 },
-/*2b*/  { "sub",   TRUE,  LONG,  op2(E, R),  0 },
-/*2c*/  { "sub",   FALSE, BYTE,  op2(I, A),  0 },
-/*2d*/  { "sub",   FALSE, LONG,  op2(Is, A), 0 },
-/*2e*/  { "",      FALSE, NONE,  0,      0 },
-/*2f*/  { "",      FALSE, NONE,  0,      0 },
-
-/*30*/  { "xor",   TRUE,  BYTE,  op2(R, E),  0 },
-/*31*/  { "xor",   TRUE,  LONG,  op2(R, E),  0 },
-/*32*/  { "xor",   TRUE,  BYTE,  op2(E, R),  0 },
-/*33*/  { "xor",   TRUE,  LONG,  op2(E, R),  0 },
-/*34*/  { "xor",   FALSE, BYTE,  op2(I, A),  0 },
-/*35*/  { "xor",   FALSE, LONG,  op2(I, A),  0 },
-/*36*/  { "",      FALSE, NONE,  0,      0 },
-/*37*/  { "",      FALSE, NONE,  0,      0 },
-
-/*38*/  { "cmp",   TRUE,  BYTE,  op2(R, E),  0 },
-/*39*/  { "cmp",   TRUE,  LONG,  op2(R, E),  0 },
-/*3a*/  { "cmp",   TRUE,  BYTE,  op2(E, R),  0 },
-/*3b*/  { "cmp",   TRUE,  LONG,  op2(E, R),  0 },
-/*3c*/  { "cmp",   FALSE, BYTE,  op2(I, A),  0 },
-/*3d*/  { "cmp",   FALSE, LONG,  op2(Is, A), 0 },
-/*3e*/  { "",      FALSE, NONE,  0,      0 },
-/*3f*/  { "",      FALSE, NONE,  0,      0 },
-
-/*40*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*41*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*42*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*43*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*44*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*45*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*46*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*47*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-
-/*48*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*49*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*4a*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*4b*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*4c*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*4d*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*4e*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-/*4f*/  { "",      FALSE, LONG,  op1(Ri),    0 },
-
-/*50*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*51*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*52*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*53*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*54*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*55*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*56*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-/*57*/  { "push",  FALSE, QUAD,  op1(Ri),    0 },
-
-/*58*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*59*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*5a*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*5b*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*5c*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*5d*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*5e*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-/*5f*/  { "pop",   FALSE, QUAD,  op1(Ri),    0 },
-
-/*60*/  { "",      FALSE, LONG,  0,      0 },
-/*61*/  { "",      FALSE, LONG,  0,      0 },
-/*62*/  { "",      TRUE,  LONG,  op2(E, R),  0 },
-/*63*/  { "movsxd",TRUE,  LONG,  op2(E, R),  0 },
-/*64*/  { "",      FALSE, NONE,  0,      0 },
-/*65*/  { "",      FALSE, NONE,  0,      0 },
-/*66*/  { "",      FALSE, NONE,  0,      0 },
-/*67*/  { "",      FALSE, NONE,  0,      0 },
-
-/*68*/  { "push",  FALSE, QUAD,  op1(I),     0 },
-/*69*/  { "imul",  TRUE,  LONG,  op3(I,E,R), 0 },
-/*6a*/  { "push",  FALSE, QUAD,  op1(Ibs),   0 },
-/*6b*/  { "imul",  TRUE,  LONG,  op3(Ibs,E,R),0 },
-/*6c*/  { "ins",   FALSE, BYTE,  op2(DX, DI), 0 },
-/*6d*/  { "ins",   FALSE, LONG,  op2(DX, DI), 0 },
-/*6e*/  { "outs",  FALSE, BYTE,  op2(SI, DX), 0 },
-/*6f*/  { "outs",  FALSE, LONG,  op2(SI, DX), 0 },
-
-/*70*/  { "jo",    FALSE, NONE,  op1(Db),     0 },
-/*71*/  { "jno",   FALSE, NONE,  op1(Db),     0 },
-/*72*/  { "jb",    FALSE, NONE,  op1(Db),     0 },
-/*73*/  { "jnb",   FALSE, NONE,  op1(Db),     0 },
-/*74*/  { "jz",    FALSE, NONE,  op1(Db),     0 },
-/*75*/  { "jnz",   FALSE, NONE,  op1(Db),     0 },
-/*76*/  { "jbe",   FALSE, NONE,  op1(Db),     0 },
-/*77*/  { "jnbe",  FALSE, NONE,  op1(Db),     0 },
-
-/*78*/  { "js",    FALSE, NONE,  op1(Db),     0 },
-/*79*/  { "jns",   FALSE, NONE,  op1(Db),     0 },
-/*7a*/  { "jp",    FALSE, NONE,  op1(Db),     0 },
-/*7b*/  { "jnp",   FALSE, NONE,  op1(Db),     0 },
-/*7c*/  { "jl",    FALSE, NONE,  op1(Db),     0 },
-/*7d*/  { "jnl",   FALSE, NONE,  op1(Db),     0 },
-/*7e*/  { "jle",   FALSE, NONE,  op1(Db),     0 },
-/*7f*/  { "jnle",  FALSE, NONE,  op1(Db),     0 },
-
-/*80*/  { NULL,    TRUE,  BYTE,  op2(I, E),   db_Grp1 },
-/*81*/  { NULL,    TRUE,  LONG,  op2(I, E),   db_Grp1 },
-/*82*/  { NULL,    TRUE,  BYTE,  op2(I, E),   db_Grp1 },
-/*83*/  { NULL,    TRUE,  LONG,  op2(Ibs,E),  db_Grp1 },
-/*84*/  { "test",  TRUE,  BYTE,  op2(R, E),   0 },
-/*85*/  { "test",  TRUE,  LONG,  op2(R, E),   0 },
-/*86*/  { "xchg",  TRUE,  BYTE,  op2(R, E),   0 },
-/*87*/  { "xchg",  TRUE,  LONG,  op2(R, E),   0 },
-
-/*88*/  { "mov",   TRUE,  BYTE,  op2(R, E),   0 },
-/*89*/  { "mov",   TRUE,  LONG,  op2(R, E),   0 },
-/*8a*/  { "mov",   TRUE,  BYTE,  op2(E, R),   0 },
-/*8b*/  { "mov",   TRUE,  LONG,  op2(E, R),   0 },
-/*8c*/  { "mov",   TRUE,  NONE,  op2(S, Ew),  0 },
-/*8d*/  { "lea",   TRUE,  LONG,  op2(E, R),   0 },
-/*8e*/  { "mov",   TRUE,  NONE,  op2(Ew, S),  0 },
-/*8f*/  { "pop",   TRUE,  QUAD,  op1(Dl),     0 },
-
-/*90*/  { "nop",   FALSE, NONE,  0,       0 },
-/*91*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-/*92*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-/*93*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-/*94*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-/*95*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-/*96*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-/*97*/  { "xchg",  FALSE, LONG,  op2(A, Ri),  0 },
-
-/*98*/  { "cbw",   FALSE, SDEP,  0,       "cwde\0cdqe" },
-/*99*/  { "cwd",   FALSE, SDEP,  0,       "cdq\0cqo"  },
-/*9a*/  { "",      FALSE, NONE,  op1(OS),     0 },
-/*9b*/  { "wait",  FALSE, NONE,  0,       0 },
-/*9c*/  { "pushf", FALSE, QUAD,  0,       0 },
-/*9d*/  { "popf",  FALSE, QUAD,  0,       0 },
-/*9e*/  { "sahf",  FALSE, NONE,  0,       0 },
-/*9f*/  { "lahf",  FALSE, NONE,  0,       0 },
-
-/*a0*/  { "mov",   FALSE, BYTE,  op2(O, A),   0 },
-/*a1*/  { "mov",   FALSE, LONG,  op2(O, A),   0 },
-/*a2*/  { "mov",   FALSE, BYTE,  op2(A, O),   0 },
-/*a3*/  { "mov",   FALSE, LONG,  op2(A, O),   0 },
-/*a4*/  { "movs",  FALSE, BYTE,  op2(SI,DI),  0 },
-/*a5*/  { "movs",  FALSE, LONG,  op2(SI,DI),  0 },
-/*a6*/  { "cmps",  FALSE, BYTE,  op2(SI,DI),  0 },
-/*a7*/  { "cmps",  FALSE, LONG,  op2(SI,DI),  0 },
-
-/*a8*/  { "test",  FALSE, BYTE,  op2(I, A),   0 },
-/*a9*/  { "test",  FALSE, LONG,  op2(I, A),   0 },
-/*aa*/  { "stos",  FALSE, BYTE,  op1(DI),     0 },
-/*ab*/  { "stos",  FALSE, LONG,  op1(DI),     0 },
-/*ac*/  { "lods",  FALSE, BYTE,  op1(SI),     0 },
-/*ad*/  { "lods",  FALSE, LONG,  op1(SI),     0 },
-/*ae*/  { "scas",  FALSE, BYTE,  op1(SI),     0 },
-/*af*/  { "scas",  FALSE, LONG,  op1(SI),     0 },
-
-/*b0*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b1*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b2*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b3*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b4*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b5*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b6*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-/*b7*/  { "mov",   FALSE, BYTE,  op2(I, Ri),  0 },
-
-/*b8*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*b9*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*ba*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*bb*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*bc*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*bd*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*be*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-/*bf*/  { "mov",   FALSE, LONG,  op2(I, Ri),  0 },
-
-/*c0*/  { NULL,    TRUE,  BYTE,  op2(Ib, E),  db_Grp2 },
-/*c1*/  { NULL,    TRUE,  LONG,  op2(Ib, E),  db_Grp2 },
-/*c2*/  { "ret",   FALSE, NONE,  op1(Iw),     0 },
-/*c3*/  { "ret",   FALSE, NONE,  0,       0 },
-/*c4*/  { "",      TRUE,  LONG,  op2(E, R),   0 },
-/*c5*/  { "",      TRUE,  LONG,  op2(E, R),   0 },
-/*c6*/  { "mov",   TRUE,  BYTE,  op2(I, E),   0 },
-/*c7*/  { "mov",   TRUE,  LONG,  op2(I, E),   0 },
-
-/*c8*/  { "enter", FALSE, NONE,  op2(Iq, Ib), 0 },
-/*c9*/  { "leave", FALSE, NONE,  0,           0 },
-/*ca*/  { "lret",  FALSE, NONE,  op1(Iw),     0 },
-/*cb*/  { "lret",  FALSE, NONE,  0,       0 },
-/*cc*/  { "int",   FALSE, NONE,  op1(o3),     0 },
-/*cd*/  { "int",   FALSE, NONE,  op1(Ib),     0 },
-/*ce*/  { "",      FALSE, NONE,  0,       0 },
-/*cf*/  { "iret",  FALSE, NONE,  0,       0 },
-
-/*d0*/  { NULL,    TRUE,  BYTE,  op2(o1, E),  db_Grp2 },
-/*d1*/  { NULL,    TRUE,  LONG,  op2(o1, E),  db_Grp2 },
-/*d2*/  { NULL,    TRUE,  BYTE,  op2(CL, E),  db_Grp2 },
-/*d3*/  { NULL,    TRUE,  LONG,  op2(CL, E),  db_Grp2 },
-/*d4*/  { "",      TRUE,  NONE,  op1(Iba),    0 },
-/*d5*/  { "",      TRUE,  NONE,  op1(Iba),    0 },
-/*d6*/  { ".byte\t0xd6",FALSE, NONE, 0,       0 },
-/*d7*/  { "xlat",  FALSE, BYTE,  op1(BX),     0 },
-
-/* d8 to df block is ignored: direct test in code handles them */
-/*d8*/  { "",      TRUE,  NONE,  0,       db_Esc8 },
-/*d9*/  { "",      TRUE,  NONE,  0,       db_Esc9 },
-/*da*/  { "",      TRUE,  NONE,  0,       db_Esca },
-/*db*/  { "",      TRUE,  NONE,  0,       db_Escb },
-/*dc*/  { "",      TRUE,  NONE,  0,       db_Escc },
-/*dd*/  { "",      TRUE,  NONE,  0,       db_Escd },
-/*de*/  { "",      TRUE,  NONE,  0,       db_Esce },
-/*df*/  { "",      TRUE,  NONE,  0,       db_Escf },
-
-/*e0*/  { "loopne",FALSE, NONE,  op1(Db),     0 },
-/*e1*/  { "loope", FALSE, NONE,  op1(Db),     0 },
-/*e2*/  { "loop",  FALSE, NONE,  op1(Db),     0 },
-/*e3*/  { "jcxz",  FALSE, SDEP,  op1(Db),     "jecxz\0jrcxz" },
-/*e4*/  { "in",    FALSE, BYTE,  op2(Ib, A),  0 },
-/*e5*/  { "in",    FALSE, LONG,  op2(Ib, A) , 0 },
-/*e6*/  { "out",   FALSE, BYTE,  op2(A, Ib),  0 },
-/*e7*/  { "out",   FALSE, LONG,  op2(A, Ib) , 0 },
-
-/*e8*/  { "call",  FALSE, QUAD,  op1(Dl),     0 },
-/*e9*/  { "jmp",   FALSE, NONE,  op1(Dl),     0 },
-/*ea*/  { "",      FALSE, NONE,  op1(OS),     0 },
-/*eb*/  { "jmp",   FALSE, NONE,  op1(Db),     0 },
-/*ec*/  { "in",    FALSE, BYTE,  op2(DX, A),  0 },
-/*ed*/  { "in",    FALSE, LONG,  op2(DX, A) , 0 },
-/*ee*/  { "out",   FALSE, BYTE,  op2(A, DX),  0 },
-/*ef*/  { "out",   FALSE, LONG,  op2(A, DX) , 0 },
-
-/*f0*/  { "",      FALSE, NONE,  0,      0 },
-/*f1*/  { "",      FALSE, NONE,  0,      0 },
-/*f2*/  { "",      FALSE, NONE,  0,      0 },
-/*f3*/  { "",      FALSE, NONE,  0,      0 },
-/*f4*/  { "hlt",   FALSE, NONE,  0,      0 },
-/*f5*/  { "cmc",   FALSE, NONE,  0,      0 },
-/*f6*/  { "",      TRUE,  BYTE,  0,      db_Grp3 },
-/*f7*/  { "",      TRUE,  LONG,  0,      db_Grp3 },
-
-/*f8*/  { "clc",   FALSE, NONE,  0,      0 },
-/*f9*/  { "stc",   FALSE, NONE,  0,      0 },
-/*fa*/  { "cli",   FALSE, NONE,  0,      0 },
-/*fb*/  { "sti",   FALSE, NONE,  0,      0 },
-/*fc*/  { "cld",   FALSE, NONE,  0,      0 },
-/*fd*/  { "std",   FALSE, NONE,  0,      0 },
-/*fe*/  { "",      TRUE,  RDEP,  0,      db_Grp4 },
-/*ff*/  { "",      TRUE,  RDEP,  0,      db_Grp5 },
+char __attribute__ ((section (".data"))) *grp6[] = {
+    "sldt",
+    "str",
+    "lldt",
+    "ltr",
+    "verr",
+    "verw",
+    "",
+    ""
 };
 
-struct inst __attribute__ ((section (".data"))) db_bad_inst =
-    { "???",   FALSE, NONE,  0,       0 }
-;
-
-#define REX_W(rex)  (((rex) & 0x8) == 0x8)  /* 64-bit operand size */
-#define REX_R(rex)  (((rex) & 0x4) << 1)    /* ModRM reg field extension */
-#define REX_X(rex)  (((rex) & 0x2) << 2)    /* SIB index field extension */
-#define REX_B(rex)  (((rex) & 0x1) << 3)    /* ModRM r/m and SIB base ext */
-
-#define f_mod(byte)     ((byte)>>6)
-#define f_reg(byte, rex)    ((((byte)>>3)&0x7) + REX_R(rex))
-#define f_rm(byte, rex)     (((byte)&0x7) + REX_B(rex))
-
-#define sib_ss(byte)        ((byte)>>6)
-#define sib_index(byte, rex)    ((((byte)>>3)&0x7) + REX_X(rex))
-#define sib_base(byte, rex) (((byte)&0x7) + REX_B(rex))
-
-struct i_addr {
-    int     is_reg; /* if reg, reg number is in 'disp' */
-    int     disp;
-    char *      base;
-    char *      index;
-    int     ss;
+char __attribute__ ((section (".data"))) *grp7[] = {
+    "sgdt",
+    "sidt",
+    "lgdt",
+    "lidt",
+    "smsw",
+    "",
+    "lmsw",
+    "invplg"
 };
 
-char __attribute__ ((section (".data"))) *  db_index_reg_16[8] = {
-    "%bx,%si",
-    "%bx,%di",
-    "%bp,%si",
-    "%bp,%di",
-    "%si",
-    "%di",
-    "%bp",
-    "%bx"
+char __attribute__ ((section (".data"))) *grp8[] = {
+    "",
+    "",
+    "",
+    "",
+    "bt",
+    "bts",
+    "btr",
+    "btc"
 };
 
-char __attribute__ ((section (".data"))) *  db_reg[4][16] = {
-    { "%al",  "%cl",  "%dl",  "%bl",  "%ah",  "%ch",  "%dh",  "%bh",
-      "%r8b", "%r9b", "%r10b", "%r11b", "%r12b", "%r13b", "%r14b", "%r15b"},
-    { "%ax",  "%cx",  "%dx",  "%bx",  "%sp",  "%bp",  "%si",  "%di",
-      "%r8w", "%r9w", "%r10w", "%r11w", "%r12w", "%r13w", "%r14w", "%r15w"},
-    { "%eax", "%ecx", "%edx", "%ebx", "%esp", "%ebp", "%esi", "%edi",
-      "%r8d", "%r9d", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d"},
-    { "%rax", "%rcx", "%rdx", "%rbx", "%rsp", "%rbp", "%rsi", "%rdi",
-      "%r8",  "%r9",  "%r10", "%r11", "%r12", "%r13", "%r14", "%r15" }
+char __attribute__ ((section (".data"))) *grp9[] = {
+    "fxsave",
+    "fxrstor",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
 };
 
-char __attribute__ ((section (".data"))) *  db_seg_reg[8] = {
-    "%es", "%cs", "%ss", "%ds", "%fs", "%gs", "", ""
+char __attribute__ ((section (".data"))) *grpA[] = {
+    "",
+    "cmpxchg8b",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
 };
 
-/*
- * lengths for size attributes
- */
-int __attribute__ ((section (".data"))) db_lengths[] = {
-    1,  /* BYTE */
-    2,  /* WORD */
-    4,  /* LONG */
-    8,  /* QUAD */
-    4,  /* SNGL */
-    8,  /* DBLR */
-    10, /* EXTR */
+char __attribute__ ((section (".data"))) *grpB[] = {
+    "xstorerng",
+    "xcryptecb",
+    "xcryptcbc",
+    "",
+    "xcryptcfb",
+    "xcryptofb",
+    "",
+    ""
 };
 
-#define get_value_inc(result, loc, size, is_signed) \
-    do { \
-        result = db_get_value((loc), (size), (is_signed)); \
-        (loc) += (size); \
-    } while (0)
+instdesc __attribute__ ((section (".data"))) inst0f0[] = {
+    { "",       DA_NONE+DA_MODRM, DA_Ew, grp6 },
+    { "",       DA_NONE+DA_MODRM, DA_Ew, 0 },
+    { "lar",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "lsl",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "clts",   DA_NONE, 0, 0 },
+    { "sysret", DA_NONE, 0, 0 },
 
-virt_t db_read_address(virt_t, int, int, int, struct i_addr *);
-virt_t db_disasm_esc(virt_t, int, int, int, int, char *);
-virt_t db_disasm_3dnow(virt_t, int, int, int, char *);
+    { "invd",   DA_NONE, 0, 0 },
+    { "wbinvd", DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 }
+};
 
-void
-db_read_bytes(virt_t addr, size_t size, char *data)
+instdesc __attribute__ ((section (".data"))) inst0f2[] = {
+    { "mov",    DA_LONG+DA_MODRM, DA2_CR_E, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_DR_E, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_E_CR, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_E_DR, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_TR_E, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_E_TR, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0f3[] = {
+    { "wrmsr",  DA_NONE, 0, 0 },
+    { "rdtsc",  DA_NONE, 0, 0 },
+    { "rdmsr",  DA_NONE, 0, 0 },
+    { "rdpmc",  DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0f8[] = {
+    { "jo",     DA_NONE, DA_Dl, 0 },
+    { "jno",    DA_NONE, DA_Dl, 0 },
+    { "jb",     DA_NONE, DA_Dl, 0 },
+    { "jnb",    DA_NONE, DA_Dl, 0 },
+    { "jz",     DA_NONE, DA_Dl, 0 },
+    { "jnz",    DA_NONE, DA_Dl, 0 },
+    { "jbe",    DA_NONE, DA_Dl, 0 },
+    { "jnbe",   DA_NONE, DA_Dl, 0 },
+
+    { "js",     DA_NONE, DA_Dl, 0 },
+    { "jns",    DA_NONE, DA_Dl, 0 },
+    { "jp",     DA_NONE, DA_Dl, 0 },
+    { "jnp",    DA_NONE, DA_Dl, 0 },
+    { "jl",     DA_NONE, DA_Dl, 0 },
+    { "jnl",    DA_NONE, DA_Dl, 0 },
+    { "jle",    DA_NONE, DA_Dl, 0 },
+    { "jnle",   DA_NONE, DA_Dl, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0f9[] = {
+    { "seto",   DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setno",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setb",   DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setnb",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setz",   DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setnz",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setbe",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setnbe", DA_NONE+DA_MODRM, DA_Eb, 0 },
+
+    { "sets",   DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setns",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setp",   DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setnp",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setl",   DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setnl",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setle",  DA_NONE+DA_MODRM, DA_Eb, 0 },
+    { "setnle", DA_NONE+DA_MODRM, DA_Eb, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0fa[] = {
+    { "push",   DA_QUAD, DA_Si, 0 },
+    { "pop",    DA_QUAD, DA_Si, 0 },
+    { "cpuid",  DA_NONE, 0, 0 },
+    { "bt",     DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "shld",   DA_LONG+DA_MODRM, DA3_Ib_R_E, 0 },
+    { "shld",   DA_LONG+DA_MODRM, DA3_CL_R_E, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, grpB },
+
+    { "push",   DA_QUAD, DA_Si, 0 },
+    { "pop",    DA_QUAD, DA_Si, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "bts",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "shrd",   DA_LONG+DA_MODRM, DA3_Ib_R_E, 0 },
+    { "shrd",   DA_LONG+DA_MODRM, DA3_CL_R_E, 0 },
+    { "",       DA_NONE+DA_MODRM, DA_E, grp9 },
+    { "imul",   DA_LONG+DA_MODRM, DA2_E_R, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0fb[] = {
+    { "cmpxchg",DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "cmpxchg",DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "lss",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "btr",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "lfs",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "lgs",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "movzb",  DA_LONG+DA_MODRM, DA2_Eb_R, 0 },
+    { "movzw",  DA_LONG+DA_MODRM, DA2_Ew_R, 0 },
+
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_LONG+DA_MODRM, DA2_Ib_E, grp8 },
+    { "btc",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "bsf",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "bsr",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "movsb",  DA_LONG+DA_MODRM, DA2_Eb_R, 0 },
+    { "movsw",  DA_LONG+DA_MODRM, DA2_Ew_R, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0fc[] = {
+    { "xadd",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "xadd",   DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, DA_E, grpA },
+
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 },
+    { "bswap",  DA_LONG, DA_Ril, 0 }
+};
+
+char __attribute__ ((section (".data"))) *esc92[] = {
+    "fnop",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *esc94[] = {
+    "fchs",
+    "fabs",
+    "",
+    "",
+    "ftst",
+    "fxam",
+    "",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *esc95[] = {
+    "fld1",
+    "fldl2t",
+    "fldl2e",
+    "fldpi",
+    "fldlg2",
+    "fldln2",
+    "fldz",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *esc96[] = {
+    "f2xm1",
+    "fyl2x",
+    "fptan",
+    "fpatan",
+    "fxtract",
+    "fprem1",
+    "fdecstp",
+    "fincstp"
+};
+
+char __attribute__ ((section (".data"))) *esc97[] = {
+    "fprem",
+    "fyl2xp1",
+    "fsqrt",
+    "fsincos",
+    "frndint",
+    "fscale",
+    "fsin",
+    "fcos"
+};
+
+char __attribute__ ((section (".data"))) *esca5[] = {
+    "",
+    "fucompp",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *escb4[] = {
+    "fneni",
+    "fndisi",
+    "fnclex",
+    "fninit",
+    "fsetpm",
+    "",
+    "",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *esce3[] = {
+    "",
+    "fcompp",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *escf4[] = {
+    "fnstsw",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+};
+
+instdesc __attribute__ ((section (".data"))) esc8[] = {
+    { "fadd",   DA_SNGL, DA2_STI_ST, 0 },
+    { "fmul",   DA_SNGL, DA2_STI_ST, 0 },
+    { "fcom",   DA_SNGL, DA2_STI_ST, 0 },
+    { "fcomp",  DA_SNGL, DA2_STI_ST, 0 },
+    { "fsub",   DA_SNGL, DA2_STI_ST, 0 },
+    { "fsubr",  DA_SNGL, DA2_STI_ST, 0 },
+    { "fdiv",   DA_SNGL, DA2_STI_ST, 0 },
+    { "fdivr",  DA_SNGL, DA2_STI_ST, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) esc9[] = {
+    { "fld",    DA_SNGL, DA_STI, 0 },
+    { "",       DA_NONE, DA_STI, "fxch" },
+    { "fst",    DA_SNGL, DA_X, esc92 },
+    { "fstp",   DA_SNGL, DA_X, 0 },
+    { "fldenv", DA_NONE, DA_X, esc94 },
+    { "fldcw",  DA_NONE, DA_X, esc95 },
+    { "fnstenv",DA_NONE, DA_X, esc96 },
+    { "fnstcw", DA_NONE, DA_X, esc97 }
+};
+
+instdesc __attribute__ ((section (".data"))) esca[] = {
+    { "fiadd",  DA_LONG, 0, 0 },
+    { "fimul",  DA_LONG, 0, 0 },
+    { "ficom",  DA_LONG, 0, 0 },
+    { "ficomp", DA_LONG, 0, 0 },
+    { "fisub",  DA_LONG, DA_X, 0 },
+    { "fisubr", DA_LONG, 0, 0 },
+    { "fidiv",  DA_LONG, 0, 0 },
+    { "fidivr", DA_LONG, 0, 0 }
+
+};
+
+instdesc __attribute__ ((section (".data"))) escb[] = {
+    { "fild",   DA_LONG, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "fist",   DA_LONG, 0, 0 },
+    { "fistp",  DA_LONG, 0, 0 },
+    { "",       DA_WORD, DA_X, escb4 },
+    { "fld",    DA_EXTR, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "fstp",   DA_EXTR, 0, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) escc[] = {
+    { "fadd",   DA_DBLR, DA2_STI_ST, 0 },
+    { "fmul",   DA_DBLR, DA2_STI_ST, 0 },
+    { "fcom",   DA_DBLR, DA2_STI_ST, 0 },
+    { "fcomp",  DA_DBLR, DA2_STI_ST, 0 },
+    { "fsub",   DA_DBLR, DA2_STI_ST, 0 },
+    { "fsubr",  DA_DBLR, DA2_STI_ST, 0 },
+    { "fdiv",   DA_DBLR, DA2_STI_ST, 0 },
+    { "fdivr",  DA_DBLR, DA2_STI_ST, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) escd[] = {
+    { "fld",    DA_DBLR, DA_STI, "ffree" },
+    { "",       DA_NONE, 0, 0 },
+    { "fst",    DA_DBLR, DA_STI, 0 },
+    { "fstp",   DA_DBLR, DA_STI, 0 },
+    { "frstor", DA_NONE, DA_STI, "fucom" },
+    { "",       DA_NONE, DA_STI, "fucomp" },
+    { "fnsave", DA_NONE, 0, 0 },
+    { "fnstsw", DA_NONE, 0, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) esce[] = {
+    { "fiadd",  DA_WORD, DA2_ST_STI, "faddp" },
+    { "fimul",  DA_WORD, DA2_ST_STI, "fmulp" },
+    { "ficom",  DA_WORD, 0, 0 },
+    { "ficomp", DA_WORD, DA_X, esce3 },
+    { "fisub",  DA_WORD, DA2_ST_STI, "fsubrp" },
+    { "fisubr", DA_WORD, DA2_ST_STI, "fsubp" },
+    { "fidiv",  DA_WORD, DA2_ST_STI, "fdivrp" },
+    { "fidivr", DA_WORD, DA2_ST_STI, "fdivp" }
+};
+
+instdesc __attribute__ ((section (".data"))) escf[] = {
+    { "fild",   DA_WORD, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "fist",   DA_WORD, 0, 0 },
+    { "fistp",  DA_WORD, 0, 0 },
+    { "fbld",   DA_NONE, DA_XA, escf4 },
+    { "fild",   DA_QUAD, 0, 0 },
+    { "fbstp",  DA_NONE, 0, 0 },
+    { "fistp",  DA_QUAD, 0, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
+    { "add",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "add",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "add",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "add",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "add",    DA_BYTE, DA2_Ib_A, 0 },
+    { "add",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, DA_Si, 0 },
+    { "",       DA_NONE, DA_Si, 0 },
+
+    { "or",     DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "or",     DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "or",     DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "or",     DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "or",     DA_BYTE, DA2_Ib_A, 0 },
+    { "or",     DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "adc",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "adc",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "adc",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "adc",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "adc",    DA_BYTE, DA2_Ib_A, 0 },
+    { "adc",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "sbb",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "sbb",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "sbb",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "sbb",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "sbb",    DA_BYTE, DA2_Ib_A, 0 },
+    { "sbb",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "and",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "and",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "and",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "and",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "and",    DA_BYTE, DA2_Ib_A, 0 },
+    { "and",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "sub",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "sub",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "sub",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "sub",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "sub",    DA_BYTE, DA2_Ib_A, 0 },
+    { "sub",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "xor",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "xor",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "xor",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "xor",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "xor",    DA_BYTE, DA2_Ib_A, 0 },
+    { "xor",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "cmp",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "cmp",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "cmp",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "cmp",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "cmp",    DA_BYTE, DA2_Ib_A, 0 },
+    { "cmp",    DA_LONG, DA2_I_A, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "push",   DA_QUAD, DA_Ri, 0 },
+
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },
+
+    { "",       DA_LONG, 0, 0 },
+    { "",       DA_LONG, 0, 0 },
+    { "",       DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "movsxd", DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "push",   DA_LONG, DA_I, 0 },
+    { "imul",   DA_LONG+DA_MODRM, DA3_I_E_R, 0 },
+    { "push",   DA_QUAD, DA_Iq, 0 },
+    { "imul",   DA_LONG+DA_MODRM, DA3_Ib_E_R, 0 },
+    { "ins",    DA_BYTE, DA2_DX_DI, 0 },
+    { "ins",    DA_LONG, DA2_DX_DI, 0 },
+    { "outs",   DA_BYTE, DA2_SI_DX, 0 },
+    { "outs",   DA_LONG, DA2_SI_DX, 0 },
+
+    { "jo",     DA_NONE, DA_Db, 0 },
+    { "jno",    DA_NONE, DA_Db, 0 },
+    { "jb",     DA_NONE, DA_Db, 0 },
+    { "jnb",    DA_NONE, DA_Db, 0 },
+    { "jz",     DA_NONE, DA_Db, 0 },
+    { "jnz",    DA_NONE, DA_Db, 0 },
+    { "jbe",    DA_NONE, DA_Db, 0 },
+    { "jnbe",   DA_NONE, DA_Db, 0 },
+
+    { "js",     DA_NONE, DA_Db, 0 },
+    { "jns",    DA_NONE, DA_Db, 0 },
+    { "jp",     DA_NONE, DA_Db, 0 },
+    { "jnp",    DA_NONE, DA_Db, 0 },
+    { "jl",     DA_NONE, DA_Db, 0 },
+    { "jnl",    DA_NONE, DA_Db, 0 },
+    { "jle",    DA_NONE, DA_Db, 0 },
+    { "jnle",   DA_NONE, DA_Db, 0 },
+
+    { "",       DA_BYTE+DA_MODRM, DA2_I_E, grp1 },
+    { "",       DA_LONG+DA_MODRM, DA2_I_E, grp1 },
+    { "",       DA_BYTE+DA_MODRM, DA2_Ib_E, grp1 },
+    { "add",    DA_LONG+DA_MODRM, DA2_Ib_E, 0 },
+    { "test",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "test",   DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "xchg",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "xchg",   DA_LONG+DA_MODRM, DA2_R_E, 0 },
+
+    { "mov",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
+    { "mov",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "mov",    DA_NONE+DA_MODRM, DA2_S_Ew, 0 },
+    { "lea",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "mov",    DA_NONE+DA_MODRM, DA2_Ew_S, 0 },
+    { "pop",    DA_QUAD+DA_MODRM, DA_E, 0 },
+
+    { "nop",    DA_NONE, 0, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+    { "xchg",   DA_LONG, DA2_A_Ri, 0 },
+
+    { "cbw",    DA_SDEP, 0, "cdqe" },
+    { "cwd",    DA_SDEP, 0, "cqo" },
+    { "",       DA_NONE, DA_OS, 0 },
+    { "wait",   DA_NONE, 0, 0 },
+    { "pushf",  DA_QUAD, 0, 0 },
+    { "popf",   DA_QUAD, 0, 0 },
+    { "sahf",   DA_NONE, 0, 0 },
+    { "lahf",   DA_NONE, 0, 0 },
+
+    { "mov",    DA_BYTE, DA2_O_A, 0 },
+    { "mov",    DA_LONG, DA2_O_A, 0 },
+    { "mov",    DA_BYTE, DA2_A_O, 0 },
+    { "mov",    DA_LONG, DA2_A_O, 0 },
+    { "movsb",  DA_BYTE, 0, 0 },
+    { "movsd",  DA_LONG, 0, 0 },
+    { "cmpsb",  DA_BYTE, 0, 0 },
+    { "cmpsd",  DA_LONG, 0, 0 },
+
+    { "test",   DA_BYTE, DA2_I_A, 0 },
+    { "test",   DA_LONG, DA2_I_A, 0 },
+    { "stosb",  DA_BYTE, 0, 0 },
+    { "stosw",  DA_WORD, 0, 0 },
+    { "lodsb",  DA_BYTE, 0, 0 },
+    { "lodsw",  DA_WORD, 0, 0 },
+    { "scasb",  DA_BYTE, 0, 0 },
+    { "scasd",  DA_LONG, 0, 0 },
+
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+
+    { "",       DA_BYTE+DA_MODRM, DA2_Ib_E, grp2 },
+    { "",       DA_LONG+DA_MODRM, DA2_Ib_E, grp2 },
+    { "ret",    DA_NONE, DA_Iw, 0 },
+    { "ret",    DA_NONE, 0, 0 },
+    { "",       DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "",       DA_LONG+DA_MODRM, DA2_E_R, 0 },
+    { "mov",    DA_BYTE+DA_MODRM, DA2_I_E, 0 },
+    { "mov",    DA_LONG+DA_MODRM, DA2_I_E, 0 },
+
+    { "enter",  DA_NONE, DA2_Iq_Ib, 0 },
+    { "leave",  DA_NONE, 0, 0 },
+    { "lret",   DA_NONE, DA_Iw, 0 },
+    { "lret",   DA_NONE, 0, 0 },
+    { "int",    DA_NONE, DA_o3, 0 },
+    { "int",    DA_NONE, DA_Ib, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "iret",   DA_NONE, 0, 0 },
+
+    { "",       DA_BYTE+DA_MODRM, DA2_o1_E, grp2 },
+    { "",       DA_LONG+DA_MODRM, DA2_o1_E, grp2 },
+    { "",       DA_BYTE+DA_MODRM, DA2_CL_E, grp2 },
+    { "",       DA_LONG+DA_MODRM, DA2_CL_E, grp2 },
+    { "",       DA_NONE+DA_MODRM, DA_Ib, 0 },
+    { "",       DA_NONE+DA_MODRM, DA_Ib, 0 },
+    { "db_0D6h",DA_NONE, 0, 0 },
+    { "xlat",   DA_BYTE, DA_BX, 0 },
+
+    { "",       DA_NONE+DA_MODRM, 0, esc8 },
+    { "",       DA_NONE+DA_MODRM, 0, esc9 },
+    { "",       DA_NONE+DA_MODRM, 0, esca },
+    { "",       DA_NONE+DA_MODRM, 0, escb },
+    { "",       DA_NONE+DA_MODRM, 0, escc },
+    { "",       DA_NONE+DA_MODRM, 0, escd },
+    { "",       DA_NONE+DA_MODRM, 0, esce },
+    { "",       DA_NONE+DA_MODRM, 0, escf },
+
+    { "loopne", DA_NONE, DA_Db, 0 },
+    { "loope",  DA_NONE, DA_Db, 0 },
+    { "loop",   DA_NONE, DA_Db, 0 },
+    { "jcxz",   DA_SDEP, DA_Db, "jrcxz" },
+    { "in",     DA_BYTE, DA2_Ib_A, 0 },
+    { "in",     DA_LONG, DA2_Ib_A, 0 },
+    { "out",    DA_BYTE, DA2_A_Ib, 0 },
+    { "out",    DA_LONG, DA2_A_Ib, 0 },
+
+    { "call",   DA_LONG, DA_Dl, 0 },
+    { "jmp",    DA_NONE, DA_Dl, 0 },
+    { "",       DA_NONE, DA_OS, 0 },
+    { "jmp",    DA_NONE, DA_Db, 0 },
+    { "in",     DA_BYTE, DA2_DX_A, 0 },
+    { "in",     DA_LONG, DA2_DX_A, 0 },
+    { "out",    DA_BYTE, DA2_A_DX, 0 },
+    { "out",    DA_LONG, DA2_A_DX, 0 },
+
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "hlt",    DA_NONE, 0, 0 },
+    { "cmc",    DA_NONE, 0, 0 },
+    { "",       DA_BYTE+DA_MODRM, 0, grp3 },
+    { "",       DA_LONG+DA_MODRM, 0, grp3 },
+
+    { "clc",    DA_NONE, 0, 0 },
+    { "stc",    DA_NONE, 0, 0 },
+    { "cli",    DA_NONE, 0, 0 },
+    { "sti",    DA_NONE, 0, 0 },
+    { "cld",    DA_NONE, 0, 0 },
+    { "std",    DA_NONE, 0, 0 },
+    { "",       DA_NONE+DA_MODRM, 0, grp4 },
+    { "",       DA_NONE+DA_MODRM, 0, grp5 }
+};
+
+instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
+    inst0f0,
+    0,
+    inst0f2,
+    inst0f3,
+    0,
+    0,
+    0,
+    0,
+    inst0f8,
+    inst0f9,
+    inst0fa,
+    inst0fb,
+    inst0fc,
+    0,
+    0,
+    0
+};
+
+instdesc __attribute__ ((section (".data"))) *instesc[] = {
+    esc8,
+    esc9,
+    esca,
+    escb,
+    escc,
+    escd,
+    esce,
+    escf
+};
+
+char __attribute__ ((section (".data"))) *sizestr[7] = {
+    "byte",
+    "word",
+    "dword",
+    "qword",
+    "single",
+    "double",
+    "extend"
+};
+
+char __attribute__ ((section (".data"))) *regs[4][16] = {
+    { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh", "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b", "r15b"},
+    { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di", "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w"},
+    { "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "r8d", "r9d", "r10d", "r11d", "r12d", "r13d", "r14d", "r15d"},
+    { "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8",  "r9",  "r10", "r11", "r12", "r13", "r14", "r15" }
+};
+
+char __attribute__ ((section (".data"))) *sregs[8] = {
+    "es", "cs", "ss", "ds", "fs", "gs", "", ""
+};
+char __attribute__ ((section (".data"))) *ripreg = "rip";
+char __attribute__ ((section (".data"))) *unkmnemonic = "???";
+
+// address resolve
+uint8_t __attribute__ ((section (".data"))) addr_reg;
+uint8_t __attribute__ ((section (".data"))) addr_scale;
+uint64_t __attribute__ ((section (".data"))) addr_disp;
+uint8_t __attribute__ ((section (".data"))) addr_seg;
+uint8_t __attribute__ ((section (".data"))) addr_saddr;
+char __attribute__ ((section (".data"))) *addr_base;
+char __attribute__ ((section (".data"))) *addr_idx;
+
+char *disasm_prtaddr(char *str, virt_t addr, uint8_t size, uint8_t reg)
 {
-	char *src;
-
-	src = (char *)addr;
-
-	if (size == 8) {
-		*((long *)data) = *((long *)src);
-		return;
-	}
-
-	if (size == 4) {
-		*((int *)data) = *((int *)src);
-		return;
-	}
-
-	if (size == 2) {
-		*((short *)data) = *((short *)src);
-		return;
-	}
-
-	while (size-- > 0)
-		*data++ = *src++;
-}
-/*
- * Access unaligned data items on aligned (longword)
- * boundaries.
- */
-int64_t
-db_get_value(virt_t addr, size_t size, int is_signed)
-{
-	char data[sizeof(int64_t)];
-	int64_t value, extend;
-	int i;
-
-	if (size > sizeof data)
-		size = sizeof data;
-
-	db_read_bytes(addr, size, data);
-
-	value = 0;
-	extend = (~(int64_t)0) << (size * 8 - 1);
-	for (i = size - 1; i >= 0; i--)
-		value = (value << 8) + (data[i] & 0xFF);
-
-	if (size < sizeof(int64_t) && is_signed && (value & extend))
-		value |= extend;
-	return (value);
-}
-
-/*
- * Read address at location and return updated location.
- */
-virt_t
-db_read_address(virt_t loc, int short_addr, int regmodrm, int rex,
-    struct i_addr *addrp)
-{
-    int     mod, rm, sib, index, disp, size;
-
-    size = (short_addr ? LONG : QUAD);
-    mod = f_mod(regmodrm);
-    rm  = f_rm(regmodrm, rex);
-
-    if (mod == 3) {
-        addrp->is_reg = TRUE;
-        addrp->disp = rm;
-        return (loc);
-    }
-    addrp->is_reg = FALSE;
-    addrp->index = 0;
-
-    if (rm == 4 || rm == 12) {
-        get_value_inc(sib, loc, 1, FALSE);
-        rm = sib_base(sib, rex);
-        index = sib_index(sib, rex);
-        if (index != 4)
-            addrp->index = db_reg[size][index];
-        addrp->ss = sib_ss(sib);
-    }
-
-    switch (mod) {
-    case 0:
-        if (rm == 5) {
-        get_value_inc(addrp->disp, loc, 4, FALSE);
-            addrp->base = 0;
+    if(addr_reg) {
+        str = sprintf(str, regs[size][reg]);
+    } else {
+        str = sprintf(str,"%s ", sizestr[size]);
+        if (addr_seg)
+            str = sprintf(str, "%cs:", addr_seg);
+        str = sprintf(str,"[");
+        if(addr_base!=NULL) {
+            str = sprintf(str,"%s", addr_base);
+            if(addr_idx!=NULL) {
+                str = sprintf(str,"+%s", addr_idx);
+                if(addr_scale>1)
+                    str = sprintf(str,"*%d", addr_scale);
+            }
         } else {
-            addrp->disp = 0;
-            addrp->base = db_reg[size][rm];
+            addr_disp += addr;
         }
-        break;
-    case 1:
-        get_value_inc(disp, loc, 1, TRUE);
-        addrp->disp = disp;
-        addrp->base = db_reg[size][rm];
-        break;
-    case 2:
-        get_value_inc(disp, loc, 4, FALSE);
-        addrp->disp = disp;
-        addrp->base = db_reg[size][rm];
-        break;
+        if(addr_disp) {
+            str = sprintf(str,"%s%x", addr_base!=NULL?"+":"", addr_disp);
+        }
+        str = sprintf(str,"]");
     }
-    return (loc);
+    return str;
 }
 
-void
-db_print_address(char *seg, int size, struct i_addr *addrp)
+virt_t disasm(virt_t addr, char *str)
 {
-    uchar *symstr;
-    if (addrp->is_reg) {
-        disasm_str=sprintf(disasm_str,"%s", db_reg[size][addrp->disp]);
-        return;
-    }
+    virt_t disasmstart;
+    //prefix
+    uint8_t rex = 0;
+    //opcode and it's argument bytes
+    uint8_t opcode = 0;
+    uint8_t modrm = 0;
+    uint8_t sib = 0;
+    uint64_t imm = 0;
+    uint64_t disp = 0;
+    //parsed values
+    uint8_t size = DA_LONG;
+    uint8_t reg = 0;
+    instdesc *inst;
+    uint32_t i_size;
+    uint32_t i_mode;
+    char *i_name;
 
-    if (seg)
-        disasm_str=sprintf(disasm_str,"%s:", seg);
+    disasmstart = addr;
+    addr_seg = 0;
+    addr_saddr = DA_QUAD;
+    addr_base = NULL;
+    addr_idx = NULL;
 
     sys_fault = false;
-    symstr = service_sym((virt_t)addrp->disp);
-    if(!sys_fault && symstr!=NULL && symstr[0]!='(')
-        disasm_str=sprintf(disasm_str,"%s",symstr);
-    else if(addrp->disp!=0)
-        disasm_str=sprintf(disasm_str,"%x",addrp->disp);
-
-    if (addrp->base != 0 || addrp->index != 0) {
-        disasm_str=sprintf(disasm_str,"(");
-        if (addrp->base)
-            disasm_str=sprintf(disasm_str,"%s", addrp->base);
-        if (addrp->index)
-            disasm_str=sprintf(disasm_str,",%s,%d", addrp->index, 1<<addrp->ss);
-        disasm_str=sprintf(disasm_str,")");
+getprefix:
+    opcode = *((uint8_t*)addr);
+    if(sys_fault)
+        goto end;
+    addr++;
+    //segment ovverride for CS, DS, ES, SS are ignored in long mode
+    if(opcode==0x26||opcode==0x36||opcode==0x2e||opcode==0x3e)
+        goto getprefix;
+    //fs
+    if(opcode==0x64) {
+        addr_seg='f';
+        goto getprefix;
     }
-}
+    //gs
+    if(opcode==0x65) {
+        addr_seg='g';
+        goto getprefix;
+    }
+    //size override prefix
+    if(opcode==0x66) {
+        size=DA_WORD;
+        goto getprefix;
+    }
+    //address size override
+    if(opcode==0x67) {
+        addr_saddr=DA_LONG;
+        goto getprefix;
+    }
+    if(opcode==0xf0) {
+        if(str!=NULL)
+            str = sprintf(str, "lock ");
+        goto getprefix;
+    }
+    if(opcode==0xf2) {
+        if(str!=NULL)
+            str = sprintf(str, "repnz ");
+        goto getprefix;
+    }
+    if(opcode==0xf3) {
+        if(str!=NULL)
+            str = sprintf(str, "repe ");
+        goto getprefix;
+    }
+    //rex
+    if((opcode&0xF0)==0x40) {
+        rex = opcode;
+        if(rex&0b1000)
+            size=DA_QUAD;
+        goto getopcode;
+    }
+    goto prefixend;
 
-/*
- * Disassemble 3DNow! instruction and return updated location.
- */
-virt_t
-db_disasm_3dnow(virt_t loc, int short_addr, int size, int rex, char *seg)
-{
-    int regmodrm = 0, sib = 0, displacement = 0, opcode = 0;
-
-    get_value_inc(regmodrm, loc, 1, FALSE);
-    get_value_inc(sib, loc, 1, FALSE);
-    get_value_inc(displacement, loc, 1, FALSE);
-    get_value_inc(opcode, loc, 1, FALSE);
-
-    /* XXX fix later... */
-    disasm_str=sprintf(disasm_str,"<3DNow! instruction %x%x%x%x>",regmodrm,sib,displacement,opcode);
-
-    return (loc);
-}
-
-/*
- * Disassemble floating-point ("escape") instruction
- * and return updated location.
- */
-virt_t
-db_disasm_esc(virt_t loc, int inst, int short_addr, int size, int rex,
-    char *seg)
-{
-    int     regmodrm;
-    struct finst    *fp;
-    int     mod;
-    struct i_addr   address;
-    char *      name;
-
-    get_value_inc(regmodrm, loc, 1, FALSE);
-    fp = &db_Esc_inst[inst - 0xd8][f_reg(regmodrm, 0)];
-    mod = f_mod(regmodrm);
-    if (mod != 3) {
-        if (*fp->f_name == '\0') {
-            disasm_str=sprintf(disasm_str,"<bad instruction>");
-            return (loc);
-        }
-
-        /*
-         * Normal address modes.
-         */
-        loc = db_read_address(loc, short_addr, regmodrm, rex, &address);
-        disasm_str=sprintf(disasm_str,"%s", fp->f_name);
-        switch (fp->f_size) {
-        case SNGL:
-            disasm_str=sprintf(disasm_str,"s");
-            break;
-        case DBLR:
-            disasm_str=sprintf(disasm_str,"l");
-            break;
-        case EXTR:
-            disasm_str=sprintf(disasm_str,"t");
-            break;
-        case WORD:
-            disasm_str=sprintf(disasm_str,"s");
-            break;
-        case LONG:
-            disasm_str=sprintf(disasm_str,"l");
-            break;
-        case QUAD:
-            disasm_str=sprintf(disasm_str,"q");
-            break;
-        default:
-            break;
-        }
-        disasm_str=sprintf(disasm_str,"\t");
-        db_print_address(seg, BYTE, &address);
+getopcode:
+    opcode = *((uint8_t*)addr);
+    if(sys_fault)
+        goto end;
+    addr++;
+prefixend:
+    //nop
+    if(opcode==0x90) {
+        i_size = 1;
+        while(*((uint8_t*)addr)==0x90) { i_size++; addr++; }
+        if(str!=NULL)
+            str = sprintf(str, "%d x nop", i_size);
+        goto end;
+    }
+    //esc
+    if(opcode>=0xd8&&opcode<=0xdf) {
+        //TODO: inst esc
+    }
+    //handle syscall specially (mov eax,...;syscall)
+    if (opcode == 0xb8 && *((uint8_t*)addr+4)==0x0f && *((uint8_t*)addr+5)==0x05) {
+        if(str!=NULL)
+            str = sprintf(str, "syscall '%c%c%c%c'",
+                *((uchar*)addr),*((uchar*)addr+1),*((uchar*)addr+2),*((uchar*)addr+3));
+        addr += 6;
+        goto end;
+    }
+    //2 bytes opcode?
+    if (opcode == 0x0f) {
+        opcode = *((uint8_t*)addr);
+        addr++;
+        inst = inst_tbl0f[opcode>>4];
+        if (inst != NULL)
+            inst = &inst[opcode&0xf];
     } else {
-        /*
-         * 'reg-reg' - special formats
-         */
-        switch (fp->f_rrmode) {
-        case op2(ST,STI):
-            name = (fp->f_rrname) ? fp->f_rrname : fp->f_name;
-            disasm_str=sprintf(disasm_str,"%s\t%%st,%%st(%d)",name, f_rm(regmodrm, 0));
-            break;
-        case op2(STI,ST):
-            name = (fp->f_rrname) ? fp->f_rrname : fp->f_name;
-            disasm_str=sprintf(disasm_str,"%s\t%%st(%d),%%st",name, f_rm(regmodrm, 0));
-            break;
-        case op1(STI):
-            name = (fp->f_rrname) ? fp->f_rrname : fp->f_name;
-            disasm_str=sprintf(disasm_str,"%s\t%%st(%d)",name, f_rm(regmodrm, 0));
-            break;
-        case op1(X):
-            name = ((char * const *)fp->f_rrname)[f_rm(regmodrm,0)];
-            if (*name == '\0')
-                goto bad;
-            disasm_str=sprintf(disasm_str,"%s", name);
-            break;
-        case op1(XA):
-            name = ((char * const *)fp->f_rrname)[f_rm(regmodrm,0)];
-            if (*name == '\0')
-                goto bad;
-            disasm_str=sprintf(disasm_str,"%s\t%%ax", name);
-            break;
-        default:
-        bad:
-            disasm_str=sprintf(disasm_str,"<bad instruction>");
-            break;
-        }
+        //no, 1 byte opcode
+        inst = &inst_tbl[opcode];
     }
-
-    return (loc);
-}
-
-/*
- * Disassemble instruction at 'loc'. Return address of start of
- * next instruction.
- */
-virt_t disasm(virt_t loc, char *str)
-{
-    int inst;
-    int size;
-    int short_addr;
-    char *  seg;
-    struct inst *   ip;
-    char *  i_name;
-    int i_size;
-    int i_mode;
-    int regmodrm = 0;
-    bool_t   first;
-    int displ;
-    int prefix;
-    long    imm;
-    int imm2;
-    int len;
-    int rex = 0;
-    int segovr_grp;
-    int repe, repne;
-    struct i_addr   address;
-    virt_t  loc_orig = loc;
-
-    disasm_str = str;
-    dbg_comment = 0;
-
-    get_value_inc(inst, loc, 1, FALSE);
-    short_addr = FALSE;
-    size = LONG;
-    seg = 0;
-    segovr_grp = 0;
-    repe = 0;
-    repne = 0;
-
-    /*
-     * Get prefixes
-     */
-    prefix = TRUE;
-    do {
-        switch (inst) {
-        case 0x66:      /* data16 */
-            size = WORD;
-            break;
-        case 0x67:
-            short_addr = TRUE;
-            break;
-        case 0x26:
-            segovr_grp++;
-            disasm_str=sprintf(disasm_str," <segment override prefix ignored>");
-            break;
-        case 0x36:
-            disasm_str=sprintf(disasm_str," <segment override prefix ignored>");
-            segovr_grp++;
-            break;
-        case 0x2e:
-            disasm_str=sprintf(disasm_str," <segment override prefix ignored>");
-            segovr_grp++;
-            break;
-        case 0x3e:
-            disasm_str=sprintf(disasm_str," <segment override prefix ignored>");
-            segovr_grp++;
-            break;
-        case 0x64:
-            segovr_grp++;
-            seg = "%fs";
-            break;
-        case 0x65:
-            segovr_grp++;
-            seg = "%gs";
-            break;
-        case 0xf0:
-            disasm_str=sprintf(disasm_str,"lock ");
-            break;
-        case 0xf2:
-            repne++;
-            break;
-        case 0xf3:
-            repe++;
-            break;
-        default:
-            prefix = FALSE;
-            break;
-        }
-        if (prefix)
-            get_value_inc(inst, loc, 1, FALSE);
-    } while (prefix);
-    if (segovr_grp > 1)
-        seg = "<bad segment override prefix combination> ";
-    if (repe > 0 && repne > 0)
-        disasm_str=sprintf(disasm_str,"<bad repeat prefex combination> ");
-    else if (repe > 0)
-        disasm_str=sprintf(disasm_str,"repe "); /* XXX "rep" if not CMPSx or SCASx */
-    else if (repne > 0)
-        disasm_str=sprintf(disasm_str,"repne ");
-
-    if (inst >= 0x40 && inst <= 0x4f) {
-        // rex page 14
-        rex = inst;
-        if (REX_W(rex))
-            size = QUAD;
-        get_value_inc(inst, loc, 1, FALSE);
+    if (inst == NULL || inst->mode == 0) {
+        if(str!=NULL)
+            str = sprintf(str, unkmnemonic);
+        goto end;
     }
-
-    if (inst == 0xb8 && *((uchar*)loc+4)==0x0f && *((uchar*)loc+5)==0x05) {
-        disasm_str=sprintf(disasm_str, "syscall '%c%c%c%c'",
-            *((uchar*)loc),*((uchar*)loc+1),*((uchar*)loc+2),*((uchar*)loc+3));
-        loc += 6;
-        goto done;
-    }
-
-    if (inst >= 0xd8 && inst <= 0xdf) {
-        loc = db_disasm_esc(loc, inst, short_addr, size, rex, seg);
-        goto done;
-    }
-
-    if (inst == 0x0f) {
-        get_value_inc(inst, loc, 1, FALSE);
-        if (inst == 0x0f) {
-            loc = db_disasm_3dnow(loc, short_addr, size, rex, seg);
-            goto done;
-        }
-        ip = db_inst_0f[inst>>4];
-        if (ip == 0)
-            ip = &db_bad_inst;
-        else
-            ip = &ip[inst&0xf];
-    } else {
-        ip = &db_inst_table[inst];
-    }
-
-    if (ip->i_has_modrm) {
-        get_value_inc(regmodrm, loc, 1, FALSE);
-        loc = db_read_address(loc, short_addr, regmodrm, rex, &address);
-    }
-
-    i_name = ip->i_name;
-    i_size = ip->i_size;
-    i_mode = ip->i_mode;
-
-    if (i_size == RDEP) {
-        /* sub-table to handle dependency on reg from ModR/M byte */
-        ip = (struct inst *)ip->i_extra;
-        ip = &ip[f_reg(regmodrm, 0)];
-        i_name = ip->i_name;
-        i_mode = ip->i_mode;
-        i_size = ip->i_size;
-    } else if (i_name == NULL) {
-        i_name = ((char **)ip->i_extra)[f_reg(regmodrm, 0)];
-    } else if (ip->i_extra == db_Grp3) {
-        ip = (struct inst *)ip->i_extra;
-        ip = &ip[f_reg(regmodrm, 0)];
-        i_name = ip->i_name;
-        i_mode = ip->i_mode;
-    }
-
-    /* ModR/M-specific operation? */
-    if ((i_mode & 0xFF) == MEx) {
-        if (f_mod(regmodrm) != 3)
-            i_mode = op1(E);
-        else {
-            /* unknown extension? */
-            if (f_rm(regmodrm, 0) > (i_mode >> 8))
-                i_name = "";
-            else {
-                /* skip to the specific op */
-                int i = f_rm(regmodrm, 0);
-                i_name = ip->i_extra;
-                while (i-- > 0)
-                    while (*i_name++)
-                        ;
+    //has modrm?
+    if(inst->size&DA_MODRM) {
+        modrm = *((uint8_t*)addr);
+        addr++;
+        uint8_t mod = (modrm>>6) & 3;
+        uint8_t rm = ((rex & 0b1)<<3) + (modrm & 7);
+        uint16_t idx;
+        reg = ((rex & 0b100)<<1) + ((modrm>>3) & 7);
+        addr_disp = 0;
+        addr_base = addr_idx = NULL;
+        addr_scale = addr_reg = false;
+        if(mod==3) {
+            addr_reg = true;
+            addr_disp = (uint64_t)rm;
+        } else {
+            // do we have a sib byte?
+            if((modrm & 7)==0b100) {
+                sib = *((uint8_t*)addr);
+                addr++;
+                addr_scale=sib>>6;
+                idx=((rex&2)<<2)+((sib>>3)&7);
+                if(idx!=4)
+                    addr_idx=regs[DA_QUAD][idx];
+                rm = ((rex&1)<<3)+(sib&7);
+            } else {
+                addr_base = regs[size][rm];
+                if(mod==0) {
+                    if(rm==5) {
+                        addr_disp = (uint64_t)(*((uint32_t*)addr));
+                        addr+=4;
+                        addr_base = 0;
+                    }
+                } else
+                if(mod==1) {
+                    addr_disp = (uint64_t)(*((uint8_t*)addr));
+                    addr++;
+                } else
+                if(mod==2) {
+                    addr_disp = (uint64_t)(*((uint32_t*)addr));
+                    addr+=4;
+                }
             }
-            i_mode = 0;
         }
     }
+    i_size = opcode!=0xb8||rex==0?(inst->size&0xf):DA_QUAD;
+    i_mode = inst->mode;
 
-    if (i_size == SDEP) {
-        if (size == WORD)
-            disasm_str=sprintf(disasm_str,"%s", i_name);
-        else if (size == LONG)
-            disasm_str=sprintf(disasm_str,"%s", (char *)ip->i_extra);
-        else {
-            char *cp = ip->i_extra;
+    //ModRM specific
+    if(inst->ext==grp4 || inst->ext==grp5) {
+        inst = (instdesc*)inst->ext;
+        inst = &inst[(modrm>>3)&7];
+    }
+    //mnemonic
+    i_name = inst->name;
+    if (i_size == DA_SDEP) {
+        if (size == DA_LONG)
+            i_name=(char *)inst->ext;
+        else if(size != DA_WORD) {
+            char *cp = (char*)inst->ext;
             while (*cp)
                 cp++;
             cp++;
-            disasm_str=sprintf(disasm_str,"%s", cp);
-        }
-    } else {
-        disasm_str=sprintf(disasm_str,"%s", i_name);
-        if (i_size != NONE) {
-            if (i_size == BYTE) {
-                disasm_str=sprintf(disasm_str,"b");
-                size = BYTE;
-            } else if (REX_W(rex)) {
-                disasm_str=sprintf(disasm_str,"q");
-                size = QUAD;
-            } else if (i_size == WORD) {
-                disasm_str=sprintf(disasm_str,"w");
-                size = WORD;
-            } else if (i_size == QUAD) {
-                size = QUAD;
-                disasm_str=sprintf(disasm_str,"q");
-            } else if (size == WORD) {
-                disasm_str=sprintf(disasm_str,"w");
-            } else {
-                disasm_str=sprintf(disasm_str,"l");
-            }
+            i_name=cp;
         }
     }
-    disasm_str=sprintf(disasm_str,"\t");
-    for (first = TRUE; i_mode != 0; i_mode >>= 8, first = FALSE) {
-        if (!first)
-            disasm_str=sprintf(disasm_str,", ");
+    if(str!=NULL)
+        str = sprintf(str, "%s\t", i_name);
+
+    //arguments
+    for (;i_mode != 0; i_mode >>= 8) {
+        if (str!=NULL && *(str-1)!='\t')
+            str = sprintf(str, ", ");
 
         switch (i_mode & 0xFF) {
-        case E: //XXX
-            db_print_address(seg, size, &address);
-            break;
-        case Eind: //XXX
-            disasm_str=sprintf(disasm_str,"*");
-            db_print_address(seg, size, &address);
-            break;
-        case Ew: //XXX
-            db_print_address(seg, WORD, &address);
-            break;
-        case Eb: //XXX
-            db_print_address(seg, BYTE, &address);
-            break;
-        case R:
-            disasm_str=sprintf(disasm_str,"%s", db_reg[size][f_reg(regmodrm, rex)]);
-            break;
-        case Rw:
-            disasm_str=sprintf(disasm_str,"%s", db_reg[WORD][f_reg(regmodrm, rex)]);
-            break;
-        case Ri:
-            disasm_str=sprintf(disasm_str,"%s", db_reg[size][f_rm(inst, rex)]);
-            break;
-        case Ril:
-            disasm_str=sprintf(disasm_str,"%s", db_reg[LONG][f_rm(inst, rex)]);
-            break;
-        case S:
-            disasm_str=sprintf(disasm_str,"%s", db_seg_reg[f_reg(regmodrm, 0)]);
-            break;
-        case Si:
-            disasm_str=sprintf(disasm_str,"%s", db_seg_reg[f_reg(inst, 0)]);
-            break;
-        case A:
-            disasm_str=sprintf(disasm_str,"%s", db_reg[size][0]);   /* acc */
-            break;
-        case BX:
-            if (seg)
-                disasm_str=sprintf(disasm_str,"%s:", seg);
-            disasm_str=sprintf(disasm_str,"(%s)", short_addr ? "%ebx" : "%rbx");
-            break;
-        case CL:
-            disasm_str=sprintf(disasm_str,"%%cl");
-            break;
-        case DX:
-            disasm_str=sprintf(disasm_str,"%%dx");
-            break;
-        case SI:
-            if (seg)
-                disasm_str=sprintf(disasm_str,"%s:", seg);
-            disasm_str=sprintf(disasm_str,"(%s)", short_addr ? "%esi" : "%rsi");
-            break;
-        case DI:
-            disasm_str=sprintf(disasm_str,"%%es:(%s)", short_addr ? "%edi" : "%rdi");
-            break;
-        case CR:
-            disasm_str=sprintf(disasm_str,"%%cr%d", f_reg(regmodrm, rex));
-            break;
-        case DR:
-            disasm_str=sprintf(disasm_str,"%%dr%d", f_reg(regmodrm, rex));
-            break;
-        case TR: //XXX
-            disasm_str=sprintf(disasm_str,"%%tr%d", f_reg(regmodrm, rex));
-            break;
-        case I:
-            len = db_lengths[size];
-            /* TODO: this is not 100% */
-            if(len==8) len=4;
-            get_value_inc(imm, loc, len, FALSE);
-            disasm_str=sprintf(disasm_str,"$0x%x", (uint)imm);
-            dbg_comment=(uint)imm;
-            break;
-        case Is:
-            len = db_lengths[size];
-            get_value_inc(imm, loc, len, TRUE);
-            disasm_str=sprintf(disasm_str,"$0x%x", (int)imm);
-            dbg_comment=(int)imm;
-            break;
-        case Ib:
-            get_value_inc(imm, loc, 1, FALSE);
-            disasm_str=sprintf(disasm_str,"$%1x", (int)imm);
-            break;
-        case Iba:
-            get_value_inc(imm, loc, 1, FALSE);
-            if (imm != 0x0a)
-                disasm_str=sprintf(disasm_str,"$%1x", (int)imm);
-            break;
-        case Ibs: //XXX
-            get_value_inc(imm, loc, 1, TRUE);
-            if (size == WORD)
-                imm &= 0xFFFF;
-            disasm_str=sprintf(disasm_str,"$%1x", (int)imm);
-            break;
-        case Iw:
-            get_value_inc(imm, loc, 2, FALSE);
-            disasm_str=sprintf(disasm_str,"$0x%2x", (int)imm);
-            dbg_comment=imm;
-            break;
-        case Iq:
-            get_value_inc(imm, loc, 8, TRUE);
-            disasm_str=sprintf(disasm_str,"$0x%8x", (int64_t)imm);
-            dbg_comment=imm;
-            break;
-        case O: //XXX
-            if (short_addr)
-                get_value_inc(displ, loc, 2, TRUE);
-            else
-                get_value_inc(displ, loc, 4, TRUE);
-            if (seg)
-                disasm_str=sprintf(disasm_str,"%s:", seg);
-            disasm_str=sprintf(disasm_str,"%x", displ);
-            dbg_comment=displ;
-            break;
-        case Db: //XXX
-            get_value_inc(displ, loc, 1, TRUE);
-            displ += loc;
-            if (size == WORD)
-                displ &= 0xFFFF;
-            disasm_str=sprintf(disasm_str,"%x", displ);
-            dbg_comment=displ;
-            break;
-        case Dl: //XXX
-            len = db_lengths[size];
-            get_value_inc(displ, loc, len, FALSE);
-            displ += loc;
-            if (size == WORD)
-                displ &= 0xFFFF;
-            disasm_str=sprintf(disasm_str,"%x", displ);
-            dbg_comment=displ;
-            break;
-        case o1: //XXX
-            disasm_str=sprintf(disasm_str,"$1");
-            break;
-        case o3: //XXX
-            disasm_str=sprintf(disasm_str,"$3");
-            break;
-        case OS: //XXX
-            len = db_lengths[size];
-            get_value_inc(imm, loc, len, FALSE);    /* offset */
-            get_value_inc(imm2, loc, 2, FALSE); /* segment */
-            disasm_str=sprintf(disasm_str,"$0x%x", imm2);
-            break;
+            case DA_E:
+            case DA_EInd:
+                if(str != NULL)
+                    str = disasm_prtaddr(str, addr, size, reg);
+                break;
+            case DA_Ew:
+                if(str != NULL)
+                    str = disasm_prtaddr(str, addr, DA_WORD, reg);
+                break;
+            case DA_Eb:
+                if(str != NULL)
+                    str = disasm_prtaddr(str, addr, DA_BYTE, reg);
+                break;
+            case DA_R:
+                if(str != NULL)
+                    str = sprintf(str, regs[size][reg]);
+                break;
+            case DA_Rw:
+                if(str != NULL)
+                    str = sprintf(str, regs[DA_WORD][reg]);
+                break;
+            case DA_Ri:
+                if(str != NULL)
+                    str = sprintf(str, regs[size][(opcode&7)+((rex&1)<<3)]);
+                break;
+            case DA_Ril:
+                if(str != NULL)
+                    str = sprintf(str, regs[DA_LONG][(opcode&7)+((rex&1)<<3)]);
+                break;
+            case DA_S:
+                if(str != NULL)
+                    str = sprintf(str, sregs[(modrm&7)]);
+                break;
+            case DA_Si:
+                if(str != NULL)
+                    str = sprintf(str, sregs[(opcode&7)]);
+                break;
+            case DA_A:
+                if(str != NULL)
+                    str = sprintf(str, regs[size][0]);
+                break;
+            case DA_BX:
+                if(str != NULL) {
+                    if (addr_seg)
+                        str = sprintf(str, "%cs:", addr_seg);
+                    str = sprintf(str,"%s [%s]", sizestr[i_size], regs[addr_saddr][3]);
+                }
+                break;
+            case DA_CL:
+                if(str != NULL)
+                    str = sprintf(str, regs[DA_BYTE][1]);
+                break;
+            case DA_DX:
+                if(str != NULL)
+                    str = sprintf(str, regs[DA_WORD][2]);
+                break;
+            case DA_SI:
+                if(str != NULL) {
+                    if (addr_seg)
+                        str = sprintf(str, "%cs:", addr_seg);
+                    str = sprintf(str,"%s [%s]", sizestr[i_size], regs[addr_saddr][6]);
+                }
+                break;
+            case DA_DI:
+                if(str != NULL) {
+                    if (addr_seg)
+                        str = sprintf(str, "%cs:", addr_seg);
+                    str = sprintf(str,"%s [%s]", sizestr[i_size], regs[addr_saddr][7]);
+                }
+                break;
+            case DA_CR:
+                if (str != NULL)
+                    str = sprintf(str, "cr%d", reg);
+                break;
+            case DA_DR:
+                if (str != NULL)
+                    str = sprintf(str, "dr%d", reg);
+                break;
+            case DA_TR:
+                if (str != NULL)
+                    str = sprintf(str, "tr%d", reg);
+                break;
+            case DA_I:
+            case DA_Is:
+                // get immediate
+                imm = (uint64_t)(*((uint32_t*)addr));
+                addr+=4;
+                if (str != NULL)
+                    str = sprintf(str, "%xh", imm);
+                dbg_comment=(uint)imm;
+                break;
+            case DA_Ib:
+                // get immediate
+                imm = (uint64_t)(*((uint8_t*)addr));
+                addr++;
+                if (str != NULL)
+                    str = sprintf(str, "%1xh", imm);
+                dbg_comment=imm;
+                break;
+            case DA_Iba:
+            case DA_Ibs:
+                // get immediate
+                imm = (uint64_t)(*((uint8_t*)addr));
+                addr++;
+                if (str != NULL && imm !=0x0a)
+                    str = sprintf(str, "%1xh", imm);
+                dbg_comment=imm;
+                break;
+            case DA_Iw:
+                // get immediate
+                imm = (uint64_t)(*((uint16_t*)addr));
+                addr+=2;
+                if (str != NULL)
+                    str = sprintf(str, "%2xh", imm);
+                dbg_comment=imm;
+                break;
+            case DA_Iq:
+                // get immediate
+                imm = (uint64_t)(*((uint64_t*)addr));
+                addr+=8;
+                if (str != NULL)
+                    str = sprintf(str, "%8xh", imm);
+                dbg_comment=imm;
+                break;
+            case DA_O:
+                // get displacement
+                if (addr_saddr==DA_QUAD) {
+                    disp = (uint64_t)(*((uint32_t*)addr));
+                    addr+=4;
+                } else {
+                    disp = (uint64_t)(*((uint16_t*)addr));
+                    addr+=2;
+                }
+                if(str != NULL) {
+                    if (addr_seg)
+                        str = sprintf(str, "%cs:", addr_seg);
+                    str = sprintf(str,"%xh", disp);
+                }
+                dbg_comment = disp;
+                break;
+            case DA_Db:
+                // get displacement
+                disp = (uint64_t)(*((uint8_t*)addr));
+                addr++;
+                disp += addr;
+                if (size == DA_WORD)
+                    disp &= 0xFFFF;
+                if(str != NULL)
+                    str = sprintf(str, "%xh", disp);
+                dbg_comment=disp;
+                break;
+            case DA_Dl:
+                // get displacement
+                if (size==DA_QUAD) {
+                    disp = (uint64_t)(*((uint64_t*)addr));
+                    addr+=8;
+                } else if (size==DA_LONG) {
+                    disp = (uint64_t)(*((uint32_t*)addr));
+                    addr+=4;
+                } else if (size==DA_WORD) {
+                    disp = (uint64_t)(*((uint16_t*)addr));
+                    addr+=2;
+                } else {
+                    disp = (uint64_t)(*((uint8_t*)addr));
+                    addr++;
+                }
+                disp += addr;
+                if (size == DA_WORD)
+                    disp &= 0xFFFF;
+                if(str != NULL)
+                    str = sprintf(str, "%xh", disp);
+                dbg_comment=disp;
+                break;
+            case DA_o1:
+                if(str != NULL)
+                    str = sprintf(str, "1");
+                break;
+            case DA_o3:
+                if(str != NULL)
+                    str = sprintf(str, "3");
+                break;
+            case DA_OS:
+                // get displacement
+                if (size==DA_QUAD) {
+                    disp = (uint64_t)(*((uint64_t*)addr));
+                    addr+=8;
+                } else if (size==DA_LONG) {
+                    disp = (uint64_t)(*((uint32_t*)addr));
+                    addr+=4;
+                } else if (size==DA_WORD) {
+                    disp = (uint64_t)(*((uint16_t*)addr));
+                    addr+=2;
+                } else {
+                    disp = (uint64_t)(*((uint8_t*)addr));
+                    addr++;
+                }
+                // get immediate
+                imm = (uint64_t)(*((uint16_t*)addr));
+                addr+=2;
+                if(str != NULL)
+                    str = sprintf(str, "%x:%xh", imm, disp);
+                break;
+            default:
+                if(str != NULL)
+                    str = sprintf(str, "?");
+                break;
         }
     }
 
-    if (inst == 0xe9 || inst == 0xeb) {
-        loc = (loc + (4-1)) & ~(4-1);
+    // stupid gas wasting code area
+    if (opcode == 0xe9 || opcode == 0xeb) {
+        addr = (addr + (4-1)) & ~(4-1);
     }
-done:
-    if (loc - loc_orig > 15)
-        disasm_str=sprintf(disasm_str," <instruction too long>");
-    *disasm_str=0;
-    return (loc);
+
+end:
+    if (addr - disasmstart > 15 && str!=NULL)
+        str = sprintf(str," <too long>");
+    *str=0;
+    return addr;
 }
 
 #endif
