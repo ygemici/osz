@@ -168,6 +168,112 @@ __inline__ void service_loadso(char *fn)
     service_loadelf(fn);
 }
 
+#if DEBUG
+virt_t service_lookupsym(uchar *name, size_t size)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    Elf64_Ehdr *ehdr;
+    virt_t addr = CORE_ADDRESS;
+    if(size==3 && !kmemcmp(name,"tcb",3))
+        return 0;
+    if(size==2 && !kmemcmp(name,"mq",2))
+        return __PAGESIZE;
+    if(size==5 && !kmemcmp(name,"stack",5))
+        return __SLOTSIZE/2;
+    if(tcb->memroot == sys_mapping) {
+        if(size==5 && !kmemcmp(name,"_main",5))
+            return TEXT_ADDRESS;
+        if(size==3 && !kmemcmp(name,"irt",3))
+            return TEXT_ADDRESS + __PAGESIZE;
+    }
+    while((addr == CORE_ADDRESS || addr < BSS_ADDRESS)) {
+        sys_fault = false;
+        if(!kmemcmp(((Elf64_Ehdr*)addr)->e_ident,ELFMAG,SELFMAG)){
+            ehdr = (Elf64_Ehdr*)addr;
+            Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
+            Elf64_Sym *sym=NULL, *s;
+            // the string tables
+            char *strtable;
+            int i, strsz, syment;
+
+            /* Program Header */
+            for(i = 0; i < ehdr->e_phnum; i++){
+                /* we only need the Dynamic header */
+                if(phdr->p_type==PT_DYNAMIC) {
+                    /* Dynamic header */
+                    Elf64_Dyn *d;
+                    d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
+                    while(d->d_tag != DT_NULL) {
+                        if(d->d_tag == DT_STRTAB) {
+                            strtable = (char*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF);
+                        }
+                        if(d->d_tag == DT_STRSZ) {
+                            strsz = d->d_un.d_val;
+                        }
+                        if(d->d_tag == DT_SYMTAB) {
+                            sym = (Elf64_Sym *)((uint8_t*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF));
+                        }
+                        if(d->d_tag == DT_SYMENT) {
+                            syment = d->d_un.d_val;
+                        }
+                        /* move pointer to next dynamic entry */
+                        d++;
+                    }
+                }
+                /* move pointer to next section header */
+                phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
+            }
+            /* fallback to sections if dynamic segment not found */
+            if(sym==NULL) {
+                // section header
+                Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
+                // string table and other section header entries
+                Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
+                char *shstr = (char*)ehdr + (uint32_t)strt->sh_offset;
+                // failsafe
+                if((virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
+                   (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
+                )
+                    continue;
+                /* Section header */
+                for(i = 0; i < ehdr->e_shnum; i++){
+                    if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".symtab")){
+                        sym = (Elf64_Sym *)((uint8_t*)ehdr + (uint32_t)shdr->sh_offset);
+                        syment = (int)shdr->sh_entsize;
+                    }
+                    if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".strtab")){
+                        strtable = (char*)ehdr + (uint32_t)shdr->sh_offset;
+                        strsz = (int)shdr->sh_size;
+                    }
+                    /* move pointer to next section header */
+                    shdr = (Elf64_Shdr *)((uint8_t *)shdr + ehdr->e_shentsize);
+                }
+            }
+            if(sym==NULL)
+                continue;
+
+            /* find the symbol with that name */
+            s=sym;
+            for(i=0;i<(strtable-(char*)sym)/syment;i++) {
+                if(s->st_name > strsz) break;
+                if( (char*)(strtable + (uint32_t)s->st_name)!=0 &&
+                    *((char*)(strtable + (uint32_t)s->st_name + size))==0 &&
+                    !kmemcmp(strtable + (uint32_t)s->st_name,name,size)
+                ) {
+                    return (virt_t)(s->st_value + (addr!=CORE_ADDRESS?(uint64_t)ehdr:0));
+                }
+                s++;
+            }
+        }
+        if(addr == CORE_ADDRESS)
+            addr = TEXT_ADDRESS;
+        else
+            addr += __PAGESIZE;
+    }
+    return 0;
+}
+#endif
+
 /* look up a symbol for address */
 uchar *service_sym(virt_t addr)
 {

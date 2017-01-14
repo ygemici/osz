@@ -680,11 +680,22 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
     }
 }
 
-virt_t dbg_getaddr(char *cmd, int cmdlast)
+extern virt_t service_lookupsym(uchar *sym, size_t size);
+
+virt_t dbg_getaddr(char *cmd, size_t size)
 {
-    uint64_t ret = 0;
+    uint64_t base = 0,ret = 0;
+    char *s=cmd;
+    if(*cmd<'0'||*cmd>'9') {
+        while((uint64_t)cmd < (uint64_t)s+size &&
+            *cmd != ' ' && *cmd != '-' && *cmd != '+'
+        )
+            cmd++;
+        base = service_lookupsym((uchar*)s,(uint64_t)cmd-(uint64_t)s);
+    }
+    while(*cmd==' '||*cmd=='-'||*cmd=='+') cmd++;
     env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
-    return ret;
+    return (*(cmd-1)=='-'?base-ret:base+ret);
 }
 
 void dbg_singlestep(bool_t enable)
@@ -1225,6 +1236,9 @@ help:
                 }
                 // instruction
                 if(cmd[0]=='i'){
+                    x=0; while(x<cmdlast && cmd[x]!=' ') x++;
+                    if(cmd[x]==' ')
+                        goto getgoto;
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
                     if(dbg_tab != tab_code)
@@ -1237,9 +1251,9 @@ help:
                 if(cmd[0]=='g'){
                     x=0; while(x<cmdlast && cmd[x]!=' ') x++;
                     if(cmd[x]==' ') {
-                        while(x<cmdlast && cmd[x]==' ') x++;
+getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
-                        y = dbg_getaddr(&cmd[x],cmdlast);
+                        y = dbg_getaddr(&cmd[x],cmdlast-x);
                         if(y==0) {
                             rip = tcb->rip;
                         } else {
@@ -1287,7 +1301,7 @@ help:
                     }
                     if(x<cmdlast) {
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
-                        y = dbg_getaddr(&cmd[x],cmdlast);
+                        y = dbg_getaddr(&cmd[x],cmdlast-x);
                         if(y==0 && cmd[x]!='0'){
                             rsp = tcb->rsp;
                             cmdidx = cmdlast = 0;
@@ -1348,7 +1362,7 @@ help:
                         }
                         while(x<cmdlast && cmd[x]==' ') x++;
                     }
-                    y = dbg_getaddr(&cmd[x], cmdlast);
+                    y = dbg_getaddr(&cmd[x], cmdlast-x);
                     if(y==0) {
                         fx = kx = (maxx-25)/2; ky = (maxy-6)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
                         __asm__ __volatile__ ("movq %%dr0, %0":"=r"(y)::);
