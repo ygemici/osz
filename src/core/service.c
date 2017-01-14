@@ -278,7 +278,7 @@ uchar *service_sym(virt_t addr)
         {
             last = strtable + (uint32_t)s->st_name;
 #if DEBUG
-            lastsym = (uint64_t)((uint8_t*)ehdr + (uint32_t)s->st_value);
+            lastsym = (uint64_t)s->st_value;
 #endif
             ptr = s->st_value;
         }

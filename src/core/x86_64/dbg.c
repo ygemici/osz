@@ -44,6 +44,7 @@ extern OSZ_pmm pmm;
 extern uint64_t *safestack;
 extern uint8_t sys_fault;
 extern uint64_t lastsym;
+extern char *addr_base;
 
 extern uchar *service_sym(virt_t addr);
 extern void kprintf_putchar(int c);
@@ -272,7 +273,21 @@ void dbg_code(uint64_t rip, uint64_t rs)
             fg=dbg_theme[2];
             kx=maxx/2+10;
             sys_fault = false;
-            symstr = service_sym(dbg_comment);
+            if(addr_base == NULL){
+                if(dbg_comment<__PAGESIZE) {
+                    symstr="tcb";
+                    lastsym=0;
+                } else
+                if(dbg_comment>=__PAGESIZE && dbg_comment<__SLOTSIZE/2) {
+                    symstr="mq";
+                    lastsym=__PAGESIZE;
+                } else
+                if(dbg_comment>=__SLOTSIZE/2 && dbg_comment<__SLOTSIZE) {
+                    symstr="stack";
+                    lastsym=__SLOTSIZE/2;
+                } else
+                    symstr = service_sym(dbg_comment);
+            }
             if(!sys_fault && symstr!=NULL && symstr[0]!='(')
                 kprintf("%s +%x", symstr, dbg_comment-lastsym);
         }
@@ -297,6 +312,7 @@ void dbg_data(uint64_t ptr)
             fg = dbg_theme[3];
         }
         switch(dbg_unit) {
+            // stack view
             case 4:
                 if(!sys_fault) {
                     kx = 19; kprintf("%8x",*((uint64_t*)ptr));
@@ -313,6 +329,7 @@ void dbg_data(uint64_t ptr)
                 }
                 ptr+=8;
                 break;
+            // qword
             case 3:
                 for(i=0;i<2;i++) {
                     if(!sys_fault) {
@@ -331,6 +348,7 @@ void dbg_data(uint64_t ptr)
                     ptr+=8;
                 }
                 break;
+            // dword
             case 2:
                 for(i=0;i<4;i++) {
                     if(!sys_fault) {
@@ -345,6 +363,7 @@ void dbg_data(uint64_t ptr)
                     ptr+=4;
                 }
                 break;
+            // word
             case 1:
                 j=18;
                 for(i=0;i<8;i++) {
@@ -359,10 +378,12 @@ void dbg_data(uint64_t ptr)
                     ptr+=2;
                 }
                 break;
+            // byte
             default:
                 j=18;
                 for(i=0;i<16;i++) {
-                    if(i%4==0) j++;
+                    if(i%4==0)
+                        j++;
                     if(!sys_fault) {
                         kx = 3*i+j; kprintf("%1x",*((uint8_t*)ptr));
                         kx = i+71; kprintf_putchar(*((uint8_t*)ptr));

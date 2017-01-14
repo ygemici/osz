@@ -155,7 +155,7 @@ char __attribute__ ((section (".data"))) *grp2[] = {
     "rcr",
     "shl",
     "shr",
-    "shl",
+    "sal",
     "sar"
 };
 
@@ -203,15 +203,26 @@ char __attribute__ ((section (".data"))) *grp6[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *grp7[] = {
-    "sgdt",
-    "sidt",
-    "lgdt",
-    "lidt",
-    "smsw",
+char __attribute__ ((section (".data"))) *inst0f00[] = {
+    "invplg",
+    "swapgs",
+    "rdtscp",
     "",
-    "lmsw",
-    "invplg"
+    "",
+    "",
+    "",
+    ""
+};
+
+instdesc __attribute__ ((section (".data"))) grp7[] = {
+    { "sgdt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { "sidt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { "lgdt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { "lidt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { "smsw",   DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { "",       DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { "lmsw",   DA_NONE+DA_MODRM, DA_Rw, 0 },
+    { NULL,     DA_NONE+DA_MODRM, DA_Rw, inst0f00 }
 };
 
 char __attribute__ ((section (".data"))) *grp8[] = {
@@ -226,8 +237,8 @@ char __attribute__ ((section (".data"))) *grp8[] = {
 };
 
 char __attribute__ ((section (".data"))) *grp9[] = {
-    "fxsave",
-    "fxrstor",
+    "",
+    "cmpxchg8b",
     "",
     "",
     "",
@@ -258,9 +269,52 @@ char __attribute__ ((section (".data"))) *grpB[] = {
     ""
 };
 
+char __attribute__ ((section (".data"))) *inst0f71[] = {
+    "",
+    "",
+    "psrlw",
+    "",
+    "psraw",
+    "",
+    "psllw",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *inst0f72[] = {
+    "",
+    "",
+    "psrld",
+    "",
+    "psrad",
+    "",
+    "pslld",
+    ""
+};
+
+char __attribute__ ((section (".data"))) *inst0f73[] = {
+    "",
+    "psrlq",
+    "psrldq",
+    "psraq",
+    "",
+    "psllq",
+    "pslldq"
+};
+
+char __attribute__ ((section (".data"))) *inst0fae[] = {
+    "sfence",
+    "clflush",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+};
+
 instdesc __attribute__ ((section (".data"))) inst0f0[] = {
-    { "",       DA_NONE+DA_MODRM, DA_Ew, grp6 },
-    { "",       DA_NONE+DA_MODRM, DA_Ew, 0 },
+    { NULL,     DA_NONE+DA_MODRM, DA_Ew, grp6 },
+    { NULL,     DA_NONE+DA_MODRM, DA_Ew, grp7 },
     { "lar",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
     { "lsl",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
     { "",       DA_NONE, 0, 0 },
@@ -303,6 +357,27 @@ instdesc __attribute__ ((section (".data"))) inst0f3[] = {
     { "rdtsc",  DA_NONE, 0, 0 },
     { "rdmsr",  DA_NONE, 0, 0 },
     { "rdpmc",  DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 }
+};
+
+instdesc __attribute__ ((section (".data"))) inst0f7[] = {
+    { "",       DA_NONE, 0, 0 },
+    { NULL,     DA_NONE, 0, inst0f71 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
@@ -374,7 +449,7 @@ instdesc __attribute__ ((section (".data"))) inst0fa[] = {
     { "bts",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "shrd",   DA_LONG+DA_MODRM, DA3_Ib_R_E, 0 },
     { "shrd",   DA_LONG+DA_MODRM, DA3_CL_R_E, 0 },
-    { "",       DA_NONE+DA_MODRM, DA_E, grp9 },
+    { NULL,     DA_NONE+DA_MODRM, DA_E, grp9 },
     { "imul",   DA_LONG+DA_MODRM, DA2_E_R, 0 }
 };
 
@@ -390,7 +465,7 @@ instdesc __attribute__ ((section (".data"))) inst0fb[] = {
 
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
-    { "",       DA_LONG+DA_MODRM, DA2_Ib_E, grp8 },
+    { NULL,     DA_LONG+DA_MODRM, DA2_Ib_E, grp8 },
     { "btc",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "bsf",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
     { "bsr",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -406,7 +481,7 @@ instdesc __attribute__ ((section (".data"))) inst0fc[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
-    { "",       DA_NONE+DA_MODRM, DA_E, grpA },
+    { NULL,       DA_NONE+DA_MODRM, DA_E, grp9 },
 
     { "bswap",  DA_LONG, DA_Ril, 0 },
     { "bswap",  DA_LONG, DA_Ril, 0 },
@@ -751,10 +826,10 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "jle",    DA_NONE, DA_Db, 0 },
     { "jnle",   DA_NONE, DA_Db, 0 },
 
-    { "",       DA_BYTE+DA_MODRM, DA2_I_E, grp1 },  /*80*/
-    { "",       DA_LONG+DA_MODRM, DA2_I_E, grp1 },
-    { "",       DA_BYTE+DA_MODRM, DA2_Ib_E, grp1 },
-    { "add",    DA_LONG+DA_MODRM, DA2_Ib_E, 0 },
+    { NULL,     DA_BYTE+DA_MODRM, DA2_Ib_E, grp1 },  /*80*/
+    { NULL,     DA_LONG+DA_MODRM, DA2_I_E, grp1 },
+    { NULL,     DA_BYTE+DA_MODRM, DA2_Ib_E, grp1 },
+    { NULL,     DA_LONG+DA_MODRM, DA2_I_E, grp1 },
     { "test",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
     { "test",   DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "xchg",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
@@ -841,10 +916,10 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "iret",   DA_NONE, 0, 0 },
 
-    { "",       DA_BYTE+DA_MODRM, DA2_o1_E, grp2 }, /*D0*/
-    { "",       DA_LONG+DA_MODRM, DA2_o1_E, grp2 },
-    { "",       DA_BYTE+DA_MODRM, DA2_CL_E, grp2 },
-    { "",       DA_LONG+DA_MODRM, DA2_CL_E, grp2 },
+    { NULL,     DA_BYTE+DA_MODRM, DA2_o1_E, grp2 }, /*D0*/
+    { NULL,     DA_LONG+DA_MODRM, DA2_o1_E, grp2 },
+    { NULL,     DA_BYTE+DA_MODRM, DA2_CL_E, grp2 },
+    { NULL,     DA_LONG+DA_MODRM, DA2_CL_E, grp2 },
     { "",       DA_NONE+DA_MODRM, DA_Ib, 0 },
     { "",       DA_NONE+DA_MODRM, DA_Ib, 0 },
     { "",       DA_NONE, 0, 0 },
@@ -883,8 +958,8 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "hlt",    DA_NONE, 0, 0 },
     { "cmc",    DA_NONE, 0, 0 },
-    { NULL,       DA_BYTE+DA_MODRM, 0, grp3 },
-    { NULL,       DA_LONG+DA_MODRM, 0, grp3 },
+    { NULL,     DA_BYTE+DA_MODRM, 0, grp3 },
+    { NULL,     DA_LONG+DA_MODRM, 0, grp3 },
 
     { "clc",    DA_NONE, 0, 0 },                    /*F8*/
     { "stc",    DA_NONE, 0, 0 },
@@ -892,8 +967,8 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "sti",    DA_NONE, 0, 0 },
     { "cld",    DA_NONE, 0, 0 },
     { "std",    DA_NONE, 0, 0 },
-    { NULL,       DA_NONE+DA_MODRM, 0, grp4 },
-    { NULL,       DA_NONE+DA_MODRM, 0, grp5 }
+    { NULL,     DA_NONE+DA_MODRM, 0, grp4 },
+    { NULL,     DA_NONE+DA_MODRM, 0, grp5 }
 };
 
 instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
@@ -904,7 +979,7 @@ instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
     0,
     0,
     0,
-    0,
+    inst0f7,
     inst0f8,
     inst0f9,
     inst0fa,
@@ -946,7 +1021,7 @@ uint8_t __attribute__ ((section (".data"))) addr_saddr;
 char __attribute__ ((section (".data"))) *addr_base;
 char __attribute__ ((section (".data"))) *addr_idx;
 
-char *disasm_prtaddr(char *str, virt_t addr, uint8_t size, uint8_t reg)
+char *disasm_prtaddr(char *str, virt_t addr, uint8_t mode, uint8_t size, uint8_t reg)
 {
     if(addr_reg) {
         str = sprintf(str, regs[size][reg]);
@@ -963,10 +1038,12 @@ char *disasm_prtaddr(char *str, virt_t addr, uint8_t size, uint8_t reg)
                     str = sprintf(str,"*%d", addr_scale);
             }
         } else {
-            addr_disp += addr;
+            if(mode!=DA_E)
+                addr_disp += addr;
         }
         if(addr_disp) {
             str = sprintf(str,"%s%x", addr_base!=NULL?"+":"", addr_disp);
+            dbg_comment = addr_disp;
         }
         str = sprintf(str,"]");
     }
@@ -979,7 +1056,7 @@ virt_t disasm(virt_t addr, char *str)
     //prefix
     uint8_t rex = 0;
     //opcode and it's argument bytes
-    uint8_t opcode = 0;
+    uint8_t opcode = 0, opcode2 = 0;
     uint8_t modrm = 0;
     uint8_t sib = 0;
     uint64_t imm = 0;
@@ -988,7 +1065,7 @@ virt_t disasm(virt_t addr, char *str)
     uint8_t size = DA_LONG;
     uint8_t reg = 0;
     instdesc *inst;
-    uint32_t i_size;
+    uint32_t i_size = DA_NONE;
     uint32_t i_mode;
     char *i_name;
 
@@ -1063,36 +1140,35 @@ prefixend:
     if(opcode==0x90) {
         i_size = 1;
         while(*((uint8_t*)addr)==0x90) { i_size++; addr++; }
-        if(str!=NULL)
+        if(str != NULL)
             str = sprintf(str, "%d x nop", i_size);
-        goto end;
-    }
-    //handle syscall specially (mov eax,...;syscall)
-    if (opcode == 0xb8 && *((uint8_t*)addr+4)==0x0f && *((uint8_t*)addr+5)==0x05) {
-        if(str!=NULL)
-            str = sprintf(str, "syscall '%c%c%c%c'",
-                *((uchar*)addr),*((uchar*)addr+1),*((uchar*)addr+2),*((uchar*)addr+3));
-        addr += 6;
         goto end;
     }
     //2 bytes opcode?
     if (opcode == 0x0f) {
-        opcode = *((uint8_t*)addr);
+        opcode2 = *((uint8_t*)addr);
         addr++;
-        inst = inst_tbl0f[opcode>>4];
+        //handle syscall specially (mov eax,...;syscall)
+        if (opcode2 == 0x05) {
+            if(str != NULL)
+                str = sprintf(str, "syscall '%c%c%c%c'",
+                    *((uchar*)addr-6),*((uchar*)addr-5),*((uchar*)addr-4),*((uchar*)addr-3));
+            goto end;
+        }
+        inst = inst_tbl0f[opcode2>>4];
         if (inst != NULL)
-            inst = &inst[opcode&0xf];
+            inst = &inst[opcode2&0xf];
     } else {
         //no, 1 byte opcode
         inst = &inst_tbl[opcode];
     }
     if (inst == NULL) {
-        if(str!=NULL)
+        if(str != NULL)
             str = sprintf(str, unkmnemonic);
         goto end;
     }
     //has modrm?
-    if(inst->size&DA_MODRM) {
+    if(inst->size & DA_MODRM) {
         modrm = *((uint8_t*)addr);
         addr++;
         uint8_t mod = (modrm>>6) & 3;
@@ -1104,7 +1180,7 @@ prefixend:
         addr_scale = addr_reg = false;
         if(mod==3) {
             addr_reg = true;
-            addr_disp = (uint64_t)rm;
+            addr_disp = (uint64_t)((uint8_t)rm);
         } else {
             // do we have a sib byte?
             if((modrm & 7)==0b100) {
@@ -1115,14 +1191,14 @@ prefixend:
                 if(idx!=4)
                     addr_idx=regs[DA_QUAD][idx];
                 rm = ((rex&1)<<3)+(sib&7);
+                addr_disp = (uint64_t)(*((uint32_t*)addr));
+                addr+=4;
             } else {
                 addr_base = regs[size][rm];
                 if(mod==0) {
-                    if(rm==5) {
-                        addr_disp = (uint64_t)(*((uint32_t*)addr));
-                        addr+=4;
-                        addr_base = 0;
-                    }
+                    addr_disp = (uint64_t)(*((uint32_t*)addr));
+                    addr+=4;
+                    addr_base = 0;
                 } else
                 if(mod==1) {
                     addr_disp = (uint64_t)(*((uint8_t*)addr));
@@ -1138,22 +1214,25 @@ prefixend:
 
     //ModRM specific
     i_name = inst->name;
-    if((inst->name==NULL||inst->name[0]==0)&&inst->ext!=0) {
+    if((inst->name==NULL||inst->name[0]==0) && inst->ext != 0) {
         if(opcode>=0xd0&&opcode<=0xd8){
             //TODO: esc
             inst = (instdesc*)inst->ext;
             inst = &inst[(modrm>>3)&7];
             i_name = inst->name;
         } else {
-            if(inst->ext==grp3 || inst->ext==grp4 || inst->ext==grp5) {
+            // typeof inst->ext == instdesc*?
+            if(inst->ext==grp3 || inst->ext==grp4 || inst->ext==grp5 ||
+               inst->ext==grp7) {
                 inst = (instdesc*)inst->ext;
-                inst = &inst[reg];
-                i_name = inst->name;
-            } else {
-                i_name = ((char**)inst->ext)[reg];
+                inst = &inst[(modrm>>3)&7];
+            }
+            if (opcode==0x0f && (opcode2 == 0x01 || opcode2 == 0xae)) {
+
             }
         }
     }
+    i_name = inst->name!=NULL ? inst->name : ((char**)inst->ext)[reg];
     i_size = inst->size&0xf;
     i_mode = inst->mode;
 
@@ -1181,15 +1260,15 @@ prefixend:
             case DA_E:
             case DA_EInd:
                 if(str != NULL)
-                    str = disasm_prtaddr(str, addr, size, reg);
+                    str = disasm_prtaddr(str, addr, i_mode&0xFF, i_size, addr_disp);
                 break;
             case DA_Ew:
                 if(str != NULL)
-                    str = disasm_prtaddr(str, addr, DA_WORD, reg);
+                    str = disasm_prtaddr(str, addr, i_mode&0xFF, DA_WORD, reg);
                 break;
             case DA_Eb:
                 if(str != NULL)
-                    str = disasm_prtaddr(str, addr, DA_BYTE, reg);
+                    str = disasm_prtaddr(str, addr, i_mode&0xFF, DA_BYTE, reg);
                 break;
             case DA_R:
                 if(str != NULL)
