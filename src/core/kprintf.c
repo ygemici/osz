@@ -66,9 +66,9 @@ char kpanicsuffix2[] =
     "               AND RESTART YOUR COMPUTER              \n"
     "                                                      ";
 char poweroffprefix[] =
-    "OS/Z shutdown finished.\n";
+    "OS/Z shutdown finished. ";
 char poweroffsuffix[] =
-    "TURN OFF YOUR COMPUTER.";
+    "TURN OFF YOUR COMPUTER.\n";
 char nullstr[] = "(null)";
 
 typedef unsigned char *valist;

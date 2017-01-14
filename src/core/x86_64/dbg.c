@@ -57,6 +57,8 @@ uint8_t __attribute__ ((section (".data"))) dbg_active;
 uint8_t __attribute__ ((section (".data"))) dbg_tab;
 uint8_t __attribute__ ((section (".data"))) dbg_inst;
 uint8_t __attribute__ ((section (".data"))) dbg_unit;
+uint8_t __attribute__ ((section (".data"))) dbg_numbrk;
+uint8_t __attribute__ ((section (".data"))) dbg_iskbd;
 uint64_t __attribute__ ((section (".data"))) cr2;
 uint64_t __attribute__ ((section (".data"))) cr3;
 uint64_t __attribute__ ((section (".data"))) dr6;
@@ -69,6 +71,7 @@ uint32_t __attribute__ ((section (".data"))) *dbg_theme;
 uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x400000,0x800000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
 uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000020,0x000040,0x101080,0x3e32a2,0x7c71da,0x867ade} ;
 //uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000010,0x000020,0x000040,0x1b3c9c,0x4b6ccc,0x6b8cec} ;
+char __attribute__ ((section (".data"))) *brk = "BRK? set";
 
 // different kind of tabs
 enum {
@@ -275,16 +278,16 @@ void dbg_code(uint64_t rip, uint64_t rs)
             sys_fault = false;
             if(addr_base == NULL){
                 if(dbg_comment<__PAGESIZE) {
-                    symstr="tcb";
-                    lastsym=0;
+                    symstr = (uchar*)"tcb";
+                    lastsym = 0;
                 } else
                 if(dbg_comment>=__PAGESIZE && dbg_comment<__SLOTSIZE/2) {
-                    symstr="mq";
-                    lastsym=__PAGESIZE;
+                    symstr = (uchar*)"mq";
+                    lastsym = __PAGESIZE;
                 } else
                 if(dbg_comment>=__SLOTSIZE/2 && dbg_comment<__SLOTSIZE) {
-                    symstr="stack";
-                    lastsym=__SLOTSIZE/2;
+                    symstr = (uchar*)"stack";
+                    lastsym = __SLOTSIZE/2;
                 } else
                     symstr = service_sym(dbg_comment);
             }
@@ -654,6 +657,43 @@ void dbg_putchar(int c) {
     ::"r"(c):"%rax","%rbx","%rdx");
 }
 
+#define DBG_MODE_EXEC 0b00
+#define DBG_MODE_READ 0b00
+#define DBG_MODE_WRITE 0b00
+
+void dbg_setbrk(virt_t addr, uint8_t mode, uint8_t len)
+{
+    dbg_err = brk;
+    brk[3]='0'+(dbg_numbrk%4);
+    switch(dbg_numbrk%4){
+        case 0:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr0;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11))):"%rax","%rdx");
+            break;
+        case 1:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr1;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b1100))):"%rax","%rdx");
+            break;
+        case 2:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr2;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b110000))):"%rax","%rdx");
+            break;
+        case 3:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr3;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11000000))):"%rax","%rdx");
+        default: break;
+    }
+    dbg_numbrk++;
+}
+
 // activate debugger. Called from ISRs
 void dbg_enable(uint64_t rip, char *reason)
 {
@@ -664,6 +704,7 @@ void dbg_enable(uint64_t rip, char *reason)
     char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM" };
     char cmd[64], c;
     int cmdidx=0,cmdlast=0;
+    uint8_t m,l;
 
     // turn of scroll
     scry = -1;
@@ -685,9 +726,11 @@ void dbg_enable(uint64_t rip, char *reason)
         if(dr6&(1<<14))
             reason="single step";
         if(dr6&(1<<0)||dr6&(1<<1)||dr6&(1<<2))
-            reason="watchpoint";
+            reason="breakpoint";
     }
     kprintf_reset();
+    dbg_putchar(13);
+    dbg_putchar(10);
     fg = 0xFFDD33;
     bg = 0;
     kprintf("OS/Z debug");
@@ -710,6 +753,17 @@ void dbg_enable(uint64_t rip, char *reason)
     /* redraw and get command */
     while(1) {
 redraw:
+        dbg_putchar(13);
+        dbg_putchar(10);
+/*
+        dbg_putchar(27);
+        dbg_putchar('[');
+        dbg_putchar('H');
+        dbg_putchar(27);
+        dbg_putchar('[');
+            dbg_putchar('2');
+        dbg_putchar('J');
+*/
         fx=kx=0; ky=1;
         for(x=0;x<tab_last;x++) {
             kx++;
@@ -782,6 +836,56 @@ getcmd:
         }
 */
         scancode = kwaitkey();
+        if(dbg_iskbd==false) {
+            if(scancode==12)
+                goto getcmd;
+            else
+            if(scancode==27) {
+                scancode = kwaitkey();
+                if(scancode==27)
+                    scancode=1;
+                else
+                if(scancode=='[') {
+                    scancode = kwaitkey();
+                    if(scancode=='A')
+                        scancode=328;
+                    else
+                    if(scancode=='B')
+                        scancode=336;
+                    else
+                    if(scancode=='C')
+                        scancode=333;
+                    else
+                    if(scancode=='D')
+                        scancode=331;
+                    else
+                    if(scancode=='3') {
+                        scancode = kwaitkey();
+                        if(scancode=='~')
+                            scancode=339;
+                    }
+                    if(scancode=='1') {
+                        scancode = kwaitkey();
+                        if(scancode=='1') {
+                            scancode = kwaitkey();
+                            if(scancode=='~')
+                                scancode=59;
+                        }
+                    }
+                }
+            } else
+            if(scancode==3) {
+                scancode=1;
+            } else
+            if(scancode==8||scancode==127)
+                scancode=14;
+            else
+            if(scancode=='\t')
+                scancode=15;
+            else
+            if(scancode=='\r'||scancode=='\n')
+                scancode=28;
+        }
         switch(scancode){
             // ESC
             case 1: {
@@ -822,7 +926,7 @@ end:
                     dbg_switchprev(&rip, &rsp);
                     goto redraw;
                 }
-                if(cmdidx>0)
+                if(cmdidx>0 && dbg_iskbd)
                     cmdidx--;
                 goto getcmd;
             }
@@ -832,7 +936,7 @@ end:
                     dbg_switchnext(&rip, &rsp);
                     goto redraw;
                 }
-                if(cmdidx<cmdlast)
+                if(cmdidx<cmdlast && dbg_iskbd)
                     cmdidx++;
                 goto getcmd;
             }
@@ -873,7 +977,7 @@ end:
                 dbg_inst = 1-dbg_inst;
                 goto redraw;
             }
-            // F1
+            // F1 Help
             case 59: {
 help:
                 fx = kx = (maxx-54)/2; ky = (maxy-29)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
@@ -907,9 +1011,12 @@ help:
                     "  Instruction, Disasm - instruction disassemble       \n"
                     "  Goto X - go to address X                            \n"
                     "  eXamine [/bwdqs] X - examine memory at X            \n"
+                    "  Break [/rwx] X - set a breakpoint at X              \n"
                     "                                                      \n"
                 );
-                kwaitkey();
+                if(kwaitkey()==27 && dbg_iskbd==false){
+                    while(kwaitkey()!='~');
+                }
                 goto redraw;
             }
             // Enter
@@ -1081,6 +1188,32 @@ help:
                     dbg_tab = tab_data;
                     goto redraw;
                 }
+                // break
+                if(cmd[0]=='b'){
+                    x=0; while(x<cmdlast && cmd[x]!=' ' && cmd[x]!='/') x++;
+                    while(x<cmdlast && cmd[x]==' ') x++;
+
+                    m = l = 0b00;
+                    if(cmd[x]=='/') {
+                        x++;
+                        if(cmd[x]=='r') {
+                            m=0b10;
+                            l=0b10;
+                        } else
+                        if(cmd[x]=='w') {
+                            m=0b11;
+                            l=0b10;
+                        }
+                        x++;
+                        while(x<cmdlast && cmd[x]==' ') x++;
+                    }
+                    y = dbg_getaddr(&cmd[x], cmdlast);
+                    dbg_setbrk(y/*addr*/, m/*mode*/, l/*len*/);
+                    cmdidx = cmdlast = 0;
+                    cmd[cmdidx]=0;
+                    dbg_tab = tab_code;
+                    goto redraw;
+                }
                 /* unknown command, do nothing */
                 dbg_err = "Unknown command";
                 goto getcmd;
@@ -1094,22 +1227,25 @@ help:
                     for(x=cmdlast;x>cmdidx;x--)
                         cmd[x]=cmd[x-1];
                 }
-                if(scancode>=2&&scancode<=13) {
-                    c = "1234567890-+"[scancode-2];
+                if(dbg_iskbd){
+                    if(scancode>=2&&scancode<=13) {
+                        c = "1234567890-+"[scancode-2];
+                    } else
+                    if(scancode>=16 && scancode<=27) {
+                        c = "qwertyuiop[]"[scancode-16];
+                    } else
+                    if(scancode>=30 && scancode<=40) {
+                        c = "asdfghjkl;'"[scancode-30];
+                    } else
+                    if(scancode>=44 && scancode<=53) {
+                        c = "zxcvbnm,./"[scancode-44];
+                    } else
+                    if(scancode==57) {
+                        c = ' ';
+                    } else
+                        c = 0;
                 } else
-                if(scancode>=16 && scancode<=27) {
-                    c = "qwertyuiop[]"[scancode-16];
-                } else
-                if(scancode>=30 && scancode<=40) {
-                    c = "asdfghjkl;'"[scancode-30];
-                } else
-                if(scancode>=44 && scancode<=53) {
-                    c = "zxcvbnm,./"[scancode-44];
-                } else
-                if(scancode==57) {
-                    c = ' ';
-                } else
-                    c = 0;
+                    c = scancode;
                 if(c!=0) {
                     cmdlast++;
                     cmd[cmdidx++] = c;

@@ -428,6 +428,9 @@ kwaitkey:
     xorq    %rdx, %rdx
     /* is there a key waiting? */
 1:  inb     $0x64, %al
+#if DEBUG
+    movb    $1, dbg_iskbd
+#endif
     andb    $1, %al
     jnz     2f
 #if DEBUG
@@ -437,6 +440,7 @@ kwaitkey:
     jz      1b
     subb    $5, %dl
     inb     %dx, %al
+    movb    $0, dbg_iskbd
     jmp     8f
 #else
     jmp     1b

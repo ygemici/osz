@@ -70,6 +70,8 @@ void sys_disable()
     acpi_poweroff();
     // if it didn't work, show a message and freeze.
     kprintf_init();
+    dbg_putchar(13);
+    dbg_putchar(10);
     kprintf(poweroffprefix);
     fg = 0x29283f;
     kprintf_center(21, -8);
