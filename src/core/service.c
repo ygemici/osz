@@ -173,6 +173,7 @@ virt_t service_lookupsym(uchar *name, size_t size)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
+    /* common to all threads */
     virt_t addr = CORE_ADDRESS;
     if(size==3 && !kmemcmp(name,"tcb",3))
         return 0;
@@ -180,14 +181,22 @@ virt_t service_lookupsym(uchar *name, size_t size)
         return __PAGESIZE;
     if(size==5 && !kmemcmp(name,"stack",5))
         return __SLOTSIZE/2;
+    if(size==4 && !kmemcmp(name,"text",4))
+        return TEXT_ADDRESS;
+    if(size==3 && !kmemcmp(name,"bss",3))
+        return BSS_ADDRESS;
+    if(size==4 && !kmemcmp(name,"core",4))
+        return CORE_ADDRESS;
+    /* SYS task only */
     if(tcb->memroot == sys_mapping) {
         if(size==5 && !kmemcmp(name,"_main",5))
             return TEXT_ADDRESS;
         if(size==3 && !kmemcmp(name,"irt",3))
             return TEXT_ADDRESS + __PAGESIZE;
     }
-    while((addr == CORE_ADDRESS || addr < BSS_ADDRESS)) {
+    /* otherwise look for elf and parse for symbols */
         sys_fault = false;
+    while(!sys_fault && (addr == CORE_ADDRESS || addr < BSS_ADDRESS)) {
         if(!kmemcmp(((Elf64_Ehdr*)addr)->e_ident,ELFMAG,SELFMAG)){
             ehdr = (Elf64_Ehdr*)addr;
             Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
