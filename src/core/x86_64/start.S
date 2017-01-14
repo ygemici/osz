@@ -139,7 +139,11 @@ _start:
 
     /* enable OSFXSR and TSC */
     movq    %cr4, %rax
+#if DEBUG
+    orl     $0x208, %eax
+#else
     orl     $0x200, %eax
+#endif
     andb    $0xFB, %al
     movq    %rax, %cr4
 

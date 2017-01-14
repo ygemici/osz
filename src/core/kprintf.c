@@ -28,6 +28,10 @@
 #include "font.h"
 #include "env.h"
 
+#if DEBUG
+extern char *syslog_buf;
+#endif
+
 /* re-entrant counter */
 char __attribute__ ((section (".data"))) reent;
 /* for temporary strings */
@@ -136,6 +140,22 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
+}
+
+void kprintf_ready()
+{
+    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
+    kprintf_reset();
+    kprintf("OS/Z ready. Allocated %d pages out of %d",
+        pmm.totalpages - pmm.freepages, pmm.totalpages);
+    kprintf(", free %d.%d%%\n",
+        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
+#if DEBUG
+    if(debug&DBG_LOG)
+        kprintf(syslog_buf);
+#endif
+    //disable scroll pause
+    scry = -1;
 }
 
 void kprintf_putlogo()

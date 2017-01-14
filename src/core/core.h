@@ -88,6 +88,9 @@ extern uint64_t kwaitkey();
 /** Initialize console printf for debugging and panicing */
 extern void kprintf_init();
 
+/** ready prompt */
+extern void kprintf_ready();
+
 /** Set default colors and move cursor home */
 extern void kprintf_reset();
 

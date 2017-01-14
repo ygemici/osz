@@ -59,6 +59,8 @@ uint8_t __attribute__ ((section (".data"))) dbg_inst;
 uint8_t __attribute__ ((section (".data"))) dbg_unit;
 uint8_t __attribute__ ((section (".data"))) dbg_numbrk;
 uint8_t __attribute__ ((section (".data"))) dbg_iskbd;
+uint8_t __attribute__ ((section (".data"))) dbg_indump;
+uint8_t __attribute__ ((section (".data"))) dbg_tui;
 uint64_t __attribute__ ((section (".data"))) cr2;
 uint64_t __attribute__ ((section (".data"))) cr3;
 uint64_t __attribute__ ((section (".data"))) dr6;
@@ -71,7 +73,7 @@ uint32_t __attribute__ ((section (".data"))) *dbg_theme;
 uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x400000,0x800000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
 uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000020,0x000040,0x101080,0x3e32a2,0x7c71da,0x867ade} ;
 //uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000010,0x000020,0x000040,0x1b3c9c,0x4b6ccc,0x6b8cec} ;
-char __attribute__ ((section (".data"))) *brk = "BRK? set";
+char __attribute__ ((section (".data"))) *brk = "BRK? ?? set at ????????????????h";
 
 // different kind of tabs
 enum {
@@ -168,12 +170,43 @@ void dbg_code(uint64_t rip, uint64_t rs)
 
     /* stack */
     ky=3; kx = maxx-44;
+    if(dbg_tui) {
+        dbg_putchar(27);
+        dbg_putchar('[');
+        if(ky>98)
+            dbg_putchar('0'+((ky/100)%10));
+        dbg_putchar('0'+((ky/10)%10));
+        dbg_putchar('0'+(ky%10));
+        dbg_putchar(';');
+        if(kx>98)
+            dbg_putchar('0'+((kx/100)%10));
+        dbg_putchar('0'+((kx/10)%10));
+        dbg_putchar('0'+(kx%10));
+        dbg_putchar('H');
+    } else {
+        dbg_putchar(13);
+        dbg_putchar(10);
+    }
     fg=dbg_theme[4];
     kprintf("[Stack %8x]\n",rsp);
     fg=dbg_theme[3];
     kx=fx=maxx-44;
     sys_fault = false;
     while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+        if(dbg_tui) {
+            dbg_putchar(27);
+            dbg_putchar('[');
+            if(ky>98)
+                dbg_putchar('0'+((ky/100)%10));
+            dbg_putchar('0'+((ky/10)%10));
+            dbg_putchar('0'+(ky%10));
+            dbg_putchar(';');
+            if(kx>98)
+                dbg_putchar('0'+((kx/100)%10));
+            dbg_putchar('0'+((kx/10)%10));
+            dbg_putchar('0'+(kx%10));
+            dbg_putchar('H');
+        }
         kprintf("rsp+%1x rbp-%1x: %8x \n",
             (uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
             (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp),
@@ -181,14 +214,39 @@ void dbg_code(uint64_t rip, uint64_t rs)
         );
         rsp++;
     }
+    if(dbg_tui) {
+        dbg_putchar(27);
+        dbg_putchar('[');
+        if(ky>98)
+            dbg_putchar('0'+((ky/100)%10));
+        dbg_putchar('0'+((ky/10)%10));
+        dbg_putchar('0'+(ky%10));
+        dbg_putchar(';');
+        if(kx>98)
+            dbg_putchar('0'+((kx/100)%10));
+        dbg_putchar('0'+((kx/10)%10));
+        dbg_putchar('0'+(kx%10));
+        dbg_putchar('H');
+    }
     fg = dbg_theme[2];
     kprintf(sys_fault?"  * not mapped *\n":"  * end *\n");
     fg = dbg_theme[3];
 
     /* back trace */
-    ky=17; kx=fx=2;
+    ky=16; kx=fx=2;
+    if(dbg_tui) {
+        dbg_putchar(27);
+        dbg_putchar('[');
+        if(ky>98)
+            dbg_putchar('0'+((ky/100)%10));
+        dbg_putchar('0'+((ky/10)%10));
+        dbg_putchar('0'+(ky%10));
+        dbg_putchar(';');
+        dbg_putchar('1');
+        dbg_putchar('H');
+    }
     fg=dbg_theme[4];
-    kprintf("[Back trace]\n");
+    kprintf("\n[Back trace]\n");
     fg=dbg_theme[3];
     rsp=(uint64_t*)(rs!=0?rs:tcb->rsp);
     i=0;
@@ -219,9 +277,10 @@ void dbg_code(uint64_t rip, uint64_t rs)
         }
         rsp++;
     }
+    kprintf("\n");
 
     /* disassemble block */
-    kx=fx=2; ky++;
+    kx=fx=2;
     fg=dbg_theme[4];
     sys_fault = false;
     symstr = service_sym(rip);
@@ -314,11 +373,12 @@ void dbg_data(uint64_t ptr)
             kprintf(" * not mapped *");
             fg = dbg_theme[3];
         }
+        dbg_indump = true;
         switch(dbg_unit) {
             // stack view
             case 4:
                 if(!sys_fault) {
-                    kx = 19; kprintf("%8x",*((uint64_t*)ptr));
+                    kx = 19; kprintf("%8x ",*((uint64_t*)ptr));
                     kx = 70;
                     kprintf_putchar(*((uint8_t*)ptr)); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
@@ -328,7 +388,6 @@ void dbg_data(uint64_t ptr)
                     kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+7)));
-                    dbg_putchar(' ');
                 }
                 ptr+=8;
                 break;
@@ -336,7 +395,13 @@ void dbg_data(uint64_t ptr)
             case 3:
                 for(i=0;i<2;i++) {
                     if(!sys_fault) {
-                        kx = 17*i+19; kprintf("%8x",*((uint64_t*)ptr));
+                        kx = 17*i+19; kprintf("%8x ",*((uint64_t*)ptr));
+                    }
+                    ptr += 8;
+                }
+                ptr -= 16;
+                for(i=0;i<2;i++) {
+                    if(!sys_fault) {
                         kx = 9*i+70;
                         kprintf_putchar(*((uint8_t*)(ptr+7))); kx++;
                         kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
@@ -348,14 +413,20 @@ void dbg_data(uint64_t ptr)
                         kprintf_putchar(*((uint8_t*)ptr));
                         dbg_putchar(' ');
                     }
-                    ptr+=8;
+                    ptr += 8;
                 }
                 break;
             // dword
             case 2:
                 for(i=0;i<4;i++) {
                     if(!sys_fault) {
-                        kx = 9*i+19; kprintf("%4x",*((uint32_t*)ptr));
+                        kx = 9*i+19; kprintf("%4x ",*((uint32_t*)ptr));
+                    }
+                    ptr += 4;
+                }
+                ptr -= 16;
+                for(i=0;i<4;i++) {
+                    if(!sys_fault) {
                         kx = 5*i+68;
                         kprintf_putchar(*((uint8_t*)(ptr+3))); kx++;
                         kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
@@ -363,7 +434,7 @@ void dbg_data(uint64_t ptr)
                         kprintf_putchar(*((uint8_t*)ptr));
                         dbg_putchar(' ');
                     }
-                    ptr+=4;
+                    ptr += 4;
                 }
                 break;
             // word
@@ -372,30 +443,45 @@ void dbg_data(uint64_t ptr)
                 for(i=0;i<8;i++) {
                     if(i%4==0) j++;
                     if(!sys_fault) {
-                        kx = 5*i+j; kprintf("%2x",*((uint16_t*)ptr));
+                        kx = 5*i+j; kprintf("%2x ",*((uint16_t*)ptr));
+                    }
+                    ptr += 2;
+                }
+                ptr -= 16;
+                for(i=0;i<8;i++) {
+                    if(!sys_fault) {
                         kx = 3*i+64;
                         kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
                         kprintf_putchar(*((uint8_t*)ptr));
                         dbg_putchar(' ');
                     }
-                    ptr+=2;
+                    ptr += 2;
                 }
                 break;
             // byte
             default:
                 j=18;
                 for(i=0;i<16;i++) {
-                    if(i%4==0)
-                        j++;
-                    if(!sys_fault) {
-                        kx = 3*i+j; kprintf("%1x",*((uint8_t*)ptr));
-                        kx = i+71; kprintf_putchar(*((uint8_t*)ptr));
+                    if(i%4==0) {
                         dbg_putchar(' ');
+                        j++;
+                    }
+                    if(!sys_fault) {
+                        kx = 3*i+j;
+                        kprintf("%1x ",*((uint8_t*)ptr));
+                    }
+                    ptr++;
+                }
+                ptr -= 16;
+                for(i=0;i<16;i++) {
+                    if(!sys_fault) {
+                        kx = i+71; kprintf_putchar(*((uint8_t*)ptr));
                     }
                     ptr++;
                 }
                 break;
         }
+        dbg_indump = false;
         dbg_putchar(13);
         dbg_putchar(10);
         ky++;
@@ -500,14 +586,17 @@ void dbg_ram()
     kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
         pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
     );
-    bg = dbg_theme[2];
+    bg = fg = dbg_theme[2];
+    dbg_putchar('[');
     for(i=0;i<(pmm.totalpages-pmm.freepages)*(maxx-9)/(pmm.totalpages+1);i++) {
-        kprintf_putchar(' '); kx++;
+        kprintf_putchar('#'); kx++;
     }
-    bg = dbg_theme[0];
+    bg = fg = dbg_theme[0];
     for(;i<(maxx-9);i++) {
-        kprintf_putchar(' '); kx++;
+        kprintf_putchar('.'); kx++;
     }
+    dbg_putchar(']');
+    fg = dbg_theme[3];
     bg = dbg_theme[1];
     kprintf(" %2d.%d%%\n",
         (pmm.totalpages-pmm.freepages)*100/(pmm.totalpages+1), ((pmm.totalpages-pmm.freepages)*1000/(pmm.totalpages+1))%10
@@ -591,9 +680,9 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
     }
 }
 
-virt_t dbg_getaddr(char *cmd,int cmdlast)
+virt_t dbg_getaddr(char *cmd, int cmdlast)
 {
-    uint64_t ret;
+    uint64_t ret = 0;
     env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
     return ret;
 }
@@ -648,7 +737,7 @@ void dbg_init()
 }
 
 void dbg_putchar(int c) {
-    if(c<8)
+    if(c<8||(dbg_indump && c<' ')||c>127)
         c='.';
     __asm__ __volatile__ (
         "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
@@ -658,13 +747,18 @@ void dbg_putchar(int c) {
 }
 
 #define DBG_MODE_EXEC 0b00
-#define DBG_MODE_READ 0b00
-#define DBG_MODE_WRITE 0b00
+#define DBG_MODE_READ 0b11
+#define DBG_MODE_WRITE 0b01
+#define DBG_MODE_PORT 0b10
+extern char *sprintf(char *dst,char* fmt, ...);
 
 void dbg_setbrk(virt_t addr, uint8_t mode, uint8_t len)
 {
     dbg_err = brk;
     brk[3]='0'+(dbg_numbrk%4);
+    brk[5]=(mode==DBG_MODE_EXEC?'x':(mode==DBG_MODE_READ?'r':(mode==DBG_MODE_WRITE?'w':'p')));
+    brk[6]=(len==0b00?'b':(len==0b01?'w':(len==0b11?'d':'q')));
+    sprintf(brk+15,"%8x",addr);
     switch(dbg_numbrk%4){
         case 0:
             __asm__ __volatile__ (
@@ -725,7 +819,7 @@ void dbg_enable(uint64_t rip, char *reason)
     if(reason==NULL) {
         if(dr6&(1<<14))
             reason="single step";
-        if(dr6&(1<<0)||dr6&(1<<1)||dr6&(1<<2))
+        if(dr6&(1<<0)||dr6&(1<<1)||dr6&(1<<2)||dr6&(1<<3))
             reason="breakpoint";
     }
     kprintf_reset();
@@ -753,17 +847,19 @@ void dbg_enable(uint64_t rip, char *reason)
     /* redraw and get command */
     while(1) {
 redraw:
-        dbg_putchar(13);
-        dbg_putchar(10);
-/*
-        dbg_putchar(27);
-        dbg_putchar('[');
-        dbg_putchar('H');
-        dbg_putchar(27);
-        dbg_putchar('[');
+        if(dbg_tui) {
+            // clear screen
+            dbg_putchar(27);
+            dbg_putchar('[');
+            dbg_putchar('H');
+            dbg_putchar(27);
+            dbg_putchar('[');
             dbg_putchar('2');
-        dbg_putchar('J');
-*/
+            dbg_putchar('J');
+        } else {
+            dbg_putchar(13);
+            dbg_putchar(10);
+        }
         fx=kx=0; ky=1;
         for(x=0;x<tab_last;x++) {
             kx++;
@@ -771,10 +867,14 @@ redraw:
             fg= dbg_tab==x ? dbg_theme[5] : dbg_theme[2];
             kprintf_putchar(' ');
             kx++;
+            dbg_putchar(dbg_tab==x?'[':' ');
             kprintf(tabs[x]);
+            dbg_putchar(dbg_tab==x?']':' ');
             kprintf_putchar(' ');
             kx++;
         }
+        dbg_putchar(13);
+        dbg_putchar(10);
         dbg_putchar(13);
         dbg_putchar(10);
 
@@ -815,7 +915,23 @@ getcmd:
         kx = maxx-5 - (tcb->mypid>0xff?(tcb->mypid>0xffff?8:2):1) - kstrlen((char*)tcb->name);
         ky = maxy-1;
         scry = -1;
+        if(dbg_tui) {
+            dbg_putchar(27);
+            dbg_putchar('[');
+            if(ky>98)
+                dbg_putchar('0'+((ky/100)%10));
+            dbg_putchar('0'+((ky/10)%10));
+            dbg_putchar('0'+(ky%10));
+            dbg_putchar(';');
+            if(kx>98)
+                dbg_putchar('0'+(((kx+1)/100)%10));
+            dbg_putchar('0'+(((kx+1)/10)%10));
+            dbg_putchar('0'+((kx+1)%10));
+            dbg_putchar('H');
+        }
         kprintf("%s %x ", tcb->name, tcb->mypid);
+        if(dbg_tui)
+            dbg_putchar('\r');
         fx=kx=0; ky=maxy-1; fg=0x808080; bg=0;
         cmd[cmdlast]=0;
         kprintf("dbg> %s",cmd);
@@ -980,7 +1096,7 @@ end:
             // F1 Help
             case 59: {
 help:
-                fx = kx = (maxx-54)/2; ky = (maxy-29)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
+                fx = kx = (maxx-54)/2; ky = (maxy-30)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
                 kprintf(
                     "                                                      \n"
                     " OS/Z " ARCH " Debugger (build " OSZ_BUILD ") \n"
@@ -1005,13 +1121,14 @@ help:
                     "  Prev - switch to previous task                      \n"
                     "  Next - switch to next task                          \n"
                     "  Tcb - show current task's Thread Control Block      \n"
+                    "  TUi - toggle serial line based, text user interface \n"
                     "  Messages - list messages in current thread's queue  \n"
                     "  All, CCb - show all task queues and CCB             \n"
                     "  Ram - show RAM information and allocation           \n"
                     "  Instruction, Disasm - instruction disassemble       \n"
                     "  Goto X - go to address X                            \n"
-                    "  eXamine [/bwdqs] X - examine memory at X            \n"
-                    "  Break [/rwx] X - set a breakpoint at X              \n"
+                    "  eXamine [/b1w2d4q8s] X - examine memory at X        \n"
+                    "  Break [/b12d4q8rwx] X - set a breakpoint at X       \n"
                     "                                                      \n"
                 );
                 if(kwaitkey()==27 && dbg_iskbd==false){
@@ -1079,7 +1196,10 @@ help:
                 if(cmd[0]=='t'){
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
-                    dbg_tab = tab_tcb;
+                    if(cmd[1]=='u')
+                        dbg_tui = 1-dbg_tui;
+                    else
+                        dbg_tab = tab_tcb;
                     goto redraw;
                 }
                 // messages
@@ -1150,9 +1270,9 @@ help:
                             dbg_unit=0;
                         else if(cmd[x]=='2'||cmd[x]=='w')
                             dbg_unit=1;
-                        else if(cmd[x]=='4'||cmd[x]=='d')
+                        else if(cmd[x]=='4'||cmd[x]=='d'||cmd[x]=='l')
                             dbg_unit=2;
-                        else if(cmd[x]=='8'||cmd[x]=='q'||cmd[x]=='l')
+                        else if(cmd[x]=='8'||cmd[x]=='q')
                             dbg_unit=3;
                         else if(cmd[x]=='s')
                             dbg_unit=4;
@@ -1193,22 +1313,59 @@ help:
                     x=0; while(x<cmdlast && cmd[x]!=' ' && cmd[x]!='/') x++;
                     while(x<cmdlast && cmd[x]==' ') x++;
 
-                    m = l = 0b00;
+                    m = l = DBG_MODE_EXEC;
                     if(cmd[x]=='/') {
-                        x++;
-                        if(cmd[x]=='r') {
-                            m=0b10;
-                            l=0b10;
-                        } else
-                        if(cmd[x]=='w') {
-                            m=0b11;
-                            l=0b10;
+                        while(x<cmdlast && cmd[x]!=' ') {
+                            if(cmd[x]=='1'||cmd[x]=='b') {
+                                l=0x00;
+                            } else
+                            if(cmd[x]=='2') {
+                                l=0x01;
+                            } else
+                            if(cmd[x]=='4'||cmd[x]=='d'||cmd[x]=='l') {
+                                l=0x11;
+                            } else
+                            if(cmd[x]=='8'||cmd[x]=='q') {
+                                l=0x10;
+                            } else
+                            if(cmd[x]=='r') {
+                                m=DBG_MODE_READ;
+                                if(l==0)
+                                    l=0b10;
+                            } else
+                            if(cmd[x]=='w') {
+                                m=DBG_MODE_WRITE;
+                                if(l==0)
+                                    l=0b10;
+                            } else
+                            if(cmd[x]=='p') {
+                                m=DBG_MODE_PORT;
+                                if(l==0)
+                                    l=0b10;
+                            }
+                            //nothing to do with 'x'
+                            x++;
                         }
-                        x++;
                         while(x<cmdlast && cmd[x]==' ') x++;
                     }
                     y = dbg_getaddr(&cmd[x], cmdlast);
-                    dbg_setbrk(y/*addr*/, m/*mode*/, l/*len*/);
+                    if(y==0) {
+                        fx = kx = (maxx-25)/2; ky = (maxy-6)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
+                        __asm__ __volatile__ ("movq %%dr0, %0":"=r"(y)::);
+                        kprintf("                         \n");
+                        kprintf("  BRK0 %8x  \n",y);
+                        __asm__ __volatile__ ("movq %%dr1, %0":"=r"(y)::);
+                        kprintf("  BRK1 %8x  \n",y);
+                        __asm__ __volatile__ ("movq %%dr2, %0":"=r"(y)::);
+                        kprintf("  BRK2 %8x  \n",y);
+                        __asm__ __volatile__ ("movq %%dr3, %0":"=r"(y)::);
+                        kprintf("  BRK3 %8x  \n",y);
+                        kprintf("                         \n");
+                        cmdidx = cmdlast = 0;
+                        cmd[cmdidx]=0;
+                        goto getcmd;
+                    } else
+                        dbg_setbrk(y/*addr*/, m/*mode*/, l/*len*/);
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
                     dbg_tab = tab_code;

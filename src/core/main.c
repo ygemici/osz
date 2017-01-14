@@ -47,10 +47,6 @@
 #include <sys/sysinfo.h>
 #include "env.h"
 
-#if DEBUG
-extern char *syslog_buf;
-#endif
-
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************
@@ -109,18 +105,7 @@ void main()
         service_init(SRV_init, "sbin/init");
 
     // The "ready" message. Cover out "starting" message
-    syslog_early("Ready. %d of %d free.",pmm.totalpages - pmm.freepages, pmm.totalpages);
-    kprintf_reset();
-    kprintf("OS/Z ready. Allocated %d pages out of %d",
-        pmm.totalpages - pmm.freepages, pmm.totalpages);
-    kprintf(", free %d.%d%%\n",
-        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
-#if DEBUG
-    if(debug&DBG_LOG)
-        kprintf(syslog_buf);
-#endif
-    //disable scroll pause
-    scry = -1;
+    kprintf_ready();
 
     // enable system task. That will initialize devices and then blocks.
     // When that happens, scheduler will choose a task to run and...

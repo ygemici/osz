@@ -54,7 +54,6 @@ void syslog_early(char* fmt, ...)
     vastart(args, fmt);
     uint64_t arg;
     char *p;
-
     if(fmt==NULL||fmt[0]==0)
         return;
 
@@ -65,6 +64,9 @@ void syslog_early(char* fmt, ...)
     ) {
         syslog_ptr = syslog_buf;
     }
+#if DEBUG
+    char *oldptr = syslog_ptr;
+#endif
 
     /* date time process prefix, decode from BCD */
     p=(char*)&bootboot.datetime;
@@ -118,9 +120,14 @@ put:        *syslog_ptr++ = *fmt;
         }
         fmt++;
     }
-    while(*(syslog_ptr-1)=='\n') syslog_ptr--;
+    while(*(syslog_ptr-1)=='\n')
+        syslog_ptr--;
     *syslog_ptr = '\n';
     syslog_ptr++;
     *syslog_ptr = 0;
+#if DEBUG
+    for(p=oldptr;p<syslog_ptr;p++)
+        dbg_putchar((int)(*p));
+#endif
 }
 
