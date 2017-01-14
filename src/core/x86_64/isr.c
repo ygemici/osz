@@ -135,24 +135,24 @@ void excabort(uint64_t excno, uint64_t rip, uint64_t errcode)
 
 void exc00divzero(uint64_t excno, uint64_t rip)
 {
-    kpanic("divzero %d",excno);
+    kpanic("divzero exception %d",excno);
 }
 
 void exc01debug(uint64_t excno, uint64_t rip)
 {
 #if DEBUG
-    kdbg(rip,"debug 1");
+    kdbg(rip,NULL);
 #else
-    kpanic("debug %d", excno);
+    kpanic("debug exception %d", excno);
 #endif
 }
 
 void exc03chkpoint(uint64_t excno, uint64_t rip)
 {
 #if DEBUG
-    kdbg(rip,"debug 3");
+    kdbg(rip,NULL);
 #else
-    kpanic("debug %d", excno);
+    kpanic("chkpoint exception %d", excno);
 #endif
 }
 

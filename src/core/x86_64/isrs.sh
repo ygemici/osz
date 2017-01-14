@@ -491,7 +491,8 @@ do
 	    cmpq    \$CORE_ADDRESS, 8(%rsp)
 	    jb      1f
 	    incb    sys_fault
-	    movq    \$-8, %rdi
+	    movq    \$-8, %rax
+	    movq    %rax, %rdi
 	    addq    \$8, %rsp
 	    iretq
 	1:

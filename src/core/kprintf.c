@@ -129,7 +129,7 @@ void kprintf_init()
                     (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
                     (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
                 );
-//                isr_entropy[((uint64_t)data)%4] ^= (uint64_t)data;
+                isr_entropy[((uint64_t)(data+data[0]))%4] ^= (uint64_t)data;
             }
             data++;
             line+=4;
@@ -187,8 +187,11 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
-//    isr_entropy[offs%4] += (uint64_t)c;
-//    isr_entropy[(offs+1)%4] -= (uint64_t)glyph;
+    isr_entropy[offs%4] += (uint64_t)c;
+    isr_entropy[(offs+1)%4] -= (uint64_t)glyph;
+#if DEBUG
+    dbg_putchar(c);
+#endif
 }
 
 void kprintf_putascii(int64_t c)
@@ -238,6 +241,10 @@ void kprintf_putfps()
     kx=0; ky=maxy-1; bg=0;
     fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
     kprintf(" %d fps, ts %d ticks %d",isr_lastfps,isr_ticks[TICKS_TS],isr_ticks[TICKS_LO]);
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
     kx=ox; ky=oy;
     fg=of; bg=ob;
 }
@@ -327,11 +334,17 @@ void kprintf(char* fmt, ...)
         if(fmt[0]==8) {
             // backspace
             kx--;
+#if DEBUG
+            dbg_putchar(8);
+#endif
             kprintf_putchar((int)' ');
         } else
         if(fmt[0]==9) {
             // tab
             kx=((kx+8)/8)*8;
+#if DEBUG
+            dbg_putchar(9);
+#endif
         } else
         if(fmt[0]==10) {
             // newline
@@ -340,6 +353,9 @@ void kprintf(char* fmt, ...)
         if(fmt[0]==13) {
             // carridge return
             kx=fx;
+#if DEBUG
+            dbg_putchar(13);
+#endif
         } else
         // argument access
         if(fmt[0]=='%' && !reent) {
@@ -396,10 +412,15 @@ nextchar:   kx++;
             if(kx>=maxx) {
 newline:        kx=fx;
                 ky++;
-                if(ky>=maxy-1) {
+                if(ky>=maxy) {
                     ky--;
-                    kprintf_scrollscr();
+                    if(scry!=-1)
+                        kprintf_scrollscr();
                 }
+#if DEBUG
+                dbg_putchar(13);
+                dbg_putchar(10);
+#endif
             }
         }
         fmt++;

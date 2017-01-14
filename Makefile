@@ -61,7 +61,7 @@ clean:
 
 debug:
 ifeq ($(DEBUG),1)
-	qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+avx,+x2apic -monitor stdio
+	qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+avx,+x2apic -serial stdio
 else
 	@echo Compiled without debugging symbols! Set DEBUG = 1 in Config and recompile.
 endif
@@ -76,14 +76,14 @@ testefi:
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -option-rom loader/bootboot.rom -d guest_errors -monitor stdio
-	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic  -monitor stdio
+	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -seral mon:stdio
 
 testq:
 	@echo "TEST"
 	@echo
-	#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -cpu host,+avx,+x2apic,enforce -monitor stdio
-	#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -machine kernel-irqchip=on -cpu host,+avx,+x2apic,enforce -monitor stdio
-	qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -enable-kvm -cpu host,+x2apic -monitor stdio
+	#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -cpu host,+avx,+x2apic,enforce -serial mon:stdio
+	#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -machine kernel-irqchip=on -cpu host,+avx,+x2apic,enforce -serial mon:stdio
+	qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -enable-kvm -cpu host,+x2apic -serial mon:stdio
 
 testb:
 	@echo "TEST"

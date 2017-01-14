@@ -264,7 +264,7 @@ instdesc __attribute__ ((section (".data"))) inst0f0[] = {
     { "lar",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
     { "lsl",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
     { "",       DA_NONE, 0, 0 },
-    { "",       DA_NONE, 0, 0 },
+    { "syscall",DA_NONE, 0, 0 },
     { "clts",   DA_NONE, 0, 0 },
     { "sysret", DA_NONE, 0, 0 },
 
@@ -607,7 +607,7 @@ instdesc __attribute__ ((section (".data"))) escf[] = {
 };
 
 instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
-    { "add",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "add",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*00*/
     { "add",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "add",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "add",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -616,7 +616,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, DA_Si, 0 },
     { "",       DA_NONE, DA_Si, 0 },
 
-    { "or",     DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "or",     DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*08*/
     { "or",     DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "or",     DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "or",     DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -625,7 +625,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "adc",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "adc",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*10*/
     { "adc",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "adc",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "adc",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -634,7 +634,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "sbb",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "sbb",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*18*/
     { "sbb",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "sbb",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "sbb",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -643,7 +643,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "and",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "and",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*20*/
     { "and",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "and",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "and",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -652,7 +652,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "sub",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "sub",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*28*/
     { "sub",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "sub",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "sub",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -661,7 +661,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "xor",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "xor",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*30*/
     { "xor",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "xor",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "xor",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -670,7 +670,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "cmp",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "cmp",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*38*/
     { "cmp",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
     { "cmp",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "cmp",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -679,16 +679,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-    { "",       DA_LONG, DA_Ri, 0 },
-
-    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },                /*40*/
     { "",       DA_LONG, DA_Ri, 0 },
     { "",       DA_LONG, DA_Ri, 0 },
     { "",       DA_LONG, DA_Ri, 0 },
@@ -697,7 +688,16 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_LONG, DA_Ri, 0 },
     { "",       DA_LONG, DA_Ri, 0 },
 
-    { "push",   DA_QUAD, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },                /*48*/
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+    { "",       DA_LONG, DA_Ri, 0 },
+
+    { "push",   DA_QUAD, DA_Ri, 0 },                /*50*/
     { "push",   DA_QUAD, DA_Ri, 0 },
     { "push",   DA_QUAD, DA_Ri, 0 },
     { "push",   DA_QUAD, DA_Ri, 0 },
@@ -706,7 +706,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "push",   DA_QUAD, DA_Ri, 0 },
     { "push",   DA_QUAD, DA_Ri, 0 },
 
-    { "pop",    DA_QUAD, DA_Ri, 0 },
+    { "pop",    DA_QUAD, DA_Ri, 0 },                /*58*/
     { "pop",    DA_QUAD, DA_Ri, 0 },
     { "pop",    DA_QUAD, DA_Ri, 0 },
     { "pop",    DA_QUAD, DA_Ri, 0 },
@@ -715,7 +715,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "pop",    DA_QUAD, DA_Ri, 0 },
     { "pop",    DA_QUAD, DA_Ri, 0 },
 
-    { "",       DA_LONG, 0, 0 },
+    { "",       DA_LONG, 0, 0 },                    /*60*/
     { "",       DA_LONG, 0, 0 },
     { "",       DA_LONG+DA_MODRM, DA2_E_R, 0 },
     { "movsxd", DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -724,7 +724,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
 
-    { "push",   DA_LONG, DA_I, 0 },
+    { "push",   DA_LONG, DA_I, 0 },                 /*68*/
     { "imul",   DA_LONG+DA_MODRM, DA3_I_E_R, 0 },
     { "push",   DA_QUAD, DA_Iq, 0 },
     { "imul",   DA_LONG+DA_MODRM, DA3_Ib_E_R, 0 },
@@ -733,7 +733,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "outs",   DA_BYTE, DA2_SI_DX, 0 },
     { "outs",   DA_LONG, DA2_SI_DX, 0 },
 
-    { "jo",     DA_NONE, DA_Db, 0 },
+    { "jo",     DA_NONE, DA_Db, 0 },                /*70*/
     { "jno",    DA_NONE, DA_Db, 0 },
     { "jb",     DA_NONE, DA_Db, 0 },
     { "jnb",    DA_NONE, DA_Db, 0 },
@@ -742,7 +742,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "jbe",    DA_NONE, DA_Db, 0 },
     { "jnbe",   DA_NONE, DA_Db, 0 },
 
-    { "js",     DA_NONE, DA_Db, 0 },
+    { "js",     DA_NONE, DA_Db, 0 },                /*78*/
     { "jns",    DA_NONE, DA_Db, 0 },
     { "jp",     DA_NONE, DA_Db, 0 },
     { "jnp",    DA_NONE, DA_Db, 0 },
@@ -751,7 +751,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "jle",    DA_NONE, DA_Db, 0 },
     { "jnle",   DA_NONE, DA_Db, 0 },
 
-    { "",       DA_BYTE+DA_MODRM, DA2_I_E, grp1 },
+    { "",       DA_BYTE+DA_MODRM, DA2_I_E, grp1 },  /*80*/
     { "",       DA_LONG+DA_MODRM, DA2_I_E, grp1 },
     { "",       DA_BYTE+DA_MODRM, DA2_Ib_E, grp1 },
     { "add",    DA_LONG+DA_MODRM, DA2_Ib_E, 0 },
@@ -760,7 +760,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "xchg",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
     { "xchg",   DA_LONG+DA_MODRM, DA2_R_E, 0 },
 
-    { "mov",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },
+    { "mov",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*88*/
     { "mov",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "mov",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
     { "mov",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -769,7 +769,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "mov",    DA_NONE+DA_MODRM, DA2_Ew_S, 0 },
     { "pop",    DA_QUAD+DA_MODRM, DA_E, 0 },
 
-    { "nop",    DA_NONE, 0, 0 },
+    { "nop",    DA_NONE, 0, 0 },                    /*90*/
     { "xchg",   DA_LONG, DA2_A_Ri, 0 },
     { "xchg",   DA_LONG, DA2_A_Ri, 0 },
     { "xchg",   DA_LONG, DA2_A_Ri, 0 },
@@ -778,7 +778,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "xchg",   DA_LONG, DA2_A_Ri, 0 },
     { "xchg",   DA_LONG, DA2_A_Ri, 0 },
 
-    { "cbw",    DA_SDEP, 0, "cdqe" },
+    { "cbw",    DA_SDEP, 0, "cdqe" },               /*98*/
     { "cwd",    DA_SDEP, 0, "cqo" },
     { "",       DA_NONE, DA_OS, 0 },
     { "wait",   DA_NONE, 0, 0 },
@@ -787,7 +787,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "sahf",   DA_NONE, 0, 0 },
     { "lahf",   DA_NONE, 0, 0 },
 
-    { "mov",    DA_BYTE, DA2_O_A, 0 },
+    { "mov",    DA_BYTE, DA2_O_A, 0 },              /*A0*/
     { "mov",    DA_LONG, DA2_O_A, 0 },
     { "mov",    DA_BYTE, DA2_A_O, 0 },
     { "mov",    DA_LONG, DA2_A_O, 0 },
@@ -796,7 +796,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "cmpsb",  DA_BYTE, 0, 0 },
     { "cmpsd",  DA_LONG, 0, 0 },
 
-    { "test",   DA_BYTE, DA2_I_A, 0 },
+    { "test",   DA_BYTE, DA2_I_A, 0 },              /*A8*/
     { "test",   DA_LONG, DA2_I_A, 0 },
     { "stosb",  DA_BYTE, 0, 0 },
     { "stosw",  DA_WORD, 0, 0 },
@@ -805,7 +805,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "scasb",  DA_BYTE, 0, 0 },
     { "scasd",  DA_LONG, 0, 0 },
 
-    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
+    { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },            /*B0*/
     { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
     { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
     { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
@@ -814,7 +814,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
     { "mov",    DA_BYTE, DA2_Ib_Ri, 0 },
 
-    { "mov",    DA_LONG, DA2_I_Ri, 0 },
+    { "mov",    DA_LONG, DA2_I_Ri, 0 },             /*B8*/
     { "mov",    DA_LONG, DA2_I_Ri, 0 },
     { "mov",    DA_LONG, DA2_I_Ri, 0 },
     { "mov",    DA_LONG, DA2_I_Ri, 0 },
@@ -823,8 +823,8 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "mov",    DA_LONG, DA2_I_Ri, 0 },
     { "mov",    DA_LONG, DA2_I_Ri, 0 },
 
-    { "",       DA_BYTE+DA_MODRM, DA2_Ib_E, grp2 },
-    { "",       DA_LONG+DA_MODRM, DA2_Ib_E, grp2 },
+    { NULL,     DA_BYTE+DA_MODRM, DA2_Ib_E, grp2 }, /*C0*/
+    { NULL,     DA_LONG+DA_MODRM, DA2_Ib_E, grp2 },
     { "ret",    DA_NONE, DA_Iw, 0 },
     { "ret",    DA_NONE, 0, 0 },
     { "",       DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -832,7 +832,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "mov",    DA_BYTE+DA_MODRM, DA2_I_E, 0 },
     { "mov",    DA_LONG+DA_MODRM, DA2_I_E, 0 },
 
-    { "enter",  DA_NONE, DA2_Iq_Ib, 0 },
+    { "enter",  DA_NONE, DA2_Iq_Ib, 0 },            /*C8*/
     { "leave",  DA_NONE, 0, 0 },
     { "lret",   DA_NONE, DA_Iw, 0 },
     { "lret",   DA_NONE, 0, 0 },
@@ -841,16 +841,16 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE, 0, 0 },
     { "iret",   DA_NONE, 0, 0 },
 
-    { "",       DA_BYTE+DA_MODRM, DA2_o1_E, grp2 },
+    { "",       DA_BYTE+DA_MODRM, DA2_o1_E, grp2 }, /*D0*/
     { "",       DA_LONG+DA_MODRM, DA2_o1_E, grp2 },
     { "",       DA_BYTE+DA_MODRM, DA2_CL_E, grp2 },
     { "",       DA_LONG+DA_MODRM, DA2_CL_E, grp2 },
     { "",       DA_NONE+DA_MODRM, DA_Ib, 0 },
     { "",       DA_NONE+DA_MODRM, DA_Ib, 0 },
-    { "db_0D6h",DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },
     { "xlat",   DA_BYTE, DA_BX, 0 },
 
-    { "",       DA_NONE+DA_MODRM, 0, esc8 },
+    { "",       DA_NONE+DA_MODRM, 0, esc8 },        /*D8*/
     { "",       DA_NONE+DA_MODRM, 0, esc9 },
     { "",       DA_NONE+DA_MODRM, 0, esca },
     { "",       DA_NONE+DA_MODRM, 0, escb },
@@ -859,7 +859,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "",       DA_NONE+DA_MODRM, 0, esce },
     { "",       DA_NONE+DA_MODRM, 0, escf },
 
-    { "loopne", DA_NONE, DA_Db, 0 },
+    { "loopne", DA_NONE, DA_Db, 0 },                /*E0*/
     { "loope",  DA_NONE, DA_Db, 0 },
     { "loop",   DA_NONE, DA_Db, 0 },
     { "jcxz",   DA_SDEP, DA_Db, "jrcxz" },
@@ -868,7 +868,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "out",    DA_BYTE, DA2_A_Ib, 0 },
     { "out",    DA_LONG, DA2_A_Ib, 0 },
 
-    { "call",   DA_LONG, DA_Dl, 0 },
+    { "call",   DA_LONG, DA_Dl, 0 },                /*E8*/
     { "jmp",    DA_NONE, DA_Dl, 0 },
     { "",       DA_NONE, DA_OS, 0 },
     { "jmp",    DA_NONE, DA_Db, 0 },
@@ -877,23 +877,23 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "out",    DA_BYTE, DA2_A_DX, 0 },
     { "out",    DA_LONG, DA2_A_DX, 0 },
 
-    { "",       DA_NONE, 0, 0 },
+    { "",       DA_NONE, 0, 0 },                    /*F0*/
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "hlt",    DA_NONE, 0, 0 },
     { "cmc",    DA_NONE, 0, 0 },
-    { "",       DA_BYTE+DA_MODRM, 0, grp3 },
-    { "",       DA_LONG+DA_MODRM, 0, grp3 },
+    { NULL,       DA_BYTE+DA_MODRM, 0, grp3 },
+    { NULL,       DA_LONG+DA_MODRM, 0, grp3 },
 
-    { "clc",    DA_NONE, 0, 0 },
+    { "clc",    DA_NONE, 0, 0 },                    /*F8*/
     { "stc",    DA_NONE, 0, 0 },
     { "cli",    DA_NONE, 0, 0 },
     { "sti",    DA_NONE, 0, 0 },
     { "cld",    DA_NONE, 0, 0 },
     { "std",    DA_NONE, 0, 0 },
-    { "",       DA_NONE+DA_MODRM, 0, grp4 },
-    { "",       DA_NONE+DA_MODRM, 0, grp5 }
+    { NULL,       DA_NONE+DA_MODRM, 0, grp4 },
+    { NULL,       DA_NONE+DA_MODRM, 0, grp5 }
 };
 
 instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
@@ -915,17 +915,6 @@ instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
     0
 };
 
-instdesc __attribute__ ((section (".data"))) *instesc[] = {
-    esc8,
-    esc9,
-    esca,
-    escb,
-    escc,
-    escd,
-    esce,
-    escf
-};
-
 char __attribute__ ((section (".data"))) *sizestr[7] = {
     "byte",
     "word",
@@ -944,9 +933,8 @@ char __attribute__ ((section (".data"))) *regs[4][16] = {
 };
 
 char __attribute__ ((section (".data"))) *sregs[8] = {
-    "es", "cs", "ss", "ds", "fs", "gs", "", ""
+    "es", "cs", "ss", "ds", "fs", "gs", "?", "?"
 };
-char __attribute__ ((section (".data"))) *ripreg = "rip";
 char __attribute__ ((section (".data"))) *unkmnemonic = "???";
 
 // address resolve
@@ -1012,7 +1000,9 @@ virt_t disasm(virt_t addr, char *str)
 
     sys_fault = false;
 getprefix:
+    __asm__ __volatile__ ("pushq %%rax;pushq %%rdi":::"%rax","%rdi");
     opcode = *((uint8_t*)addr);
+    __asm__ __volatile__ ("popq %%rdi;popq %%rax":::"%rax","%rdi");
     if(sys_fault)
         goto end;
     addr++;
@@ -1077,10 +1067,6 @@ prefixend:
             str = sprintf(str, "%d x nop", i_size);
         goto end;
     }
-    //esc
-    if(opcode>=0xd8&&opcode<=0xdf) {
-        //TODO: inst esc
-    }
     //handle syscall specially (mov eax,...;syscall)
     if (opcode == 0xb8 && *((uint8_t*)addr+4)==0x0f && *((uint8_t*)addr+5)==0x05) {
         if(str!=NULL)
@@ -1100,7 +1086,7 @@ prefixend:
         //no, 1 byte opcode
         inst = &inst_tbl[opcode];
     }
-    if (inst == NULL || inst->mode == 0) {
+    if (inst == NULL) {
         if(str!=NULL)
             str = sprintf(str, unkmnemonic);
         goto end;
@@ -1149,16 +1135,29 @@ prefixend:
             }
         }
     }
-    i_size = opcode!=0xb8||rex==0?(inst->size&0xf):DA_QUAD;
-    i_mode = inst->mode;
 
     //ModRM specific
-    if(inst->ext==grp4 || inst->ext==grp5) {
-        inst = (instdesc*)inst->ext;
-        inst = &inst[(modrm>>3)&7];
-    }
-    //mnemonic
     i_name = inst->name;
+    if((inst->name==NULL||inst->name[0]==0)&&inst->ext!=0) {
+        if(opcode>=0xd0&&opcode<=0xd8){
+            //TODO: esc
+            inst = (instdesc*)inst->ext;
+            inst = &inst[(modrm>>3)&7];
+            i_name = inst->name;
+        } else {
+            if(inst->ext==grp3 || inst->ext==grp4 || inst->ext==grp5) {
+                inst = (instdesc*)inst->ext;
+                inst = &inst[reg];
+                i_name = inst->name;
+            } else {
+                i_name = ((char**)inst->ext)[reg];
+            }
+        }
+    }
+    i_size = inst->size&0xf;
+    i_mode = inst->mode;
+
+    //mnemonic
     if (i_size == DA_SDEP) {
         if (size == DA_LONG)
             i_name=(char *)inst->ext;

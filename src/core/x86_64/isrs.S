@@ -178,7 +178,8 @@ isr_exc00divzero:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -202,7 +203,8 @@ isr_exc01debug:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -226,7 +228,8 @@ isr_exc02nmi:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -250,7 +253,8 @@ isr_exc03chkpoint:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -274,7 +278,8 @@ isr_exc04overflow:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -298,7 +303,8 @@ isr_exc05bound:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -322,7 +328,8 @@ isr_exc06invopcode:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -346,7 +353,8 @@ isr_exc07devunavail:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -370,7 +378,8 @@ isr_exc08dblfault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -394,7 +403,8 @@ isr_exc09coproc:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -418,7 +428,8 @@ isr_exc10invtss:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -442,7 +453,8 @@ isr_exc11segfault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -466,7 +478,8 @@ isr_exc12stackfault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -490,7 +503,8 @@ isr_exc13genprot:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -514,7 +528,8 @@ isr_exc14pagefault:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -538,7 +553,8 @@ isr_exc15unknown:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -562,7 +578,8 @@ isr_exc16float:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -586,7 +603,8 @@ isr_exc17alignment:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -610,7 +628,8 @@ isr_exc18machinecheck:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -634,7 +653,8 @@ isr_exc19double:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -658,7 +678,8 @@ isr_exc20:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -682,7 +703,8 @@ isr_exc21:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -706,7 +728,8 @@ isr_exc22:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -730,7 +753,8 @@ isr_exc23:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -754,7 +778,8 @@ isr_exc24:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -778,7 +803,8 @@ isr_exc25:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -802,7 +828,8 @@ isr_exc26:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -826,7 +853,8 @@ isr_exc27:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -850,7 +878,8 @@ isr_exc28:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -874,7 +903,8 @@ isr_exc29:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -898,7 +928,8 @@ isr_exc30:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
@@ -922,7 +953,8 @@ isr_exc31:
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
     incb    sys_fault
-    movq    $-8, %rdi
+    movq    $-8, %rax
+    movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:

@@ -58,6 +58,7 @@ uint8_t __attribute__ ((section (".data"))) dbg_inst;
 uint8_t __attribute__ ((section (".data"))) dbg_unit;
 uint64_t __attribute__ ((section (".data"))) cr2;
 uint64_t __attribute__ ((section (".data"))) cr3;
+uint64_t __attribute__ ((section (".data"))) dr6;
 char __attribute__ ((section (".data"))) dbg_instruction[128];
 virt_t __attribute__ ((section (".data"))) dbg_comment;
 virt_t __attribute__ ((section (".data"))) dbg_next;
@@ -147,10 +148,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
     /* registers and stack dump */
     fx = 2;
     fg=dbg_theme[4];
-    kprintf("[Registers]");
-    kx = maxx-43;
-    kprintf("[Stack %8x]\n",rsp);
-
+    kprintf("[Registers]\n");
     fg=dbg_theme[3];
     kprintf("cs=%4x rip=%8x \n",tcb->cs,tcb->rip);
     kprintf("rflags=%8x excerr=%4x \n",tcb->rflags,tcb->excerr);
@@ -165,7 +163,11 @@ void dbg_code(uint64_t rip, uint64_t rs)
     kprintf("r14=%8x r15=%8x \n",*((uint64_t*)tcb->gpr+96),*((uint64_t*)tcb->gpr+104));
 
     /* stack */
-    ky=4; kx=fx=maxx-43;
+    ky=3; kx = maxx-44;
+    fg=dbg_theme[4];
+    kprintf("[Stack %8x]\n",rsp);
+    fg=dbg_theme[3];
+    kx=fx=maxx-44;
     sys_fault = false;
     while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
         kprintf("rsp+%1x rbp-%1x: %8x \n",
@@ -228,8 +230,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
     /* disassemble instructions */
     fg=dbg_theme[3];
     /* find a start position */
-    j=dbg_start? dbg_start : rip-16;
-    dbg_start = 0;
+    j=dbg_start? dbg_start : (rip>(uint64_t)CORE_ADDRESS?rip:rip-15);
     if(j < lastsym)
         j = lastsym;
     i = 0;
@@ -262,21 +263,21 @@ void dbg_code(uint64_t rip, uint64_t rs)
             return;
         }
         if(dbg_inst) {
-            kprintf("%s", dbg_instruction);
+            kprintf("%s\t", dbg_instruction);
         } else {
             for(;dmp<ptr;dmp++)
                 kprintf("%1x ",*((uchar*)dmp));
         }
         if(dbg_comment) {
             fg=dbg_theme[2];
-            kx=maxx/2;
+            kx=maxx/2+10;
             sys_fault = false;
             symstr = service_sym(dbg_comment);
             if(!sys_fault && symstr!=NULL && symstr[0]!='(')
                 kprintf("%s +%x", symstr, dbg_comment-lastsym);
         }
         lastsym = lastsymsave;
-        kx=fx; ky++;
+        kprintf("\n");
     }
 }
 
@@ -308,6 +309,7 @@ void dbg_data(uint64_t ptr)
                     kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+7)));
+                    dbg_putchar(' ');
                 }
                 ptr+=8;
                 break;
@@ -324,6 +326,7 @@ void dbg_data(uint64_t ptr)
                         kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
                         kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
                         kprintf_putchar(*((uint8_t*)ptr));
+                        dbg_putchar(' ');
                     }
                     ptr+=8;
                 }
@@ -337,6 +340,7 @@ void dbg_data(uint64_t ptr)
                         kprintf_putchar(*((uint8_t*)(ptr+2))); kx++;
                         kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
                         kprintf_putchar(*((uint8_t*)ptr));
+                        dbg_putchar(' ');
                     }
                     ptr+=4;
                 }
@@ -350,6 +354,7 @@ void dbg_data(uint64_t ptr)
                         kx = 3*i+64;
                         kprintf_putchar(*((uint8_t*)(ptr+1))); kx++;
                         kprintf_putchar(*((uint8_t*)ptr));
+                        dbg_putchar(' ');
                     }
                     ptr+=2;
                 }
@@ -361,11 +366,14 @@ void dbg_data(uint64_t ptr)
                     if(!sys_fault) {
                         kx = 3*i+j; kprintf("%1x",*((uint8_t*)ptr));
                         kx = i+71; kprintf_putchar(*((uint8_t*)ptr));
+                        dbg_putchar(' ');
                     }
                     ptr++;
                 }
                 break;
         }
+        dbg_putchar(13);
+        dbg_putchar(10);
         ky++;
     }
 }
@@ -559,6 +567,42 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
     }
 }
 
+virt_t dbg_getaddr(char *cmd,int cmdlast)
+{
+    uint64_t ret;
+    env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
+    return ret;
+}
+
+void dbg_singlestep(bool_t enable)
+{
+    OSZ_tcb *tcb=(OSZ_tcb*)&tmpmap;
+    int i;
+    pid_t n;
+    for(i=PRI_SYS; i<PRI_IDLE; i++) {
+        if(ccb.hd_active[i] == 0)
+            continue;
+        n = ccb.hd_active[i];
+        while(n != 0) {
+            kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+            if(enable)
+                tcb->rflags |= (1<<8);
+            else
+                tcb->rflags &= ~(1<<8);
+            n = tcb->next;
+        }
+    }
+    n = ccb.hd_blocked;
+    while(n != 0) {
+        kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+        if(enable)
+            tcb->rflags |= (1<<8);
+        else
+            tcb->rflags &= ~(1<<8);
+        n = tcb->next;
+    }
+}
+
 // initialize debugger. Called from sys_enable()
 void dbg_init()
 {
@@ -566,6 +610,27 @@ void dbg_init()
     dbg_err = NULL;
     dbg_theme = theme_debug;
     dbg_unit = 0;
+    __asm__ __volatile__ (
+        "movw $0x3f9, %%dx;"
+        "xorb %%al, %%al;outb %%al, %%dx;"   //int off
+        "movb $0x80, %%al;addb $2,%%dl;outb %%al, %%dx;"  //set divisor mode
+        "movb $12, %%al;subb $3,%%dl;outb %%al, %%dx;"    //lo 9600
+        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"   //hi
+        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"   //fifo off
+        "movb $3, %%al;incb %%dl;outb %%al, %%dx;"     //8N1
+        "movb $0x4, %%al;incb %%dl;outb %%al, %%dx;"   //mcr
+        "xorb %%al, %%al;subb $4,%%dl;outb %%al, %%dx;inb %%dx, %%al"   //clear receiver/transmitter
+    :::"%rax","%rdx");
+}
+
+void dbg_putchar(int c) {
+    if(c<8)
+        c='.';
+    __asm__ __volatile__ (
+        "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
+        "movw $0x3fd,%%dx;1:inb %%dx, %%al;andb $0x40,%%al;jz 1b;"
+        "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx"
+    ::"r"(c):"%rax","%rbx","%rdx");
 }
 
 // activate debugger. Called from ISRs
@@ -579,24 +644,35 @@ void dbg_enable(uint64_t rip, char *reason)
     char cmd[64], c;
     int cmdidx=0,cmdlast=0;
 
+    // turn of scroll
     scry = -1;
+    // set up variables and stack
     dbg_active = true;
     __asm__ __volatile__ ( "movq %%cr2, %%rax; movq %%rax, %0" : "=r"(cr2) : : "%rax");
     __asm__ __volatile__ ( "movq %%cr3, %%rax; movq %%rax, %0" : "=r"(cr3) : : "%rax");
+    __asm__ __volatile__ ( "movq %%dr6, %%rax; movq %%rax, %0;": "=r"(dr6) : : "%rax");
+    __asm__ __volatile__ ( "xorq %%rax, %%rax; movq %%rax,%%dr6": : : "%rax");
     ccb.ist1 = (uint64_t)safestack + (uint64_t)__PAGESIZE-1024;
 
-    if(rip!=tcb->rip)
-        rip=tcb->rip;
+    // get rip and rsp to display
+    rip=tcb->rip;
     rsp = tcb->rsp;
 
     dbg_next = dbg_start = 0;
 
-    if(reason!=NULL&&*reason!=0) {
-        kprintf_reset();
-        fg = 0xFFDD33;
-        bg = 0;
-        kprintf("OS/Z core debug: %s  \n", reason);
+    if(reason==NULL) {
+        if(dr6&(1<<14))
+            reason="single step";
+        if(dr6&(1<<0)||dr6&(1<<1)||dr6&(1<<2))
+            reason="watchpoint";
     }
+    kprintf_reset();
+    fg = 0xFFDD33;
+    bg = 0;
+    kprintf("OS/Z debug");
+    if(reason!=NULL&&*reason!=0)
+        kprintf(": %s  ", reason);
+    kprintf("\n");
     offs = font->height*bootboot.fb_scanline;
     for(y=0;y<font->height;y++){
         line=offs;
@@ -609,6 +685,7 @@ void dbg_enable(uint64_t rip, char *reason)
 
     dbg_tab = tab_code;
     dbg_inst = 1;
+    dbg_start = 0;
     /* redraw and get command */
     while(1) {
 redraw:
@@ -623,6 +700,9 @@ redraw:
             kprintf_putchar(' ');
             kx++;
         }
+        dbg_putchar(13);
+        dbg_putchar(10);
+
         // clear tab
         bg=dbg_theme[1];
         offs = font->height*bootboot.fb_scanline*2;
@@ -655,15 +735,16 @@ getcmd:
             }
             offs+=bootboot.fb_scanline;
         }
+        fg = 0x404040; bg=0;
+        dbg_putchar(13);
+        kx = maxx-5 - (tcb->mypid>0xff?(tcb->mypid>0xffff?8:2):1) - kstrlen((char*)tcb->name);
+        ky = maxy-1;
+        scry = -1;
+        kprintf("%s %x ", tcb->name, tcb->mypid);
         fx=kx=0; ky=maxy-1; fg=0x808080; bg=0;
         cmd[cmdlast]=0;
         kprintf("dbg> %s",cmd);
-        x = kx;
-        fg = 0x404040; bg=0;
-        kx = maxx-3 - (tcb->mypid>0xff?(tcb->mypid>0xffff?8:2):1) - kstrlen((char*)tcb->name);
-        kprintf("%s %x", tcb->name, tcb->mypid);
         if(dbg_err != NULL) {
-            kx = x;
             fg=0x800000;
             kprintf("  %s", dbg_err);
             dbg_err = NULL;
@@ -789,17 +870,18 @@ help:
                     "  Ctrl - toggle instruction bytes / mnemonics         \n"
                     "                                                      \n"
                     " Commands                                             \n"
+                    "  (none) - repeat last step or continue command       \n"
                     "  Step - step instruction                             \n"
                     "  Continue - continue execution                       \n"
                     "  REset, REboot - reboot computer                     \n"
-                    "  HAlt - power off computer                           \n"
+                    "  Quit, HAlt - power off computer                     \n"
                     "  Help - this help                                    \n"
                     "  Pid X - switch to task                              \n"
                     "  Prev - switch to previous task                      \n"
                     "  Next - switch to next task                          \n"
                     "  Tcb - show current task's Thread Control Block      \n"
-                    "  Messages - list messages in queue                   \n"
-                    "  Queues, CCb - show task priority queues and CCB     \n"
+                    "  Messages - list messages in current thread's queue  \n"
+                    "  All, CCb - show all task queues and CCB             \n"
                     "  Ram - show RAM information and allocation           \n"
                     "  Instruction, Disasm - instruction disassemble       \n"
                     "  Goto X - go to address X                            \n"
@@ -814,18 +896,19 @@ help:
                 /* parse commands */
                 // step, continue
                 if(cmdlast==0 || cmd[0]=='s' || (cmd[0]=='c' && cmd[1]!='c')) {
-                    if(cmdlast==0 || cmd[0]=='s') {
-                        /* TODO: set up debug registers on next instruction */
-                        rip = disasm(rip, NULL);
-                    }
+                    /* enable or disable single stepping. */
+                    if(((dr6>>14)&1) != ((tcb->rflags>>8)&1) || cmdlast!=0)
+                    /* we enable if command starts with 's' or we are
+                     * already in single stepping mode */
+                        dbg_singlestep((cmdlast==0 && dr6&(1<<14)) || cmd[0]=='s');
                     goto end;
                 }
                 // reset, reboot
                 if(cmd[0]=='r' && cmd[1]=='e'){
                     __asm__ __volatile__ ("movb $0xFE, %%al;outb %%al, $0x64;hlt":::);
                 }
-                // halt
-                if(cmd[0]=='h' && cmd[1]=='a'){
+                // quit, halt
+                if(cmd[0]=='q'||(cmd[0]=='h' && cmd[1]=='a')){
                     sys_disable();
                 }
                 // help
@@ -878,8 +961,8 @@ help:
                     dbg_tab = tab_msg;
                     goto redraw;
                 }
-                // queues / ccb
-                if(cmd[0]=='q' || (cmd[0]=='c'&&cmd[1]=='c')){
+                // all, ccb
+                if(cmd[0]=='a' || (cmd[0]=='c'&&cmd[1]=='c')){
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
                     dbg_tab = tab_queues;
@@ -908,8 +991,7 @@ help:
                     if(cmd[x]==' ') {
                         while(x<cmdlast && cmd[x]==' ') x++;
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
-                        y = 0;
-                        env_hex((unsigned char*)&cmd[x], (uint64_t*)&y, 0, 0);
+                        y = dbg_getaddr(&cmd[x],cmdlast);
                         if(y==0) {
                             rip = tcb->rip;
                         } else {
@@ -957,8 +1039,7 @@ help:
                     }
                     if(x<cmdlast) {
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
-                        y = 0;
-                        env_hex((unsigned char*)&cmd[x], (uint64_t*)&y, 0, 0);
+                        y = dbg_getaddr(&cmd[x],cmdlast);
                         if(y==0 && cmd[x]!='0'){
                             rsp = tcb->rsp;
                             cmdidx = cmdlast = 0;

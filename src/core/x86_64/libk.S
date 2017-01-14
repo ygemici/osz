@@ -430,7 +430,17 @@ kwaitkey:
 1:  inb     $0x64, %al
     andb    $1, %al
     jnz     2f
+#if DEBUG
+    movw    $0x3fd, %dx
+    inb     %dx, %al
+    andb    $1, %al
+    jz      1b
+    subb    $5, %dl
+    inb     %dx, %al
+    jmp     8f
+#else
     jmp     1b
+#endif
     /* yes, read the scancode */
 2:  inb     $0x60, %al
     movb    %al, %dl
@@ -456,7 +466,7 @@ kwaitkey:
     movb    %dl, %al
     bt      $7, %ax
     jnc     kwaitkey
-    andb    $0x7F, %al
+8:  andb    $0x7F, %al
     /* extended scancode in ax */
     ret
 9:
