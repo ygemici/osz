@@ -86,12 +86,19 @@ Hit <kbd>Enter</kbd> to start simulation.
 Later you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
 the internal debugger again.
 
+<img align="left" style="padding-right:10px;width:300px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png" alt="OS/Z Internar Debugger">
 By default, debugger assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
 ```
 dbg> tui
 ```
 You can get help any time by pressing <kbd>F1</kbd> either on keyboard or serial terminal, or by `help` command.
-<img src='https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png' alt='OS/Z Internar Debugger TUI'>
+
+### Interfaces
+
+By default the debugger is shown on framebuffer and accepts keyboard strokes. It also has a serial connection with 115200,8N1.
+The later supports video terminal mode with `tui` command.
+<img align="left" style="padding-right:10px;width:300px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png" alt="OS/Z Internar Debugger Line Console">
+<img align="left" style="padding-right:10px;width:300px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png" alt="OS/Z Internar Debugger Text User Interface">
 
 ### Checking pid
 
@@ -101,12 +108,12 @@ It's on the right bottom corner of the screen.
 
 | Name | Description |
 | ---- | ----------- |
-| Code | Register dump and code disassembly |
-| Data | Memory or stack dump |
-| [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | Dump task's message queue |
-| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | Dump the current task's control block |
-| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | Dump CPU COntrol Block (task priority queues) |
-| [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | Dump physical memory manager |
+| Code | <img align="left" style="padding-right:10px;height:64px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png" alt="OS/Z Internar Debugger Follow Execution">Register dump and code disassembly |
+| Data | <img align="left" style="padding-right:10px;height:64px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png" alt="OS/Z Internar Debugger Data Dump">Memory or stack dump |
+| [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;height:64px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png" alt="OS/Z Internar Debugger Message Queue">Dump task's message queue |
+| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;height:64px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png" alt="OS/Z Internar Debugger Thread Control Block">Dump the current task's control block |
+| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px;height:64px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png" alt="OS/Z Internar Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
+| [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;height:64px;" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png" alt="OS/Z Internar Debugger Physical Memory">Dump physical memory manager |
 
 ### Keyboard Shortcuts
 

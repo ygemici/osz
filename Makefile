@@ -47,8 +47,12 @@ images: tools
 	@echo "IMAGES"
 	@make -e --no-print-directory -C tools images | grep -v 'Nothing to be done' | grep -v 'lowercase' || true
 
+bin/disk/vdi: vdi
+
 vdi: images
 	@make -e --no-print-directory -C tools vdi | grep -v 'Nothing to be done' || true
+
+bin/disk.vdmk: vdmk
 
 vdmk: images
 	@make -e --no-print-directory -C tools vdmk | grep -v 'Nothing to be done' || true
@@ -93,3 +97,8 @@ ifneq ($(wildcard /usr/local/bin/bochs),)
 else
 	bochs -f etc/bochs.rc -q
 endif
+
+testv: bin/disk.vdi
+	@echo "TEST"
+	@echo
+	VBoxManage startvm --type sdl "OS/Z"
