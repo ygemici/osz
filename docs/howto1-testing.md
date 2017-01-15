@@ -102,8 +102,8 @@ Check Point - Enabling Multitask
 Before the third break point, [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md) is called with a
 checkpoint exception. This break point therefore is accessible in qemu and on real hardware too.
 
-<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg1.png" alt="OS/Z Internal Debugger Line Console">
-<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png" alt="OS/Z Internal Debugger Text User Interface">
+<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg1.png?raw=true" alt="OS/Z Internal Debugger Line Console">
+<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Internal Debugger Text User Interface">
 At the third break point we can see that driver initialization finished, and "SYS" task is
 about to send a message to core to enable interrupts. By doing so, it will unleash hell, as nobody
 will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's

@@ -91,9 +91,9 @@ the internal debugger again.
 The debugger is shown on framebuffer and accepts keyboard strokes.
 
 
-<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png" alt="OS/Z Internar Debugger">
-<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png" alt="OS/Z Internar Debugger Line Console">
-<img height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png" alt="OS/Z Internar Debugger Text User Interface">
+<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internar Debugger">
+<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png?raw=true" alt="OS/Z Internar Debugger Line Console">
+<img height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png?raw=true" alt="OS/Z Internar Debugger Text User Interface">
 
 It also has a serial connection with 115200,8N1. By default assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
 ```
@@ -112,12 +112,12 @@ In line console mode, it's shown before the `dbg>` prompt.
 
 | Name | Description |
 | ---- | ----------- |
-| Code | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png" alt="OS/Z Internar Debugger Follow Execution">Register dump and code disassembly |
-| Data | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png" alt="OS/Z Internar Debugger Data Dump">Memory or stack dump |
-| [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png" alt="OS/Z Internar Debugger Message Queue">Dump task's message queue |
-| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png" alt="OS/Z Internar Debugger Thread Control Block">Dump the current task's control block |
-| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png" alt="OS/Z Internar Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
-| [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png" alt="OS/Z Internar Debugger Physical Memory">Dump physical memory manager |
+| Code | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internar Debugger Follow Execution">Register dump and code disassembly |
+| Data | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png?raw=true" alt="OS/Z Internar Debugger Data Dump">Memory or stack dump |
+| [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png?raw=true" alt="OS/Z Internar Debugger Message Queue">Dump task's message queue |
+| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internar Debugger Thread Control Block">Dump the current task's control block |
+| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png?raw=true" alt="OS/Z Internar Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
+| [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png?raw=true" alt="OS/Z Internar Debugger Physical Memory">Dump physical memory manager |
 
 ### Keyboard Shortcuts
 
