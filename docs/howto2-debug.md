@@ -108,7 +108,7 @@ It's on the right bottom corner of the screen.
 
 In line console mode, it's shown before the `dbg>` prompt.
 
-Within the debugger, use <kbd>&larr;</kbd and <kbd>&rarr;</kbd> to switch tasks.
+Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> to switch task.
 
 ### Panels (tabs)
 
