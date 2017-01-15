@@ -71,6 +71,7 @@ uint8_t __attribute__ ((section (".data"))) dbg_iskbd;
 uint8_t __attribute__ ((section (".data"))) dbg_isshft;
 uint8_t __attribute__ ((section (".data"))) dbg_indump;
 uint8_t __attribute__ ((section (".data"))) dbg_tui;
+uint64_t __attribute__ ((section (".data"))) dbg_scr;
 uint64_t __attribute__ ((section (".data"))) cr2;
 uint64_t __attribute__ ((section (".data"))) cr3;
 uint64_t __attribute__ ((section (".data"))) dr6;
@@ -746,45 +747,48 @@ void dbg_ram()
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("[Physical Memory Manager]\n");
+    if(!dbg_full) {
+        kprintf("[Physical Memory Manager]\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("Core bss: %8x - %8x, %d pages\nNumber of free memory fragments: %d\n\n",
+            pmm.bss, pmm.bss_end,(pmm.bss_end-pmm.bss)/__PAGESIZE,pmm.size
+        );
+        kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
+            pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
+        );
+        dbg_putchar('[');
+        bg = fg = dbg_theme[2];
+        if(dbg_tui)
+            dbg_settheme();
+        for(i=0;i<(pmm.totalpages-pmm.freepages)*(maxx-9)/(pmm.totalpages+1);i++) {
+            kprintf_putchar('#'); kx++;
+        }
+        bg = fg = dbg_theme[0];
+        if(dbg_tui)
+            dbg_settheme();
+        for(;i<(maxx-9);i++) {
+            kprintf_putchar('.'); kx++;
+        }
+        fg = dbg_theme[3];
+        bg = dbg_theme[1];
+        if(dbg_tui)
+            dbg_settheme();
+        dbg_putchar(']');
+        kprintf(" %2d.%d%%\n\n",
+            (pmm.totalpages-pmm.freepages)*100/(pmm.totalpages+1), ((pmm.totalpages-pmm.freepages)*1000/(pmm.totalpages+1))%10
+        );
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+    }
+    kprintf("[Free Memory Fragments]\nAddress           Num pages\n");
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("Core bss: %8x - %8x, %d pages\nNumber of free memory fragments: %d\n\n",
-        pmm.bss, pmm.bss_end,(pmm.bss_end-pmm.bss)/__PAGESIZE,pmm.size
-    );
-    kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
-        pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
-    );
-    dbg_putchar('[');
-    bg = fg = dbg_theme[2];
-    if(dbg_tui)
-        dbg_settheme();
-    for(i=0;i<(pmm.totalpages-pmm.freepages)*(maxx-9)/(pmm.totalpages+1);i++) {
-        kprintf_putchar('#'); kx++;
-    }
-    bg = fg = dbg_theme[0];
-    if(dbg_tui)
-        dbg_settheme();
-    for(;i<(maxx-9);i++) {
-        kprintf_putchar('.'); kx++;
-    }
-    fg = dbg_theme[3];
-    bg = dbg_theme[1];
-    if(dbg_tui)
-        dbg_settheme();
-    dbg_putchar(']');
-    kprintf(" %2d.%d%%\n",
-        (pmm.totalpages-pmm.freepages)*100/(pmm.totalpages+1), ((pmm.totalpages-pmm.freepages)*1000/(pmm.totalpages+1))%10
-    );
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("\n[Free Memory Fragments]\nAddress           Num pages\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    for(i=pmm.size;i>0;i--) {
+    fmem += dbg_scr;
+    for(i=dbg_scr;i<pmm.size&&ky<maxx-2;i++) {
         kprintf("%8x, %9d\n",fmem->base, fmem->size);
         fmem++;
     }
@@ -923,6 +927,7 @@ void dbg_init()
     dbg_tab = tab_code;
     dbg_inst = 1;
     dbg_full = 0;
+    dbg_scr = 0;
     __asm__ __volatile__ (
         "movw $0x3f9, %%dx;"
         "xorb %%al, %%al;outb %%al, %%dx;"   //int off
@@ -1241,12 +1246,17 @@ end:
                 if(dbg_tab == tab_data) {
                     rsp -= (dbg_unit==4? 8 : 16);
                     goto redraw;
-                }
+                } else
                 if(dbg_tab == tab_code) {
                     dbg_next = dbg_start;
                     do {
                         dbg_start--;
                     } while(dbg_start>dbg_next-31 && disasm(dbg_start,NULL)!=dbg_next);
+                    goto redraw;
+                } else
+                if(dbg_tab == tab_ram) {
+                    if(dbg_scr>0)
+                        dbg_scr--;
                     goto redraw;
                 }
                 goto getcmd;
@@ -1256,9 +1266,14 @@ end:
                 if(dbg_tab == tab_data) {
                     rsp += (dbg_unit==4? 8 : 16);
                     goto redraw;
-                }
+                } else
                 if(dbg_tab == tab_code) {
                     dbg_start = dbg_next;
+                    goto redraw;
+                } else
+                if(dbg_tab == tab_ram) {
+                    if(pmm.size>0 && dbg_scr<pmm.size-1)
+                        dbg_scr++;
                     goto redraw;
                 }
                 goto getcmd;
