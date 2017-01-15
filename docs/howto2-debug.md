@@ -116,7 +116,7 @@ In line console mode, it's shown before the `dbg>` prompt.
 | Data | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png" alt="OS/Z Internar Debugger Data Dump">Memory or stack dump |
 | [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png" alt="OS/Z Internar Debugger Message Queue">Dump task's message queue |
 | [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png" alt="OS/Z Internar Debugger Thread Control Block">Dump the current task's control block |
-| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" ;height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png" alt="OS/Z Internar Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
+| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png" alt="OS/Z Internar Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
 | [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png" alt="OS/Z Internar Debugger Physical Memory">Dump physical memory manager |
 
 ### Keyboard Shortcuts
