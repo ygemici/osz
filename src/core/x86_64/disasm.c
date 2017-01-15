@@ -1403,7 +1403,7 @@ prefixend:
                 break;
             case DA_Db:
                 // get displacement
-                disp = (uint64_t)(*((uint8_t*)addr));
+                disp = (uint64_t)(*((int8_t*)addr));
                 addr++;
                 disp += addr;
                 if(str != NULL)
@@ -1417,13 +1417,13 @@ prefixend:
                     disp = (uint64_t)(*((uint64_t*)addr));
                     addr+=8;
                 } else if (i_size==DA_LONG) {
-                    disp = (uint64_t)(*((uint32_t*)addr));
+                    disp = (uint64_t)(*((int32_t*)addr));
                     addr+=4;
                 } else if (i_size==DA_WORD) {
-                    disp = (uint64_t)(*((uint16_t*)addr));
+                    disp = (uint64_t)(*((int16_t*)addr));
                     addr+=2;
                 } else if (i_size==DA_BYTE) {
-                    disp = (uint64_t)(*((uint8_t*)addr));
+                    disp = (uint64_t)(*((int8_t*)addr));
                     addr++;
                 }
                 disp += addr;
@@ -1443,16 +1443,16 @@ prefixend:
             case DA_OS:
                 // get displacement
                 if (size==DA_QUAD) {
-                    disp = (uint64_t)(*((uint64_t*)addr));
+                    disp = (uint64_t)(*((int64_t*)addr));
                     addr+=8;
                 } else if (size==DA_LONG) {
-                    disp = (uint64_t)(*((uint32_t*)addr));
+                    disp = (uint64_t)(*((int32_t*)addr));
                     addr+=4;
                 } else if (size==DA_WORD) {
-                    disp = (uint64_t)(*((uint16_t*)addr));
+                    disp = (uint64_t)(*((int16_t*)addr));
                     addr+=2;
-                } else {
-                    disp = (uint64_t)(*((uint8_t*)addr));
+                } else if (size==DA_BYTE) {
+                    disp = (uint64_t)(*((int8_t*)addr));
                     addr++;
                 }
                 // get immediate
