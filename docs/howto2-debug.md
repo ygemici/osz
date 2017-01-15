@@ -4,9 +4,9 @@ OS/Z - How To Series #2 - Debugging
 Preface
 -------
 
-Last time we've checked how to [test OS/Z](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md) in a virtual machine. In this episode we'll take a look on how to debug OS/Z.
+Last time we've checked how to [test OS/Z](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md) in a virtual machine. In this episode we'll take a look on how to debug OS/Z. With the serial console, it's easy to connect any RS-232 cable and you're ready to debug on real hardware.
 
-First, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting `DEBUG = 1`
+But first of all, you'll have to enable debugging in [Config](https://github.com/bztsrc/osz/blob/master/Config) by setting `DEBUG = 1`
 and recompile.
 
 Debug messages
@@ -70,7 +70,7 @@ You can check the validity of a pid anytime with:
 ```
 
 Here we can see that the page starts with the magic `'THRD'` so identifies as a Thread Control Block. The
-number tells us that it's priority. In our case it's `priority queue 0`, meaning it's "SYS" task we're watching.
+number tells us that it's priority, in our case `priority queue 0`. Meaning it's "SYS" task we're watching.
 
 Save the first 8 bytes, the actual bitfields of this TCB page is platform specific as it's holding a copy of the CPU state as well.
 Each struct definition can be found in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).
@@ -107,6 +107,8 @@ You can get help any time by pressing <kbd>F1</kbd> either on keyboard or serial
 It's on the right bottom corner of the screen.
 
 In line console mode, it's shown before the `dbg>` prompt.
+
+Within the debugger, use <kbd>&larr;</kbd and <kbd>&rarr;</kbd> to switch tasks.
 
 ### Panels (tabs)
 
