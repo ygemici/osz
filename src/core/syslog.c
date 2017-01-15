@@ -41,6 +41,10 @@ extern char *sprintf_putascii(char *dst, int64_t c);
 extern char *sprintf_putdec(char *dst, int64_t c);
 extern char *sprintf_puthex(char *dst, int64_t c);
 
+#if DEBUG
+extern void dbg_putchar(int c);
+#endif
+
 char __attribute__ ((section (".data"))) *syslog_buf;
 char __attribute__ ((section (".data"))) *syslog_ptr;
 char __attribute__ ((section (".data"))) syslog_header[] =

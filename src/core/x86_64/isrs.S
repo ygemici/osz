@@ -173,24 +173,27 @@ isr_inithw:
 isr_exc00divzero:
     xchg %bx, %bx
     cli
-#if DEBUG || exc00divzero == 14
+#if DEBUG || 0 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $0, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$0, %dil
     callq	exc00divzero
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -198,24 +201,27 @@ isr_exc00divzero:
 isr_exc01debug:
     xchg %bx, %bx
     cli
-#if DEBUG || exc01debug == 14
+#if DEBUG || 1 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $1, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist3
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$1, %dil
     callq	exc01debug
+    addq	$128, ccb_ist3
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -223,24 +229,27 @@ isr_exc01debug:
 isr_exc02nmi:
     xchg %bx, %bx
     cli
-#if DEBUG || exc02nmi == 14
+#if DEBUG || 2 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $2, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist2
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$2, %dil
     callq	excabort
+    addq	$128, ccb_ist2
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -248,24 +257,27 @@ isr_exc02nmi:
 isr_exc03chkpoint:
     xchg %bx, %bx
     cli
-#if DEBUG || exc03chkpoint == 14
+#if DEBUG || 3 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $3, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist3
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$3, %dil
     callq	exc03chkpoint
+    addq	$128, ccb_ist3
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -273,24 +285,27 @@ isr_exc03chkpoint:
 isr_exc04overflow:
     xchg %bx, %bx
     cli
-#if DEBUG || exc04overflow == 14
+#if DEBUG || 4 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $4, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$4, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -298,24 +313,27 @@ isr_exc04overflow:
 isr_exc05bound:
     xchg %bx, %bx
     cli
-#if DEBUG || exc05bound == 14
+#if DEBUG || 5 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $5, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$5, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -323,24 +341,27 @@ isr_exc05bound:
 isr_exc06invopcode:
     xchg %bx, %bx
     cli
-#if DEBUG || exc06invopcode == 14
+#if DEBUG || 6 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $6, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$6, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -348,24 +369,27 @@ isr_exc06invopcode:
 isr_exc07devunavail:
     xchg %bx, %bx
     cli
-#if DEBUG || exc07devunavail == 14
+#if DEBUG || 7 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $7, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$7, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -373,24 +397,27 @@ isr_exc07devunavail:
 isr_exc08dblfault:
     xchg %bx, %bx
     cli
-#if DEBUG || exc08dblfault == 14
+#if DEBUG || 8 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $8, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist2
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$8, %dil
     callq	excabort
+    addq	$128, ccb_ist2
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -398,24 +425,27 @@ isr_exc08dblfault:
 isr_exc09coproc:
     xchg %bx, %bx
     cli
-#if DEBUG || exc09coproc == 14
+#if DEBUG || 9 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $9, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$9, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -423,24 +453,27 @@ isr_exc09coproc:
 isr_exc10invtss:
     xchg %bx, %bx
     cli
-#if DEBUG || exc10invtss == 14
+#if DEBUG || 10 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $10, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$10, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -448,24 +481,27 @@ isr_exc10invtss:
 isr_exc11segfault:
     xchg %bx, %bx
     cli
-#if DEBUG || exc11segfault == 14
+#if DEBUG || 11 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $11, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$11, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -473,24 +509,27 @@ isr_exc11segfault:
 isr_exc12stackfault:
     xchg %bx, %bx
     cli
-#if DEBUG || exc12stackfault == 14
+#if DEBUG || 12 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $12, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$12, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -498,24 +537,27 @@ isr_exc12stackfault:
 isr_exc13genprot:
     xchg %bx, %bx
     cli
-#if DEBUG || exc13genprot == 14
+#if DEBUG || 13 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $13, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$13, %dil
     callq	exc13genprot
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -523,24 +565,27 @@ isr_exc13genprot:
 isr_exc14pagefault:
     xchg %bx, %bx
     cli
-#if DEBUG || exc14pagefault == 14
+#if DEBUG || 14 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $14, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$14, %dil
     callq	exc14pagefault
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -548,24 +593,27 @@ isr_exc14pagefault:
 isr_exc15unknown:
     xchg %bx, %bx
     cli
-#if DEBUG || exc15unknown == 14
+#if DEBUG || 15 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $15, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$15, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -573,24 +621,27 @@ isr_exc15unknown:
 isr_exc16float:
     xchg %bx, %bx
     cli
-#if DEBUG || exc16float == 14
+#if DEBUG || 16 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $16, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$16, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -598,24 +649,27 @@ isr_exc16float:
 isr_exc17alignment:
     xchg %bx, %bx
     cli
-#if DEBUG || exc17alignment == 14
+#if DEBUG || 17 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $17, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$17, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -623,24 +677,27 @@ isr_exc17alignment:
 isr_exc18machinecheck:
     xchg %bx, %bx
     cli
-#if DEBUG || exc18machinecheck == 14
+#if DEBUG || 18 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $18, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$18, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -648,24 +705,27 @@ isr_exc18machinecheck:
 isr_exc19double:
     xchg %bx, %bx
     cli
-#if DEBUG || exc19double == 14
+#if DEBUG || 19 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $19, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$19, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -673,24 +733,27 @@ isr_exc19double:
 isr_exc20:
     xchg %bx, %bx
     cli
-#if DEBUG || exc20 == 14
+#if DEBUG || 20 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $20, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$20, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -698,24 +761,27 @@ isr_exc20:
 isr_exc21:
     xchg %bx, %bx
     cli
-#if DEBUG || exc21 == 14
+#if DEBUG || 21 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $21, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$21, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -723,24 +789,27 @@ isr_exc21:
 isr_exc22:
     xchg %bx, %bx
     cli
-#if DEBUG || exc22 == 14
+#if DEBUG || 22 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $22, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$22, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -748,24 +817,27 @@ isr_exc22:
 isr_exc23:
     xchg %bx, %bx
     cli
-#if DEBUG || exc23 == 14
+#if DEBUG || 23 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $23, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$23, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -773,24 +845,27 @@ isr_exc23:
 isr_exc24:
     xchg %bx, %bx
     cli
-#if DEBUG || exc24 == 14
+#if DEBUG || 24 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $24, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$24, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -798,24 +873,27 @@ isr_exc24:
 isr_exc25:
     xchg %bx, %bx
     cli
-#if DEBUG || exc25 == 14
+#if DEBUG || 25 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $25, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$25, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -823,24 +901,27 @@ isr_exc25:
 isr_exc26:
     xchg %bx, %bx
     cli
-#if DEBUG || exc26 == 14
+#if DEBUG || 26 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $26, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$26, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -848,24 +929,27 @@ isr_exc26:
 isr_exc27:
     xchg %bx, %bx
     cli
-#if DEBUG || exc27 == 14
+#if DEBUG || 27 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $27, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$27, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -873,24 +957,27 @@ isr_exc27:
 isr_exc28:
     xchg %bx, %bx
     cli
-#if DEBUG || exc28 == 14
+#if DEBUG || 28 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $28, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$28, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -898,24 +985,27 @@ isr_exc28:
 isr_exc29:
     xchg %bx, %bx
     cli
-#if DEBUG || exc29 == 14
+#if DEBUG || 29 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $29, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$29, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -923,24 +1013,27 @@ isr_exc29:
 isr_exc30:
     xchg %bx, %bx
     cli
-#if DEBUG || exc30 == 14
+#if DEBUG || 30 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $30, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$30, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -948,24 +1041,27 @@ isr_exc30:
 isr_exc31:
     xchg %bx, %bx
     cli
-#if DEBUG || exc31 == 14
+#if DEBUG || 31 == 14
     /* fault in core */
     cmpq    $CORE_ADDRESS, 8(%rsp)
     jb      1f
-    incb    sys_fault
+    movb    $31, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     addq    $8, %rsp
     iretq
 1:
 #endif
-    callq	isr_savecontext
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    callq	isr_savecontext
+    subq	$128, ccb_ist1
     xorq	%rdi, %rdi
-    movq	__PAGESIZE-40, %rsi
+    movq	(%rsp), %rsi
+    movq	24(%rsp), %rdx
     movb	$31, %dil
     callq	excabort
+    addq	$128, ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -976,6 +1072,7 @@ isr_exc31:
 isr_irq0:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
     call	isr_timer
     jmp		2f
@@ -1000,6 +1097,7 @@ isr_irq0:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1008,6 +1106,7 @@ isr_irq0:
 isr_irq1:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1030,6 +1129,7 @@ isr_irq1:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1038,6 +1138,7 @@ isr_irq1:
 isr_irq2:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1060,6 +1161,7 @@ isr_irq2:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1068,6 +1170,7 @@ isr_irq2:
 isr_irq3:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1090,6 +1193,7 @@ isr_irq3:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1098,6 +1202,7 @@ isr_irq3:
 isr_irq4:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1120,6 +1225,7 @@ isr_irq4:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1128,6 +1234,7 @@ isr_irq4:
 isr_irq5:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1150,6 +1257,7 @@ isr_irq5:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1158,6 +1266,7 @@ isr_irq5:
 isr_irq6:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1180,6 +1289,7 @@ isr_irq6:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1188,6 +1298,7 @@ isr_irq6:
 isr_irq7:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1210,6 +1321,7 @@ isr_irq7:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1218,6 +1330,7 @@ isr_irq7:
 isr_irq8:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1241,6 +1354,7 @@ isr_irq8:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1249,6 +1363,7 @@ isr_irq8:
 isr_irq9:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1272,6 +1387,7 @@ isr_irq9:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1280,6 +1396,7 @@ isr_irq9:
 isr_irq10:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1303,6 +1420,7 @@ isr_irq10:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1311,6 +1429,7 @@ isr_irq10:
 isr_irq11:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1334,6 +1453,7 @@ isr_irq11:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1342,6 +1462,7 @@ isr_irq11:
 isr_irq12:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1365,6 +1486,7 @@ isr_irq12:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1373,6 +1495,7 @@ isr_irq12:
 isr_irq13:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1396,6 +1519,7 @@ isr_irq13:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1404,6 +1528,7 @@ isr_irq13:
 isr_irq14:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1427,6 +1552,7 @@ isr_irq14:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1435,6 +1561,7 @@ isr_irq14:
 isr_irq15:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1458,6 +1585,7 @@ isr_irq15:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1466,6 +1594,7 @@ isr_irq15:
 isr_irq16:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1489,6 +1618,7 @@ isr_irq16:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1497,6 +1627,7 @@ isr_irq16:
 isr_irq17:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1520,6 +1651,7 @@ isr_irq17:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1528,6 +1660,7 @@ isr_irq17:
 isr_irq18:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1551,6 +1684,7 @@ isr_irq18:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1559,6 +1693,7 @@ isr_irq18:
 isr_irq19:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1582,6 +1717,7 @@ isr_irq19:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1590,6 +1726,7 @@ isr_irq19:
 isr_irq20:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1613,6 +1750,7 @@ isr_irq20:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1621,6 +1759,7 @@ isr_irq20:
 isr_irq21:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1644,6 +1783,7 @@ isr_irq21:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1652,6 +1792,7 @@ isr_irq21:
 isr_irq22:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1675,6 +1816,7 @@ isr_irq22:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1683,6 +1825,7 @@ isr_irq22:
 isr_irq23:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1706,6 +1849,7 @@ isr_irq23:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -1714,6 +1858,7 @@ isr_irq23:
 isr_irq24:
     cli
     call	isr_savecontext
+    subq	$128, ccb_ist1
     
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
@@ -1737,6 +1882,7 @@ isr_irq24:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
+    addq	$128, ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90

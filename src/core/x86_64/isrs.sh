@@ -482,27 +482,37 @@ do
 		    movq	\$0, tcb_excerr
 		EOF
 	fi
+	ist=1;
+	if [ $i -eq 1 -o $i -eq 3 ]; then
+		ist=3;
+	fi
+	if [ $i -eq 2 -o $i -eq 8 ]; then
+		ist=2;
+	fi
 	cat >>isrs.S <<-EOF
 	isr_$isr:
 	    $DBG
 	    cli
-	#if DEBUG || $isr == 14
+	#if DEBUG || $i == 14
 	    /* fault in core */
 	    cmpq    \$CORE_ADDRESS, 8(%rsp)
 	    jb      1f
-	    incb    sys_fault
+	    movb    \$$i, sys_fault
 	    movq    \$-8, %rax
 	    movq    %rax, %rdi
 	    addq    \$8, %rsp
 	    iretq
 	1:
 	#endif
-	    callq	isr_savecontext
 	    $EXCERR
+	    callq	isr_savecontext
+	    subq	\$$isrstack, ccb_ist$ist
 	    xorq	%rdi, %rdi
-	    movq	__PAGESIZE-40, %rsi
+	    movq	(%rsp), %rsi
+	    movq	24(%rsp), %rdx
 	    movb	\$$i, %dil
 	    callq	$handler
+	    addq	\$$isrstack, ccb_ist$ist
 	    callq	isr_loadcontext
 	    iretq
 	.align $isrexcmax, 0x90
@@ -536,6 +546,7 @@ do
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
+	    subq	\$$isrstack, ccb_ist1
 	    $TIMER
 	    /* tcb->memroot == sys_mapping? */
 	    movq	sys_mapping, %rax
@@ -556,6 +567,7 @@ do
 	    call	ksend
 	2:  call	isr_gainentropy
 	    $EOI
+	    addq	\$$isrstack, ccb_ist1
 	    call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90

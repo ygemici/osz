@@ -41,10 +41,6 @@ extern uint64_t sys_getts(char *p);
 extern phy_t core_mapping;
 extern uint64_t ioapic_addr;
 
-#if DEBUG
-extern void dbg_enable(uint64_t rip);
-#endif
-
 /* counters and timestamps */
 uint64_t __attribute__ ((section (".data"))) isr_ticks[8];
 /* 256 bit random seed */
@@ -73,7 +69,7 @@ void isr_init()
     ptr = &isr_exc00divzero;
     // 0-31 exception handlers
     for(i=0;i<32;i++) {
-        idt[i*2+0] = IDT_GATE_LO(i==2||i==8?IDT_NMI:IDT_EXC, ptr);
+        idt[i*2+0] = IDT_GATE_LO(i==2||i==8?IDT_NMI:(i==1||i==3?IDT_DBG:IDT_EXC), ptr);
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_EXCMAX;
     }
@@ -126,37 +122,37 @@ void isr_tmrinit()
 }
 
 /* fallback exception handler */
-void excabort(uint64_t excno, uint64_t rip, uint64_t errcode)
+void excabort(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
-    kpanic("---- exception %d ----",excno);
+    kpanic("---- exception %d errcode %d ----",excno,((OSZ_tcb*)0)->excerr);
 }
 
 /* exception specific code */
 
-void exc00divzero(uint64_t excno, uint64_t rip)
+void exc00divzero(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
     kpanic("divzero exception %d",excno);
 }
 
-void exc01debug(uint64_t excno, uint64_t rip)
+void exc01debug(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
 #if DEBUG
-    kdbg(rip,NULL);
+    dbg_enable(rip,rsp,NULL);
 #else
     kpanic("debug exception %d", excno);
 #endif
 }
 
-void exc03chkpoint(uint64_t excno, uint64_t rip)
+void exc03chkpoint(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
 #if DEBUG
-    kdbg(rip,NULL);
+    dbg_enable(rip,rsp,"chkpoint");
 #else
     kpanic("chkpoint exception %d", excno);
 #endif
 }
 
-void exc13genprot(uint64_t excno, uint64_t rip)
+void exc13genprot(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
     kpanic("General Protection Fault %d",excno);
 }

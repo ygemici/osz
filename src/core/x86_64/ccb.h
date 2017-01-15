@@ -30,8 +30,10 @@
 #define OSZ_CCB_MAGICH 0x42555043
 
 /* must match with ccb struct, for asm */
-#define EXCERR_OFFS 0x4C
-#define MUTEX_OFFS 0x5C
+#define ccb_ist1 0x24
+#define ccb_ist2 0x2C
+#define ccb_ist3 0x34
+#define ccb_mutex 0x5C
 #define LOCK_TASKSWITCH 0
 
 /* for priority levels see src/core/tcb.h */
@@ -43,9 +45,9 @@ typedef struct {
     uint64_t rsp2;      // +14
     uint32_t realid;    // +1C real APIC ID
     uint32_t id;        // +20 logical APIC ID
-    uint64_t ist1;      // +24 user (syscall, IRQ) stack
+    uint64_t ist1;      // +24 user (exception, syscall, IRQ) stack
     uint64_t ist2;      // +2C NMI stack
-    uint64_t ist3;      // +34 exception stack
+    uint64_t ist3;      // +34 debug stack
     uint64_t ist4;      // +3C not used at the moment
     uint64_t ist5;      // +44 not used at the moment
     uint64_t ist6;      // +4C not used at the moment

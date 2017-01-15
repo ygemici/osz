@@ -28,12 +28,12 @@
 //phy_t __attribute__ ((section (".data"))) pt;
 phy_t __attribute__ ((section (".data"))) pdpe;
 
-void exc14pagefault(uint64_t excno, uint64_t rip)
+void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
 #if DEBUG
-    kdbg(rip,"page fault");
+    dbg_enable(rip,rsp,"page fault");
 #else
-    kpanic("page fault %d",excno);
+    kpanic(" --- page fault %d ---",excno);
 #endif
 }
 

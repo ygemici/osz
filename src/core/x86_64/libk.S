@@ -27,9 +27,6 @@
 
 .section .text
 .global kpanic
-#if DEBUG
-.global kdbg
-#endif
 .global kmemcpy
 .global kmemmove
 .global kmemset
@@ -84,8 +81,9 @@ kpanic:
     jz      1f
     movq    $theme_panic, dbg_theme
     movq    $kpanicrip, %rdi
-    xorq    %rsi, %rsi
-    call    kdbg
+    movq    %rbp, %rsi
+    xorq    %rdx, %rdx
+    call    dbg_enable
     jmp     2f
 1:
 #endif
@@ -110,17 +108,6 @@ kpanic:
 2:  mov     $0xFE, %al
     out     %al, $0x64
     hlt
-
-#if DEBUG
-kdbg:
-    movq    %rsp, 1f
-    movq    safestack, %rsp
-    addq    $__PAGESIZE/2, %rsp
-    call    dbg_enable
-    movq    1f, %rsp
-    ret
-1:  .quad 0
-#endif
 
 /* misc memory functions */
 kmemcpy:
@@ -428,9 +415,6 @@ kwaitkey:
     xorq    %rdx, %rdx
     /* is there a key waiting? */
 1:  inb     $0x64, %al
-#if DEBUG
-    movb    $1, dbg_iskbd
-#endif
     andb    $1, %al
     jnz     2f
 #if DEBUG
@@ -451,6 +435,21 @@ kwaitkey:
     /* acknowledge */
     inb     $0x61, %al
     outb    %al, $0x61
+#if DEBUG
+    movb    $1, dbg_iskbd
+    cmpb    $54, %dl
+    je      2f
+    cmpb    $42, %dl
+    jne     1f
+2:  movb    $1, dbg_isshft
+    jmp     3f
+1:  cmpb    $54+0x80, %dl
+    je      2f
+    cmpb    $42+0x80, %dl
+    jne     3f
+2:  movb    $0, dbg_isshft
+3:
+#endif
     /* check extended scancode */
     cmpb    $0xE0, %dl
     jne     1f

@@ -1043,7 +1043,8 @@ char *disasm_prtaddr(char *str, virt_t addr, uint8_t mode, uint8_t size, uint8_t
         }
         if(addr_disp) {
             str = sprintf(str,"%s%x", addr_base!=NULL?"+":"", addr_disp);
-            dbg_comment = addr_disp;
+            if(addr_base==NULL)
+                dbg_comment = addr_disp;
         }
         str = sprintf(str,"]");
     }

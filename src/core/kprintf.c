@@ -84,6 +84,11 @@ extern uint64_t isr_entropy[4];
 extern uint64_t isr_ticks[8];
 extern uint64_t isr_currfps;
 extern uint64_t isr_lastfps;
+#if DEBUG
+extern uint8_t dbg_tui;
+extern void dbg_setpos();
+extern void dbg_putchar(int c);
+#endif
 
 void kprintf_reset()
 {
@@ -438,8 +443,12 @@ newline:        kx=fx;
                         kprintf_scrollscr();
                 }
 #if DEBUG
-                dbg_putchar(13);
-                dbg_putchar(10);
+                if(dbg_tui)
+                    dbg_setpos();
+                else {
+                    dbg_putchar(13);
+                    dbg_putchar(10);
+                }
 #endif
             }
         }

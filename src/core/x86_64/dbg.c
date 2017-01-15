@@ -30,6 +30,12 @@
 #include <lastbuild.h>
 #include "../font.h"
 
+//breakpoint types
+#define DBG_MODE_EXEC 0b00
+#define DBG_MODE_READ 0b11
+#define DBG_MODE_WRITE 0b01
+#define DBG_MODE_PORT 0b10
+
 // external resources
 extern uint32_t fg;
 extern uint32_t bg;
@@ -50,6 +56,7 @@ extern uchar *service_sym(virt_t addr);
 extern void kprintf_putchar(int c);
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern virt_t disasm(virt_t rip, char *str);
+extern char *sprintf(char *dst,char* fmt, ...);
 
 // variables
 uint8_t __attribute__ ((section (".data"))) dbg_enabled;
@@ -59,6 +66,7 @@ uint8_t __attribute__ ((section (".data"))) dbg_inst;
 uint8_t __attribute__ ((section (".data"))) dbg_unit;
 uint8_t __attribute__ ((section (".data"))) dbg_numbrk;
 uint8_t __attribute__ ((section (".data"))) dbg_iskbd;
+uint8_t __attribute__ ((section (".data"))) dbg_isshft;
 uint8_t __attribute__ ((section (".data"))) dbg_indump;
 uint8_t __attribute__ ((section (".data"))) dbg_tui;
 uint64_t __attribute__ ((section (".data"))) cr2;
@@ -99,6 +107,99 @@ char __attribute__ ((section (".data"))) *prio[] = {
     "IDLE ONLY"
 };
 
+void dbg_putchar(int c)
+{
+    if(c<8||(dbg_indump && c<' ')||c>127)
+        c='.';
+    __asm__ __volatile__ (
+        "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
+        "movw $0x3fd,%%dx;1:inb %%dx, %%al;andb $0x40,%%al;jz 1b;"
+        "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx"
+    ::"r"(c):"%rax","%rbx","%rdx");
+}
+
+void dbg_settheme()
+{
+    dbg_putchar(27);
+    dbg_putchar('[');
+    dbg_putchar((fg==0xFFDD33||fg==dbg_theme[4]||fg==dbg_theme[5])?'1':'0');
+    dbg_putchar(';');
+    dbg_putchar('3');
+    if(fg==0xFFDD33) {
+        dbg_putchar('3');
+    } else {
+        if(fg==dbg_theme[3]||fg==dbg_theme[4]) {
+            dbg_putchar(dbg_theme==theme_debug?'6':(fg==dbg_theme[3]?'7':'1'));
+        } else
+        if(fg==dbg_theme[0]||fg==dbg_theme[1]||fg==dbg_theme[2]) {
+            dbg_putchar(dbg_theme==theme_debug?'4':'1');
+        } else
+            dbg_putchar('7');
+    }
+    if(bg==dbg_theme[2]) {
+        dbg_putchar(';');
+        dbg_putchar('4');
+        dbg_putchar(dbg_theme==theme_debug?'4':'1');
+    }
+    dbg_putchar('m');
+}
+
+void dbg_setbrk(virt_t addr, uint8_t mode, uint8_t len)
+{
+    dbg_err = brk;
+    brk[3]='0'+(dbg_numbrk%4);
+    brk[5]=(mode==DBG_MODE_EXEC?'x':(mode==DBG_MODE_READ?'r':(mode==DBG_MODE_WRITE?'w':'p')));
+    brk[6]=(len==0b00?'b':(len==0b01?'w':(len==0b11?'d':'q')));
+    sprintf(brk+15,"%8x",addr);
+    switch(dbg_numbrk%4){
+        case 0:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr0;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11))):"%rax","%rdx");
+            break;
+        case 1:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr1;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b1100))):"%rax","%rdx");
+            break;
+        case 2:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr2;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b110000))):"%rax","%rdx");
+            break;
+        case 3:
+            __asm__ __volatile__ (
+                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr3;"
+                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11000000))):"%rax","%rdx");
+        default: break;
+    }
+    dbg_numbrk++;
+}
+
+// set terminal's cursor poisition in tui mode
+void dbg_setpos()
+{
+    if(dbg_tui) {
+        dbg_putchar(27);
+        dbg_putchar('[');
+        if(ky>98)
+            dbg_putchar('0'+(((ky+1)/100)%10));
+        dbg_putchar('0'+(((ky+1)/10)%10));
+        dbg_putchar('0'+((ky+1)%10));
+        dbg_putchar(';');
+        if(kx>98)
+            dbg_putchar('0'+(((kx+1)/100)%10));
+        dbg_putchar('0'+(((kx+1)/10)%10));
+        dbg_putchar('0'+((kx+1)%10));
+        dbg_putchar('H');
+        dbg_settheme();
+    }
+}
+
 // dump a Thread Control Block
 void dbg_tcb()
 {
@@ -106,8 +207,12 @@ void dbg_tcb()
     char *states[] = { "hybernated", "blocked", "running" };
 
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("[Thread Control Block]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
     kprintf("priority: %s (%d), state: %s (%1x) ",
         prio[tcb->priority], tcb->priority,
@@ -121,18 +226,30 @@ void dbg_tcb()
         kprintf("strace ");
     if(TCB_STATE(tcb->state)==tcb_state_hybernated) {
         fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
         kprintf("\n[Hybernation info]\n");
         fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
         kprintf("swapped to: %x\n", tcb->swapminor);
     } else {
         kprintf("\nerrno: %d, exception error code: %d\n", tcb->errno, tcb->excerr);
         fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
         kprintf("\n[Memory]\n");
         fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
         kprintf("memory root: %x, allocated pages: %d, linked pages: %d\n", tcb->memroot, tcb->allocmem, tcb->linkmem);
         fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
         kprintf("\n[Scheduler]\n");
         fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
         kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, tcb->blkcnt);
         kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
         if(TCB_STATE(tcb->state)==tcb_state_blocked) {
@@ -152,10 +269,13 @@ void dbg_code(uint64_t rip, uint64_t rs)
     uint64_t j, *rsp=(uint64_t*)(rs!=0?rs:tcb->rsp);
 
     /* registers and stack dump */
-    fx = 2;
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("[Registers]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("cs=%4x rip=%8x \n",tcb->cs,tcb->rip);
     kprintf("rflags=%8x excerr=%4x \n",tcb->rflags,tcb->excerr);
     kprintf("cr2=%8x cr3=%8x \n\n",cr2,tcb->memroot);
@@ -169,44 +289,22 @@ void dbg_code(uint64_t rip, uint64_t rs)
     kprintf("r14=%8x r15=%8x \n",*((uint64_t*)tcb->gpr+96),*((uint64_t*)tcb->gpr+104));
 
     /* stack */
-    ky=3; kx = maxx-44;
+    ky=3; fx = kx = maxx-44;
     if(dbg_tui) {
-        dbg_putchar(27);
-        dbg_putchar('[');
-        if(ky>98)
-            dbg_putchar('0'+((ky/100)%10));
-        dbg_putchar('0'+((ky/10)%10));
-        dbg_putchar('0'+(ky%10));
-        dbg_putchar(';');
-        if(kx>98)
-            dbg_putchar('0'+((kx/100)%10));
-        dbg_putchar('0'+((kx/10)%10));
-        dbg_putchar('0'+(kx%10));
-        dbg_putchar('H');
+        dbg_setpos();
     } else {
         dbg_putchar(13);
         dbg_putchar(10);
     }
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("[Stack %8x]\n",rsp);
     fg=dbg_theme[3];
-    kx=fx=maxx-44;
+    if(dbg_tui)
+        dbg_settheme();
     sys_fault = false;
     while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
-        if(dbg_tui) {
-            dbg_putchar(27);
-            dbg_putchar('[');
-            if(ky>98)
-                dbg_putchar('0'+((ky/100)%10));
-            dbg_putchar('0'+((ky/10)%10));
-            dbg_putchar('0'+(ky%10));
-            dbg_putchar(';');
-            if(kx>98)
-                dbg_putchar('0'+((kx/100)%10));
-            dbg_putchar('0'+((kx/10)%10));
-            dbg_putchar('0'+(kx%10));
-            dbg_putchar('H');
-        }
         kprintf("rsp+%1x rbp-%1x: %8x \n",
             (uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
             (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp),
@@ -215,39 +313,25 @@ void dbg_code(uint64_t rip, uint64_t rs)
         rsp++;
     }
     if(dbg_tui) {
-        dbg_putchar(27);
-        dbg_putchar('[');
-        if(ky>98)
-            dbg_putchar('0'+((ky/100)%10));
-        dbg_putchar('0'+((ky/10)%10));
-        dbg_putchar('0'+(ky%10));
-        dbg_putchar(';');
-        if(kx>98)
-            dbg_putchar('0'+((kx/100)%10));
-        dbg_putchar('0'+((kx/10)%10));
-        dbg_putchar('0'+(kx%10));
-        dbg_putchar('H');
+        dbg_setpos();
     }
     fg = dbg_theme[2];
-    kprintf(sys_fault?"  * not mapped *\n":"  * end *\n");
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf(sys_fault?"  * not mapped %d *\n":"  * end *\n", sys_fault);
     fg = dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
 
     /* back trace */
     ky=16; kx=fx=2;
-    if(dbg_tui) {
-        dbg_putchar(27);
-        dbg_putchar('[');
-        if(ky>98)
-            dbg_putchar('0'+((ky/100)%10));
-        dbg_putchar('0'+((ky/10)%10));
-        dbg_putchar('0'+(ky%10));
-        dbg_putchar(';');
-        dbg_putchar('1');
-        dbg_putchar('H');
-    }
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_setpos();
     kprintf("\n[Back trace]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     rsp=(uint64_t*)(rs!=0?rs:tcb->rsp);
     i=0;
     kprintf("%8x: %s \n",
@@ -282,6 +366,8 @@ void dbg_code(uint64_t rip, uint64_t rs)
     /* disassemble block */
     kx=fx=2;
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     sys_fault = false;
     symstr = service_sym(rip);
     if(sys_fault) {
@@ -292,6 +378,8 @@ void dbg_code(uint64_t rip, uint64_t rs)
         kprintf("[Code %s +%2x]\n", symstr, rip-lastsym);
     /* disassemble instructions */
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     /* find a start position */
     j=dbg_start? dbg_start : (rip>(uint64_t)CORE_ADDRESS?rip:rip-15);
     if(j < lastsym)
@@ -313,7 +401,9 @@ void dbg_code(uint64_t rip, uint64_t rs)
     dbg_next = disasm(ptr, NULL);
     while(ky < maxy-2) {
         fg= ptr==rip?0xFFDD33:dbg_theme[3];
-        kprintf("%2x: ",(uint64_t)ptr-lastsym);
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("%2x%c%c ",(uint64_t)ptr-lastsym,ptr==rip?'-':':',ptr==rip?'>':' ');
         dbg_comment = 0;
         dmp = ptr;
         lastsymsave = lastsym;
@@ -321,8 +411,12 @@ void dbg_code(uint64_t rip, uint64_t rs)
         ptr = disasm((virt_t)ptr, dbg_instruction);
         if(sys_fault) {
             fg = dbg_theme[2];
-            kprintf(" * not mapped *");
+            if(dbg_tui)
+                dbg_settheme();
+            kprintf(" * not mapped %d *", sys_fault);
             fg = dbg_theme[3];
+            if(dbg_tui)
+                dbg_settheme();
             return;
         }
         if(dbg_inst) {
@@ -334,6 +428,8 @@ void dbg_code(uint64_t rip, uint64_t rs)
         if(dbg_comment) {
             fg=dbg_theme[2];
             kx=maxx/2+10;
+            if(dbg_tui)
+                dbg_setpos();
             sys_fault = false;
             if(addr_base == NULL){
                 if(dbg_comment<__PAGESIZE) {
@@ -351,7 +447,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
                     symstr = service_sym(dbg_comment);
             }
             if(!sys_fault && symstr!=NULL && symstr[0]!='(')
-                kprintf("%s +%x", symstr, dbg_comment-lastsym);
+                kprintf("%s +%x", symstr, (uint32_t)(dbg_comment-lastsym));
         }
         lastsym = lastsymsave;
         kprintf("\n");
@@ -363,6 +459,8 @@ void dbg_data(uint64_t ptr)
 {
     int i,j;
     ky = 3;
+    if(dbg_tui)
+        dbg_setpos();
     while(ky<maxy-2) {
         kx=1;
         kprintf("%8x: ",ptr);
@@ -370,7 +468,7 @@ void dbg_data(uint64_t ptr)
         __asm__ __volatile__ ("movq %0, %%rdi;movb (%%rdi), %%al"::"m"(ptr):"%rax","%rdi");
         if(sys_fault) {
             fg = dbg_theme[2];
-            kprintf(" * not mapped *");
+            kprintf(" * not mapped %d *", sys_fault);
             fg = dbg_theme[3];
         }
         dbg_indump = true;
@@ -482,9 +580,7 @@ void dbg_data(uint64_t ptr)
                 break;
         }
         dbg_indump = false;
-        dbg_putchar(13);
-        dbg_putchar(10);
-        ky++;
+        kprintf("\n");
     }
 }
 
@@ -494,8 +590,12 @@ void dbg_msg()
     uint64_t m, i, t;
 
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("[Queue Header]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("msg in: %3d, msg out: %3d, msg max: %3d, recv from: %x\n",
         *((uint64_t*)(MQ_ADDRESS)), *((uint64_t*)(MQ_ADDRESS+8)),
         *((uint64_t*)(MQ_ADDRESS+16)),*((uint64_t*)(MQ_ADDRESS+24)));
@@ -503,6 +603,8 @@ void dbg_msg()
         *((uint64_t*)(MQ_ADDRESS+32)), *((uint64_t*)(MQ_ADDRESS+40)),
         *((uint64_t*)(MQ_ADDRESS+48)),*((uint64_t*)(MQ_ADDRESS+56)));
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("\n[Messages]");
     /* print out last message as well */
     i = *((uint64_t*)MQ_ADDRESS) - 1;
@@ -513,6 +615,8 @@ void dbg_msg()
             *((uint64_t*)MQ_ADDRESS)!=*((uint64_t*)MQ_ADDRESS+8) &&
                 (i>=*((uint64_t*)MQ_ADDRESS)||i<*((uint64_t*)MQ_ADDRESS+8))?2:3);
         fg = t==4 ? 0xFFDD33 : dbg_theme[t];
+        if(dbg_tui)
+            dbg_settheme();
         m = ((i * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
         kprintf("\n %2x: %8x %8x ", m,
             *((uint64_t*)m), *((uint64_t*)(m+8)));
@@ -536,13 +640,21 @@ void dbg_queues()
     pid_t n;
 
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("[CPU Control Block]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("Cpu real id: %d, logical id: %d, ",ccb.realid, ccb.id, ccb.ist1, ccb.ist2);
     kprintf("last xreg: %4x, mutex: %4x%4x%4x\n", ccb.lastxreg, ccb.mutex[0], ccb.mutex[1], ccb.mutex[2]);
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("\n[Blocked Task Queues]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     j=0;
     if(ccb.hd_blocked) {
         n = ccb.hd_blocked;
@@ -555,8 +667,12 @@ void dbg_queues()
     kprintf("timerq head: %4x (awake at %d.%d)\niowait head: %4x, %d task(s)\n",
         ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns, ccb.hd_blocked, j);
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("\n[Active Task Queues]\n No Queue     Head      Current   #Tasks\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     for(i=0;i<8;i++) {
         j=0;
         if(ccb.hd_active[i]) {
@@ -578,32 +694,46 @@ void dbg_ram()
     int i = pmm.size;
 
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("[Physical Memory Manager]\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("Core bss: %8x - %8x, %d pages\nNumber of free memory fragments: %d\n\n",
         pmm.bss, pmm.bss_end,(pmm.bss_end-pmm.bss)/__PAGESIZE,pmm.size
     );
     kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
         pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
     );
-    bg = fg = dbg_theme[2];
     dbg_putchar('[');
+    bg = fg = dbg_theme[2];
+    if(dbg_tui)
+        dbg_settheme();
     for(i=0;i<(pmm.totalpages-pmm.freepages)*(maxx-9)/(pmm.totalpages+1);i++) {
         kprintf_putchar('#'); kx++;
     }
     bg = fg = dbg_theme[0];
+    if(dbg_tui)
+        dbg_settheme();
     for(;i<(maxx-9);i++) {
         kprintf_putchar('.'); kx++;
     }
-    dbg_putchar(']');
     fg = dbg_theme[3];
     bg = dbg_theme[1];
+    if(dbg_tui)
+        dbg_settheme();
+    dbg_putchar(']');
     kprintf(" %2d.%d%%\n",
         (pmm.totalpages-pmm.freepages)*100/(pmm.totalpages+1), ((pmm.totalpages-pmm.freepages)*1000/(pmm.totalpages+1))%10
     );
     fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
     kprintf("\n[Free Memory Fragments]\nAddress           Num pages\n");
     fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
     for(i=pmm.size;i>0;i--) {
         kprintf("%8x, %9d\n",fmem->base, fmem->size);
         fmem++;
@@ -747,64 +877,12 @@ void dbg_init()
     :::"%rax","%rdx");
 }
 
-void dbg_putchar(int c) {
-    if(c<8||(dbg_indump && c<' ')||c>127)
-        c='.';
-    __asm__ __volatile__ (
-        "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
-        "movw $0x3fd,%%dx;1:inb %%dx, %%al;andb $0x40,%%al;jz 1b;"
-        "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx"
-    ::"r"(c):"%rax","%rbx","%rdx");
-}
-
-#define DBG_MODE_EXEC 0b00
-#define DBG_MODE_READ 0b11
-#define DBG_MODE_WRITE 0b01
-#define DBG_MODE_PORT 0b10
-extern char *sprintf(char *dst,char* fmt, ...);
-
-void dbg_setbrk(virt_t addr, uint8_t mode, uint8_t len)
-{
-    dbg_err = brk;
-    brk[3]='0'+(dbg_numbrk%4);
-    brk[5]=(mode==DBG_MODE_EXEC?'x':(mode==DBG_MODE_READ?'r':(mode==DBG_MODE_WRITE?'w':'p')));
-    brk[6]=(len==0b00?'b':(len==0b01?'w':(len==0b11?'d':'q')));
-    sprintf(brk+15,"%8x",addr);
-    switch(dbg_numbrk%4){
-        case 0:
-            __asm__ __volatile__ (
-                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr0;"
-                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11))):"%rax","%rdx");
-            break;
-        case 1:
-            __asm__ __volatile__ (
-                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr1;"
-                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b1100))):"%rax","%rdx");
-            break;
-        case 2:
-            __asm__ __volatile__ (
-                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr2;"
-                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b110000))):"%rax","%rdx");
-            break;
-        case 3:
-            __asm__ __volatile__ (
-                "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr3;"
-                "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11000000))):"%rax","%rdx");
-        default: break;
-    }
-    dbg_numbrk++;
-}
-
 // activate debugger. Called from ISRs
-void dbg_enable(uint64_t rip, char *reason)
+void dbg_enable(virt_t rip, virt_t rsp, char *reason)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
-    uint64_t scancode = 0, offs, line, x, y, rsp;
+    uint64_t scancode = 0, offs, line, x, y;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM" };
     char cmd[64], c;
@@ -822,10 +900,13 @@ void dbg_enable(uint64_t rip, char *reason)
     ccb.ist1 = (uint64_t)safestack + (uint64_t)__PAGESIZE-1024;
 
     // get rip and rsp to display
-    rip=tcb->rip;
-    rsp = tcb->rsp;
+    if(rip == 0)
+        rip = tcb->rip;
+    if(rsp == 0)
+        rsp = tcb->rsp;
 
     dbg_next = dbg_start = 0;
+    dbg_isshft = false;
 
     if(reason==NULL) {
         if(dr6&(1<<14))
@@ -834,14 +915,16 @@ void dbg_enable(uint64_t rip, char *reason)
             reason="breakpoint";
     }
     kprintf_reset();
-    dbg_putchar(13);
-    dbg_putchar(10);
-    fg = 0xFFDD33;
-    bg = 0;
-    kprintf("OS/Z debug");
-    if(reason!=NULL&&*reason!=0)
-        kprintf(": %s  ", reason);
-    kprintf("\n");
+    if(!dbg_tui) {
+        dbg_putchar(13);
+        dbg_putchar(10);
+        fg = 0xFFDD33;
+        bg = 0;
+        kprintf("OS/Z debug");
+        if(reason!=NULL&&*reason!=0)
+            kprintf(": %s  ", reason);
+        kprintf("\n");
+    }
     offs = font->height*bootboot.fb_scanline;
     for(y=0;y<font->height;y++){
         line=offs;
@@ -858,24 +941,35 @@ void dbg_enable(uint64_t rip, char *reason)
     /* redraw and get command */
     while(1) {
 redraw:
+        fx=kx=ky=0;
         if(dbg_tui) {
-            // clear screen
             dbg_putchar(27);
             dbg_putchar('[');
-            dbg_putchar('H');
+            dbg_putchar('0');
+            dbg_putchar('m');
+            fg = 0xFFDD33;
+            bg = 0;
+            // clear screen
+            dbg_setpos();
             dbg_putchar(27);
             dbg_putchar('[');
             dbg_putchar('2');
             dbg_putchar('J');
+            kprintf("OS/Z debug");
+            if(reason!=NULL&&*reason!=0)
+                kprintf(": %s  ", reason);
+            kprintf("\n");
         } else {
             dbg_putchar(13);
             dbg_putchar(10);
         }
-        fx=kx=0; ky=1;
+        ky=1;
         for(x=0;x<tab_last;x++) {
             kx++;
             bg= dbg_tab==x ? dbg_theme[1] : 0;
             fg= dbg_tab==x ? dbg_theme[5] : dbg_theme[2];
+            if(dbg_tui)
+                dbg_settheme();
             kprintf_putchar(' ');
             kx++;
             dbg_putchar(dbg_tab==x?'[':' ');
@@ -884,8 +978,6 @@ redraw:
             kprintf_putchar(' ');
             kx++;
         }
-        dbg_putchar(13);
-        dbg_putchar(10);
         dbg_putchar(13);
         dbg_putchar(10);
 
@@ -902,6 +994,8 @@ redraw:
         }
         // draw tab
         fx=kx=2; ky=3; fg = dbg_theme[3];
+        if(dbg_tui)
+            dbg_setpos();
         __asm__ __volatile__ ("pushq %%rdi":::"%rdi");
         if(dbg_tab==tab_code) dbg_code(rip, tcb->rsp); else
         if(dbg_tab==tab_data) dbg_data(rsp); else
@@ -927,35 +1021,37 @@ getcmd:
         ky = maxy-1;
         scry = -1;
         if(dbg_tui) {
+            dbg_setpos();
             dbg_putchar(27);
             dbg_putchar('[');
-            if(ky>98)
-                dbg_putchar('0'+((ky/100)%10));
-            dbg_putchar('0'+((ky/10)%10));
-            dbg_putchar('0'+(ky%10));
-            dbg_putchar(';');
-            if(kx>98)
-                dbg_putchar('0'+(((kx+1)/100)%10));
-            dbg_putchar('0'+(((kx+1)/10)%10));
-            dbg_putchar('0'+((kx+1)%10));
-            dbg_putchar('H');
+            dbg_putchar('2');
+            dbg_putchar('K');
         }
         kprintf("%s %x ", tcb->name, tcb->mypid);
         if(dbg_tui)
             dbg_putchar('\r');
         fx=kx=0; ky=maxy-1; fg=0x808080; bg=0;
+        if(dbg_tui)
+            dbg_settheme();
         cmd[cmdlast]=0;
         kprintf("dbg> %s",cmd);
         if(dbg_err != NULL) {
             fg=0x800000;
+            if(dbg_tui)
+                dbg_settheme();
             kprintf("  %s", dbg_err);
             dbg_err = NULL;
             fg=0x808080;
+            if(dbg_tui)
+                dbg_settheme();
         }
         fg=0; bg=0x404040;
         kx=5+cmdidx;
+        if(dbg_tui)
+            dbg_setpos();
         x = cmdidx==cmdlast||cmd[cmdidx]==0?' ':cmd[cmdidx];
         kprintf_putchar(x);
+        dbg_putchar(8);
 /*
         if(scancode) {
             kx=maxx-4; fg=0x101010; bg=0;
@@ -965,7 +1061,7 @@ getcmd:
         scancode = kwaitkey();
         if(dbg_iskbd==false) {
             if(scancode==12)
-                goto getcmd;
+                goto redraw;
             else
             if(scancode==27) {
                 scancode = kwaitkey();
@@ -1053,7 +1149,7 @@ end:
                     dbg_switchprev(&rip, &rsp);
                     goto redraw;
                 }
-                if(cmdidx>0 && dbg_iskbd)
+                if(cmdidx>0 && (dbg_iskbd || dbg_tui))
                     cmdidx--;
                 goto getcmd;
             }
@@ -1063,7 +1159,7 @@ end:
                     dbg_switchnext(&rip, &rsp);
                     goto redraw;
                 }
-                if(cmdidx<cmdlast && dbg_iskbd)
+                if(cmdidx<cmdlast && (dbg_iskbd || dbg_tui))
                     cmdidx++;
                 goto getcmd;
             }
@@ -1108,6 +1204,9 @@ end:
             case 59: {
 help:
                 fx = kx = (maxx-54)/2; ky = (maxy-30)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
+                if(dbg_tui) {
+                    dbg_setpos();
+                }
                 kprintf(
                     "                                                      \n"
                     " OS/Z " ARCH " Debugger (build " OSZ_BUILD ") \n"
@@ -1365,16 +1464,18 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                     y = dbg_getaddr(&cmd[x], cmdlast-x);
                     if(y==0) {
                         fx = kx = (maxx-25)/2; ky = (maxy-6)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
+                        if(dbg_tui)
+                            dbg_setpos();
                         __asm__ __volatile__ ("movq %%dr0, %0":"=r"(y)::);
-                        kprintf("                         \n");
-                        kprintf("  BRK0 %8x  \n",y);
+                        kprintf("                          \n");
+                        kprintf("  %cBRK0 %8x  \n",dbg_numbrk%4==0?'>':' ',y);
                         __asm__ __volatile__ ("movq %%dr1, %0":"=r"(y)::);
-                        kprintf("  BRK1 %8x  \n",y);
+                        kprintf("  %cBRK1 %8x  \n",dbg_numbrk%4==1?'>':' ',y);
                         __asm__ __volatile__ ("movq %%dr2, %0":"=r"(y)::);
-                        kprintf("  BRK2 %8x  \n",y);
+                        kprintf("  %cBRK2 %8x  \n",dbg_numbrk%4==2?'>':' ',y);
                         __asm__ __volatile__ ("movq %%dr3, %0":"=r"(y)::);
-                        kprintf("  BRK3 %8x  \n",y);
-                        kprintf("                         \n");
+                        kprintf("  %cBRK3 %8x  \n",dbg_numbrk%4==3?'>':' ',y);
+                        kprintf("                          \n");
                         cmdidx = cmdlast = 0;
                         cmd[cmdidx]=0;
                         goto getcmd;
@@ -1400,7 +1501,10 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                 }
                 if(dbg_iskbd){
                     if(scancode>=2&&scancode<=13) {
-                        c = "1234567890-+"[scancode-2];
+                        if(dbg_isshft)
+                            c = "!@#$%^&*()_+"[scancode-2];
+                        else
+                            c = "1234567890-="[scancode-2];
                     } else
                     if(scancode>=16 && scancode<=27) {
                         c = "qwertyuiop[]"[scancode-16];

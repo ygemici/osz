@@ -50,6 +50,9 @@ extern void acpi_init();
 extern void acpi_early(ACPI_Header *hdr);
 extern void acpi_poweroff();
 extern void pci_init();
+#if DEBUG
+extern void dbg_putchar(int c);
+#endif
 
 /* device drivers loaded into "system" address space */
 uint64_t __attribute__ ((section (".data"))) *drivers;
@@ -70,12 +73,18 @@ void sys_disable()
     acpi_poweroff();
     // if it didn't work, show a message and freeze.
     kprintf_init();
+#if DEBUG
     dbg_putchar(13);
     dbg_putchar(10);
+#endif
     kprintf(poweroffprefix);
     fg = 0x29283f;
     kprintf_center(21, -8);
     kprintf(poweroffsuffix);
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
 
@@ -180,8 +189,10 @@ void sys_init()
     ccb.magic = OSZ_CCB_MAGICH;
     //usr stack (userspace, first page)
     ccb.ist1 = __PAGESIZE;
-    //nmi stack (separate page in kernel space)
+    //nmi stack (separate page in kernel space, 512 bytes)
     ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
+    //debug stack (rest of the page)
+    ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE - 512;
 
     // parse MADT to get IOAPIC address
     acpi_early(NULL);
