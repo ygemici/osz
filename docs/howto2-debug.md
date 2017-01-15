@@ -91,22 +91,17 @@ the internal debugger again.
 The debugger is shown on framebuffer and accepts keyboard strokes.
 
 
-<img align="left" style="padding-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png" alt="OS/Z Internar Debugger">
-<img align="left" style="padding-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png" alt="OS/Z Internar Debugger Line Console">
-<img align="left" style="padding-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png" alt="OS/Z Internar Debugger Text User Interface">
+<img align="left" style="padding-right:10px;" width="280" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png" alt="OS/Z Internar Debugger">
+<img align="left" style="padding-right:10px;" width="280" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png" alt="OS/Z Internar Debugger Line Console">
+<img align="left" style="padding-right:10px;" width="280" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png" alt="OS/Z Internar Debugger Text User Interface">
 
 
-It also has a serial connection with 115200,8N1. By default, debugger assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
+It also has a serial connection with 115200,8N1. By default assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
 ```
 dbg> tui
 ```
 
 You can get help any time by pressing <kbd>F1</kbd> either on keyboard or serial terminal, or by `help` command.
-
-
-
-
-
 
 ### Checking pid
 
