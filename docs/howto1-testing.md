@@ -64,6 +64,8 @@ Second Break Point - OS/Z boot ends
 The first intersting point is where the operating system was loaded, arranged
 it's memory and interrupts and is about to leave privileged mode by executing the very first `iretq`.
 
+<img src='https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png' alt='OS/Z Ready'>
+
 You must see white on black "OS/Z ready." text on the top left corner of your screen,
 and something similar to this on debug console:
 
@@ -96,13 +98,18 @@ We can see that the user mode code starts at 0x200000, and it's stack is right b
 By stepping through the iret instruction with <kbd>s</kbd>, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
 will iterate through detected devices by calling their _init() method.
 
-Third Break Point - Enabling Multitask
---------------------------------------
+Check Point - Enabling Multitask
+--------------------------------
+
+Before the third break point, [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md) is called with a
+checkpoint exception. This break point therefore is accessible in qemu and on real hardware too.
+
+<img src='https://github.com/bztsrc/osz/blob/master/docs/oszdbg1.png' alt='OS/Z Internal Debugger Line Console'>
 
 At the third break point we can see that driver initialization finished, and "SYS" task is
 about to send a message to core to enable interrupts. By doing so, it will unleash hell, as nobody
 will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's
-no need for locking. This breakpoint also triggers the [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
+no need for locking. This breakpoint also triggers the.
 
 ```
 (0) Magic breakpoint

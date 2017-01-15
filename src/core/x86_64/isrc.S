@@ -186,8 +186,8 @@ isr_syscall0:
 2:  call    msg_sends
     /* map dest thread */
 7:  movq    isr_next, %rax
-    orq     %rax, %rax
-    jz      8f
+    cmpq    $__PAGESIZE, %rax
+    jb      8f
     movq    %rax, %cr3
     xorq    %rax, %rax
     movq    %rax, isr_next

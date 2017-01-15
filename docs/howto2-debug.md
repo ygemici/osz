@@ -86,6 +86,13 @@ Hit <kbd>Enter</kbd> to start simulation.
 Later you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
 the internal debugger again.
 
+By default, debugger assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
+```
+dbg> tui
+```
+You can get help any time by pressing <kbd>F1</kbd> either on keyboard or serial terminal, or by `help` command.
+<img src='https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png' alt='OS/Z Internar Debugger TUI'>
+
 ### Checking pid
 
 It's on the right bottom corner of the screen.
@@ -132,30 +139,41 @@ It's enough to enter commands until it's obvious, in most cases that's the first
 | `Prev`     | switch to previous task |
 | `Next`     | switch to next task |
 | `Tcb`      | examine current task's Thread Control Block |
+| `TUi`      | toggle video terminal mode for serial console |
 | `Messages` | examine message queue |
-| `Queues, CCb`   | examine task priority queues and CPU Control Block |
+| `All, CCb`   | examine all queues and CPU Control Block |
 | `Ram`      | examine RAM allocation, dump physical memory manager's data |
 | `Instruction`, `Disasm` | instruction disassemble (or toggle bytes / mnemonics) |
 | `Goto X`   | go to address X |
-| `eXamine [/bwqds] X`   | examine memory at X in byte, word, dword, qword or stack units |
+| `eXamine [/b1w2d4q8s] X`   | examine memory at X in byte, word, dword, qword or stack units |
+| `Break [/b12d4q8rwx] X`   | list or set brakpoints at X in byte, word, dword, qword lengths |
 
 Goto has an argument, entered in hexadecimal (prefix 0x is optional). Can be:
  * (empty) if not given, it will go to the next instruction
- * `rip` return to the original instruction
  * `+X`, `-X` set up rip relative address
  * `X` go to absolute address
+ * `symbol+X` symbol relative address
 
 Examine may have two arguments, a flag and an address. Address is the same as in goto, expect it sets rsp instead of rip.
  * (empty) return to the original stack
  * `+X`, `-X` set up rsp relative address
  * `X` go to absolute address
+ * `symbol+X` symbol relative address
 
-When flag given, the command can be omitted. The flag can be one of:
+Break works just like examine, expect that
+ * (empty) lists breakpoints
+ * w in flag sets data write breakpoint (use /2 for word size)
+
+The flag can be one of:
  * 1,b - 16 bytes in a row
  * 2,w - 8 words in a row
  * 4,d - 4 double words in a row
  * 8,q - 2 quad words in a row
- * s   - single quad word in a row (stack view)
+ * s   - single quad word in a row (stack view, examine only)
+ * r   - sets data read breakpoint (break only)
+ * w   - sets data write breakpoint (break only)
+ * p   - sets io port access breakpoint (break only)
+ * x   - sets execution breakpoint (break only, default)
 
 #### Examples
 
@@ -163,13 +181,15 @@ When flag given, the command can be omitted. The flag can be one of:
 p               switch to previous thread
 p 29            switch to thread that's pid is 29
 g               go to next instruction (in view)
-g rip           view the original instruction
+g isr_irq1+3    view instruction in function
 g +7F           move disassembler window forward by 127 bytes
 x 1234          dump memory at 0x1234
 x /q            dump in quad words
 x /s rsp        print stack
 /b              switch units to bytes
 i               go back to disassemble instructions tab
+b /qw tcb+F0    set a write breakpoint for quadword length at 000F0h
+b /bp 60        monitor keyboard port
 ```
 
 The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md) is more user than developer oriented as it's about how to use the rescue shell.

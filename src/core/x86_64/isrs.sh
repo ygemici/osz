@@ -482,6 +482,20 @@ do
 		    movq	\$0, tcb_excerr
 		EOF
 	fi
+	if [ $i -eq 1 -o $i -eq 3 -o $i -eq 14 -o "$DEBUG" == "1" ]; then
+		read -r -d '' CORECHK <<-EOF
+		    /* fault in core */
+		    cmpq    \$CORE_ADDRESS, (%rsp)
+		    jb      1f
+		    movb    \$$i, sys_fault
+		    movq    \$-8, %rax
+		    movq    %rax, %rdi
+		    iretq
+		1:
+		EOF
+	else
+		CORECHK=""
+	fi
 	ist=1;
 	if [ $i -eq 1 -o $i -eq 3 ]; then
 		ist=3;
@@ -491,28 +505,18 @@ do
 	fi
 	cat >>isrs.S <<-EOF
 	isr_$isr:
-	    $DBG
 	    cli
-	#if DEBUG || $i == 14
-	    /* fault in core */
-	    cmpq    \$CORE_ADDRESS, 8(%rsp)
-	    jb      1f
-	    movb    \$$i, sys_fault
-	    movq    \$-8, %rax
-	    movq    %rax, %rdi
-	    addq    \$8, %rsp
-	    iretq
-	1:
-	#endif
 	    $EXCERR
+	    $CORECHK
+	    $DBG
 	    callq	isr_savecontext
-	    subq	\$$isrstack, ccb_ist$ist
+	    subq	\$$isrstack, ccb + ccb_ist$ist
 	    xorq	%rdi, %rdi
 	    movq	(%rsp), %rsi
-	    movq	24(%rsp), %rdx
+	    movq	%rsp, %rdx
 	    movb	\$$i, %dil
 	    callq	$handler
-	    addq	\$$isrstack, ccb_ist$ist
+	    addq	\$$isrstack, ccb + ccb_ist$ist
 	    callq	isr_loadcontext
 	    iretq
 	.align $isrexcmax, 0x90
@@ -546,7 +550,7 @@ do
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
-	    subq	\$$isrstack, ccb_ist1
+	    subq	\$$isrstack, ccb + ccb_ist1
 	    $TIMER
 	    /* tcb->memroot == sys_mapping? */
 	    movq	sys_mapping, %rax
@@ -567,7 +571,7 @@ do
 	    call	ksend
 	2:  call	isr_gainentropy
 	    $EOI
-	    addq	\$$isrstack, ccb_ist1
+	    addq	\$$isrstack, ccb + ccb_ist1
 	    call	isr_loadcontext
 	    iretq
 	.align $isrirqmax, 0x90

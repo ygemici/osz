@@ -944,7 +944,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { "out",    DA_LONG, DA2_A_Ib, 0 },
 
     { "call",   DA_LONG, DA_Dl, 0 },                /*E8*/
-    { "jmp",    DA_NONE, DA_Dl, 0 },
+    { "jmp",    DA_LONG, DA_Dl, 0 },
     { "",       DA_NONE, DA_OS, 0 },
     { "jmp",    DA_NONE, DA_Db, 0 },
     { "in",     DA_BYTE, DA2_DX_A, 0 },
@@ -1075,6 +1075,7 @@ virt_t disasm(virt_t addr, char *str)
     addr_saddr = DA_QUAD;
     addr_base = NULL;
     addr_idx = NULL;
+    dbg_comment = 0;
 
     sys_fault = false;
 getprefix:
@@ -1099,6 +1100,7 @@ getprefix:
     }
     //size override prefix
     if(opcode==0x66) {
+        rex=0x40;
         size=DA_WORD;
         goto getprefix;
     }
@@ -1196,11 +1198,11 @@ prefixend:
                 addr+=4;
             } else {
                 addr_base = regs[size][rm];
-                if(mod==0) {
-                    addr_disp = (uint64_t)(*((uint32_t*)addr));
-                    addr+=4;
-                    addr_base = 0;
-                } else
+//                if(mod==0) {
+//                    addr_disp = (uint64_t)(*((uint32_t*)addr));
+//                    addr+=4;
+//                    addr_base = 0;
+//                } else
                 if(mod==1) {
                     addr_disp = (uint64_t)(*((uint8_t*)addr));
                     addr++;
@@ -1212,7 +1214,6 @@ prefixend:
             }
         }
     }
-
     //ModRM specific
     i_name = inst->name;
     if((inst->name==NULL||inst->name[0]==0) && inst->ext != 0) {
@@ -1241,14 +1242,10 @@ prefixend:
     if (i_size == DA_SDEP) {
         if (size == DA_LONG)
             i_name=(char *)inst->ext;
-        else if(size != DA_WORD) {
-            char *cp = (char*)inst->ext;
-            while (*cp)
-                cp++;
-            cp++;
-            i_name=cp;
-        }
+        i_size = size;
     }
+    if(rex)
+        i_size = size;
     if(str!=NULL)
         str = sprintf(str, "%s\t", i_name);
 
@@ -1347,7 +1344,8 @@ prefixend:
                 addr+=4;
                 if (str != NULL)
                     str = sprintf(str, "%xh", imm);
-                dbg_comment=(uint)imm;
+                if(!dbg_comment)
+                    dbg_comment=imm;
                 break;
             case DA_Ib:
                 // get immediate
@@ -1355,7 +1353,8 @@ prefixend:
                 addr++;
                 if (str != NULL)
                     str = sprintf(str, "%1xh", imm);
-                dbg_comment=imm;
+                if(!dbg_comment)
+                    dbg_comment=imm;
                 break;
             case DA_Iba:
             case DA_Ibs:
@@ -1364,7 +1363,8 @@ prefixend:
                 addr++;
                 if (str != NULL && imm !=0x0a)
                     str = sprintf(str, "%1xh", imm);
-                dbg_comment=imm;
+                if(!dbg_comment)
+                    dbg_comment=imm;
                 break;
             case DA_Iw:
                 // get immediate
@@ -1372,7 +1372,8 @@ prefixend:
                 addr+=2;
                 if (str != NULL)
                     str = sprintf(str, "%2xh", imm);
-                dbg_comment=imm;
+                if(!dbg_comment)
+                    dbg_comment=imm;
                 break;
             case DA_Iq:
                 // get immediate
@@ -1380,7 +1381,8 @@ prefixend:
                 addr+=8;
                 if (str != NULL)
                     str = sprintf(str, "%8xh", imm);
-                dbg_comment=imm;
+                if(!dbg_comment)
+                    dbg_comment=imm;
                 break;
             case DA_O:
                 // get displacement
@@ -1396,40 +1398,39 @@ prefixend:
                         str = sprintf(str, "%cs:", addr_seg);
                     str = sprintf(str,"%xh", disp);
                 }
-                dbg_comment = disp;
+                if(!dbg_comment)
+                    dbg_comment = disp;
                 break;
             case DA_Db:
                 // get displacement
                 disp = (uint64_t)(*((uint8_t*)addr));
                 addr++;
                 disp += addr;
-                if (size == DA_WORD)
-                    disp &= 0xFFFF;
                 if(str != NULL)
                     str = sprintf(str, "%xh", disp);
-                dbg_comment=disp;
+                if(!dbg_comment)
+                    dbg_comment=disp;
                 break;
             case DA_Dl:
                 // get displacement
-                if (size==DA_QUAD) {
+                if (i_size==DA_QUAD) {
                     disp = (uint64_t)(*((uint64_t*)addr));
                     addr+=8;
-                } else if (size==DA_LONG) {
+                } else if (i_size==DA_LONG) {
                     disp = (uint64_t)(*((uint32_t*)addr));
                     addr+=4;
-                } else if (size==DA_WORD) {
+                } else if (i_size==DA_WORD) {
                     disp = (uint64_t)(*((uint16_t*)addr));
                     addr+=2;
-                } else {
+                } else if (i_size==DA_BYTE) {
                     disp = (uint64_t)(*((uint8_t*)addr));
                     addr++;
                 }
                 disp += addr;
-                if (size == DA_WORD)
-                    disp &= 0xFFFF;
                 if(str != NULL)
                     str = sprintf(str, "%xh", disp);
-                dbg_comment=disp;
+                if(!dbg_comment)
+                    dbg_comment=disp;
                 break;
             case DA_o1:
                 if(str != NULL)
@@ -1465,11 +1466,6 @@ prefixend:
                     str = sprintf(str, "?");
                 break;
         }
-    }
-
-    // stupid gas wasting code area
-    if (opcode == 0xe9 || opcode == 0xeb) {
-        addr = (addr + (4-1)) & ~(4-1);
     }
 
 end:

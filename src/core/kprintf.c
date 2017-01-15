@@ -28,10 +28,6 @@
 #include "font.h"
 #include "env.h"
 
-#if DEBUG
-extern char *syslog_buf;
-#endif
-
 /* re-entrant counter */
 char __attribute__ ((section (".data"))) reent;
 /* for temporary strings */
@@ -85,6 +81,8 @@ extern uint64_t isr_ticks[8];
 extern uint64_t isr_currfps;
 extern uint64_t isr_lastfps;
 #if DEBUG
+extern char *syslog_buf;
+extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
 extern void dbg_setpos();
 extern void dbg_putchar(int c);
@@ -327,14 +325,19 @@ void kprintf_scrollscr()
 void kprintf_unicodetable()
 {
     int x,y;
-    kprintf_reset();
     // UNICODE table
     for(y=0;y<33;y++){
-        kx=0;ky++;
+        kx=fx;
         for(x=0;x<64;x++){
             kprintf_putchar(y*64+x);
             kx++;
         }
+#if DEBUG
+        dbg_indump = false;
+        kprintf("\n");
+#else
+        ky++;
+#endif
     }
 }
 

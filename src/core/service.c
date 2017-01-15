@@ -63,6 +63,7 @@ uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
 /* dynsym */
 unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no symbol)";
 #if DEBUG
+extern OSZ_ccb ccb;
 virt_t __attribute__ ((section (".data"))) lastsym;
 #endif
 
@@ -187,6 +188,8 @@ virt_t service_lookupsym(uchar *name, size_t size)
         return BSS_ADDRESS;
     if(size==4 && !kmemcmp(name,"core",4))
         return CORE_ADDRESS;
+    if(size==2 && !kmemcmp(name,"bt",2))
+        return (virt_t)(ccb.ist3+ISR_STACK-40);
     /* SYS task only */
     if(tcb->memroot == sys_mapping) {
         if(size==5 && !kmemcmp(name,"_main",5))

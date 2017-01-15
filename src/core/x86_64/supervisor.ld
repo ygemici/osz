@@ -31,7 +31,7 @@ SECTIONS
         *(.got*)
         . = ALIGN(4096);
         /* user mode code */
-        PROVIDE(_usercode = .);
+        _usercode = .;
         *(.text.user)
         . = ALIGN(4096);
     } :text

@@ -34,7 +34,7 @@
 .global _main
 
 /* load this page instead of /sbin/system in sys_init() */
-
+    .align  4096
 /* fake crt0 to initialize shared libraries, must be at seg:0 */
 _init:
     ret

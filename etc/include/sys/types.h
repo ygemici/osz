@@ -94,6 +94,11 @@ typedef uint64_t blksize_t;
 typedef uint64_t blkcnt_t;	 /* Type to count number of disk blocks.  */
 typedef uint64_t fsblkcnt_t; /* Type to count file system blocks.  */
 typedef uint64_t fpos_t;
+/*
+typedef void __signalfn(int);
+typedef __signalfn *sighandler_t;
+*/
+typedef void (*sighandler_t) (int);
 
 #define c_assert(c) extern char cassert[(c)?0:-1]
 

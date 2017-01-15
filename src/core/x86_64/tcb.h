@@ -34,6 +34,8 @@
 #define tcb_mypid 640
 #define tcb_memroot 648
 #define tcb_excerr 680
+#define tcb_sigmask 808
+#define tcb_sigpending 812
 
 /* platform specific TCB flags */
 #define tcb_flag_needsxsave     128
@@ -79,10 +81,11 @@ typedef struct {
     uint64_t swapminor; // swap inode when hybernated        tcb+ 784
     uint64_t cmdline;   // pointer to argc in stack          tcb+ 792
     uint64_t name;      // pointer to argv[0] in stack       tcb+ 800
-    uuid_t acl[TCB_MAXACE];// access control list            tcb+ 808
+    sighandler_t sighandler[32]; // for receiving signals    tcb+ 808
+    uuid_t acl[TCB_MAXACE];// access control list            tcb+ 1064
 
     // compile time check for minimum stack size
-    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 808 ];
+    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 1064 ];
     uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
     // the last 40 bytes of stack is referenced directly from asm
