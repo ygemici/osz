@@ -82,6 +82,22 @@ irq1:
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
+    /* handle reset, Ctrl + Alt + Del */
+    cmpb    $0x38, kbd_hist+0(%rip)
+    jne     5f
+    cmpb    $0x1D, kbd_hist+1(%rip)
+    jne     5f
+    cmpw    $0x153, %dx
+    jne     6f
+    movb    $0xFE, %al
+    outb    %al, $0x64
+    hlt
+6:  cmpw    $0x1, %dx
+    jne     5f
+    int     $3
+5:  movb    kbd_hist+0(%rip), %dil
+    movb    %dil, kbd_hist+1(%rip)
+    movb    %dl, kbd_hist+0(%rip)
     movw    $SYS_keypress, %di
 3:  /* send a key event to UI task */
     movq    %rdx, %rsi
@@ -96,3 +112,6 @@ kbd_prefix:
     .byte 0
 kbd_pressed:
     .byte 0
+kbd_hist:
+    .byte 0
+    .byte 1

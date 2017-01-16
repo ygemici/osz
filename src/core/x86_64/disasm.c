@@ -1229,9 +1229,6 @@ prefixend:
                 inst = (instdesc*)inst->ext;
                 inst = &inst[(modrm>>3)&7];
             }
-            if (opcode==0x0f && (opcode2 == 0x01 || opcode2 == 0xae)) {
-
-            }
         }
     }
     i_name = inst->name!=NULL ? inst->name : ((char**)inst->ext)[reg];

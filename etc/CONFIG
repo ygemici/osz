@@ -36,7 +36,12 @@ debug=ms
 //  1 sm = stereo channels, grayscale red-cyan
 //  2 sc = stereo channels, rgb color
 display=0
-                                                                                    
+
+// close with 3 empty lines. Keep space for dynamic arguments
+
+
+
+                  
                                                                                                                                                 
                                                                                                                                                 
                                                                                                                                                 

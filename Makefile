@@ -47,7 +47,7 @@ images: tools
 	@echo "IMAGES"
 	@make -e --no-print-directory -C tools images | grep -v 'Nothing to be done' | grep -v 'lowercase' || true
 
-bin/disk/vdi: vdi
+bin/disk.vdi: vdi
 
 vdi: images
 	@make -e --no-print-directory -C tools vdi | grep -v 'Nothing to be done' || true
@@ -80,7 +80,7 @@ testefi:
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -option-rom loader/bootboot.rom -d guest_errors -monitor stdio
-	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -seral mon:stdio
+	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
 
 testq:
 	@echo "TEST"

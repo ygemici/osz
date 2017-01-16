@@ -435,7 +435,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
         fg= ptr==rip?0xFFDD33:dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("%2x %c%c ",!dbg_inst?((uint64_t)ptr)&0xffff:(uint64_t)ptr-lastsym,ptr==rip||ptr==dbg_lastrip?
+        kprintf("%2x %c%c ",!dbg_inst?((uint64_t)ptr)&0xffffffffffff:(uint64_t)ptr-lastsym,ptr==rip||ptr==dbg_lastrip?
             ((dbg_lastrip<rip?dbg_lastrip:rip)==ptr?(dbg_lastrip==rip?'-':'/'):'\\')
             :(
             (dbg_lastrip<rip && ptr>dbg_lastrip && ptr<rip)||
@@ -1190,29 +1190,9 @@ getcmd:
         switch(scancode){
             // ESC
             case 1: {
-                if(cmdlast != 0) {
-                    cmdidx = cmdlast = 0;
-                    cmd[cmdidx]=0;
-                    goto getcmd;
-                } else {
-end:
-                    dbg_active = false;
-                    ccb.ist1 = __PAGESIZE;
-                    // clear screen
-                    offs = 0;
-                    for(y=0;y<bootboot.fb_height;y++){
-                        line=offs;
-                        for(x=0;x<bootboot.fb_width;x+=2){
-                            *((uint64_t*)(FBUF_ADDRESS + line))=(uint64_t)0;
-                            line+=8;
-                        }
-                        offs+=bootboot.fb_scanline;
-                    }
-                    kprintf_reset();
-                    scry = -1;
-                    __asm__ __volatile__ ( "movq %0, %%rax; movq %%rax, %%cr3" : : "r"(cr3) : "%rax");
-                    return;
-                }
+                cmdidx = cmdlast = 0;
+                cmd[cmdidx]=0;
+                goto getcmd;
             }
             // Tab
             case 15: {
@@ -1386,7 +1366,22 @@ help:
                     }
                     dbg_start = dbg_next;
                     dbg_lastrip = rip;
-                    goto end;
+                    dbg_active = false;
+                    ccb.ist1 = __PAGESIZE;
+                    // clear screen
+                    offs = 0;
+                    for(y=0;y<bootboot.fb_height;y++){
+                        line=offs;
+                        for(x=0;x<bootboot.fb_width;x+=2){
+                            *((uint64_t*)(FBUF_ADDRESS + line))=(uint64_t)0;
+                            line+=8;
+                        }
+                        offs+=bootboot.fb_scanline;
+                    }
+                    kprintf_reset();
+                    scry = -1;
+                    __asm__ __volatile__ ( "movq %0, %%rax; movq %%rax, %%cr3" : : "r"(cr3) : "%rax");
+                    return;
                 } else
                 // reset, reboot
                 if(cmd[0]=='r' && cmd[1]=='e'){

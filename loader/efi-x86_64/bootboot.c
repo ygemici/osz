@@ -1,11 +1,11 @@
 /*
  * loader/efi-x86_64/bootboot.c
- * 
+ *
  * Copyright 2016 Public Domain BOOTBOOT bztsrc@github
- * 
+ *
  * This file is part of the BOOTBOOT Protocol package.
  * @brief Booting code for EFI
- * 
+ *
  */
 #include <elf.h>
 #include <efi.h>
@@ -148,9 +148,10 @@ int oct2bin(unsigned char *str,int size)
 #include "fs.h"
 
 EFI_STATUS
-ParseEnvironment(unsigned char *cfg, int len)
+ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
 {
     unsigned char *ptr=cfg-1;
+    int i;
     DBG(L" * Environment @%lx %d bytes\n",cfg,len);
     while(ptr<cfg+len && ptr[0]!=0) {
         ptr++;
@@ -181,6 +182,15 @@ ParseEnvironment(unsigned char *cfg, int len)
             *ptr=0;
             ptr++;
         }
+        if(argc>2 && !CompareMem(ptr,(const CHAR8 *)"\n\n\n",3)){
+            ptr++;
+            for(i=3;i<argc;i++) {
+                CopyMem(ptr,argv[i],StrLen(argv[i]));
+                ptr += StrLen(argv[i]);
+                *ptr = '\n';
+                ptr++;
+            }
+        }
     }
     if(reqwidth<640) { reqwidth=640; }
     if(reqheight<400) { reqheight=400; }
@@ -196,11 +206,11 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
     UINT64              ReadSize;
     UINTN               BufferSize;
     UINT8               *Buffer;
-    
+
     if ((RootDir == NULL) || (FileName == NULL)) {
         return report(EFI_NOT_FOUND,L"Empty Root or FileName\n");
     }
-    
+
     Status = uefi_call_wrapper(RootDir->Open, 5, RootDir, &FileHandle, FileName, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
     if (EFI_ERROR(Status)) {
         report(Status,L"Open error");
@@ -218,7 +228,7 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
     if (ReadSize > 16*1024*1024)
         ReadSize = 16*1024*1024;
     FreePool(FileInfo);
-    
+
     BufferSize = (UINTN)((ReadSize+4095)/4096);
     Status = uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, BufferSize, (EFI_PHYSICAL_ADDRESS*)&Buffer);
     if (Buffer == NULL) {
@@ -233,7 +243,7 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
         Print(L"  File: %s\n",FileName);
         return Status;
     }
-    
+
     *FileData = Buffer;
     *FileDataLength = ReadSize;
     return EFI_SUCCESS;
@@ -399,8 +409,8 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     InitializeLib(image, systab);
     status = uefi_call_wrapper(systab->BootServices->HandleProtocol,
                 3,
-                image, 
-                &LoadedImageProtocol, 
+                image,
+                &LoadedImageProtocol,
                 (void **) &loaded_image);
     if (EFI_ERROR(status)) {
         return report(status, L"HandleProtocol");
@@ -440,7 +450,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         kne=NULL;
         // if there's an evironment file, load it
         if(LoadFile(configfile,&env_ptr,&env_len)==EFI_SUCCESS)
-            ParseEnvironment(env_ptr,env_len);
+            ParseEnvironment(env_ptr,env_len, argc, argv);
         else {
             env_len=0;
             uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
@@ -616,7 +626,7 @@ get_memory_map:
             if(bootboot->size>=4096) break;
         }
         // --- NO PRINT AFTER THIS POINT ---
-        
+
         //inform firmware that we're about to leave it's realm
         status = uefi_call_wrapper(BS->ExitBootServices, 2, image, map_key);
         if(EFI_ERROR(status)){
