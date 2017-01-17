@@ -4,6 +4,7 @@ unsigned char *stdlib_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t 
 {
     if(*s=='0' && *(s+1)=='x')
         s+=2;
+    *v=0;
     do{
         *v <<= 4;
         if(*s>='0' && *s<='9')

@@ -485,7 +485,10 @@ do
 	if [ $i -eq 1 -o $i -eq 3 -o $i -eq 14 -o "$DEBUG" == "1" ]; then
 		read -r -d '' CORECHK <<-EOF
 		    /* fault in core */
-		    cmpq    \$CORE_ADDRESS, (%rsp)
+		    cmpq    \$TEXT_ADDRESS, (%rsp)
+		    ja      1f
+xchg %bx, %bx
+		1:  cmpq    \$CORE_ADDRESS, (%rsp)
 		    jb      1f
 		    movb    \$$i, sys_fault
 		    movq    \$-8, %rax

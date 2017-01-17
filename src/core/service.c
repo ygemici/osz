@@ -174,31 +174,52 @@ virt_t service_lookupsym(uchar *name, size_t size)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
+    uchar c = name[size];
+    name[size]=0;
     /* common to all threads */
-    virt_t addr = CORE_ADDRESS;
-    if(size==3 && !kmemcmp(name,"tcb",3))
+    virt_t addr = TEXT_ADDRESS;
+    if(size==3 && !kmemcmp(name,"tcb",4)) {
+        name[size] = c;
         return 0;
-    if(size==2 && !kmemcmp(name,"mq",2))
+    }
+    if(size==2 && !kmemcmp(name,"mq",3)) {
+        name[size] = c;
         return __PAGESIZE;
-    if(size==5 && !kmemcmp(name,"stack",5))
+    }
+    if(size==5 && !kmemcmp(name,"stack",6)) {
+        name[size] = c;
         return __SLOTSIZE/2;
-    if(size==4 && !kmemcmp(name,"text",4))
+    }
+    if(size==4 && !kmemcmp(name,"text",5)) {
+        name[size] = c;
         return TEXT_ADDRESS;
-    if(size==3 && !kmemcmp(name,"bss",3))
+    }
+    if(size==3 && !kmemcmp(name,"bss",4)) {
+        name[size] = c;
         return BSS_ADDRESS;
-    if(size==4 && !kmemcmp(name,"core",4))
+    }
+    if(size==4 && !kmemcmp(name,"core",5)) {
+        name[size] = c;
         return CORE_ADDRESS;
-    if(size==2 && !kmemcmp(name,"bt",2))
+    }
+    if(size==2 && !kmemcmp(name,"bt",3)) {
+        name[size] = c;
         return (virt_t)(ccb.ist3+ISR_STACK-40);
+    }
     /* SYS task only */
     if(tcb->memroot == sys_mapping) {
-        if(size==5 && !kmemcmp(name,"_main",5))
+        if(size==5 && !kmemcmp(name,"_main",6)) {
+            name[size] = c;
             return TEXT_ADDRESS;
-        if(size==3 && !kmemcmp(name,"irt",3))
+        }
+        if(size==3 && !kmemcmp(name,"irt",4)) {
+            name[size] = c;
             return TEXT_ADDRESS + __PAGESIZE;
+        }
     }
+    name[size] = c;
     /* otherwise look for elf and parse for symbols */
-        sys_fault = false;
+    sys_fault = false;
     while(!sys_fault && (addr == CORE_ADDRESS || addr < BSS_ADDRESS)) {
         if(!kmemcmp(((Elf64_Ehdr*)addr)->e_ident,ELFMAG,SELFMAG)){
             ehdr = (Elf64_Ehdr*)addr;
@@ -270,7 +291,7 @@ virt_t service_lookupsym(uchar *name, size_t size)
             s=sym;
             for(i=0;i<(strtable-(char*)sym)/syment;i++) {
                 if(s->st_name > strsz) break;
-                if( (char*)(strtable + (uint32_t)s->st_name)!=0 &&
+                if( s->st_value && (char*)(strtable + (uint32_t)s->st_name)!=0 &&
                     *((char*)(strtable + (uint32_t)s->st_name + size))==0 &&
                     !kmemcmp(strtable + (uint32_t)s->st_name,name,size)
                 ) {
@@ -280,9 +301,10 @@ virt_t service_lookupsym(uchar *name, size_t size)
             }
         }
         if(addr == CORE_ADDRESS)
-            addr = TEXT_ADDRESS;
-        else
-            addr += __PAGESIZE;
+            break;
+        addr += __PAGESIZE;
+        if(addr == BSS_ADDRESS)
+            addr = CORE_ADDRESS;
     }
     return 0;
 }

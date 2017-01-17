@@ -55,23 +55,19 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
         if(*c=='#' || (*c=='/'&&*(c+1)=='/')) {
             c++;
             while(c<e && *c!=0 && *(c-1)!='\n') c++;
-            continue;
         }
         if((*c=='/'&&*(c+1)=='*')) {
             c+=2;
             while(c<e && *c!=0 && *(c-2)!='*' && *(c-1)!='/') c++;
-            continue;
         }
+        while(c<e && (*c=='\n'||*c==' ')) c++;
         // get scancode
-        c = stdlib_dec(c, &scancode, 0, 511);
-        c++; while(c<e && *c==' ') c++;
+        c = stdlib_dec(c, &scancode, 0, 511); c++;
         // load key symbols
         i=0; *((uint32_t*)&key)=0;
         while(c<e && *c!='\n' && *c!=0) {
-            if(*c==' ') {
-                while(c<e && *c==' ') c++;
-            }
-            if(i<16) {
+            while(c<e && *c==' ') c++;
+            if(scancode && i<16) {
                 key[0] = (uint8_t)(*c); c++;
                 if(*c!=' ' && *c!='\n') {
                     key[1] = (uint8_t)(*c); c++;
@@ -82,9 +78,9 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
                         }
                     }
                 }
-                keymap[alt*(512*16)+scancode*16+i] = *((uint32_t*)&key);
-                if(*c==0)
-                    break;
+                keymap[alt*(512*16)+scancode*16+i] = *((uint32_t*)&key[0]);
+                if(*c==0||*c=='\n')
+                    continue;
                 i++;
             }
             c++;
@@ -92,20 +88,18 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
     }
 }
 
-/* receive a scancode or a max. 32 bytes long CSI sequence */
-public void keypress(uint64_t scancode, uint64_t term0, uint64_t term1, uint64_t term2, uint64_t term3)
+/* receive a scancode or a pretranslated keycode */
+public void keypress(uint64_t scancode, uint32_t keycode)
 {
     uint8_t k[4] = { 0, 0, 0, 0 };
     uint64_t i = altmap*(512*16)+scancode*16;
-    if(term0==0) {
+    if(scancode!=0) {
         *((uint32_t*)&k) = keymap[i+modmap[keyflags]] ?
             keymap[i+modmap[keyflags]] : keymap[i];
     } else {
-        if((term0&0xFF)==0x1B) {
-        } else
-            k[0] = (uint8_t)term0;
+        *((uint32_t*)&k) = keycode;
     }
-asm("movl %0, %%eax;xchg %%bx,%%bx"::"r"(*((uint32_t*)&k)):);
+asm("movl %0, %%eax;movq %1, %%rbx;xchg %%bx,%%bx;int $1"::"r"(*((uint32_t*)&k)),"r"(scancode):);
 }
 
 public void keyrelease(uint64_t scancode)

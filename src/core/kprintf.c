@@ -64,7 +64,7 @@ char kpanicsuffix2[] =
     "                                                      \n"
     "                       KEEP CALM                      \n"
     "               AND RESTART YOUR COMPUTER              \n"
-    "                                                      ";
+    "                                                      \n";
 char poweroffprefix[] =
     "OS/Z shutdown finished. ";
 char poweroffsuffix[] =
@@ -219,10 +219,30 @@ void kprintf_putchar(int c)
 
 void kprintf_putascii(int64_t c)
 {
-    uint64_t *t = (uint64_t*)&tmpstr;
-    *t = c;
-    tmpstr[8]=0;
+    *((uint64_t*)&tmpstr) = c;
+    tmpstr[cnt>0&&cnt<=8?cnt:8]=0;
     kprintf(&tmpstr[0]);
+}
+
+void kprintf_dumpascii(int64_t c)
+{
+    int i;
+    *((uint64_t*)&tmpstr) = c;
+    if(cnt<1||cnt>8)
+        cnt = 8;
+    for(i=0;i<cnt;i++)
+        if((uchar)tmpstr[i]==0 ||
+            ((uchar)tmpstr[i]<' ' && (uchar)tmpstr[i]!=27) ||
+            (uchar)tmpstr[i]>=127)
+            tmpstr[i]='.';
+    tmpstr[cnt]=0;
+#if DEBUG
+    dbg_indump = true;
+#endif
+    kprintf(&tmpstr[0]);
+#if DEBUG
+    dbg_indump = false;
+#endif
 }
 
 void kprintf_putdec(int64_t c)
@@ -405,6 +425,9 @@ void kprintf(char* fmt, ...)
             reent++;
             if(fmt[0]=='a') {
                 kprintf_putascii(arg);
+            }
+            if(fmt[0]=='A') {
+                kprintf_dumpascii(arg);
             }
             if(fmt[0]=='d') {
                 kprintf_putdec(arg);

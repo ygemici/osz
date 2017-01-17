@@ -69,9 +69,6 @@ irq1:
     addw    kbd_prefix(%rip), %si
     movw    $0, kbd_prefix(%rip)
     /* extended scancode in si */
-    xorq    %r10, %r10
-    xorq    %r9, %r9
-    xorq    %r8, %r8
     movq    $SRV_UI, %rdi
     shlq    $16, %rdi
     bt      $7, %ax

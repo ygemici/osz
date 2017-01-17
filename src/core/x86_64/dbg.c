@@ -286,13 +286,23 @@ void dbg_code(uint64_t rip, uint64_t rs)
         kprintf("cs=%4x rip=%8x \n",tcb->cs, tcb->rip);
         kprintf("rflags=%8x excerr=%4x \n",tcb->rflags, tcb->excerr);
         kprintf("cr2=%8x cr3=%8x \n\n",cr2, tcb->memroot);
-        kprintf("rax=%8x rbx=%8x \n",*((uint64_t*)(tcb->gpr+0)),  *((uint64_t*)(tcb->gpr+8)));
-        kprintf("rcx=%8x rdx=%8x \n",*((uint64_t*)(tcb->gpr+16)), *((uint64_t*)(tcb->gpr+24)));
-        kprintf("rsi=%8x rdi=%8x \n",*((uint64_t*)(tcb->gpr+32)), *((uint64_t*)(tcb->gpr+40)));
-        kprintf(" r8=%8x  r9=%8x \n",*((uint64_t*)(tcb->gpr+48)), *((uint64_t*)(tcb->gpr+56)));
-        kprintf("r10=%8x r11=%8x \n",*((uint64_t*)(tcb->gpr+64)), *((uint64_t*)(tcb->gpr+72)));
-        kprintf("r12=%8x r13=%8x \n",*((uint64_t*)(tcb->gpr+80)), *((uint64_t*)(tcb->gpr+88)));
-        kprintf("r14=%8x r15=%8x \n",*((uint64_t*)(tcb->gpr+96)), *((uint64_t*)(tcb->gpr+104)));
+        if(dbg_inst) {
+            kprintf("rax=%8x rbx=%8x \n",*((uint64_t*)(tcb->gpr+0)),  *((uint64_t*)(tcb->gpr+8)));
+            kprintf("rcx=%8x rdx=%8x \n",*((uint64_t*)(tcb->gpr+16)), *((uint64_t*)(tcb->gpr+24)));
+            kprintf("rsi=%8x rdi=%8x \n",*((uint64_t*)(tcb->gpr+32)), *((uint64_t*)(tcb->gpr+40)));
+            kprintf(" r8=%8x  r9=%8x \n",*((uint64_t*)(tcb->gpr+48)), *((uint64_t*)(tcb->gpr+56)));
+            kprintf("r10=%8x r11=%8x \n",*((uint64_t*)(tcb->gpr+64)), *((uint64_t*)(tcb->gpr+72)));
+            kprintf("r12=%8x r13=%8x \n",*((uint64_t*)(tcb->gpr+80)), *((uint64_t*)(tcb->gpr+88)));
+            kprintf("r14=%8x r15=%8x \n",*((uint64_t*)(tcb->gpr+96)), *((uint64_t*)(tcb->gpr+104)));
+        } else {
+            kprintf("rax='%A' rbx='%A' \n",*((uint64_t*)(tcb->gpr+0)),  *((uint64_t*)(tcb->gpr+8)));
+            kprintf("rcx='%A' rdx='%A' \n",*((uint64_t*)(tcb->gpr+16)), *((uint64_t*)(tcb->gpr+24)));
+            kprintf("rsi='%A' rdi='%A' \n",*((uint64_t*)(tcb->gpr+32)), *((uint64_t*)(tcb->gpr+40)));
+            kprintf(" r8='%A'  r9='%A' \n",*((uint64_t*)(tcb->gpr+48)), *((uint64_t*)(tcb->gpr+56)));
+            kprintf("r10='%A' r11='%A' \n",*((uint64_t*)(tcb->gpr+64)), *((uint64_t*)(tcb->gpr+72)));
+            kprintf("r12='%A' r13='%A' \n",*((uint64_t*)(tcb->gpr+80)), *((uint64_t*)(tcb->gpr+88)));
+            kprintf("r14='%A' r15='%A' \n",*((uint64_t*)(tcb->gpr+96)), *((uint64_t*)(tcb->gpr+104)));
+        }
         kprintf("rbp=%8x rsp=%8x \n",*((uint64_t*)(tcb->gpr+112)),tcb->rsp);
 
         /* stack */
@@ -312,11 +322,11 @@ void dbg_code(uint64_t rip, uint64_t rs)
             dbg_settheme();
         sys_fault = false;
         while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
-            kprintf("rsp+%1x rbp-%1x: %8x \n",
+            kprintf("rsp+%1x rbp-%1x: ",
                 !dbg_inst?((uint64_t)rsp)&0xFF:(uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
-                (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp),
-                *rsp
+                (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp)
             );
+            kprintf(dbg_inst?"%8x \n":"'%A' \n", *rsp);
             rsp++;
         }
         if(dbg_tui) {
@@ -870,6 +880,7 @@ extern virt_t service_lookupsym(uchar *sym, size_t size);
 
 virt_t dbg_getaddr(char *cmd, size_t size)
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
     uint64_t base = 0,ret = 0;
     char *s=cmd;
     if(*cmd<'0'||*cmd>'9') {
@@ -877,8 +888,28 @@ virt_t dbg_getaddr(char *cmd, size_t size)
             *cmd != ' ' && *cmd != '-' && *cmd != '+'
         )
             cmd++;
-        base = service_lookupsym((uchar*)s,(uint64_t)cmd-(uint64_t)s);
+        /* translate registers */
+        if(size==3 && s[0]=='c' && s[1]=='r' && s[2]=='2') base = cr2; else
+        if(size==3 && s[0]=='c' && s[1]=='r' && s[2]=='3') base = cr3; else
+        if(size==3 && s[0]=='r' && s[1]=='a' && s[2]=='x') base = *((uint64_t*)(tcb->gpr+0)); else
+        if(size==3 && s[0]=='r' && s[1]=='b' && s[2]=='x') base = *((uint64_t*)(tcb->gpr+8)); else
+        if(size==3 && s[0]=='r' && s[1]=='c' && s[2]=='x') base = *((uint64_t*)(tcb->gpr+16)); else
+        if(size==3 && s[0]=='r' && s[1]=='d' && s[2]=='x') base = *((uint64_t*)(tcb->gpr+24)); else
+        if(size==3 && s[0]=='r' && s[1]=='s' && s[2]=='i') base = *((uint64_t*)(tcb->gpr+32)); else
+        if(size==3 && s[0]=='r' && s[1]=='d' && s[2]=='i') base = *((uint64_t*)(tcb->gpr+40)); else
+        if(size==2 && s[0]=='r' && s[1]=='8') base = *((uint64_t*)(tcb->gpr+48)); else
+        if(size==2 && s[0]=='r' && s[1]=='9') base = *((uint64_t*)(tcb->gpr+56)); else
+        if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='0') base = *((uint64_t*)(tcb->gpr+64)); else
+        if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='1') base = *((uint64_t*)(tcb->gpr+72)); else
+        if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='2') base = *((uint64_t*)(tcb->gpr+80)); else
+        if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='3') base = *((uint64_t*)(tcb->gpr+88)); else
+        if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='4') base = *((uint64_t*)(tcb->gpr+96)); else
+        if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='5') base = *((uint64_t*)(tcb->gpr+104)); else
+        if(size==3 && s[0]=='r' && s[1]=='b' && s[2]=='p') base = *((uint64_t*)(tcb->gpr+112)); else
+        /* neither, lookup sym */
+            base = service_lookupsym((uchar*)s,(uint64_t)cmd-(uint64_t)s);
     }
+    /* parse displacement */
     while(*cmd==' '||*cmd=='-'||*cmd=='+') cmd++;
     env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
     return (*(cmd-1)=='-'?base-ret:base+ret);
@@ -1501,6 +1532,8 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
                         y = dbg_getaddr(&cmd[x],cmdlast-x);
                         if(y==0) {
+                            if((cmd[x]!='r'&&cmd[x+1]!='i'&&cmd[x+2]!='p'))
+                                dbg_err = "Symbol not found";
                             rip = tcb->rip;
                         } else {
                             if(cmd[x-1]=='-')
@@ -1550,7 +1583,12 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
                         y = dbg_getaddr(&cmd[x],cmdlast-x);
                         if(y==0 && cmd[x]!='0'){
-                            rsp = tcb->rsp;
+                            if((cmd[x]!='t'&&cmd[x+1]!='c'&&cmd[x+2]!='b')) {
+                                if((cmd[x]!='r'&&cmd[x+1]!='s'&&cmd[x+2]!='p'))
+                                    dbg_err = "Symbol not found";
+                                rip = tcb->rsp;
+                            } else
+                                rsp = 0;
                             cmdidx = cmdlast = 0;
                             cmd[cmdidx]=0;
                         } else {

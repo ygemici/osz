@@ -175,7 +175,10 @@ isr_exc00divzero:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $0, sys_fault
     movq    $-8, %rax
@@ -200,7 +203,10 @@ isr_exc01debug:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $1, sys_fault
     movq    $-8, %rax
@@ -225,7 +231,10 @@ isr_exc02nmi:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $2, sys_fault
     movq    $-8, %rax
@@ -250,7 +259,10 @@ isr_exc03chkpoint:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $3, sys_fault
     movq    $-8, %rax
@@ -275,7 +287,10 @@ isr_exc04overflow:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $4, sys_fault
     movq    $-8, %rax
@@ -300,7 +315,10 @@ isr_exc05bound:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $5, sys_fault
     movq    $-8, %rax
@@ -325,7 +343,10 @@ isr_exc06invopcode:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $6, sys_fault
     movq    $-8, %rax
@@ -350,7 +371,10 @@ isr_exc07devunavail:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $7, sys_fault
     movq    $-8, %rax
@@ -375,7 +399,10 @@ isr_exc08dblfault:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $8, sys_fault
     movq    $-8, %rax
@@ -400,7 +427,10 @@ isr_exc09coproc:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $9, sys_fault
     movq    $-8, %rax
@@ -425,7 +455,10 @@ isr_exc10invtss:
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $10, sys_fault
     movq    $-8, %rax
@@ -450,7 +483,10 @@ isr_exc11segfault:
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $11, sys_fault
     movq    $-8, %rax
@@ -475,7 +511,10 @@ isr_exc12stackfault:
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $12, sys_fault
     movq    $-8, %rax
@@ -500,7 +539,10 @@ isr_exc13genprot:
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $13, sys_fault
     movq    $-8, %rax
@@ -525,7 +567,10 @@ isr_exc14pagefault:
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $14, sys_fault
     movq    $-8, %rax
@@ -550,7 +595,10 @@ isr_exc15unknown:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $15, sys_fault
     movq    $-8, %rax
@@ -575,7 +623,10 @@ isr_exc16float:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $16, sys_fault
     movq    $-8, %rax
@@ -600,7 +651,10 @@ isr_exc17alignment:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $17, sys_fault
     movq    $-8, %rax
@@ -625,7 +679,10 @@ isr_exc18machinecheck:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $18, sys_fault
     movq    $-8, %rax
@@ -650,7 +707,10 @@ isr_exc19double:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $19, sys_fault
     movq    $-8, %rax
@@ -675,7 +735,10 @@ isr_exc20:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $20, sys_fault
     movq    $-8, %rax
@@ -700,7 +763,10 @@ isr_exc21:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $21, sys_fault
     movq    $-8, %rax
@@ -725,7 +791,10 @@ isr_exc22:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $22, sys_fault
     movq    $-8, %rax
@@ -750,7 +819,10 @@ isr_exc23:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $23, sys_fault
     movq    $-8, %rax
@@ -775,7 +847,10 @@ isr_exc24:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $24, sys_fault
     movq    $-8, %rax
@@ -800,7 +875,10 @@ isr_exc25:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $25, sys_fault
     movq    $-8, %rax
@@ -825,7 +903,10 @@ isr_exc26:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $26, sys_fault
     movq    $-8, %rax
@@ -850,7 +931,10 @@ isr_exc27:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $27, sys_fault
     movq    $-8, %rax
@@ -875,7 +959,10 @@ isr_exc28:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $28, sys_fault
     movq    $-8, %rax
@@ -900,7 +987,10 @@ isr_exc29:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $29, sys_fault
     movq    $-8, %rax
@@ -925,7 +1015,10 @@ isr_exc30:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $30, sys_fault
     movq    $-8, %rax
@@ -950,7 +1043,10 @@ isr_exc31:
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
     /* fault in core */
-    cmpq    $CORE_ADDRESS, (%rsp)
+    cmpq    $TEXT_ADDRESS, (%rsp)
+    ja      1f
+xchg %bx, %bx
+1:  cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
     movb    $31, sys_fault
     movq    $-8, %rax
