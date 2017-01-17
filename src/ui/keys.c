@@ -45,9 +45,9 @@ uint8_t altmap = 0;
 uint8_t keyflags = 0;
 uint32_t keymap[2*512*16];
 
-private void keymap_parse(bool_t alt, char *keymap, size_t len)
+private void keymap_parse(bool_t alt, char *keyrc, size_t len)
 {
-    char *c = keymap, *e = keymap + len;
+    char *c = keyrc, *e = keyrc + len;
     uint64_t scancode, i;
     uint8_t key[4];
     while(c<e && *c!=0) {
@@ -63,7 +63,7 @@ private void keymap_parse(bool_t alt, char *keymap, size_t len)
             continue;
         }
         // get scancode
-        c = stdlib_dec(c, &scancode, 0, 0x1FF);
+        c = stdlib_dec(c, &scancode, 0, 511);
         c++; while(c<e && *c==' ') c++;
         // load key symbols
         i=0; *((uint32_t*)&key)=0;
@@ -83,7 +83,7 @@ private void keymap_parse(bool_t alt, char *keymap, size_t len)
                     }
                 }
                 keymap[alt*(512*16)+scancode*16+i] = *((uint32_t*)&key);
-                if(*c=='\n')
+                if(*c==0)
                     break;
                 i++;
             }

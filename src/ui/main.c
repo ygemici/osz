@@ -27,7 +27,6 @@
 #include <osZ.h>
 
 extern char _binary_logo_start;
-extern uint32_t keymap[2][128][11];
 extern void keymap_parse(bool_t alt, char *keymap, size_t len);
 
 public void opentty(){}

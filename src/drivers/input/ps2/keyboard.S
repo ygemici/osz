@@ -64,7 +64,8 @@ irq1:
     movw    $3*128, kbd_prefix(%rip)
     ret
 1:  movb    %sil, %al
-    btc     $7, %si
+    /* clear release bit so that it won't mess up scancode */
+    btr     $7, %si
     addw    kbd_prefix(%rip), %si
     movw    $0, kbd_prefix(%rip)
     /* extended scancode in si */
@@ -83,8 +84,6 @@ irq1:
     jg      4f
     decb    kbd_pressed(%rip)
     movw    $SYS_keyrelease, %di
-    /* clear release bit so that it won't mess up scancode */
-    btr     $7, %si
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
