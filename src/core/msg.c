@@ -80,7 +80,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         msghdr = (msghdr_t*)(MQ_ADDRESS);
         dsttcb = srctcb;
     } else {
-        isr_next = thread;
+        isr_next = dsttcb->memroot;
         kmap_mq(dsttcb->self);
     }
 

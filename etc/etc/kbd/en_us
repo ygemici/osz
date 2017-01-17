@@ -83,20 +83,20 @@
 81: PgDn VEnd WdZ+
 82: Ins Pste
 83: Del
-0xe01c: KEnt KEnt FScr
-0xe01d: RCtl SwKM
-0xe037: ^PSc
-0xe038: RAlt
-0xe046: ^Brk
-0xe047: KHme LHme VHme WdHm
-0xe048: Up KUp WdH- WdY-
-0xe049: PgUp KPUp
-0xe04b: Left KLft WdW- WdX-
-0xe04d: Rght KRht WdW+ WdX+
-0xe04f: End KEnd
-0xe050: Down KDwn WdH+ WdY+
-0xe051: PgDn KPDn
-0xe052: Ins KIns
-0xe053: Del KDel
-0xe05b: LSpr
-0xe05c: RSpr
+0x9c: KEnt KEnt FScr
+0x9d: RCtl SwKM
+0xb7: ^PSc
+0xb8: RAlt
+0xc6: ^Brk
+0xc7: KHme LHme VHme WdHm
+0xc8: Up KUp WdH- WdY-
+0xc9: PgUp KPUp
+0xcb: Left KLft WdW- WdX-
+0xcd: Rght KRht WdW+ WdX+
+0xcf: End KEnd
+0xd0: Down KDwn WdH+ WdY+
+0xd1: PgDn KPDn
+0xd2: Ins KIns
+0xd3: Del KDel
+0xdb: LSpr
+0xdc: RSpr

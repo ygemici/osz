@@ -51,6 +51,7 @@
 mq_send:
     # non-blocking send message
     /* this will call msg_sends() in core */
+    movq     %rcx, %r10
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
@@ -68,6 +69,7 @@ mymq_call:
     shrq     $32, %rax
     movswl   %ax, %eax
     movl     %eax, MQ_ADDRESS + 28
+    movq     %rcx, %r10
     movl     $0x6c6c6163, %eax # 'call'
     syscall
     /* unlock */
@@ -86,6 +88,7 @@ mymq_recv:
     movq     8(%rbx), %rax
     cmpq     (%rbx), %rax
     jne      2f
+    movq     %rcx, %r10
     movl     $0x76636572, %eax # 'recv'
     /* block until we receive something */
     syscall
@@ -109,10 +112,11 @@ mq_ismsg:
     subq     MQ_ADDRESS+8, %rax
     ret
 
-/* uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,r10 func); */
+/* uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,stack func); */
 mq_dispatchcall:
     /* rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
-    callq   *%r10
+    movq    8(%rsp), %rax
+    callq   *%rax
     ret
 
 /* void *dl(so, sym) */

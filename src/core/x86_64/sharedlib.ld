@@ -26,7 +26,7 @@ SECTIONS
   . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
   .text :
   {
-    PROVIDE (_code = .);
+    _code = .;
     /* text segment must start with crt0 */
     *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
@@ -76,7 +76,7 @@ SECTIONS
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
-    *(.bss .bss.* .gnu.linkonce.b.*)
+    *(.bss .bss.* .sbss* .gnu.linkonce.b.*)
     SORT(CONSTRUCTORS)
     *(COMMON)
     . = ALIGN(. != 0 ? 64 / 8 : 1);

@@ -27,7 +27,7 @@ SECTIONS
   . = SEGMENT_START("text-segment", 0);
   .text SIZEOF_HEADERS : AT(SIZEOF_HEADERS)
   {
-    PROVIDE (_code = .);
+    _code = .;
     /* text segment must start with crt0 code */
     *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)

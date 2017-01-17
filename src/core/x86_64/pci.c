@@ -56,5 +56,5 @@ char *pci_getdriver(char *device)
 
 void pci_init()
 {
-// TODO:  service_installirq(irq, ehdr->e_shoff);
+// TODO: load drivers and save autodetected irq number in ehdr->e_machine
 }

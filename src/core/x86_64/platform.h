@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Platform dependent headers
+ * @brief Platform dependent libk headers (for the core)
  */
 
 #include <errno.h>
@@ -38,8 +38,10 @@
 #include "isr.h"
 #include "../core.h"
 
+#ifndef OSZ_CORE
 #define thread_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
 #define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
+#endif
 
 /* VMM access bits */
 #define PG_CORE 0b00011

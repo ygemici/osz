@@ -35,6 +35,7 @@
 # include <stdint.h>
 # include <sys/types.h>
 # ifndef OSZ_CORE
+#  include <sys/platform.h>
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>

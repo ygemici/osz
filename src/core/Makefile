@@ -12,7 +12,7 @@ CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER=
  -fpic -nostdinc -I../../etc/include -I. -I./$(ARCH) -include ./$(ARCH)/platform.h \
  -Wall -ffreestanding -fno-builtin -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 ifeq ($(DEBUG),1)
-CFLAGS += -g
+CFLAGS +=
 else
 LDFLAGS += -Xlinker -s
 endif

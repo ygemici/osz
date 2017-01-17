@@ -131,6 +131,8 @@ void dbg_settheme()
     dbg_putchar('3');
     if(fg==0xFFDD33) {
         dbg_putchar('3');
+    } else if(fg==0x800000) {
+        dbg_putchar('1');
     } else {
         if(fg==dbg_theme[3]||fg==dbg_theme[4]) {
             dbg_putchar(dbg_theme==theme_debug?'6':(fg==dbg_theme[3]?'7':'1'));
@@ -281,17 +283,17 @@ void dbg_code(uint64_t rip, uint64_t rs)
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("cs=%4x rip=%8x \n",tcb->cs,tcb->rip);
-        kprintf("rflags=%8x excerr=%4x \n",tcb->rflags,tcb->excerr);
-        kprintf("cr2=%8x cr3=%8x \n\n",cr2,tcb->memroot);
-        kprintf("rax=%8x rbx=%8x \n",*((uint64_t*)tcb->gpr),*((uint64_t*)tcb->gpr+8));
-        kprintf("rcx=%8x rdx=%8x \n",*((uint64_t*)tcb->gpr+16),*((uint64_t*)tcb->gpr+24));
-        kprintf("rsi=%8x rdi=%8x \n",*((uint64_t*)tcb->gpr+32),*((uint64_t*)tcb->gpr+40));
-        kprintf("rbp=%8x rsp=%8x \n",*((uint64_t*)tcb->gpr+112),tcb->rsp);
-        kprintf(" r8=%8x  r9=%8x \n",*((uint64_t*)tcb->gpr+48),*((uint64_t*)tcb->gpr+56));
-        kprintf("r10=%8x r11=%8x \n",*((uint64_t*)tcb->gpr+64),*((uint64_t*)tcb->gpr+72));
-        kprintf("r12=%8x r13=%8x \n",*((uint64_t*)tcb->gpr+80),*((uint64_t*)tcb->gpr+88));
-        kprintf("r14=%8x r15=%8x \n",*((uint64_t*)tcb->gpr+96),*((uint64_t*)tcb->gpr+104));
+        kprintf("cs=%4x rip=%8x \n",tcb->cs, tcb->rip);
+        kprintf("rflags=%8x excerr=%4x \n",tcb->rflags, tcb->excerr);
+        kprintf("cr2=%8x cr3=%8x \n\n",cr2, tcb->memroot);
+        kprintf("rax=%8x rbx=%8x \n",*((uint64_t*)(tcb->gpr+0)),  *((uint64_t*)(tcb->gpr+8)));
+        kprintf("rcx=%8x rdx=%8x \n",*((uint64_t*)(tcb->gpr+16)), *((uint64_t*)(tcb->gpr+24)));
+        kprintf("rsi=%8x rdi=%8x \n",*((uint64_t*)(tcb->gpr+32)), *((uint64_t*)(tcb->gpr+40)));
+        kprintf(" r8=%8x  r9=%8x \n",*((uint64_t*)(tcb->gpr+48)), *((uint64_t*)(tcb->gpr+56)));
+        kprintf("r10=%8x r11=%8x \n",*((uint64_t*)(tcb->gpr+64)), *((uint64_t*)(tcb->gpr+72)));
+        kprintf("r12=%8x r13=%8x \n",*((uint64_t*)(tcb->gpr+80)), *((uint64_t*)(tcb->gpr+88)));
+        kprintf("r14=%8x r15=%8x \n",*((uint64_t*)(tcb->gpr+96)), *((uint64_t*)(tcb->gpr+104)));
+        kprintf("rbp=%8x rsp=%8x \n",*((uint64_t*)(tcb->gpr+112)),tcb->rsp);
 
         /* stack */
         ky=3; fx = kx = maxx-44;
@@ -882,18 +884,23 @@ virt_t dbg_getaddr(char *cmd, size_t size)
     return (*(cmd-1)=='-'?base-ret:base+ret);
 }
 
-void dbg_singlestep(bool_t enable)
+#define SINGLESTEP_NONE 0
+#define SINGLESTEP_LOCAL 1
+#define SINGLESTEP_GLOBAL 2
+
+void dbg_singlestep(uint8_t enable)
 {
     OSZ_tcb *tcb=(OSZ_tcb*)&tmpmap;
     int i;
     pid_t n;
+    // enable globally or clear all flags
     for(i=PRI_SYS; i<PRI_IDLE; i++) {
         if(ccb.hd_active[i] == 0)
             continue;
         n = ccb.hd_active[i];
         while(n != 0) {
             kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
-            if(enable)
+            if(enable==SINGLESTEP_GLOBAL)
                 tcb->rflags |= (1<<8);
             else
                 tcb->rflags &= ~(1<<8);
@@ -903,16 +910,20 @@ void dbg_singlestep(bool_t enable)
     n = ccb.hd_blocked;
     while(n != 0) {
         kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
-        if(enable)
+        if(enable==SINGLESTEP_GLOBAL)
             tcb->rflags |= (1<<8);
         else
             tcb->rflags &= ~(1<<8);
         n = tcb->next;
     }
-    if(enable)
+    // enable locally
+    if(enable) {
         *((uint64_t*)(ccb.ist3+ISR_STACK-24)) |= (1<<8);
-    else
+        ((OSZ_tcb*)0)->rflags |= (1<<8);
+    } else {
         *((uint64_t*)(ccb.ist3+ISR_STACK-24)) &= ~(1<<8);
+        ((OSZ_tcb*)0)->rflags &= ~(1<<8);
+    }
 }
 
 // initialize debugger. Called from sys_enable()
@@ -1362,7 +1373,10 @@ help:
                     if(((dr6>>14)&1) != ((tcb->rflags>>8)&1) || cmdlast!=0) {
                     /* we enable if command starts with 's' or we are
                      * already in single stepping mode */
-                        dbg_singlestep((cmdlast==0 && dr6&(1<<14)) || cmd[0]=='s');
+                        dbg_singlestep((cmdlast==0 && dr6&(1<<14)) || cmd[0]=='s'?
+                            (cmd[1]=='g' ? SINGLESTEP_GLOBAL : SINGLESTEP_LOCAL)
+                            :SINGLESTEP_NONE
+                        );
                     }
                     dbg_start = dbg_next;
                     dbg_lastrip = rip;

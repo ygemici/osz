@@ -226,5 +226,6 @@ found:
         kprintf("sched_pick()=%x  \n", tcb->mypid);
 #endif
     ccb.cr_active[i] = tcb->next;
+    isr_next = tcb->memroot;
     return tcb->memroot;
 }

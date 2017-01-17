@@ -205,48 +205,20 @@ virt_t service_lookupsym(uchar *name, size_t size)
             Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
             Elf64_Sym *sym=NULL, *s;
             // the string tables
-            char *strtable;
-            int i, strsz, syment;
+            char *strtable=NULL;
+            int i, strsz=0, syment=24;
 
-            /* Program Header */
-            for(i = 0; i < ehdr->e_phnum; i++){
-                /* we only need the Dynamic header */
-                if(phdr->p_type==PT_DYNAMIC) {
-                    /* Dynamic header */
-                    Elf64_Dyn *d;
-                    d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
-                    while(d->d_tag != DT_NULL) {
-                        if(d->d_tag == DT_STRTAB) {
-                            strtable = (char*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF);
-                        }
-                        if(d->d_tag == DT_STRSZ) {
-                            strsz = d->d_un.d_val;
-                        }
-                        if(d->d_tag == DT_SYMTAB) {
-                            sym = (Elf64_Sym *)((uint8_t*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF));
-                        }
-                        if(d->d_tag == DT_SYMENT) {
-                            syment = d->d_un.d_val;
-                        }
-                        /* move pointer to next dynamic entry */
-                        d++;
-                    }
-                }
-                /* move pointer to next section header */
-                phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
-            }
-            /* fallback to sections if dynamic segment not found */
-            if(sym==NULL) {
-                // section header
-                Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
-                // string table and other section header entries
-                Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
-                char *shstr = (char*)ehdr + (uint32_t)strt->sh_offset;
-                // failsafe
-                if((virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
-                   (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
-                )
-                    continue;
+            // section header
+            Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
+            // string table and other section header entries
+            Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
+            char *shstr = (char*)ehdr + (uint32_t)strt->sh_offset;
+            // failsafe
+            if((virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
+               (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
+            )
+                sym=NULL;
+            else {
                 /* Section header */
                 for(i = 0; i < ehdr->e_shnum; i++){
                     if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".symtab")){
@@ -261,7 +233,37 @@ virt_t service_lookupsym(uchar *name, size_t size)
                     shdr = (Elf64_Shdr *)((uint8_t *)shdr + ehdr->e_shentsize);
                 }
             }
-            if(sym==NULL)
+            /* fallback to dynamic segment if symtab section not found */
+            if(sym==NULL || strtable==NULL || strsz==0) {
+                /* Program Header */
+                for(i = 0; i < ehdr->e_phnum; i++){
+                    /* we only need the Dynamic header */
+                    if(phdr->p_type==PT_DYNAMIC) {
+                        /* Dynamic header */
+                        Elf64_Dyn *d;
+                        d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
+                        while(d->d_tag != DT_NULL) {
+                            if(d->d_tag == DT_STRTAB) {
+                                strtable = (char*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF);
+                            }
+                            if(d->d_tag == DT_STRSZ) {
+                                strsz = d->d_un.d_val;
+                            }
+                            if(d->d_tag == DT_SYMTAB) {
+                                sym = (Elf64_Sym *)((uint8_t*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF));
+                            }
+                            if(d->d_tag == DT_SYMENT) {
+                                syment = d->d_un.d_val;
+                            }
+                            /* move pointer to next dynamic entry */
+                            d++;
+                        }
+                    }
+                    /* move pointer to next section header */
+                    phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
+                }
+            }
+            if(sym==NULL || strtable==NULL || strsz==0)
                 continue;
 
             /* find the symbol with that name */
@@ -327,54 +329,28 @@ uchar *service_sym(virt_t addr)
     Elf64_Sym *sym=NULL, *s;
     // the string tables
     char *strtable, *last=NULL;
-    int i, strsz, syment;
+    int i, strsz=0, syment=24;
 
-    /* Program Header */
-    for(i = 0; i < ehdr->e_phnum; i++){
-        /* we only need the Dynamic header */
-        if(phdr->p_type==PT_DYNAMIC) {
-            /* Dynamic header */
-            Elf64_Dyn *d;
-            d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
-            while(d->d_tag != DT_NULL) {
-                if(d->d_tag == DT_STRTAB) {
-                    strtable = (char*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF);
-                }
-                if(d->d_tag == DT_STRSZ) {
-                    strsz = d->d_un.d_val;
-                }
-                if(d->d_tag == DT_SYMTAB) {
-                    sym = (Elf64_Sym *)((uint8_t*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF));
-                }
-                if(d->d_tag == DT_SYMENT) {
-                    syment = d->d_un.d_val;
-                }
-                /* move pointer to next dynamic entry */
-                d++;
-            }
-        }
-        /* move pointer to next section header */
-        phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
-    }
-    /* fallback to sections if dynamic segment not found */
-    if(sym==NULL) {
-        // section header
-        Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
-        // string table and other section header entries
-        Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);
-        char *shstr = (char*)ehdr + (uint32_t)strt->sh_offset;
-        // failsafe
-        if((virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
-           (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
-        )
-            return nosym;
+    /* Section Headers */
+    Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_shoff);
+    // string table and other section header entries
+    Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)(ehdr->e_shstrndx)*(uint64_t)(ehdr->e_shentsize));
+    sys_fault=false;
+    char *shstr = (char*)ehdr + strt->sh_offset;
+    // failsafe
+
+    if(sys_fault || (virt_t)strt<TEXT_ADDRESS || ((virt_t)strt>=BSS_ADDRESS && (virt_t)strt<FBUF_ADDRESS) ||
+       (virt_t)shstr<TEXT_ADDRESS || ((virt_t)shstr>=BSS_ADDRESS && (virt_t)shstr<FBUF_ADDRESS)
+    )
+        sym=NULL;
+    else {
         /* Section header */
         for(i = 0; i < ehdr->e_shnum; i++){
-            if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".symtab")){
+            if(!kmemcmp(shstr+(uint32_t)shdr->sh_name, ".symtab",8)){
                 sym = (Elf64_Sym *)((uint8_t*)ehdr + (uint32_t)shdr->sh_offset);
                 syment = (int)shdr->sh_entsize;
             }
-            if(!kstrcmp(shstr+(uint32_t)shdr->sh_name, ".strtab")){
+            if(!kmemcmp(shstr+(uint32_t)shdr->sh_name, ".strtab",8)){
                 strtable = (char*)ehdr + (uint32_t)shdr->sh_offset;
                 strsz = (int)shdr->sh_size;
             }
@@ -382,21 +358,51 @@ uchar *service_sym(virt_t addr)
             shdr = (Elf64_Shdr *)((uint8_t *)shdr + ehdr->e_shentsize);
         }
     }
-    if(sym==NULL)
+    /* fallback to dynamic segment if symtab section not found */
+    if(sym==NULL || strtable==NULL || strsz==0) {
+        /* Program Header */
+        for(i = 0; i < ehdr->e_phnum; i++){
+            /* we only need the Dynamic header */
+            if(phdr->p_type==PT_DYNAMIC) {
+                /* Dynamic header */
+                Elf64_Dyn *d;
+                d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
+                while(d->d_tag != DT_NULL) {
+                    if(d->d_tag == DT_STRTAB) {
+                        strtable = (char*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF);
+                    }
+                    if(d->d_tag == DT_STRSZ) {
+                        strsz = d->d_un.d_val;
+                    }
+                    if(d->d_tag == DT_SYMTAB) {
+                        sym = (Elf64_Sym *)((uint8_t*)ehdr + (((uint32_t)d->d_un.d_ptr)&0xFFFFFF));
+                    }
+                    if(d->d_tag == DT_SYMENT) {
+                        syment = d->d_un.d_val;
+                    }
+                    /* move pointer to next dynamic entry */
+                    d++;
+                }
+            }
+            /* move pointer to next section header */
+            phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
+        }
+    }
+    if(sym==NULL || strtable==NULL || strsz==0)
         return nosym;
 
     /* find the closest symbol to the address */
     s=sym;
-    ptr = 0;
+    ptr=0;
     for(i=0;i<(strtable-(char*)sym)/syment;i++) {
         if(s->st_name > strsz) break;
         if((virt_t)s->st_value <= (virt_t)addr &&
            (virt_t)s->st_value > ptr &&
-           (char*)(strtable + (uint32_t)s->st_name)!=0)
+           *((char*)(strtable + (uint32_t)s->st_name))!=0)
         {
             last = strtable + (uint32_t)s->st_name;
 #if DEBUG
-            lastsym = (uint64_t)s->st_value;
+            lastsym = (uint64_t)s->st_value + (uint64_t)ehdr;
 #endif
             ptr = s->st_value;
         }
@@ -578,9 +584,6 @@ bool_t service_rtlink()
         // the string table
         char *strtable;
         int strsz, syment;
-        // clear session header offset, we don't need it, so we can reuse it
-        // to store irq handler's address
-        ehdr->e_shoff = 0;
 
         for(i = 0; i < ehdr->e_phnum; i++){
             if(phdr->p_type==PT_DYNAMIC) {
@@ -638,13 +641,13 @@ bool_t service_rtlink()
                             *(strtable + s->st_name + 5)==0 ||
                             *(strtable + s->st_name + 6)==0)
                         ) {
+                            // irq number from function name
                             env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
-                            service_installirq(k, offs);
                         } else {
-                            // record the irq handler's offset for later, we cannot
-                            // install it yet. We'll have to autodetect the irq number
-                            ehdr->e_shoff = offs;
+                            // get autodetected irq name
+                            k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
                         }
+                        service_installirq(k, offs);
                     }
                     if(!kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG

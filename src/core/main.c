@@ -68,7 +68,7 @@ void main()
     // this will also detect device drivers
     sys_init();
     // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
-    fs_init();
+//    fs_init();
 
     /* step 2: communication */
     // initialize "UI" task to handle user input / output
@@ -78,6 +78,7 @@ void main()
     // other means of communication
     // start "syslog" task so others can log errors
     // special service_init(SRV_syslog, "sbin/syslog")
+/*
     syslog_init();
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
@@ -87,23 +88,26 @@ void main()
         // initialize "sound" task to handle audio channels
         service_init(SRV_sound, "sbin/sound");
     }
+*/
     // load screen saver
 //    service_init(SRV_USRLAST, "sbin/scrsvr");
 
     /* step 3: who am I */
+/*
     fs_locate("etc/hostname");
     if(identity || fs_size==0) {
         // start first time turn on's set up task
         service_init(SRV_USRFIRST, "sbin/identity");
     }
-
+*/
     /* step 4: stand up and prosper. */
     // load "init" or "sh" process
+/*
     if(rescueshell)
         service_init(SRV_USRFIRST, "bin/sh");
     else
         service_init(SRV_init, "sbin/init");
-
+*/
     // The "ready" message. Cover out "starting" message
     kprintf_ready();
 

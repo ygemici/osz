@@ -10,6 +10,7 @@ CFLAGS = -Wall -fpic -ffreestanding -fPIC
 all: $(OBJS) ok
 
 ok:
+	@cp -f platform.h ../../../../etc/include/sys 2>/dev/null 1>/dev/null || true
 	@true
 
 %.o: %.S

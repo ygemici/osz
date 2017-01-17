@@ -36,6 +36,7 @@ irq1:
     /* is there a key waiting? */
     movw    $512, %cx
     xorq    %rax, %rax
+    xorq    %rsi, %rsi
     xorq    %rdx, %rdx
 1:  inb     $0x64, %al
     andb    $1, %al
@@ -45,29 +46,34 @@ irq1:
     ret
     /* yes, read the scancode */
 2:  inb     $0x60, %al
-    movb    %al, %dl
+    movb    %al, %sil
     /* acknowledge */
     inb     $0x61, %al
     outb    %al, $0x61
     /* check extended scancode */
-    cmpb    $0xE0, %dl
+    cmpb    $0xE0, %sil
     jne     1f
-    movb    $1, kbd_prefix(%rip)
+    movw    $1*128, kbd_prefix(%rip)
     ret
-1:  cmpb    $0xE1, %dl
+1:  cmpb    $0xE1, %sil
     jne     1f
-    movb    $2, kbd_prefix(%rip)
+    movw    $2*128, kbd_prefix(%rip)
     ret
-1:  cmpb    $0xFF, %dl
+1:  cmpb    $0xFF, %sil
     jne     1f
-    movb    $3, kbd_prefix(%rip)
+    movw    $3*128, kbd_prefix(%rip)
     ret
-1:  movb    kbd_prefix(%rip), %dh
-    movb    $0, kbd_prefix(%rip)
-    /* extended scancode in dx */
+1:  movb    %sil, %al
+    btc     $7, %si
+    addw    kbd_prefix(%rip), %si
+    movw    $0, kbd_prefix(%rip)
+    /* extended scancode in si */
+    xorq    %r10, %r10
+    xorq    %r9, %r9
+    xorq    %r8, %r8
     movq    $SRV_UI, %rdi
     shlq    $16, %rdi
-    bt      $7, %dx
+    bt      $7, %ax
     jnc     2f
     /* keyrelease */
     cmpb    $0, kbd_pressed(%rip)
@@ -78,29 +84,31 @@ irq1:
     decb    kbd_pressed(%rip)
     movw    $SYS_keyrelease, %di
     /* clear release bit so that it won't mess up scancode */
-    btr     $7, %dx
+    btr     $7, %si
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
-    /* handle reset, Ctrl + Alt + Del */
+    /* handle Ctrl + Alt + Del */
     cmpb    $0x38, kbd_hist+0(%rip)
     jne     5f
     cmpb    $0x1D, kbd_hist+1(%rip)
     jne     5f
-    cmpw    $0x153, %dx
+    cmpw    $0x53, %si
+    jne     7f
+    cmpw    $0xd3, %si
     jne     6f
-    movb    $0xFE, %al
+7:  movb    $0xFE, %al
     outb    %al, $0x64
     hlt
-6:  cmpw    $0x1, %dx
+    /* handle Ctrl + Alt + Escape */
+6:  cmpw    $0x1, %si
     jne     5f
     int     $3
-5:  movb    kbd_hist+0(%rip), %dil
-    movb    %dil, kbd_hist+1(%rip)
-    movb    %dl, kbd_hist+0(%rip)
+5:  movb    kbd_hist+0(%rip), %al
+    movb    %al, kbd_hist+1(%rip)
+    movb    %sil, kbd_hist+0(%rip)
     movw    $SYS_keypress, %di
 3:  /* send a key event to UI task */
-    movq    %rdx, %rsi
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
@@ -109,7 +117,7 @@ irq1:
 
 .section .data
 kbd_prefix:
-    .byte 0
+    .hword 0
 kbd_pressed:
     .byte 0
 kbd_hist:

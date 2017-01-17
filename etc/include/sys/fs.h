@@ -32,4 +32,4 @@
 #define SYS_seek	(  9)
 #define SYS_dup	( 10)
 #define SYS_stat	( 11)
-#define SYS_ioctl	( 12)
+#define SYS_ioctl	( 13)

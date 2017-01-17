@@ -28,7 +28,6 @@
 #include <osZ.h>
 #include <elf.h>
 #include <sysexits.h>
-#include <platform.h>
 
 extern uint64_t mq_dispatchcall(
     uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5,

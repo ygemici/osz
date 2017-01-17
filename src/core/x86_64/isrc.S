@@ -113,10 +113,11 @@ isr_syscall0:
     /* make the environment look like in an irq handler */
     /* tcb->rip */
     movq    %rcx, __PAGESIZE-40
+    movq    %r10, %rcx
     /* tcp->rsp, save stack pointer and switch to core stack */
     movq    %rsp, __PAGESIZE-16
     movq    safestack, %rsp
-    addq    1024, %rsp
+    addq    512, %rsp
 //movq $__PAGESIZE-40, %rsp
 
     /* 'send' */
@@ -186,7 +187,7 @@ isr_syscall0:
 2:  call    msg_sends
     /* map dest thread */
 7:  movq    isr_next, %rax
-    cmpq    $__PAGESIZE, %rax
+3:  cmpq    $__PAGESIZE, %rax
     jb      8f
     movq    %rax, %cr3
     xorq    %rax, %rax
@@ -198,15 +199,12 @@ isr_syscall0:
     jne     1f
     /* tcb->gpr */
     call    isr_savecontext
-    /* never block system thread */
-    movq    sys_mapping, %rcx
-    /* tcb->memroot == sys_mapping? */
-    cmpq    %rcx, tcb_memroot
-    je      8f
     xorq    %rdi, %rdi
+    /* sched_block(tcb); */
     call    sched_block
+    /* isr_next = sched_pick(); */
     call    sched_pick
-    jmp     7b
+    jmp     3b
 
     /* tcb->errno = EINVAL */
 1:  movw    $EINVAL, tcb_errno
@@ -229,11 +227,11 @@ isr_timer:
     /* isr_ticks[TICKS_SEC]--; */
     decq    isr_ticks + 32
     /* a sec passed, isr_ticks[TICKS_SEC]==0? */
-    cmpq    $0, isr_ticks + 32
+    xorq    %rax, %rax
+    cmpq    %rax, isr_ticks + 32
     jnz     1f
     /* isr_ticks[TICKS_TS]++; isr_ticks[TICKS_NTS]=0; */
     incq    isr_ticks
-    xorq    %rax, %rax
     movq    %rax, isr_ticks + 8
     /* isr_ticks[TICKS_SEC] = freq; */
     movq    freq, %rax
@@ -298,7 +296,6 @@ isr_timer:
 1:  incq    (%rbx)
     /* switch to a new thread if any */
     call    sched_pick
-    movq    %rax, isr_next
 2:
     /* isr_ticks[TICKS_FPS]--; */
     decq    isr_ticks + 48
