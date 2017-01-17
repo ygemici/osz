@@ -41,6 +41,7 @@ irq1:
 1:  inb     $0x64, %al
     andb    $1, %al
     jnz     2f
+    pause
     decw    %cx
     jnz     1b
     ret

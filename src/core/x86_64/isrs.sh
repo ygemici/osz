@@ -563,6 +563,9 @@ do
 	    movq	%rax, %cr3
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi
+	#if DEBUG
+	    movq    %rdi, dbg_lastrip
+	#endif
 	    movb	\$$isr, %dil
 	    pushq   %rdi
 	    call	isr_disableirq

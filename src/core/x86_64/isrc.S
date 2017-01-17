@@ -192,6 +192,9 @@ isr_syscall0:
     movq    %rax, %cr3
     xorq    %rax, %rax
     movq    %rax, isr_next
+#if DEBUG
+    movq    %rax, dbg_lastrip
+#endif
     jmp     8f
 
     /* 'recv' */
@@ -309,6 +312,9 @@ isr_timer:
     movq    %rax, %cr3
     /* msg_sends(EVT_DEST(SRV_CORE) | SYS_swapbuf, 0,0,0,0,0); */
     xorq    %rsi, %rsi
+#if DEBUG
+    movq    %rsi, dbg_lastrip
+#endif
     movb    $SYS_swapbuf, %sil
     movq    $MQ_ADDRESS, %rdi
     call    ksend

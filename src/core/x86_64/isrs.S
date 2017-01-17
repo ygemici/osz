@@ -1084,6 +1084,9 @@ isr_irq0:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$0, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1116,6 +1119,9 @@ isr_irq1:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$1, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1148,6 +1154,9 @@ isr_irq2:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$2, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1180,6 +1189,9 @@ isr_irq3:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$3, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1212,6 +1224,9 @@ isr_irq4:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$4, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1244,6 +1259,9 @@ isr_irq5:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$5, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1276,6 +1294,9 @@ isr_irq6:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$6, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1308,6 +1329,9 @@ isr_irq7:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$7, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1340,6 +1364,9 @@ isr_irq8:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$8, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1373,6 +1400,9 @@ isr_irq9:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$9, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1406,6 +1436,9 @@ isr_irq10:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$10, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1439,6 +1472,9 @@ isr_irq11:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$11, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1472,6 +1508,9 @@ isr_irq12:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$12, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1505,6 +1544,9 @@ isr_irq13:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$13, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1538,6 +1580,9 @@ isr_irq14:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$14, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1571,6 +1616,9 @@ isr_irq15:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$15, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1604,6 +1652,9 @@ isr_irq16:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$16, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1637,6 +1688,9 @@ isr_irq17:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$17, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1670,6 +1724,9 @@ isr_irq18:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$18, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1703,6 +1760,9 @@ isr_irq19:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$19, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1736,6 +1796,9 @@ isr_irq20:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$20, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1769,6 +1832,9 @@ isr_irq21:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$21, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1802,6 +1868,9 @@ isr_irq22:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$22, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1835,6 +1904,9 @@ isr_irq23:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$23, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1868,6 +1940,9 @@ isr_irq24:
     movq	%rax, %cr3
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
+#if DEBUG
+    movq    %rdi, dbg_lastrip
+#endif
     movb	$24, %dil
     pushq   %rdi
     call	isr_disableirq

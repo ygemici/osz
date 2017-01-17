@@ -417,6 +417,7 @@ kwaitkey:
 1:  inb     $0x64, %al
     andb    $1, %al
     jnz     2f
+    pause
 #if DEBUG
     movw    $0x3fd, %dx
     inb     %dx, %al

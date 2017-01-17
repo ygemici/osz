@@ -448,11 +448,11 @@ void dbg_code(uint64_t rip, uint64_t rs)
         if(dbg_tui)
             dbg_settheme();
         kprintf("%2x %c%c ",!dbg_inst?((uint64_t)ptr)&0xffffffffffff:(uint64_t)ptr-lastsym,ptr==rip||ptr==dbg_lastrip?
-            ((dbg_lastrip<rip?dbg_lastrip:rip)==ptr?(dbg_lastrip==rip?'-':'/'):'\\')
+            ((dbg_lastrip<rip?dbg_lastrip:rip)==ptr||dbg_lastrip==0?(dbg_lastrip==rip||dbg_lastrip==0?'-':'/'):'\\')
             :(
-            (dbg_lastrip<rip && ptr>dbg_lastrip && ptr<rip)||
-            (dbg_lastrip>rip && ptr>rip && ptr<dbg_lastrip)?'|':' '),
-            ptr==rip?'>':(ptr==dbg_lastrip?'-':' '));
+            dbg_lastrip!=0&&((dbg_lastrip<rip && ptr>dbg_lastrip && ptr<rip)||
+            (dbg_lastrip>rip && ptr>rip && ptr<dbg_lastrip))?'|':' '),
+            ptr==rip?'>':(dbg_lastrip!=0&&ptr==dbg_lastrip?'-':' '));
         dbg_comment = 0;
         dmp = ptr;
         lastsymsave = lastsym;
