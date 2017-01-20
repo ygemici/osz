@@ -286,7 +286,7 @@ look for the first ELF image in the first initrd image on the first partition,
 which is quite comfortable specially when you boot it from ROM. You just copy
 your initrd on the EFI System Partition, and ready to rock and roll!
 
-The reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/src/docs/fs.md) as initrd.
+The reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) as initrd.
 Gzip uncompressor coming soon in EFI version.
 
 Troubleshooting

@@ -1172,6 +1172,7 @@ prefixend:
     }
     //has modrm?
     if(inst->size & DA_MODRM) {
+        // mod/rm
         modrm = *((uint8_t*)addr);
         addr++;
         uint8_t mod = (modrm>>6) & 3;
@@ -1195,9 +1196,9 @@ prefixend:
                     addr_idx=regs[DA_QUAD][idx];
                 rm = ((rex&1)<<3)+(sib&7);
                 addr_disp = (uint64_t)(*((uint32_t*)addr));
-                addr+=4;
+                addr += 4;
             } else {
-                addr_base = regs[size][rm];
+                addr_base = regs[DA_QUAD][rm];
 //                if(mod==0) {
 //                    addr_disp = (uint64_t)(*((uint32_t*)addr));
 //                    addr+=4;
@@ -1209,7 +1210,7 @@ prefixend:
                 } else
                 if(mod==2) {
                     addr_disp = (uint64_t)(*((uint32_t*)addr));
-                    addr+=4;
+                    addr += 4;
                 }
             }
         }
@@ -1267,7 +1268,7 @@ prefixend:
                 break;
             case DA_R:
                 if(str != NULL)
-                    str = sprintf(str, regs[size][reg]);
+                    str = sprintf(str, regs[i_size][reg]);
                 break;
             case DA_Rw:
                 if(str != NULL)
@@ -1275,7 +1276,7 @@ prefixend:
                 break;
             case DA_Ri:
                 if(str != NULL)
-                    str = sprintf(str, regs[size][(opcode&7)+((rex&1)<<3)]);
+                    str = sprintf(str, regs[i_size][(opcode&7)+((rex&1)<<3)]);
                 break;
             case DA_Ril:
                 if(str != NULL)
@@ -1291,7 +1292,7 @@ prefixend:
                 break;
             case DA_A:
                 if(str != NULL)
-                    str = sprintf(str, regs[size][0]);
+                    str = sprintf(str, regs[i_size][0]);
                 break;
             case DA_BX:
                 if(str != NULL) {
@@ -1337,8 +1338,13 @@ prefixend:
             case DA_I:
             case DA_Is:
                 // get immediate
-                imm = (uint64_t)(*((uint32_t*)addr));
-                addr+=4;
+                if(i_size == DA_WORD) {
+                    imm = (uint64_t)(*((uint16_t*)addr));
+                    addr += 2;
+                } else {
+                    imm = (uint64_t)(*((uint32_t*)addr));
+                    addr += 4;
+                }
                 if (str != NULL)
                     str = sprintf(str, "%xh", imm);
                 if(!dbg_comment)
@@ -1366,7 +1372,7 @@ prefixend:
             case DA_Iw:
                 // get immediate
                 imm = (uint64_t)(*((uint16_t*)addr));
-                addr+=2;
+                addr += 2;
                 if (str != NULL)
                     str = sprintf(str, "%2xh", imm);
                 if(!dbg_comment)
@@ -1375,7 +1381,7 @@ prefixend:
             case DA_Iq:
                 // get immediate
                 imm = (uint64_t)(*((uint64_t*)addr));
-                addr+=8;
+                addr += 8;
                 if (str != NULL)
                     str = sprintf(str, "%8xh", imm);
                 if(!dbg_comment)
@@ -1383,13 +1389,15 @@ prefixend:
                 break;
             case DA_O:
                 // get displacement
+/*
                 if (addr_saddr==DA_QUAD) {
                     disp = (uint64_t)(*((uint32_t*)addr));
-                    addr+=4;
+                    addr += 4;
                 } else {
+*/
                     disp = (uint64_t)(*((uint16_t*)addr));
-                    addr+=2;
-                }
+                    addr += 2;
+//                }
                 if(str != NULL) {
                     if (addr_seg)
                         str = sprintf(str, "%cs:", addr_seg);

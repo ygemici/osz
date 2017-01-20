@@ -91,7 +91,7 @@ irq1:
     cmpb    $0x1D, kbd_hist+1(%rip)
     jne     5f
     cmpw    $0x53, %si
-    jne     7f
+    je      7f
     cmpw    $0xd3, %si
     jne     6f
 7:  movb    $0xFE, %al

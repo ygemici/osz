@@ -30,7 +30,7 @@
 #include <lastbuild.h>
 #include "../font.h"
 
-//breakpoint types
+// breakpoint types for setbrk
 #define DBG_MODE_EXEC 0b00
 #define DBG_MODE_READ 0b11
 #define DBG_MODE_WRITE 0b01
@@ -150,13 +150,17 @@ void dbg_settheme()
     dbg_putchar('m');
 }
 
+// set a breakpoint for a memory range.
+// For available modes see DBG_MODE_* at top.
 void dbg_setbrk(virt_t addr, uint8_t mode, uint8_t len)
 {
+    // set up message with highlight
     dbg_err = brk;
     brk[3]='0'+(dbg_numbrk%4);
     brk[5]=(mode==DBG_MODE_EXEC?'x':(mode==DBG_MODE_READ?'r':(mode==DBG_MODE_WRITE?'w':'p')));
     brk[6]=(len==0b00?'b':(len==0b01?'w':(len==0b11?'d':'q')));
     sprintf(brk+15,"%8x",addr);
+    // set up registers
     switch(dbg_numbrk%4){
         case 0:
             __asm__ __volatile__ (
@@ -410,39 +414,37 @@ void dbg_code(uint64_t rip, uint64_t rs)
         dbg_settheme();
     /* find a start position */
     if(dbg_lastrip && dbg_lastrip > rip)
-        dbg_start = rip-15;
-    if(dbg_start == rip) {
-        dbg_next = dbg_start;
+        dbg_start = rip;
+    if(dbg_start == rip || dbg_start == 0) {
+again:
+        dbg_next = dbg_start = rip;
         do {
             dbg_start--;
-        } while(dbg_start>dbg_next-15 && disasm(dbg_start,NULL)!=dbg_next);
+        } while(dbg_start>dbg_next-15 && disasm(dbg_start,NULL) != dbg_next);
     }
-    if(dbg_start<lastsym)
-        dbg_start = lastsym;
     j = dbg_start && dbg_start > rip-63 && dbg_start <= rip ? dbg_start :
         (dbg_lastrip && dbg_lastrip > rip-63 && dbg_lastrip <= rip ? dbg_lastrip :
         rip-15);
-    if(dbg_lastrip && dbg_lastrip < j && dbg_lastrip > j-15) {
-        j = dbg_lastrip-15;
-    }
     if(lastsym && j < lastsym)
         j = lastsym;
     i = 0;
-    while(!i && j<=rip) {
-        ptr = j;
+    dbg_start = j;
+    ptr = j;
+    while(!i && ptr<=rip) {
         sys_fault = false;
-        while(ky < maxy-2 && !sys_fault) {
+        while(!sys_fault) {
             if(ptr == rip) {
                 i = 1;
-                ptr = j;
                 break;
             }
             ptr = disasm((virt_t)ptr, NULL);
         }
-        j++;
     }
-    dbg_start = ptr;
+    if(!i) {
+        goto again;
+    }
     dbg_next = disasm(dbg_start, NULL);
+    ptr = dbg_start;
     while(ky < maxy-2) {
         fg= ptr==rip?0xFFDD33:dbg_theme[3];
         if(dbg_tui)
@@ -469,6 +471,11 @@ void dbg_code(uint64_t rip, uint64_t rs)
             return;
         }
         if(dbg_inst) {
+            if(*((uint8_t*)ptr-1) == 0x90) {
+                fg = dbg_theme[2];
+                if(dbg_tui)
+                    dbg_settheme();
+            }
             kprintf("%s", dbg_instruction);
         } else {
             for(;dmp<ptr;dmp++)
@@ -508,8 +515,11 @@ void dbg_code(uint64_t rip, uint64_t rs)
                 }
                 if(symstr != (uchar*)&dbg_comment)
                     kprintf("%s +%x", symstr, (uint32_t)(dbg_comment-lastsym));
-                else
+                else {
+                    dbg_indump = true;
                     kprintf("'%s'", symstr);
+                    dbg_indump = false;
+                }
             }
         }
         lastsym = lastsymsave;
@@ -727,8 +737,11 @@ void dbg_queues()
             n = tcbq->next;
         } while(n!=0);
     }
-    kprintf("timerq head: %4x (awake at %d.%d)\niowait head: %4x, %d task(s)\n",
-        ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns, ccb.hd_blocked, j);
+    if(ccb.hd_timerq)
+        kprintf("timerq head: %4x (awake at %d.%d)\n",
+            ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns);
+    kprintf("iowait head: %4x, %d task(s)\n",
+        ccb.hd_blocked, j);
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
@@ -970,15 +983,16 @@ void dbg_init()
     dbg_inst = 1;
     dbg_full = 0;
     dbg_scr = 0;
+    /* initialize uart as an alternative "keyboard" */
     __asm__ __volatile__ (
         "movw $0x3f9, %%dx;"
-        "xorb %%al, %%al;outb %%al, %%dx;"   //int off
-        "movb $0x80, %%al;addb $2,%%dl;outb %%al, %%dx;"  //set divisor mode
-        "movb $12, %%al;subb $3,%%dl;outb %%al, %%dx;"    //lo 9600
-        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"   //hi
-        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"   //fifo off
-        "movb $3, %%al;incb %%dl;outb %%al, %%dx;"     //8N1
-        "movb $0x4, %%al;incb %%dl;outb %%al, %%dx;"   //mcr
+        "xorb %%al, %%al;outb %%al, %%dx;"               //IER int off
+        "movb $0x80, %%al;addb $2,%%dl;outb %%al, %%dx;" //LCR set divisor mode
+        "movb $1, %%al;subb $3,%%dl;outb %%al, %%dx;"    //DLL divisor lo 115200
+        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //DLH divisor hi
+        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //FCR fifo off
+        "movb $3, %%al;incb %%dl;outb %%al, %%dx;"       //LCR 8N1
+        "movb $0x8, %%al;incb %%dl;outb %%al, %%dx;"     //MCR Aux out 2
         "xorb %%al, %%al;subb $4,%%dl;outb %%al, %%dx;inb %%dx, %%al"   //clear receiver/transmitter
     :::"%rax","%rdx");
 }
@@ -1088,15 +1102,15 @@ redraw:
         dbg_putchar(10);
 
         // clear tab
-        bg=dbg_theme[1];
+        bg = dbg_theme[1];
         offs = font->height*bootboot.fb_scanline*2;
         for(y=font->height;y<(maxy-2)*font->height;y++){
-            line=offs;
-            for(x=0;x<bootboot.fb_width;x++){
-                *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)bg;
-                line+=4;
+            line = offs;
+            for(x=0; x < bootboot.fb_width; x++){
+                *((uint32_t*)(FBUF_ADDRESS + line)) = (uint32_t)bg;
+                line += 4;
             }
-            offs+=bootboot.fb_scanline;
+            offs += bootboot.fb_scanline;
         }
         // draw tab
         fx=kx=2; ky=3; fg = dbg_theme[3];
@@ -1172,6 +1186,7 @@ getcmd:
         }
 */
         scancode = kwaitkey();
+
         /* translate ANSI terminal codes */
         if(dbg_iskbd==false) {
             if(scancode==12)
@@ -1273,7 +1288,7 @@ getcmd:
                     dbg_next = dbg_start;
                     do {
                         dbg_start--;
-                    } while(dbg_start>dbg_next-31 && disasm(dbg_start,NULL)!=dbg_next);
+                    } while(dbg_start>dbg_next-15 && disasm(dbg_start,NULL) != dbg_next);
                     goto redraw;
                 } else
                 if(dbg_tab == tab_ram) {
@@ -1423,6 +1438,8 @@ help:
                         }
                         offs+=bootboot.fb_scanline;
                     }
+                    dbg_putchar(13);
+                    dbg_putchar(10);
                     kprintf_reset();
                     scry = -1;
                     __asm__ __volatile__ ( "movq %0, %%rax; movq %%rax, %%cr3" : : "r"(cr3) : "%rax");
@@ -1676,14 +1693,17 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                 goto getcmd;
             }
             default: {
+                //is there a place for a new character?
                 if(cmdlast>=sizeof(cmd)-1) {
                     dbg_err = "Buffer full";
                     goto getcmd;
                 }
+                //if we're not appending, move bytes after cursor
                 if(cmdidx<cmdlast) {
                     for(x=cmdlast;x>cmdidx;x--)
                         cmd[x]=cmd[x-1];
                 }
+                //do we need to translate scancode?
                 if(dbg_iskbd){
                     if(scancode>=2&&scancode<=13) {
                         if(dbg_isshft)
@@ -1706,6 +1726,7 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                         c = 0;
                 } else
                     c = scancode;
+                //do we have a character?
                 if(c!=0) {
                     cmdlast++;
                     cmd[cmdidx++] = c;

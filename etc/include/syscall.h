@@ -28,7 +28,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H 1
 
-// system services
+// system services (negative pid_t)
 #define SRV_CORE		 0
 #define SRV_SYS			-1
 #define SRV_FS			-2

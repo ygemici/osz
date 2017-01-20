@@ -72,7 +72,6 @@
 #ifndef _AS
 #include <stdint.h>
 
-typedef void *va_list;
 typedef unsigned char uchar;
 typedef unsigned int uint;
 typedef uint8_t bool_t;
@@ -94,6 +93,7 @@ typedef uint64_t blksize_t;
 typedef uint64_t blkcnt_t;	 /* Type to count number of disk blocks.  */
 typedef uint64_t fsblkcnt_t; /* Type to count file system blocks.  */
 typedef uint64_t fpos_t;
+typedef uint32_t keymap_t;
 /*
 typedef void __signalfn(int);
 typedef __signalfn *sighandler_t;

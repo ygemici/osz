@@ -2,12 +2,18 @@ include ../../../Config
 TARGET = lib/libc.so
 
 BINTARGET = ../../../bin/root/$(TARGET)
-SRCS = $(filter-out service.c,$(wildcard *.c))
+SRCS = $(filter-out service.c dbg.c,$(wildcard *.c))
+#ifeq $($(DEBUG),1)
+SRCS += dbg.c
+#endif
 OBJS = $(SRCS:.c=.o)
 LIBS =
 
 # without the -no flags, gcc generates extra, unwanted xmm code in printf...
 CFLAGS = -Wall -fPIC -ffreestanding -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -nostdinc -I../../../etc/include -I. -I../../core/$(ARCH)
+#ifeq $($(DEBUG),1)
+CFLAGS += -DDEBUG=1
+#endif
 
 all: $(OBJS) $(BINTARGET)
 

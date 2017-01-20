@@ -1,10 +1,11 @@
+./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:21:    // TODO: debug why this isn't working. No errors, no output
 ./src/lib/libc/exit.c:6:    /* TODO: call atexit handlers and dtors */
 ./src/core/sched.c:96:    /* TODO: ccb.hd_blocked -> swap */
 ./src/core/sched.c:108:        /* TODO: swap -> ccb.hd_active */
 ./src/core/sched.c:111:        /* TODO: ccb.hd_blocked -> ccb.hd_active */
 ./src/core/x86_64/pci.c:59:// TODO: load drivers and save autodetected irq number in ehdr->e_machine
-./src/core/x86_64/disasm.c:1221:            //TODO: esc
+./src/core/x86_64/disasm.c:1222:            //TODO: esc
 ./src/core/x86_64/acpi.c:157:        // TODO: get values for poweroff
 ./src/core/syscall.c:80:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/msg.c:107:    /* TODO: use mq_buffstart properly as a circular buffer */

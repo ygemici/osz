@@ -69,17 +69,18 @@ uint8_t __attribute__ ((section (".data"))) sys_fault;
 /* turn off computer */
 void sys_disable()
 {
-    //Poweroff platform
-    acpi_poweroff();
-    // if it didn't work, show a message and freeze.
+    //say we're finished (on serial too)
     kprintf_init();
 #if DEBUG
     dbg_putchar(13);
     dbg_putchar(10);
 #endif
     kprintf(poweroffprefix);
+    //Poweroff platform
+    acpi_poweroff();
+    // if it didn't work, show a message and freeze.
     fg = 0x29283f;
-    kprintf_center(21, -8);
+    kprintf_center(20, -8);
     kprintf(poweroffsuffix);
 #if DEBUG
     dbg_putchar(13);
@@ -245,7 +246,7 @@ void sys_init()
     drvptr = drivers;
     // default timer frequency
     freq = 0;
-    if(drvs==NULL) {
+    if(drvs!=NULL) {
         // should never happen!
 #if DEBUG
         kprintf("WARNING missing /etc/sys/drivers\n");
@@ -292,7 +293,6 @@ void sys_init()
 
     // dynamic linker
     if(service_rtlink()) {
-
         /*** Static fields in System Info Block (returned by a syscall) ***/
         // calculate addresses for screen buffers
         sysinfostruc->screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));

@@ -154,5 +154,5 @@ void exc03chkpoint(uint64_t excno, uint64_t rip, uint64_t rsp)
 
 void exc13genprot(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
-    kpanic("General Protection Fault %d",excno);
+    kpanic("General Protection Fault %d",rip);
 }

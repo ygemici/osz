@@ -33,6 +33,19 @@
 #define	EXIT_FAILURE	1	/* Failing exit status.  */
 #define	EXIT_SUCCESS	0	/* Successful exit status.  */
 
+#ifdef DEBUG
+extern void dbg_printf(char * fmt, ...);
+#endif
+extern unsigned char *stdlib_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
+extern unsigned char *stdlib_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
+
+/* Convert a string to an integer.  */
+extern int atoi (char *c);
+/* Convert a string to a long integer.  */
+extern long int atol (char *c);
+extern long long int atoll (char *__nptr);
+
+/*** unimplemented ***/
 #if 0
 
 /* Maximum length of a multibyte character in the current locale.  */
@@ -41,11 +54,6 @@ extern size_t __ctype_get_mb_cur_max (void);
 
 /* Convert a string to a floating-point number.  */
 extern double atof (char *__nptr);
-/* Convert a string to an integer.  */
-extern int atoi (char *__nptr);
-/* Convert a string to a long integer.  */
-extern long int atol (char *__nptr);
-extern long long int atoll (char *__nptr);
 /* Convert a string to a floating-point number.  */
 extern double strtod (char *nptr, char **endptr);
 /* Likewise for `float' and `long double' sizes of floating-point numbers.  */

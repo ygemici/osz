@@ -180,7 +180,7 @@ _start:
 1:  movq    $nocpu, %rdi
     call    kpanic
 
-/* placed in text intentionally, it's rodata */
+/* placed in text intentionally, it's rodata. Yes, GDT too. */
 nocpu:
 .asciz "CPU feature %a not supported"
     .align  16

@@ -1,5 +1,5 @@
 /*
- * osZ.h
+ * stdarg.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,28 +22,25 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Mandatory include file for every OS/Z applications
+ * @brief variable length arguments
  */
 
-#ifndef _OS_Z_
-#define _OS_Z_ 1
+#ifndef _STDARG_H_
+#define _STDARG_H_ 1
 
-#include <errno.h>
-#include <limits.h>
+typedef void *va_list;
 
-#ifndef _AS
-# include <stdint.h>
-# include <sys/types.h>
-# ifndef OSZ_CORE
-#  include <sys/platform.h>
-#  include <stdio.h>
-#  include <stdlib.h>
-#  include <stdarg.h>
-#  include <string.h>
-# endif
+#ifdef __builtin_va_start
+#define va_start(list, param) __builtin_va_start(list, param)
+#else
+//TODO: this is x86_64 ABI specific
+#define va_start(list, param) (list = (((va_list)&param) + sizeof(void*)*6))
 #endif
 
-#include <lastbuild.h>
-#include <syscall.h>
+#ifdef __builtin_va_arg
+#define va_arg(list, type)    __builtin_va_arg(list, type)
+#else
+#define va_arg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
+#endif
 
-#endif /* osZ.h */
+#endif /* stdarg.h */

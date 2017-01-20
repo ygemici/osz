@@ -51,7 +51,7 @@ uint32_t __attribute__ ((section (".data"))) bg;
 uint8_t __attribute__ ((section (".data"))) cnt;
 
 /* string constants and ascii arts */
-char kpanicprefix[] = "OS/Z core panic: ";
+char kpanicprefix[] = "OS/Z panic: ";
 char kpanicrip[] = " @%x ";
 char kpanicsym[] = "%s  ";
 char kpanictlb[] = "paging error resolving %8x at step %d. ";

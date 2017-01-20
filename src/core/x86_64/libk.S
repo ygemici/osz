@@ -69,18 +69,31 @@ kpanic:
     addq    $8, %rsp
     call    kprintf
     movq    __PAGESIZE-40, %rsi
-    movq    $kpanicrip, %rdi
+    /* canonized url? */
+    movq    %rsi, %rax
+    shrq    $48, %rax
+    cmpw    $0xFFFF, %ax
+    je      1f
+    orw     %ax, %ax
+    jnz     2f
+    /* if so, print rip and try to resolve symbol for it */
+1:  movq    $kpanicrip, %rdi
     call    kprintf
     movq    __PAGESIZE-40, %rdi
     call    service_sym
     mov     %rax, %rsi
     movq    $kpanicsym, %rdi
     call    kprintf
+2:
 #if DEBUG
+    movb    $13, %dil
+    call    dbg_putchar
+    movb    $10, %dil
+    call    dbg_putchar
     cmpb    $0, dbg_enabled
     jz      1f
     movq    $theme_panic, dbg_theme
-    movq    $kpanicrip, %rdi
+    movq    __PAGESIZE-40, %rdi
     movq    %rbp, %rsi
     xorq    %rdx, %rdx
     call    dbg_enable
@@ -412,6 +425,7 @@ ksend:
 
 /* an early implementation, called by kprintf */
 kwaitkey:
+    xorq    %rax, %rax
     xorq    %rdx, %rdx
     /* is there a key waiting? */
 1:  inb     $0x64, %al
@@ -421,10 +435,16 @@ kwaitkey:
 #if DEBUG
     movw    $0x3fd, %dx
     inb     %dx, %al
+    /* do we have a serial port at all? */
+    cmpb    $0xFF, %al
+    je      1b
+    /* is there a received byte waiting? */
     andb    $1, %al
     jz      1b
     subb    $5, %dl
     inb     %dx, %al
+    orb     %al, %al
+    jz      1b
     movb    $0, dbg_iskbd
     jmp     8f
 #else
@@ -432,11 +452,14 @@ kwaitkey:
 #endif
     /* yes, read the scancode */
 2:  inb     $0x60, %al
+    orb     %al, %al
+    jz      1b
     movb    %al, %dl
     /* acknowledge */
     inb     $0x61, %al
     outb    %al, $0x61
 #if DEBUG
+    /* handle shift key here for debugger */
     movb    $1, dbg_iskbd
     cmpb    $54, %dl
     je      2f
@@ -469,9 +492,8 @@ kwaitkey:
     movb    $0, 9f
     movb    %dl, %al
     bt      $7, %ax
-    jnc     kwaitkey
-8:  andb    $0x7F, %al
-    /* extended scancode in ax */
+    jc      kwaitkey
+8:  /* extended scancode in ax */
     ret
 9:
     .byte 0

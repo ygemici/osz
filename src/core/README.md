@@ -25,7 +25,7 @@ OS/Z is booted, you should read the [documentation on booting](https://github.co
 `fs.c` - an early file system driver to locate files on initial ramdisk. Once booted, the [filesystem service](https://github.com/bztsrc/osz/blob/master/src/core/fs) is used to retrieve and write files.
 
 `kprintf.c` - console print commands. It's not optimal or effective, but that was never intended. It's sole purpose is to display
-messages during boot. Later the [user interface service](https://github.com/bztsrc/osz/blob/master/src/core/ui) is responsible for
+messages during boot. Later the [user interface service](https://github.com/bztsrc/osz/blob/master/src/ui) is responsible for
 displaying windows.
 
 `msg.c` - messaging functions. As OS/Z is a microkernel, it heavily realies on an effective message bus.

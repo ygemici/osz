@@ -52,3 +52,8 @@ long atol(char *c)
     stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFFFFFFFFFF);
     return r;
 }
+
+long long atoll(char *c)
+{
+    return (long long)atol(c);
+}

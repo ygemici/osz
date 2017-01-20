@@ -36,7 +36,7 @@ SECTIONS
         . = ALIGN(4096);
     } :text
     .dynamic : { *(.dynamic) } :text :dynamic
-    /* GNU ld buf workaround. It refuses to place symtab and strtab in text */
+    /* GNU ld bug workaround. It refuses to place symtab and strtab in text */
     . += 65536;
 
     /* dynamically allocated/mapped data */
