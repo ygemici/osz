@@ -874,7 +874,10 @@ void ui_init()
             }
             bss += __SLOTSIZE;
         }
-
+        //set IOPL=3 in rFlags to permit IO address space
+#ifdef DEBUG
+        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
+#endif
         // add to queue so that scheduler will know about this thread
         ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));

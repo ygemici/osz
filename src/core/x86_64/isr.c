@@ -72,6 +72,10 @@ void isr_init()
         idt[i*2+0] = IDT_GATE_LO(i==2||i==8?IDT_NMI:(i==1||i==3?IDT_DBG:IDT_EXC), ptr);
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_EXCMAX;
+#if DEBUG
+        if(i==13)
+            ptr+=ISR_EXCMAX;
+#endif
     }
     // 32-255 irq handlers
     ptr = &isr_irq0;

@@ -39,7 +39,8 @@ public uint64_t mq_dispatch()
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)TEXT_ADDRESS;
     Elf64_Phdr *phdr = (Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
     Elf64_Sym *sym = NULL, *sym_end = NULL;
-    uint64_t i, maxfunc, syment = 0;
+    uint64_t i, syment = 0;
+    uint16_t maxfunc;
 
     /* Program Header */
     for(i = 0; i < ehdr->e_phnum; i++){

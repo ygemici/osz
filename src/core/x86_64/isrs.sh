@@ -485,10 +485,7 @@ do
 	if [ $i -eq 1 -o $i -eq 3 -o $i -eq 14 -o "$DEBUG" == "1" ]; then
 		read -r -d '' CORECHK <<-EOF
 		    /* fault in core */
-		    cmpq    \$TEXT_ADDRESS, (%rsp)
-		    ja      1f
-xchg %bx, %bx
-		1:  cmpq    \$CORE_ADDRESS, (%rsp)
+		    cmpq    \$CORE_ADDRESS, (%rsp)
 		    jb      1f
 		    movb    \$$i, sys_fault
 		    movq    \$-8, %rax
@@ -498,6 +495,31 @@ xchg %bx, %bx
 		EOF
 	else
 		CORECHK=""
+	fi
+	if [ $i -eq 13 -a "$DEBUG" == "1" ]; then
+		read -r -d '' SIMIO <<-EOF
+		    /* simulate serial in / out */
+		    cmpq    \$TEXT_ADDRESS, (%rsp)
+		    jb      2f
+		    cmpw    \$0x3f8, %dx
+		    jb      2f
+		    cmpw    \$0x3ff, %dx
+		    ja      2f
+		    movq    (%rsp), %rax
+		    cmpb    \$0xEC, (%rax)
+		    jne     1f
+		    inb     %dx, %al
+		    incq    (%rsp)
+		    iretq
+		1:  cmpb    \$0xEE, (%rax)
+		    jne     2f
+		    outb    %al, %dx
+		    incq    (%rsp)
+		    iretq
+		2:
+		EOF
+	else
+		SIMIO=""
 	fi
 	ist=1;
 	if [ $i -eq 1 -o $i -eq 3 ]; then
@@ -511,6 +533,7 @@ xchg %bx, %bx
 	    cli
 	    $EXCERR
 	    $CORECHK
+	    $SIMIO
 	    $DBG
 	    callq	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist$ist
