@@ -100,19 +100,33 @@ void sched_sleep(OSZ_tcb *tcb)
 // awake a hybernated or blocked thread
 void sched_awake(OSZ_tcb *tcb)
 {
+    pid_t pid = tcb->mypid, next = tcb->next, prev = tcb->prev;
 #if DEBUG
     if(debug&DBG_SCHED)
         kprintf("sched_awake(%x)\n", tcb->mypid);
 #endif
+    tcb->state = tcb_state_running;
+    isr_next = tcb->memroot;
     if(tcb->state == tcb_state_hybernated) {
         /* TODO: swap -> ccb.hd_active */
     } else
     if(tcb->state == tcb_state_blocked) {
-        /* TODO: ccb.hd_blocked -> ccb.hd_active */
-        tcb->blkcnt += tcb->blktime - isr_ticks[0];
+        /* ccb.hd_blocked -> ccb.hd_active */
+        tcb->blkcnt += tcb->blktime - isr_ticks[TICKS_QALL];
+        sched_add(tcb);
+        if(ccb.hd_blocked == tcb->mypid) {
+            ccb.hd_blocked = next;
+        }
+        if(prev != 0) {
+            tcb = sched_get_tcb(prev);
+            tcb->next = next;
+        }
+        if(next != 0) {
+            tcb = sched_get_tcb(next);
+            tcb->prev = prev;
+        }
+        tcb = sched_get_tcb(pid);
     }
-    tcb->state = tcb_state_running;
-    isr_next = tcb->memroot;
 }
 
 // add a thread to priority queue
@@ -129,6 +143,7 @@ void sched_add(OSZ_tcb *tcb)
     if(tcb->next != 0) {
         tcb = sched_get_tcb(tcb->next);
         tcb->prev = pid;
+        tcb = sched_get_tcb(pid);
     }
 }
 
@@ -164,7 +179,7 @@ void sched_block(OSZ_tcb *tcb)
     if(tcb->mypid == services[-SRV_SYS] ||
        tcb->memroot == sys_mapping)
         return;
-    tcb->blktime = isr_ticks[0];
+    tcb->blktime = isr_ticks[TICKS_QALL];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
     pid_t pid = tcb->mypid;

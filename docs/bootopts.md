@@ -21,13 +21,11 @@ Boot Parameters
 | height    | 600    | number | loader |  -II-  |
 | kernel    | lib/sys/core | string | loader | the name of kernel executable on initrd |
 | debug     | 0      | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
-| hpet      | -      | hexdec | core | override autodetected HPET address |
-| apic      | -      | hexdec | core | override autodetected LAPIC address |
-| ioapic    | -      | hexdec | core | override autodetected IOAPIC address |
 | nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
 | nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
 | nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
 | nrlogmax  | 8      | number | core | the number of pages for early syslog buffer |
+| nropenmax | 16     | number | core | the number of open file descriptors per thread |
 | nrirqmax  | 8      | number | core | the maximum number of IRQ handlers per IRQ |
 | quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |
@@ -36,8 +34,11 @@ Boot Parameters
 | sound | true | boolean | core | disable sound service |
 | identity  | false  | boolean | core | force running first time setup to get machine's identity, such as hostname |
 | rescueshell | false | boolean | core | if true, starts `/bin/sh` instead of `/sbin/init` |
+| hpet      | -      | hexdec | core | x86_64 override autodetected HPET address |
+| apic      | -      | hexdec | core | x86_64 override autodetected LAPIC address |
+| ioapic    | -      | hexdec | core | x86_64 override autodetected IOAPIC address |
 
-The available values for debug parameter and display can be found in [core/env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
+The available values for debug parameter and display can be found in [sysinfo.h](https://github.com/bztsrc/osz/blob/master/etc/include/sysinfo.h).
 
 Debugging
 ---------

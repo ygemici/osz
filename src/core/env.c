@@ -33,6 +33,7 @@ uint64_t __attribute__ ((section (".data"))) nrmqmax;
 uint64_t __attribute__ ((section (".data"))) nrirqmax;
 uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
+uint64_t __attribute__ ((section (".data"))) nropenmax;
 uint64_t __attribute__ ((section (".data"))) debug;
 uint64_t __attribute__ ((section (".data"))) quantum;
 uint64_t __attribute__ ((section (".data"))) fps;
@@ -46,6 +47,7 @@ uint8_t __attribute__ ((section (".data"))) rescueshell;
 /*** for overriding default or autodetected values ***/
 extern uint64_t hpet_addr;
 extern uint64_t lapic_addr;
+extern uint64_t dsdt_addr;
 extern uint64_t ioapic_addr;
 extern uint64_t fpsdiv;
 
@@ -172,14 +174,18 @@ void env_init()
     // set up defaults
     networking = sound = true;
     identity = false;
-    hpet_addr = ioapic_addr = lapic_addr = 0;
+    hpet_addr = dsdt_addr = ioapic_addr = lapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
+    nropenmax = 16;
     quantum = 1024;
     fps = 10;
     display = DSP_MONO_COLOR;
     debug = DBG_NONE;
+    dsdt_addr = (uint64_t)fs_locate("etc/sys/dsdt");
+    if(fs_size == 0)
+        dsdt_addr = 0;
 
     // parse ascii text
     while(env < env_end && *env!=0) {
@@ -217,6 +223,11 @@ void env_init()
         if(!kmemcmp(env, "nrlogmax=", 9)) {
             env += 9;
             env = env_dec(env, &nrlogmax, 4, 128);
+        } else
+        // number of file descriptors per thread. With fopen, number is unlimited.
+        if(!kmemcmp(env, "nropenmax=", 10)) {
+            env += 10;
+            env = env_dec(env, &nropenmax, 4, 128);
         } else
         // manually override HPET address
         if(!kmemcmp(env, "hpet=", 5)) {

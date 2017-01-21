@@ -30,6 +30,7 @@
 
 /* main properties, configurable */
 uint64_t __attribute__ ((section (".data"))) hpet_addr;
+uint64_t __attribute__ ((section (".data"))) dsdt_addr;
 uint64_t __attribute__ ((section (".data"))) lapic_addr;
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
@@ -92,6 +93,11 @@ void acpi_early(ACPI_Header *hdr)
     if(!hpet_addr && !kmemcmp("HPET", hdr->magic, 4)) {
         hpet_addr = (uint64_t)hdr;
     }
+}
+
+/* DSDT and SSDT parsing */
+void acpi_parsesdt(ACPI_Header *hdr)
+{
 }
 
 /* reentrant acpi table parser */
@@ -159,6 +165,11 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
             PM1a_CNT = fadt->PM1a_cnt_blk;
             PM1b_CNT = fadt->PM1b_cnt_blk;
         }
+    } else
+    /* Specific Description Tables */
+    if(!kmemcmp("DSDT", hdr->magic, 4) || !kmemcmp("SSDT", hdr->magic, 4)) {
+        if(dsdt_addr == 0)
+            dsdt_addr = (uint64_t)hdr;
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
@@ -267,17 +278,21 @@ void acpi_init()
             kprintf("\nACPI System Tables\n");
 #endif
         acpi_parse((ACPI_Header*)bootboot.acpi_ptr, 1);
-        // fallback to default if not found and not given either
-        if(ioapic_addr==0)
-            ioapic_addr=0xFEC00000;
-        /* load timer driver */
-        //   with PIC:  PIT and RTC
-        //   with APIC: HPET, if detected, APIC timer otherwise
-        service_loadso(hpet_addr==0 || (hpet_addr & (__PAGESIZE-1))!=0?
-            (ISR_CTRL==CTRL_PIC?"lib/sys/proc/pitrtc.so":
-            "lib/sys/proc/apic.so"):
-            "lib/sys/proc/hpet.so");
     }
+    if(dsdt_addr != 0)
+        acpi_parsesdt((ACPI_Header*)dsdt_addr);
+    // fallback to default if not found and not given either
+    if(ioapic_addr==0)
+        ioapic_addr=0xFEC00000;
+    /* load timer driver */
+    //   with PIC:  PIT and RTC
+    //   with APIC: HPET, if detected, APIC timer otherwise
+    //   with x2APIC: HPET, if detected, x2APIC timer otherwise
+    service_loadso(hpet_addr==0 || (hpet_addr & (__PAGESIZE-1))!=0?
+        (ISR_CTRL==CTRL_PIC?"lib/sys/proc/pitrtc.so":
+        (ISR_CTRL==CTRL_APIC?"lib/sys/proc/apic.so":
+            "lib/sys/proc/x2apic.so")):
+        "lib/sys/proc/hpet.so");
 }
 
 void acpi_poweroff()

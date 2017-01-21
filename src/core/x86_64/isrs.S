@@ -520,7 +520,7 @@ isr_exc13genprot:
     movq    %rax, %rdi
     iretq
 1:
-    /* simulate serial in / out */
+    /* simulate serial in / out for dbg_putchar() */
     cmpq    $TEXT_ADDRESS, (%rsp)
     jb      2f
     cmpw    $0x3f8, %dx

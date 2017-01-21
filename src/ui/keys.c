@@ -141,7 +141,6 @@ public void keyrelease(uint64_t scancode, keymap_t keycode)
     uint64_t i = altmap*(512*16)+scancode*16;
     uint64_t j = modmap[keyflags];
     uint8_t k[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    dbg_printf("-------modifiers %x %d+%d\n", 1, 2, 3);
     // look up scancode
     if(scancode!=0) {
         // messages sent by keyboard comes with scancode
@@ -150,7 +149,7 @@ public void keyrelease(uint64_t scancode, keymap_t keycode)
     }
 #if DEBUG
     dbg_printf("------------keyrelease %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
-    dbg_printf("-------modifiers %x %d+%d\n", 1, 2, 3);
+    dbg_printf("-------modifiers %x %d+%d\n", keyflags, i, j);
 #endif
     // handle key modifiers
     if(k[0]=='L' || k[0]=='R') {

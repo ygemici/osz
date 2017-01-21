@@ -149,7 +149,9 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         else
             sched_block(dsttcb);
         return false;
-    }else
+    } else {
         srctcb->errno = SUCCESS;
+        sched_awake(dsttcb);
+    }
     return true;
 }

@@ -28,6 +28,7 @@
 #if DEBUG
 
 #include <lastbuild.h>
+#include <sys/init.h>
 #include "../font.h"
 
 // breakpoint types for setbrk
@@ -72,6 +73,7 @@ uint8_t __attribute__ ((section (".data"))) dbg_isshft;
 uint8_t __attribute__ ((section (".data"))) dbg_indump;
 uint8_t __attribute__ ((section (".data"))) dbg_tui;
 uint64_t __attribute__ ((section (".data"))) dbg_scr;
+uint64_t __attribute__ ((section (".data"))) dbg_mqptr;
 uint64_t __attribute__ ((section (".data"))) cr2;
 uint64_t __attribute__ ((section (".data"))) cr3;
 uint64_t __attribute__ ((section (".data"))) dr6;
@@ -660,6 +662,7 @@ void dbg_data(uint64_t ptr)
 // list messages in Thread Message Queue
 void dbg_msg()
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
     uint64_t m, i, t;
 
     fg=dbg_theme[4];
@@ -679,10 +682,8 @@ void dbg_msg()
     if(dbg_tui)
         dbg_settheme();
     kprintf("\n[Messages]");
-    /* print out last message as well */
-    i = *((uint64_t*)MQ_ADDRESS) - 1;
-    if(i==0)
-        i = *((uint64_t*)(MQ_ADDRESS+16)) - 1;
+    /* print out messages */
+    i = dbg_mqptr;
     do {
         t = i==*((uint64_t*)MQ_ADDRESS)?4:(
             *((uint64_t*)MQ_ADDRESS)!=*((uint64_t*)MQ_ADDRESS+8) &&
@@ -691,11 +692,95 @@ void dbg_msg()
         if(dbg_tui)
             dbg_settheme();
         m = ((i * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
-        kprintf("\n %2x: %8x %8x ", m,
-            *((uint64_t*)m), *((uint64_t*)(m+8)));
-        kprintf("%8x %8x\n %s",
-            *((uint64_t*)(m+16)), *((uint64_t*)(m+24)),
-            t==4?"next":(t==3?"    ":"done"));
+        kprintf("\n %2x: from %x ", m, *((uint64_t*)m) >>16);
+        if((*((uint64_t*)m) >>16) == services[-SRV_CORE] ||
+            tcb->mypid == services[-SRV_SYS]) {
+            switch(*((uint8_t*)m)) {
+                case SYS_IRQ: kprintf("IRQ"); break;
+                case SYS_ack: kprintf("ack"); break;
+                case SYS_nack: kprintf("nack"); break;
+                case SYS_dl: kprintf("dl"); break;
+                case SYS_sysinfo: kprintf("sysinfo"); break;
+                case SYS_swapbuf: kprintf("swapbuf"); break;
+                case SYS_regservice: kprintf("regservice"); break;
+                case SYS_stimebcd: kprintf("stimebcd"); break;
+                case SYS_stime: kprintf("stime"); break;
+                case SYS_alarm: kprintf("alarm"); break;
+                case SYS_mmap: kprintf("mmap"); break;
+                case SYS_munmap: kprintf("munmap"); break;
+                case SYS_mapfile: kprintf("mapfile"); break;
+                case SYS_fork: kprintf("fork"); break;
+                case SYS_exec: kprintf("exec"); break;
+                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+        if(tcb->mypid == services[-SRV_FS]) {
+            switch(*((uint8_t*)m)) {
+                case SYS_read: kprintf("read"); break;
+                case SYS_dup2: kprintf("dup2"); break;
+                case SYS_pipe: kprintf("pipe"); break;
+                case SYS_write: kprintf("write"); break;
+                case SYS_seek: kprintf("seek"); break;
+                case SYS_dup: kprintf("dup"); break;
+                case SYS_stat: kprintf("stat"); break;
+                case SYS_ioctl: kprintf("ioctl"); break;
+                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+        if(tcb->mypid == services[-SRV_UI]) {
+            switch(*((uint8_t*)m)) {
+                case SYS_keypress: kprintf("keypress"); break;
+                case SYS_keyrelease: kprintf("keyrelease"); break;
+                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+        if(tcb->mypid == services[-SRV_syslog]) {
+            switch(*((uint8_t*)m)) {
+                case SYS_vsyslog: kprintf("vsyslog"); break;
+                case SYS_openlog: kprintf("openlog"); break;
+                case SYS_closelog: kprintf("closelog"); break;
+                case SYS_syslog: kprintf("syslog"); break;
+                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+        if(tcb->mypid == services[-SRV_net]) {
+            switch(*((uint8_t*)m)) {
+                case SYS_recvfrom: kprintf("recvfrom"); break;
+                case SYS_connect: kprintf("connect"); break;
+                case SYS_getsockopt: kprintf("getsockopt"); break;
+                case SYS_bind: kprintf("bind"); break;
+                case SYS_socket: kprintf("socket"); break;
+                case SYS_getpeername: kprintf("getpeername"); break;
+                case SYS_setsockopt: kprintf("setsockopt"); break;
+                case SYS_sendto: kprintf("sendto"); break;
+                case SYS_getsockname: kprintf("getsockname"); break;
+                case SYS_sendmsg: kprintf("sendmsg"); break;
+                case SYS_listen: kprintf("listen"); break;
+                case SYS_accept: kprintf("accept"); break;
+                case SYS_shutdown: kprintf("shutdown"); break;
+                case SYS_socketpair: kprintf("socketpair"); break;
+                case SYS_recvmsg: kprintf("recvmsg"); break;
+               default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+        if(tcb->mypid == services[-SRV_sound]) {
+            switch(*((uint8_t*)m)) {
+                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+        if(tcb->mypid == services[-SRV_init]) {
+            switch(*((uint8_t*)m)) {
+                case SYS_stop: kprintf("stop"); break;
+                case SYS_start: kprintf("start"); break;
+                case SYS_restart: kprintf("restart"); break;
+                case SYS_status: kprintf("status"); break;
+                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
+            }
+        } else
+            kprintf("%x ", *((uint64_t*)m) &0x7FFF);
+        kprintf("%8x %8x %8x\n %s",
+            *((uint64_t*)(m+8)),*((uint64_t*)(m+16)), *((uint64_t*)(m+24)),
+            t==4?"next":(t==3?"pend":"done"));
         kprintf("  %8x %8x %8x %8x\n",
             *((uint64_t*)(m+32)), *((uint64_t*)(m+40)),
             *((uint64_t*)(m+48)), *((uint64_t*)(m+56)));
@@ -728,24 +813,27 @@ void dbg_queues()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
+    if(ccb.hd_timerq)
+        kprintf("timerq head: %4x (awake at %d.%d)\n",
+            ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns);
     j=0;
     if(ccb.hd_blocked) {
         n = ccb.hd_blocked;
         do {
             j++;
             kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+            // failsafe
+            if( n == tcbq->next)
+                break;
             n = tcbq->next;
-        } while(n!=0);
+        } while(n!=0 && j<65536);
     }
-    if(ccb.hd_timerq)
-        kprintf("timerq head: %4x (awake at %d.%d)\n",
-            ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns);
     kprintf("iowait head: %4x, %d task(s)\n",
         ccb.hd_blocked, j);
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("\n[Active Task Queues]\n No Queue     Head      Current   #Tasks\n");
+    kprintf("\n[Active Priority Queues]\n Queue number Head      Current   #Tasks\n");
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
@@ -1027,6 +1115,10 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
 
     dbg_next = 0;
     dbg_isshft = false;
+
+    dbg_mqptr = *((uint64_t*)MQ_ADDRESS) - 1;
+    if(dbg_mqptr==0)
+        dbg_mqptr = *((uint64_t*)(MQ_ADDRESS+16)) - 1;
 
     if(reason==NULL) {
         if(dr6&(1<<14))

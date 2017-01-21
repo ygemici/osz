@@ -498,7 +498,7 @@ do
 	fi
 	if [ $i -eq 13 -a "$DEBUG" == "1" ]; then
 		read -r -d '' SIMIO <<-EOF
-		    /* simulate serial in / out */
+		    /* simulate serial in / out for dbg_putchar() */
 		    cmpq    \$TEXT_ADDRESS, (%rsp)
 		    jb      2f
 		    cmpw    \$0x3f8, %dx

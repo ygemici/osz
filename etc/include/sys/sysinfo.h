@@ -35,7 +35,7 @@ typedef struct {
     uint8_t display;        // display type
     uint8_t fps;            // maximum frame per second
     uint8_t rescueshell;    // rescue shell requested flag
-    uint8_t reserved;
+    uint8_t nropenmax;      // number of open file descriptors
     uint32_t debug;         // debug flags
     uint64_t screen_ptr;    // screen virtual address ("SYS" and "UI")
     uint64_t fb_ptr;        // framebuffer virtual address ("SYS" only)
@@ -77,6 +77,7 @@ sysinfo_t *sysinfo();                   // query system information
 #define sysinfo_display 0
 #define sysinfo_fps 1
 #define sysinfo_rescueshell 2
+#define sysinfo_nropenmax 3
 #define sysinfo_debug 4
 #define sysinfo_screen 8
 #define sysinfo_fb_ptr 16
@@ -115,6 +116,7 @@ sysinfo_t *sysinfo();                   // query system information
 #define systable_mp_ptr 3
 #define systable_apic_ptr 4
 #define systable_hpet_ptr 5
+#define systable_dsdt_ptr 6
 #endif
 
 #endif /* sys/sysinfo.h */

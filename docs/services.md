@@ -77,7 +77,8 @@ Net
 ---
 
 Service that is responsible for handling interfaces and IP routes, and all other networking stuff. You
-can disable networking with the boot parameter `networking=false`.
+can disable networking with the boot parameter `networking=false`. When disabled, the same service can be
+provided by an alternative non-system service.
 
 Typical functions: connect(), accept(), bind(), listen().
 
@@ -85,7 +86,8 @@ Sound
 -----
 
 Service that mixes several audio channels into a single stream. You
-can disable audio as a whole with the boot parameter `sound=false`.
+can disable audio as a whole with the boot parameter `sound=false`. When disabled, the same service can be
+provided by an alternative non-system service.
 
 Typical functions: speak(), setvolume().
 
