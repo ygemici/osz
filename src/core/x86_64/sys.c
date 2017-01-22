@@ -39,9 +39,6 @@ extern uint64_t pt;
 extern OSZ_rela *relas;
 extern phy_t pdpe;
 extern uint64_t freq;
-extern uint64_t hpet_addr;
-extern uint64_t lapic_addr;
-extern uint64_t dsdt_addr;
 
 extern void kprintf_center(int w, int h);
 extern void isr_initirq();
@@ -244,7 +241,7 @@ void sys_init()
     drvptr = drivers;
     // default timer frequency
     freq = 0;
-    if(drvs!=NULL) {
+    if(drvs==NULL) {
         // should never happen!
 #if DEBUG
         kprintf("WARNING missing /etc/sys/drivers\n");
@@ -305,9 +302,6 @@ void sys_init()
         sysinfostruc.systables[systable_smbi_ptr] = bootboot.smbi_ptr;
         sysinfostruc.systables[systable_efi_ptr]  = bootboot.efi_ptr;
         sysinfostruc.systables[systable_mp_ptr]   = bootboot.mp_ptr;
-        sysinfostruc.systables[systable_apic_ptr] = lapic_addr;
-        sysinfostruc.systables[systable_hpet_ptr] = hpet_addr;
-        sysinfostruc.systables[systable_dsdt_ptr] = dsdt_addr;
 
         /*** Timer stuff ***/
         isr_tmrinit();

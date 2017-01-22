@@ -1,16 +1,16 @@
 /*
  * core/x86_64/acpi.h
- * 
+ *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
- * 
+ *
  * You are free to:
  *
  * - Share — copy and redistribute the material in any medium or format
  * - Adapt — remix, transform, and build upon the material
  *     The licensor cannot revoke these freedoms as long as you follow
  *     the license terms.
- * 
+ *
  * Under the following terms:
  *
  * - Attribution — You must give appropriate credit, provide a link to
@@ -80,6 +80,27 @@ typedef struct {
     uint8_t PM1_cnt_len;
     uint8_t PM2_cnt_len;
     uint8_t PM_tmr_len;
+    uint8_t GPE0_blk_len;
+    uint8_t GPE1_blk_len;
+    uint8_t GPE1_base;
+    uint8_t cst_cnt;
+    uint16_t p_lvl2_lat;
+    uint16_t p_lvl3_lat;
+    uint16_t flush_size;
+    uint16_t flush_stride;
+    uint8_t duty_offset;
+    uint8_t duty_width;
+    uint8_t day_alrm;
+    uint8_t mon_alrm;
+    uint8_t century;
+    uint16_t iapc_boot_arch;
+    uint8_t reserved0;
+    uint32_t flags;
+    uint8_t reset_reg[12];
+    uint8_t reset_value;
+    uint8_t reserved1[3];
+    uint64_t x_fw_ctrl;
+    uint64_t x_dsdt;
 } __attribute__((packed)) ACPI_FACP;
 
 typedef struct {

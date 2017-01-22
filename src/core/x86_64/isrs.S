@@ -170,6 +170,7 @@ isr_exc00divzero:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -178,7 +179,6 @@ isr_exc00divzero:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -195,6 +195,7 @@ isr_exc01debug:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -203,7 +204,6 @@ isr_exc01debug:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist3
     xorq	%rdi, %rdi
@@ -220,6 +220,7 @@ isr_exc02nmi:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -228,7 +229,6 @@ isr_exc02nmi:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist2
     xorq	%rdi, %rdi
@@ -245,6 +245,7 @@ isr_exc03chkpoint:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -253,7 +254,6 @@ isr_exc03chkpoint:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist3
     xorq	%rdi, %rdi
@@ -270,6 +270,7 @@ isr_exc04overflow:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -278,7 +279,6 @@ isr_exc04overflow:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -295,6 +295,7 @@ isr_exc05bound:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -303,7 +304,6 @@ isr_exc05bound:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -320,6 +320,7 @@ isr_exc06invopcode:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -328,7 +329,6 @@ isr_exc06invopcode:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -345,6 +345,7 @@ isr_exc07devunavail:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -353,7 +354,6 @@ isr_exc07devunavail:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -370,6 +370,7 @@ isr_exc08dblfault:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -378,7 +379,6 @@ isr_exc08dblfault:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist2
     xorq	%rdi, %rdi
@@ -395,6 +395,7 @@ isr_exc09coproc:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -403,7 +404,6 @@ isr_exc09coproc:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -420,6 +420,7 @@ isr_exc10invtss:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -428,7 +429,6 @@ isr_exc10invtss:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -445,6 +445,7 @@ isr_exc11segfault:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -453,7 +454,6 @@ isr_exc11segfault:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -470,6 +470,7 @@ isr_exc12stackfault:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -478,7 +479,6 @@ isr_exc12stackfault:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -495,6 +495,7 @@ isr_exc13genprot:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -503,7 +504,6 @@ isr_exc13genprot:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -520,6 +520,7 @@ isr_exc14pagefault:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -528,7 +529,6 @@ isr_exc14pagefault:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -545,6 +545,7 @@ isr_exc15unknown:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -553,7 +554,6 @@ isr_exc15unknown:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -570,6 +570,7 @@ isr_exc16float:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -578,7 +579,6 @@ isr_exc16float:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -595,6 +595,7 @@ isr_exc17alignment:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -603,7 +604,6 @@ isr_exc17alignment:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -620,6 +620,7 @@ isr_exc18machinecheck:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -628,7 +629,6 @@ isr_exc18machinecheck:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -645,6 +645,7 @@ isr_exc19double:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -653,7 +654,6 @@ isr_exc19double:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -670,6 +670,7 @@ isr_exc20:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -678,7 +679,6 @@ isr_exc20:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -695,6 +695,7 @@ isr_exc21:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -703,7 +704,6 @@ isr_exc21:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -720,6 +720,7 @@ isr_exc22:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -728,7 +729,6 @@ isr_exc22:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -745,6 +745,7 @@ isr_exc23:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -753,7 +754,6 @@ isr_exc23:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -770,6 +770,7 @@ isr_exc24:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -778,7 +779,6 @@ isr_exc24:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -795,6 +795,7 @@ isr_exc25:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -803,7 +804,6 @@ isr_exc25:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -820,6 +820,7 @@ isr_exc26:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -828,7 +829,6 @@ isr_exc26:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -845,6 +845,7 @@ isr_exc27:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -853,7 +854,6 @@ isr_exc27:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -870,6 +870,7 @@ isr_exc28:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -878,7 +879,6 @@ isr_exc28:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -895,6 +895,7 @@ isr_exc29:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -903,7 +904,6 @@ isr_exc29:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -920,6 +920,7 @@ isr_exc30:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -928,7 +929,6 @@ isr_exc30:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi
@@ -945,6 +945,7 @@ isr_exc31:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
+    xchg %bx, %bx
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -953,7 +954,6 @@ isr_exc31:
     movq    %rax, %rdi
     iretq
 1:
-    xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
     xorq	%rdi, %rdi

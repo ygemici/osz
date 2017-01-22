@@ -503,8 +503,8 @@ do
 	isr_$isr:
 	    cli
 	    $EXCERR
-	    $CORECHK
 	    $DBG
+	    $CORECHK
 	    callq	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist$ist
 	    xorq	%rdi, %rdi

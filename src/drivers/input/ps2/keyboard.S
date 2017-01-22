@@ -91,16 +91,12 @@ irq1:
     cmpb    $0x1D, kbd_hist+1(%rip)
     jne     5f
     cmpw    $0x53, %si
-    je      7f
+    je      6f
     cmpw    $0xd3, %si
-    jne     6f
-7:  movb    $0xFE, %al
+    jne     5f
+6:  movb    $0xFE, %al
     outb    %al, $0x64
     hlt
-    /* handle Ctrl + Alt + Escape */
-6:  cmpw    $0x1, %si
-    jne     5f
-    int     $3
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %sil, kbd_hist+0(%rip)

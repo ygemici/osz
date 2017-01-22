@@ -5,7 +5,6 @@
 ./src/core/sched.c:110:        /* TODO: swap -> ccb.hd_active */
 ./src/core/x86_64/pci.c:59:// TODO: load drivers and save autodetected irq number in ehdr->e_machine
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc
-./src/core/x86_64/acpi.c:163:        // TODO: get values for poweroff
 ./src/core/syscall.c:69:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/msg.c:107:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./docs/howto3-rescueshell.md:19:TODO: write howto

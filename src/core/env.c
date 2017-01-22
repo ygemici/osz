@@ -34,18 +34,13 @@ uint64_t __attribute__ ((section (".data"))) nrirqmax;
 uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
 uint64_t __attribute__ ((section (".data"))) fps;
-uint64_t __attribute__ ((section (".data"))) keymap;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
-uint8_t __attribute__ ((section (".data"))) rescueshell;
 uint8_t __attribute__ ((section (".data"))) identity;
 
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
-extern uint64_t hpet_addr;
-extern uint64_t lapic_addr;
-extern uint64_t dsdt_addr;
 extern uint64_t ioapic_addr;
 
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
@@ -123,6 +118,20 @@ unsigned char *env_display(unsigned char *s)
     return s;
 }
 
+unsigned char *env_keymap(unsigned char *s)
+{
+    unsigned char *c = (unsigned char *)sysinfostruc.keymap;
+    unsigned char *e = (unsigned char *)sysinfostruc.keymap + 7;
+
+    while(c<e && s!=NULL && *s!=0) {
+        *c = *s;
+        c++;
+        s++;
+    }
+    *c = 0;
+    return s;
+}
+
 #if DEBUG
 unsigned char *env_debug(unsigned char *s)
 {
@@ -180,7 +189,9 @@ void env_init()
     // set up defaults
     networking = sound = true;
     identity = false;
-    hpet_addr = dsdt_addr = ioapic_addr = lapic_addr = 0;
+    sysinfostruc.systables[systable_hpet_ptr] =
+        sysinfostruc.systables[systable_apic_ptr] =
+            ioapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
@@ -189,9 +200,10 @@ void env_init()
     sysinfostruc.quantum = 1024;
     sysinfostruc.display = DSP_MONO_COLOR;
     sysinfostruc.debug = DBG_NONE;
-    dsdt_addr = (uint64_t)fs_locate("etc/sys/dsdt");
+    kmemcpy(&sysinfostruc.keymap, "en_us", 6);
+    sysinfostruc.systables[systable_dsdt_ptr] = (uint64_t)fs_locate("etc/sys/dsdt");
     if(fs_size == 0)
-        dsdt_addr = 0;
+        sysinfostruc.systables[systable_dsdt_ptr] = 0;
 
     // parse ascii text
     while(env < env_end && *env!=0) {
@@ -240,13 +252,13 @@ void env_init()
         if(!kmemcmp(env, "hpet=", 5)) {
             env += 5;
             // we only accept hex value for this parameter
-            env = env_hex(env, (uint64_t*)&hpet_addr, 1024*1024, 0);
+            env = env_hex(env, (uint64_t*)&sysinfostruc.systables[systable_hpet_ptr], 1024*1024, 0);
         } else
         // manually override APIC address
         if(!kmemcmp(env, "apic=", 5)) {
             env += 5;
             // we only accept hex value for this parameter
-            env = env_hex(env, (uint64_t*)&lapic_addr, 1024*1024, 0);
+            env = env_hex(env, (uint64_t*)&sysinfostruc.systables[systable_apic_ptr], 1024*1024, 0);
         } else
         // manually override IOAPIC address
         if(!kmemcmp(env, "ioapic=", 7)) {
@@ -290,6 +302,11 @@ void env_init()
         if(!kmemcmp(env, "display=", 8)) {
             env += 8;
             env = env_display(env);
+        } else
+        // keyboard layout
+        if(!kmemcmp(env, "keymap=", 7)) {
+            env += 7;
+            env = env_keymap(env);
         } else
 #if DEBUG
         // output verbosity level

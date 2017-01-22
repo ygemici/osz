@@ -47,6 +47,7 @@ typedef struct {
     uint64_t quantum;       // max time a task can allocate CPU 1/quantum
     uint64_t quantum_cnt;   // total number of task switches
     uint64_t freq;          // timer freqency, task switch at freq/quantum
+    uint64_t keymap;        // keyboard layout
     uint64_t ticks[8];      // overall jiffies counter
     uint64_t srand[4];      // random seed bits
     uint64_t systables[16]; // platform specific addresses
@@ -97,31 +98,32 @@ sysinfo_t *sysinfo();                   // query system information
 #define sysinfo_quantum 48
 #define sysinfo_quantum_cnt 56
 #define sysinfo_freq 64
-#define sysinfo_ticks 72
-#define sysinfo_ts 72
-#define sysinfo_nts 80
-#define sysinfo_jiffy_lo 88
-#define sysinfo_jiffy_hi 96
-#define sysinfo_qtotal  128
-#define sysinfo_srand0 136
-#define sysinfo_srand1 144
-#define sysinfo_srand2 152
-#define sysinfo_srand3 160
+#define sysinfo_keymap 72
+#define sysinfo_ticks 80
+#define sysinfo_ts 80
+#define sysinfo_nts 88
+#define sysinfo_jiffy_lo 96
+#define sysinfo_jiffy_hi 104
+#define sysinfo_qtotal  136
+#define sysinfo_srand0 144
+#define sysinfo_srand1 152
+#define sysinfo_srand2 160
+#define sysinfo_srand3 168
 
 /*** Platform specific ***/
-#define sysinfo_systables 168
+#define sysinfo_systables 176
 
 #ifdef OSZ_ARCH_Aarch64
 #endif
 
 #ifdef OSZ_ARCH_x86_64
-#define sysinfo_acpi_ptr 168
-#define sysinfo_smbi_ptr 176
-#define sysinfo_efi_ptr 184
-#define sysinfo_mp_ptr 192
-#define sysinfo_apic_ptr 200
-#define sysinfo_hpet_ptr 208
-#define sysinfo_dsdt_ptr 216
+#define sysinfo_acpi_ptr 174
+#define sysinfo_smbi_ptr 184
+#define sysinfo_efi_ptr 192
+#define sysinfo_mp_ptr 200
+#define sysinfo_apic_ptr 208
+#define sysinfo_hpet_ptr 216
+#define sysinfo_dsdt_ptr 224
 
 #define systable_acpi_ptr 0
 #define systable_smbi_ptr 1

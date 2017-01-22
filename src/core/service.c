@@ -93,7 +93,7 @@ void *service_loadelf(char *fn)
     Elf64_Ehdr *elf=(Elf64_Ehdr *)fs_locate(fn);
     /* get program headers */
     Elf64_Phdr *phdr_c=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff);
-    Elf64_Phdr *phdr_d=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff+elf->e_phentsize);
+    Elf64_Phdr *phdr_d=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff+1*elf->e_phentsize);
     Elf64_Phdr *phdr_l=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff+2*elf->e_phentsize);
     int i=0,ret,size=(fs_size+__PAGESIZE-1)/__PAGESIZE;
     // PT at tmpmap
@@ -127,6 +127,8 @@ void *service_loadelf(char *fn)
             syslog_early("WARNING corrupt ELF binary: %s", fn);
             return (void*)(-1);
     }
+    /* clear autodetected irq number field */
+    elf->e_machine = 0;
     /* map text segment */
     size=(phdr_c->p_filesz+__PAGESIZE-1)/__PAGESIZE;
     while(size--) {
@@ -665,7 +667,7 @@ bool_t service_rtlink()
                             // irq number from function name
                             env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
                         } else {
-                            // get autodetected irq name
+                            // get autodetected irq number
                             k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
                         }
                         service_installirq(k, offs);

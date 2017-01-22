@@ -25,13 +25,11 @@
  * @brief ACPI table parser
  */
 
+#include <elf.h>
 #include "acpi.h"
 #include "isr.h"
 
 /* main properties, configurable */
-uint64_t __attribute__ ((section (".data"))) hpet_addr;
-uint64_t __attribute__ ((section (".data"))) dsdt_addr;
-uint64_t __attribute__ ((section (".data"))) lapic_addr;
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
 /* poweroff stuff, autodetected */
@@ -40,6 +38,11 @@ uint32_t __attribute__ ((section (".data"))) SLP_TYPa;
 uint32_t __attribute__ ((section (".data"))) PM1a_CNT;
 uint32_t __attribute__ ((section (".data"))) SLP_TYPb;
 uint32_t __attribute__ ((section (".data"))) PM1b_CNT;
+uint32_t __attribute__ ((section (".data"))) PM1_CNT_LEN;
+uint32_t __attribute__ ((section (".data"))) ACPI_ENABLE;
+uint32_t __attribute__ ((section (".data"))) SCI_EN;
+uint32_t __attribute__ ((section (".data"))) SCI_INT;
+uint32_t __attribute__ ((section (".data"))) SMI_CMD;
 
 extern sysinfo_t sysinfostruc;
 extern uint32_t fg;
@@ -76,13 +79,17 @@ void acpi_early(ACPI_Header *hdr)
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
         ACPI_APIC *madt = (ACPI_APIC *)hdr;
-        lapic_addr = madt->localApic;
+        sysinfostruc.systables[systable_apic_ptr] = madt->localApic;
         // This header is 8 bytes longer than normal header
         len -= 8; ptr = (char*)(data+8);
         while(len>0) {
             if(ptr[0]==ACPI_APIC_IOAPIC_MAGIC) {
                 ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
                 ioapic_addr = rec->address;
+#if DEBUG
+                if(sysinfostruc.debug&DBG_DEVICES)
+                    kprintf("IOAPIC  %x\n", ioapic_addr);
+#endif
                 break;
             }
             len-=ptr[1];
@@ -90,14 +97,49 @@ void acpi_early(ACPI_Header *hdr)
         }
     } else
     /* High Precision Event Timer */
-    if(!hpet_addr && !kmemcmp("HPET", hdr->magic, 4)) {
-        hpet_addr = (uint64_t)hdr;
+    if(!sysinfostruc.systables[systable_hpet_ptr] && !kmemcmp("HPET", hdr->magic, 4)) {
+        sysinfostruc.systables[systable_hpet_ptr] = (uint64_t)hdr;
+#if DEBUG
+        if(sysinfostruc.debug&DBG_DEVICES)
+            kprintf("HPET  %x\n", sysinfostruc.systables[systable_hpet_ptr]);
+#endif
     }
 }
 
 /* DSDT and SSDT parsing */
-void acpi_parsesdt(ACPI_Header *hdr)
+void acpi_parseaml(ACPI_Header *hdr)
 {
+#if DEBUG
+        if(sysinfostruc.debug&DBG_DEVICES) {
+            kprintf("AML %c%c%c%c  %x\n",
+                hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3],
+                hdr);
+        }
+#endif
+    // search the \_S5 package in the DSDT
+    char *c = (char *)hdr + sizeof(ACPI_Header);
+    int len = (uint32_t)hdr->length;
+
+    // locate _S5_
+    for (;(c[0]!=0x8 || c[1]!='_' || c[2]!='S' || c[3]!='5' || c[4]!='_') && len > 0; len--)
+      c++;
+    c += 5;
+
+    // check if _S5_ was found
+    if ( len>0 && *c == 0x12 )
+    {
+        c++;
+        if (*c == 0x06 || *c == 0x0A) {
+            c++;   // skip byteprefix
+            SLP_TYPa = *(c)<<10;
+            c++;
+        }
+        if (*c == 0x0A) {
+            c++;   // skip byteprefix
+            SLP_TYPb = *(c)<<10;
+            c++;
+        }
+    }
 }
 
 /* reentrant acpi table parser */
@@ -138,11 +180,6 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
         char tmp[9];
         kmemcpy((char*)&tmp[0],(char*)&hdr->oemid[0],8); tmp[9]=0;
         syslog_early("%cSDT %x %s",(uint8_t)hdr->magic[0],hdr,&tmp[0]);
-        /* defaults for qemu and bochs */
-        if(!kmemcmp(hdr->oemid,"BOCHS",5)) {
-            PM1a_CNT = 0xB004;
-            SLP_EN = 0x2000;
-        }
         ptr = 0;
         while(len>0) {
             if(hdr->magic[0]=='X') {
@@ -160,36 +197,32 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     /* Fixed ACPI Description Table */
     if(!kmemcmp("FACP", hdr->magic, 4)) {
         ACPI_FACP *fadt = (ACPI_FACP *)hdr;
-        // TODO: get values for poweroff
+        // get values for poweroff
         if(PM1a_CNT==0) {
             PM1a_CNT = fadt->PM1a_cnt_blk;
             PM1b_CNT = fadt->PM1b_cnt_blk;
+            PM1_CNT_LEN = fadt->PM1_cnt_len;
+            SMI_CMD = fadt->smi_cmd;
+            ACPI_ENABLE = fadt->acpi_enable;
+            SLP_EN = 1<<13;
+            SCI_INT = fadt->sci_int;
+            SCI_EN = 1;
         }
+        hdr = (ACPI_Header*)(fadt->x_dsdt && (fadt->x_dsdt>>48)==0 ? fadt->x_dsdt : fadt->dsdt);
+        if(!kmemcmp("SDT", hdr->magic+1, 3) && sysinfostruc.systables[systable_dsdt_ptr] == 0)
+            sysinfostruc.systables[systable_dsdt_ptr] = (uint64_t)hdr;
     } else
     /* Specific Description Tables */
     if(!kmemcmp("DSDT", hdr->magic, 4) || !kmemcmp("SSDT", hdr->magic, 4)) {
-        if(dsdt_addr == 0)
-            dsdt_addr = (uint64_t)hdr;
+        if(sysinfostruc.systables[systable_dsdt_ptr] == 0)
+            sysinfostruc.systables[systable_dsdt_ptr] = (uint64_t)hdr;
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
-        ACPI_APIC *madt = (ACPI_APIC *)hdr;
-        lapic_addr = madt->localApic;
         // This header is 8 bytes longer than normal header
         len -= 8; ptr = (char*)(data+8);
         while(len>0) {
-            if(ptr[0]==ACPI_APIC_IOAPIC_MAGIC) {
-                ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
 #if DEBUG
-                if(sysinfostruc.debug&DBG_DEVICES) {
-                    for(i=0;i<=level;i++) kprintf("  ");
-                    kprintf("IOAPIC  %x %d %x\n", ptr, ptr[1], rec->address);
-                }
-#endif
-                if(!ioapic_addr)
-                    ioapic_addr = rec->address;
-#if DEBUG
-            } else
             if(ptr[0]==ACPI_APIC_LAPIC_MAGIC) {
                 ACPI_APIC_LAPIC *rec = (ACPI_APIC_LAPIC*)ptr;
                 if(sysinfostruc.debug&DBG_DEVICES) {
@@ -259,8 +292,10 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
 }
 
 /* Load device drivers into "system" task's address space */
-void acpi_init()
+bool_t acpi_init()
 {
+    uint64_t i = 10000;
+    uint16_t tmp;
     SLP_EN = PM1a_CNT = 0;
 
     if(bootboot.acpi_ptr==0 ||
@@ -279,39 +314,93 @@ void acpi_init()
 #endif
         acpi_parse((ACPI_Header*)bootboot.acpi_ptr, 1);
     }
-    if(dsdt_addr != 0)
-        acpi_parsesdt((ACPI_Header*)dsdt_addr);
+    if(sysinfostruc.systables[systable_dsdt_ptr] != 0)
+        acpi_parseaml((ACPI_Header *)sysinfostruc.systables[systable_dsdt_ptr]);
     // fallback to default if not found and not given either
     if(ioapic_addr==0)
         ioapic_addr=0xFEC00000;
+
     /* load timer driver */
     //   with PIC:  PIT and RTC
-    //   with APIC: HPET, if detected, APIC timer otherwise
-    //   with x2APIC: HPET, if detected, x2APIC timer otherwise
-    service_loadso(hpet_addr==0 || (hpet_addr & (__PAGESIZE-1))!=0?
+    //   with APIC: HPET if detected, APIC timer otherwise
+    //   with x2APIC: HPET if detected, x2APIC timer otherwise
+    service_loadso(sysinfostruc.systables[systable_hpet_ptr]==0 ||
+        (sysinfostruc.systables[systable_hpet_ptr] & (__PAGESIZE-1))!=0?
         (ISR_CTRL==CTRL_PIC?"lib/sys/proc/pitrtc.so":
         (ISR_CTRL==CTRL_APIC?"lib/sys/proc/apic.so":
             "lib/sys/proc/x2apic.so")):
         "lib/sys/proc/hpet.so");
+
+    if(PM1a_CNT==0)
+        return false;
+    if(SCI_INT!=0) {
+        Elf64_Ehdr *ehdr = (Elf64_Ehdr *)service_loadelf("lib/sys/proc/sci.so");
+        ehdr->e_machine = SCI_INT;
+    }
+#if DEBUG
+    if(sysinfostruc.debug&DBG_DEVICES)
+        kprintf("ACPI PM1a_CNT %x SMI_CMD %x ACPI_ENABLE %x\n", PM1a_CNT, SMI_CMD, ACPI_ENABLE);
+#endif
+    // check if acpi is enabled
+    __asm__ __volatile__ (
+        "xor %%rax, %%rax;movl %1, %%edx; inw %%dx, %%ax" :
+        "=r"(tmp) :
+        "r"(PM1a_CNT) );
+    if ( (tmp &SCI_EN) == 0 ) {
+        // enable
+        if (SMI_CMD != 0 && ACPI_ENABLE != 0) {
+            __asm__ __volatile__ (
+                "movl %0, %%eax; movl %1, %%edx; outw %%ax, %%dx" : :
+                "r"(ACPI_ENABLE), "r"(SMI_CMD) );
+            do {
+                __asm__ __volatile__ (
+                    "xor %%rax, %%rax;movl %1, %%edx; inw %%dx, %%ax" :
+                    "=r"(tmp) :
+                    "r"(PM1a_CNT) );
+            } while(i-- > 0 && (tmp &SCI_EN)==0);
+            if (PM1b_CNT != 0)
+                do {
+                    __asm__ __volatile__ (
+                        "xor %%rax, %%rax;movl %1, %%edx; inw %%dx, %%ax" :
+                        "=r"(tmp) :
+                        "r"(PM1b_CNT) );
+                } while(i-- > 0 && (tmp &SCI_EN)==0);
+#if DEBUG
+        if(sysinfostruc.debug&DBG_DEVICES) {
+            kprintf("ACPI enable %d\n",i>0);
+        }
+#endif
+        return i>0;
+      } else
+        return false;
+    } else {
+#if DEBUG
+        if(sysinfostruc.debug&DBG_DEVICES) {
+            kprintf("ACPI already enabled\n");
+        }
+#endif
+    }
+    return true;
 }
 
 void acpi_poweroff()
 {
+    uint64_t en;
     // APCI poweroff
-/*
     if(PM1a_CNT!=0) {
-        int en = SLP_TYPa | SLP_EN;
-        //acpi_enable();
-        breakpoint;
+#if DEBUG
+        if(sysinfostruc.debug&DBG_DEVICES)
+            kprintf("\nPM1a_CNT %x SLP_TYPa %x SLP_EN %x\n", PM1a_CNT,SLP_TYPa,SLP_EN);
+#endif
+        en = SLP_TYPa | SLP_EN;
         __asm__ __volatile__ (
-            "movq %0, %%rax; movq %1, %%rdx; outw %%ax, %%dx" : :
-            "m"(en), "m"(PM1a_CNT) );
+            "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :
+            "r"(en), "r"(PM1a_CNT) );
         if ( PM1b_CNT != 0 ) {
             en = SLP_TYPb | SLP_EN;
             __asm__ __volatile__ (
-                "movq %0, %%rax; movq %1, %%rdx; outw %%ax, %%dx" : :
-                "m"(en), "m"(PM1b_CNT) );
+                "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :
+                "r"(en), "r"(PM1b_CNT) );
         }
     }
-*/
 }
