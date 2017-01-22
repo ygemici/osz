@@ -36,9 +36,7 @@
 .global isr_irq0
 .global isr_enableirq
 .global isr_disableirq
-.global isr_next
 
-.extern isr_ticks
 .extern isr_gainentropy
 .extern isr_savecontext
 .extern isr_loadcontext
@@ -56,8 +54,6 @@ idt64:
     .word	(32+24)*16-1
     .quad	0
     .align	8
-isr_next:
-    .quad	0
 ctrl:
     .asciz "PIC"
     .align 8
@@ -182,7 +178,6 @@ isr_exc00divzero:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -208,7 +203,6 @@ isr_exc01debug:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist3
@@ -234,7 +228,6 @@ isr_exc02nmi:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist2
@@ -260,7 +253,6 @@ isr_exc03chkpoint:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist3
@@ -286,7 +278,6 @@ isr_exc04overflow:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -312,7 +303,6 @@ isr_exc05bound:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -338,7 +328,6 @@ isr_exc06invopcode:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -364,7 +353,6 @@ isr_exc07devunavail:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -390,7 +378,6 @@ isr_exc08dblfault:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist2
@@ -416,7 +403,6 @@ isr_exc09coproc:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -442,7 +428,6 @@ isr_exc10invtss:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -468,7 +453,6 @@ isr_exc11segfault:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -494,7 +478,6 @@ isr_exc12stackfault:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -520,25 +503,6 @@ isr_exc13genprot:
     movq    %rax, %rdi
     iretq
 1:
-    /* simulate serial in / out for dbg_putchar() */
-    cmpq    $TEXT_ADDRESS, (%rsp)
-    jb      2f
-    cmpw    $0x3f8, %dx
-    jb      2f
-    cmpw    $0x3ff, %dx
-    ja      2f
-    movq    (%rsp), %rax
-    cmpb    $0xEC, (%rax)
-    jne     1f
-    inb     %dx, %al
-    incq    (%rsp)
-    iretq
-1:  cmpb    $0xEE, (%rax)
-    jne     2f
-    outb    %al, %dx
-    incq    (%rsp)
-    iretq
-2:
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -564,7 +528,6 @@ isr_exc14pagefault:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -590,7 +553,6 @@ isr_exc15unknown:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -616,7 +578,6 @@ isr_exc16float:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -642,7 +603,6 @@ isr_exc17alignment:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -668,7 +628,6 @@ isr_exc18machinecheck:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -694,7 +653,6 @@ isr_exc19double:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -720,7 +678,6 @@ isr_exc20:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -746,7 +703,6 @@ isr_exc21:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -772,7 +728,6 @@ isr_exc22:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -798,7 +753,6 @@ isr_exc23:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -824,7 +778,6 @@ isr_exc24:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -850,7 +803,6 @@ isr_exc25:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -876,7 +828,6 @@ isr_exc26:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -902,7 +853,6 @@ isr_exc27:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -928,7 +878,6 @@ isr_exc28:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -954,7 +903,6 @@ isr_exc29:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -980,7 +928,6 @@ isr_exc30:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1
@@ -1006,7 +953,6 @@ isr_exc31:
     movq    %rax, %rdi
     iretq
 1:
-    
     xchg %bx, %bx
     callq	isr_savecontext
     subq	$128, ccb + ccb_ist1

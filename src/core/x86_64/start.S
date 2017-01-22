@@ -31,6 +31,7 @@
 .global _start
 .global gdt64_tss
 .extern main
+.extern sysinfostruc
 
 /**********************************************************************
  *                     OS/Z Loader entry point                        *
@@ -79,7 +80,8 @@ _start:
 
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
-    mov     $isr_entropy, %rdi
+    movq    $sysinfostruc, %rdi
+    addq    $sysinfo_srand0, %rdi
     xorq    %rax, %rax
     incb    %al
     cpuid
@@ -148,9 +150,10 @@ _start:
     movq    %rax, %cr4
 
     /* init entropy */
-    mov     $isr_entropy, %rdi
+    movq    $sysinfostruc, %rdi
+    addq    $sysinfo_srand0, %rdi
     /* add bootboot structure, environment and core segments */
-    mov     $bootboot, %rsi
+    movq    $bootboot, %rsi
 2:  lodsq
     xorq    %rax, (%rdi)
     lodsq

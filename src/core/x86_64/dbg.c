@@ -119,8 +119,12 @@ void dbg_putchar(int c)
         c='.';
     __asm__ __volatile__ (
         "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
-        "movw $0x3fd,%%dx;1:inb %%dx, %%al;andb $0x40,%%al;jz 1b;"
-        "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx"
+        "movl $10000,%%ecx;movw $0x3fd,%%dx;1:"
+        "inb %%dx, %%al;"
+        "cmpb $0xff,%%al;je 2f;"
+        "dec %%ecx;jz 2f;"
+        "andb $0x40,%%al;jz 1b;"
+        "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx;2:"
     ::"r"(c):"%rax","%rbx","%rdx");
 }
 
@@ -692,102 +696,110 @@ void dbg_msg()
         if(dbg_tui)
             dbg_settheme();
         m = ((i * sizeof(msg_t))+(uint64_t)MQ_ADDRESS);
-        kprintf("\n %2x: from %x ", m, *((uint64_t*)m) >>16);
-        if((*((uint64_t*)m) >>16) == services[-SRV_CORE] ||
-            tcb->mypid == services[-SRV_SYS]) {
-            switch(*((uint8_t*)m)) {
-                case SYS_IRQ: kprintf("IRQ"); break;
-                case SYS_ack: kprintf("ack"); break;
-                case SYS_nack: kprintf("nack"); break;
-                case SYS_dl: kprintf("dl"); break;
-                case SYS_sysinfo: kprintf("sysinfo"); break;
-                case SYS_swapbuf: kprintf("swapbuf"); break;
-                case SYS_regservice: kprintf("regservice"); break;
-                case SYS_stimebcd: kprintf("stimebcd"); break;
-                case SYS_stime: kprintf("stime"); break;
-                case SYS_alarm: kprintf("alarm"); break;
-                case SYS_mmap: kprintf("mmap"); break;
-                case SYS_munmap: kprintf("munmap"); break;
-                case SYS_mapfile: kprintf("mapfile"); break;
-                case SYS_fork: kprintf("fork"); break;
-                case SYS_exec: kprintf("exec"); break;
-                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-        if(tcb->mypid == services[-SRV_FS]) {
-            switch(*((uint8_t*)m)) {
-                case SYS_read: kprintf("read"); break;
-                case SYS_dup2: kprintf("dup2"); break;
-                case SYS_pipe: kprintf("pipe"); break;
-                case SYS_write: kprintf("write"); break;
-                case SYS_seek: kprintf("seek"); break;
-                case SYS_dup: kprintf("dup"); break;
-                case SYS_stat: kprintf("stat"); break;
-                case SYS_ioctl: kprintf("ioctl"); break;
-                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-        if(tcb->mypid == services[-SRV_UI]) {
-            switch(*((uint8_t*)m)) {
-                case SYS_keypress: kprintf("keypress"); break;
-                case SYS_keyrelease: kprintf("keyrelease"); break;
-                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-        if(tcb->mypid == services[-SRV_syslog]) {
-            switch(*((uint8_t*)m)) {
-                case SYS_vsyslog: kprintf("vsyslog"); break;
-                case SYS_openlog: kprintf("openlog"); break;
-                case SYS_closelog: kprintf("closelog"); break;
-                case SYS_syslog: kprintf("syslog"); break;
-                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-        if(tcb->mypid == services[-SRV_net]) {
-            switch(*((uint8_t*)m)) {
-                case SYS_recvfrom: kprintf("recvfrom"); break;
-                case SYS_connect: kprintf("connect"); break;
-                case SYS_getsockopt: kprintf("getsockopt"); break;
-                case SYS_bind: kprintf("bind"); break;
-                case SYS_socket: kprintf("socket"); break;
-                case SYS_getpeername: kprintf("getpeername"); break;
-                case SYS_setsockopt: kprintf("setsockopt"); break;
-                case SYS_sendto: kprintf("sendto"); break;
-                case SYS_getsockname: kprintf("getsockname"); break;
-                case SYS_sendmsg: kprintf("sendmsg"); break;
-                case SYS_listen: kprintf("listen"); break;
-                case SYS_accept: kprintf("accept"); break;
-                case SYS_shutdown: kprintf("shutdown"); break;
-                case SYS_socketpair: kprintf("socketpair"); break;
-                case SYS_recvmsg: kprintf("recvmsg"); break;
-               default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-        if(tcb->mypid == services[-SRV_sound]) {
-            switch(*((uint8_t*)m)) {
-                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-        if(tcb->mypid == services[-SRV_init]) {
-            switch(*((uint8_t*)m)) {
-                case SYS_stop: kprintf("stop"); break;
-                case SYS_start: kprintf("start"); break;
-                case SYS_restart: kprintf("restart"); break;
-                case SYS_status: kprintf("status"); break;
-                default: kprintf("%x? ", *((uint64_t*)m) &0x7FFF); break;
-            }
-        } else
-            kprintf("%x ", *((uint64_t*)m) &0x7FFF);
-        kprintf("%8x %8x %8x\n %s",
-            *((uint64_t*)(m+8)),*((uint64_t*)(m+16)), *((uint64_t*)(m+24)),
-            t==4?"next":(t==3?"pend":"done"));
-        kprintf("  %8x %8x %8x %8x\n",
-            *((uint64_t*)(m+32)), *((uint64_t*)(m+40)),
-            *((uint64_t*)(m+48)), *((uint64_t*)(m+56)));
+        kprintf("\n %2x: ", m);
+        if(*((uint64_t*)m)==0 && *((uint64_t*)m+8)==0 && *((uint64_t*)m+16)==0) {
+            fg = dbg_theme[0];
+            if(dbg_tui)
+                dbg_settheme();
+            kprintf("* empty *\n");
+        } else {
+            kprintf("from %x ", *((uint64_t*)m) >>16);
+            if((*((uint64_t*)m) >>16) == services[-SRV_CORE] ||
+                tcb->mypid == services[-SRV_SYS]) {
+                switch(*((uint8_t*)m)) {
+                    case SYS_IRQ: kprintf("IRQ"); break;
+                    case SYS_ack: kprintf("ack"); break;
+                    case SYS_nack: kprintf("nack"); break;
+                    case SYS_dl: kprintf("dl"); break;
+                    case SYS_sysinfo: kprintf("sysinfo"); break;
+                    case SYS_swapbuf: kprintf("swapbuf"); break;
+                    case SYS_regservice: kprintf("regservice"); break;
+                    case SYS_stimebcd: kprintf("stimebcd"); break;
+                    case SYS_stime: kprintf("stime"); break;
+                    case SYS_alarm: kprintf("alarm"); break;
+                    case SYS_mmap: kprintf("mmap"); break;
+                    case SYS_munmap: kprintf("munmap"); break;
+                    case SYS_mapfile: kprintf("mapfile"); break;
+                    case SYS_fork: kprintf("fork"); break;
+                    case SYS_exec: kprintf("exec"); break;
+                    default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+            if(tcb->mypid == services[-SRV_FS]) {
+                switch(*((uint8_t*)m)) {
+                    case SYS_read: kprintf("read"); break;
+                    case SYS_dup2: kprintf("dup2"); break;
+                    case SYS_pipe: kprintf("pipe"); break;
+                    case SYS_write: kprintf("write"); break;
+                    case SYS_seek: kprintf("seek"); break;
+                    case SYS_dup: kprintf("dup"); break;
+                    case SYS_stat: kprintf("stat"); break;
+                    case SYS_ioctl: kprintf("ioctl"); break;
+                    default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+            if(tcb->mypid == services[-SRV_UI]) {
+                switch(*((uint8_t*)m)) {
+                    case SYS_keypress: kprintf("keypress"); break;
+                    case SYS_keyrelease: kprintf("keyrelease"); break;
+                    default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+            if(tcb->mypid == services[-SRV_syslog]) {
+                switch(*((uint8_t*)m)) {
+                    case SYS_vsyslog: kprintf("vsyslog"); break;
+                    case SYS_openlog: kprintf("openlog"); break;
+                    case SYS_closelog: kprintf("closelog"); break;
+                    case SYS_syslog: kprintf("syslog"); break;
+                    default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+            if(tcb->mypid == services[-SRV_net]) {
+                switch(*((uint8_t*)m)) {
+                    case SYS_recvfrom: kprintf("recvfrom"); break;
+                    case SYS_connect: kprintf("connect"); break;
+                    case SYS_getsockopt: kprintf("getsockopt"); break;
+                    case SYS_bind: kprintf("bind"); break;
+                    case SYS_socket: kprintf("socket"); break;
+                    case SYS_getpeername: kprintf("getpeername"); break;
+                    case SYS_setsockopt: kprintf("setsockopt"); break;
+                    case SYS_sendto: kprintf("sendto"); break;
+                    case SYS_getsockname: kprintf("getsockname"); break;
+                    case SYS_sendmsg: kprintf("sendmsg"); break;
+                    case SYS_listen: kprintf("listen"); break;
+                    case SYS_accept: kprintf("accept"); break;
+                    case SYS_shutdown: kprintf("shutdown"); break;
+                    case SYS_socketpair: kprintf("socketpair"); break;
+                    case SYS_recvmsg: kprintf("recvmsg"); break;
+                   default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+            if(tcb->mypid == services[-SRV_sound]) {
+                switch(*((uint8_t*)m)) {
+                    default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+            if(tcb->mypid == services[-SRV_init]) {
+                switch(*((uint8_t*)m)) {
+                    case SYS_stop: kprintf("stop"); break;
+                    case SYS_start: kprintf("start"); break;
+                    case SYS_restart: kprintf("restart"); break;
+                    case SYS_status: kprintf("status"); break;
+                    default: kprintf("%x?", *((uint64_t*)m) &0x7FFF); break;
+                }
+            } else
+                kprintf("%x", *((uint64_t*)m) &0x7FFF);
+            kprintf(" (%8x, %8x, %8x,\n %s",
+                *((uint64_t*)(m+8)),*((uint64_t*)(m+16)), *((uint64_t*)(m+24)),
+                t==4?"next":(t==3?"pend":"done"));
+            kprintf("      %8x, %8x, %8x) at %d\n",
+                *((uint64_t*)(m+32)), *((uint64_t*)(m+40)),
+                *((uint64_t*)(m+48)), *((uint64_t*)(m+56)));
+        }
         i++;
         if(i>=*((uint64_t*)(MQ_ADDRESS+16))-1)
             i=1;
-    } while (i!=*((uint64_t*)(MQ_ADDRESS+8)) && ky<maxy-3);
+    } while (ky<maxy-3);
 }
 
 // dump CPU Control Block and priority queues
@@ -1387,6 +1399,11 @@ getcmd:
                     if(dbg_scr>0)
                         dbg_scr--;
                     goto redraw;
+                } else
+                if(dbg_tab == tab_msg) {
+                    if(dbg_mqptr > 1)
+                        dbg_mqptr--;
+                    goto redraw;
                 }
                 goto getcmd;
             }
@@ -1403,6 +1420,11 @@ getcmd:
                 if(dbg_tab == tab_ram) {
                     if(pmm.size>0 && dbg_scr<pmm.size-1)
                         dbg_scr++;
+                    goto redraw;
+                } else
+                if(dbg_tab == tab_msg) {
+                    if(dbg_mqptr < *((uint64_t*)(MQ_ADDRESS+16)))
+                        dbg_mqptr++;
                     goto redraw;
                 }
                 goto getcmd;

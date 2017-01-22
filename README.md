@@ -77,7 +77,11 @@ All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/mast
      you must distribute your contributions under the same license as
      the original.
 
-Author
-------
+Authors
+-------
 
-bztemail AT gmail DOT com
+efirom: Michael Brown
+zlib: Mark Adler
+MurmurHash: Austin Appleby
+BOOTBOOT, OS/Z: bzt
+

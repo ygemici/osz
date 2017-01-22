@@ -25,7 +25,6 @@
  * @brief Physical Memory Manager architecture specific part
  */
 
-#include <sys/sysinfo.h>
 #include "env.h"
 
 /* get addresses from linker script */
@@ -41,8 +40,8 @@ extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 extern char *syslog_header;
-extern sysinfo_t *sysinfostruc;
 extern pid_t *services;
+extern sysinfo_t sysinfostruc;
 
 /* Main scructure */
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
@@ -65,8 +64,8 @@ void* pmm_alloc()
         fmem++;
     if(i) {
         /* add entropy */
-        isr_entropy[(i+0)%4] ^= (uint64_t)fmem->base;
-        isr_entropy[(i+2)%4] ^= (uint64_t)fmem->base;
+        sysinfostruc.srand[(i+0)%4] ^= (uint64_t)fmem->base;
+        sysinfostruc.srand[(i+2)%4] ^= (uint64_t)fmem->base;
         isr_gainentropy();
         /* allocate page */
         if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
@@ -98,8 +97,8 @@ again:
     i--;
     if(i<pmm.size) {
         /* add entropy */
-        isr_entropy[(i+0)%4] ^= fmem->base;
-        isr_entropy[(i+3)%4] ^= fmem->base;
+        sysinfostruc.srand[(i+0)%4] ^= fmem->base;
+        sysinfostruc.srand[(i+3)%4] ^= fmem->base;
         isr_gainentropy();
         /* alignment */
         if(fmem->base & (__SLOTSIZE-1)){
@@ -194,12 +193,12 @@ void pmm_init()
     entry = (MMapEnt*)&bootboot.mmap;
     pmm.totalpages = 0;
 #if DEBUG
-    if(debug&DBG_MEMMAP)
+    if(sysinfostruc.debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
 #endif
     while(num>0) {
 #if DEBUG
-        if(debug&DBG_MEMMAP)
+        if(sysinfostruc.debug&DBG_MEMMAP)
             kprintf("  %s %8x %9d\n",
                 MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Size(entry)
@@ -235,8 +234,6 @@ void pmm_init()
     drvnames = (char*)kalloc(2);
     //allocate stack for ISRs and syscall
     safestack = kalloc(1);
-    //allocate system info structure
-    sysinfostruc = kalloc(1);
     //allocate services structure
     services = kalloc(nrsrvmax);
     //allocate syslog buffer
@@ -248,7 +245,10 @@ void pmm_init()
     syslog_ptr += i;
 
     //first real message
-    syslog_early("Started uuid %4x-%2x-%2x-%8x",(uint32_t)isr_entropy[0],(uint16_t)isr_entropy[1],(uint16_t)isr_entropy[2],isr_entropy[3]);
+    syslog_early("Started uuid %4x-%2x-%2x-%8x",
+        (uint32_t)sysinfostruc.srand[0],
+        (uint16_t)sysinfostruc.srand[1],(uint16_t)sysinfostruc.srand[2],
+        sysinfostruc.srand[3]);
     syslog_early("Frame buffer %d x %d @%x",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr);
 
     //dump memory map to log

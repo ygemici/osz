@@ -34,10 +34,7 @@
 extern OSZ_ccb ccb;                   // CPU Control Block
 
 extern uint64_t sys_getts(char *p);
-extern sysinfo_t *sysinfostruc;
-extern uint64_t isr_ticks[8];
-extern uint64_t isr_entropy[4];
-extern uint64_t isr_lastfps;
+extern sysinfo_t sysinfostruc;
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
 
@@ -56,21 +53,13 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_exit:
             break;
 
+        case SYS_dl:
+            break;
+
         case SYS_sysinfo:
-            // update dynamic fields in System Info Block
-            sysinfostruc->ticks[0] = isr_ticks[TICKS_LO];
-            sysinfostruc->ticks[1] = isr_ticks[TICKS_HI];
-            sysinfostruc->quantum_cnt = isr_ticks[TICKS_QALL];
-            sysinfostruc->timestamp_s = isr_ticks[TICKS_TS];
-            sysinfostruc->timestamp_ns = isr_ticks[TICKS_NTS];
-            sysinfostruc->srand[0] = isr_entropy[0];
-            sysinfostruc->srand[1] = isr_entropy[1];
-            sysinfostruc->srand[2] = isr_entropy[2];
-            sysinfostruc->srand[3] = isr_entropy[3];
-            sysinfostruc->fps = isr_lastfps;
             // reply with ptr message to map sysinfostruc in userspace
             msg_send(EVT_DEST(tcb->mypid) | MSG_PTRDATA | EVT_FUNC(SYS_ack),
-                (virt_t)sysinfostruc,
+                (virt_t)&sysinfostruc,
                 sizeof(sysinfo_t),
                 SYS_sysinfo);
             break;
@@ -93,9 +82,9 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
-            if(tcb->memroot == sys_mapping || thread_allowed("stime",A_WRITE)) {
-                isr_ticks[TICKS_TS] = arg0;
-                isr_ticks[TICKS_NTS] = 0;
+            if(tcb->memroot == sys_mapping || thread_allowed("stime", A_WRITE)) {
+                sysinfostruc.ticks[TICKS_TS] = arg0;
+                sysinfostruc.ticks[TICKS_NTS] = 0;
             }
             break;
 
@@ -107,7 +96,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         case SYS_mapfile:
-kprintf("mapfile arg0 %x arg1 %s: ",arg0,arg1);
+            /* map a file info bss */
             if(arg0<BSS_ADDRESS || arg0>=FBUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
                 tcb->errno = EINVAL;
                 return 0;
@@ -120,14 +109,12 @@ kprintf("mapfile arg0 %x arg1 %s: ",arg0,arg1);
             thread_map(identity_mapping);
             data = fs_locate(fn);
             thread_map(tmp);
-kprintf("data %x ",data);
             if(data==NULL) {
                 tcb->errno = ENOENT;
                 return 0;
             }
             /* data inlined in inode? */
-            if(data!=NULL && ((phy_t)data & (__PAGESIZE-1))!=0) {
-kprintf("inline ");
+            if(data != NULL && ((phy_t)data & (__PAGESIZE-1))!=0) {
                 /* copy to a new empty page */
                 tmp = (phy_t)pmm_alloc();
                 tcb->allocmem++;
@@ -137,9 +124,8 @@ kprintf("inline ");
                 kmemcpy((char*)&tmp2map, &tmpmap + ((phy_t)data & (__PAGESIZE-1)), fs_size);
                 data = (void*)tmp;
             }
-kprintf("map data %x %d\n",data,fs_size);
             /* map */
-            vmm_mapbss(tcb,(virt_t)arg0, (phy_t)data, fs_size, PG_USER_RO);
+            vmm_mapbss(tcb, (virt_t)arg0, (phy_t)data, fs_size, PG_USER_RO);
             /* return loaded file size */
             return fs_size;
 

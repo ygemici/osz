@@ -76,10 +76,8 @@ typedef unsigned char *valist;
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
 extern char _binary_logo_tga_start;
-extern uint64_t isr_entropy[4];
-extern uint64_t isr_ticks[8];
 extern uint64_t isr_currfps;
-extern uint64_t isr_lastfps;
+extern sysinfo_t sysinfostruc;
 #if DEBUG
 extern char *syslog_buf;
 extern uint8_t dbg_indump;
@@ -136,7 +134,7 @@ void kprintf_init()
                     (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
                     (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
                 );
-                isr_entropy[((uint64_t)(data+data[0]))%4] ^= (uint64_t)data;
+                sysinfostruc.srand[((uint64_t)(data+data[0]))%4] ^= (uint64_t)data;
             }
             data++;
             line+=4;
@@ -154,7 +152,7 @@ void kprintf_ready()
     kprintf(", free %d.%d%%\n",
         pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
 #if DEBUG
-    if(debug&DBG_LOG)
+    if(sysinfostruc.debug&DBG_LOG)
         kprintf(syslog_buf);
 #endif
     //disable scroll pause
@@ -210,8 +208,8 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
-    isr_entropy[offs%4] += (uint64_t)c;
-    isr_entropy[(offs+1)%4] -= (uint64_t)glyph;
+    sysinfostruc.srand[offs%4] += (uint64_t)c;
+    sysinfostruc.srand[(offs+1)%4] -= (uint64_t)glyph;
 #if DEBUG
     dbg_putchar(c);
 #endif
@@ -282,8 +280,8 @@ void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
-    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
-    kprintf(" %d fps, ts %d ticks %d",isr_lastfps,isr_ticks[TICKS_TS],isr_ticks[TICKS_LO]);
+    fg=sysinfostruc.fps>=fps+fps/2?0x108010:(sysinfostruc.fps>=fps?0x101080:0x801010);
+    kprintf(" %d fps, ts %d ticks %d",sysinfostruc.fps,sysinfostruc.ticks[TICKS_TS],sysinfostruc.ticks[TICKS_LO]);
 #if DEBUG
     dbg_putchar(13);
     dbg_putchar(10);

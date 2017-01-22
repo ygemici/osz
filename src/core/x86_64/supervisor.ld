@@ -57,6 +57,8 @@ SECTIONS
     /* CPU Control Block. We need static address for that */
     ccb = .;
     . += 4096;
+    sysinfostruc = .;
+    . += 4096;
     /* physical memory manager free memory entries */
     pmm_entries = .;
 

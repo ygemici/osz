@@ -38,8 +38,6 @@
 .global isr_alarm
 .global isr_timer
 
-.extern isr_ticks
-.extern isr_entropy
 .extern alarmstep
 .extern alarmstepmax
 .extern sched_get_tcb
@@ -88,9 +86,11 @@ isr_loadcontext:
 
 /* shuffle bits of random seed */
 isr_gainentropy:
-    /* isr_entropy[isr_ticks[0]&3] ^=
-       (isr_entropy[(isr_ticks[0]+1)&3])<<(isr_ticks&7) */
-    movq    isr_ticks, %rax
+    pushq   %rdi
+    pushq   %rsi
+    movq    $sysinfostruc, %rdi
+    addq    $sysinfo_srand0, %rdi
+    movq    %rdi, %rax
     movq    %rax, %rdx
     incq    %rdx
     movq    %rdx, %rcx
@@ -98,12 +98,19 @@ isr_gainentropy:
     shlq    $3, %rdx
     andq    $3, %rax
     shlq    $3, %rax
-    addq    $isr_entropy, %rax
-    addq    $isr_entropy, %rdx
+    addq    %rdi, %rax
+    addq    %rdi, %rdx
     andb    $0x3f, %cl
     rolq    %cl, (%rax)
-    movq    (%rax), %rax
-    xorq    %rax, (%rdx)
+    pushq   %rdx
+    movq    (%rax), %rsi
+    xorq    %rsi, (%rdx)
+    movq    $4*8, %rsi
+    callq   MurmurHash64A
+    popq    %rdi
+    stosq
+    popq    %rsi
+    popq    %rdi
     ret
 
 /* syscall dispatcher, platform dependent wrapper */
@@ -166,7 +173,7 @@ isr_syscall0:
 3:  call    isr_syscall
     jmp     9f
 4:  call    msg_sends
-    jmp     8f
+    jmp     9f
 
     /* 'call' */
 1:  cmpl    $0x6c6c6163, %eax
@@ -219,38 +226,44 @@ isr_syscall0:
     sysretq
 
 isr_timer:
-    /* uint128_t isr_ticks[TICKS_LO]++ */
-    addq    $1, isr_ticks+16
-    adcq    $0, isr_ticks+24
+    /* uint128_t sysinfostruc.ticks[TICKS_LO]++ */
+    movq    $sysinfostruc, %rbx
+    addq    $sysinfo_ticks, %rbx
+    addq    $1, 16(%rbx)
+    adcq    $0, 24(%rbx)
 
-    /* isr_ticks[TICKS_NTS] += alarmstep; */
+    /* sysinfostruc.ticks[TICKS_NTS] += alarmstep; */
     movq    alarmstep, %rax
-    addq    %rax, isr_ticks + 8
+    addq    %rax, 8(%rbx)
 
-    /* isr_ticks[TICKS_SEC]--; */
-    decq    isr_ticks + 32
-    /* a sec passed, isr_ticks[TICKS_SEC]==0? */
+    /* sysinfostruc.ticks[TICKS_SEC]--; */
+    decq    32(%rbx)
+    /* a sec passed, sysinfostruc.ticks[TICKS_SEC]==0? */
     xorq    %rax, %rax
-    cmpq    %rax, isr_ticks + 32
+    cmpq    %rax, 32(%rbx)
     jnz     1f
-    /* isr_ticks[TICKS_TS]++; isr_ticks[TICKS_NTS]=0; */
-    incq    isr_ticks
-    movq    %rax, isr_ticks + 8
-    /* isr_ticks[TICKS_SEC] = freq; */
+    /* sysinfostruc.ticks[TICKS_TS]++; sysinfostruc.ticks[TICKS_NTS]=0; */
+    incq    (%rbx)
+    movq    %rax, 8(%rbx)
+    /* sysinfostruc.ticks[TICKS_SEC] = freq; */
     movq    freq, %rax
-    movq    %rax, isr_ticks + 32
-    /* isr_ticks[TICKS_QUANTUM] = quantumdiv; */
+    movq    %rax, 32(%rbx)
+    /* sysinfostruc.ticks[TICKS_QUANTUM] = quantumdiv; */
     movq    quantumdiv, %rax
-    movq    %rax, isr_ticks + 40
-    /* isr_lastfps = isr_currfps */
+    movq    %rax, 40(%rbx)
+    /* sysinfostruc.fps = isr_currfps */
     movq    isr_currfps, %rax
-    movq    %rax, isr_lastfps
+    movq    $sysinfostruc, %rbx
+    addq    $sysinfo_fps, %rbx
+    movq    %rax, (%rbx)
     xorq    %rax, %rax
     movq    %rax, isr_currfps
 #if DEBUG
     call    kprintf_putfps
 #endif
 1:
+    movq    $sysinfostruc, %rbx
+    addq    $sysinfo_ticks, %rbx
     /* check timer queue's head and awake thread if time passed */
     /* ccb.hd_timerq != 0? */
     movq    ccb + 0x6A, %rax
@@ -258,13 +271,13 @@ isr_timer:
     jz      1f
     /* has a pid, it's tcb is mapped at tmpalarm then */
     movq    $tmpalarm, %rdi
-    /* tcb->alarmsec <= isr_ticks[TICKS_TS]? */
+    /* tcb->alarmsec <= sysinfostruc.ticks[TICKS_TS]? */
     movq    728(%rdi), %rax
-    cmpq    isr_ticks, %rax
+    cmpq    (%rbx), %rax
     jb      1f
-    /* tcb->alarmns <= isr_ticks[TICKS_NTS]? */
+    /* tcb->alarmns <= sysinfostruc.ticks[TICKS_NTS]? */
     movq    736(%rdi), %rax
-    cmpq    isr_ticks + 8, %rax
+    cmpq    8(%rbx), %rax
     jb      1f
     movq    $tmpalarm, %rdi
     /* isr_next = sched_awake(tcb); */
@@ -280,32 +293,36 @@ isr_timer:
     xorq    %rdx, %rdx
     movw    $PG_CORE_NOCACHE, %dx
     call    kmap
+    movq    $sysinfostruc, %rbx
+    addq    $sysinfo_ticks, %rbx
 1:
-    /* isr_ticks[TICKS_QUANTUM]--; */
-    decq    isr_ticks + 40
-    cmpq    $0, isr_ticks + 40
+    /* sysinfostruc.ticks[TICKS_QUANTUM]--; */
+    decq    40(%rbx)
+    cmpq    $0, 40(%rbx)
     jnz     2f
-    /* isr_ticks[TICKS_QALL]++; */
-    incq    isr_ticks + 56
-    /* isr_ticks[TICKS_QUANTUM] = quantumdiv; */
+    /* sysinfostruc.ticks[TICKS_QALL]++; */
+    incq    56(%rbx)
+    /* sysinfostruc.ticks[TICKS_QUANTUM] = quantumdiv; */
     movq    quantumdiv, %rax
-    movq    %rax, isr_ticks + 40
+    movq    %rax, 40(%rbx)
     /* if(tcb->rip < 0) tcb->syscnt++; else tcb->billcnt++; */
-    movq    $656, %rbx
+    movq    $656, %rcx
     movb    __PAGESIZE-33, %al
     cmpb    $0xFF, %al
     jne     1f
-    addq    $8, %rbx
-1:  incq    (%rbx)
+    addq    $8, %rcx
+1:  incq    (%rcx)
     /* switch to a new thread if any */
     call    sched_pick
+    movq    $sysinfostruc, %rbx
+    addq    $sysinfo_ticks, %rbx
 2:
-    /* isr_ticks[TICKS_FPS]--; */
-    decq    isr_ticks + 48
-    cmpq    $0, isr_ticks + 48
+    /* sysinfostruc.ticks[TICKS_FPS]--; */
+    decq    48(%rbx)
+    cmpq    $0, 48(%rbx)
     jnz     1f
     mov     fpsdiv, %rax
-    movq    %rax, isr_ticks+48
+    movq    %rax, 48(%rbx)
     /* build and send a mem2vid message */
     /* switch to system task */
     movq    sys_mapping, %rax

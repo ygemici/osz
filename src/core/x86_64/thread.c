@@ -25,6 +25,8 @@
  * @brief Thread functions platform dependent code
  */
 
+extern sysinfo_t sysinfostruc;
+
 phy_t __attribute__ ((section (".data"))) sys_mapping;
 phy_t __attribute__ ((section (".data"))) core_mapping;
 phy_t __attribute__ ((section (".data"))) identity_mapping;
@@ -109,7 +111,7 @@ pid_t thread_new(char *cmdline)
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    if(debug&DBG_THREADS||debug==DBG_ELF)
+    if(sysinfostruc.debug&DBG_THREADS||sysinfostruc.debug==DBG_ELF)
         kprintf("Thread %x %s\n",self/__PAGESIZE,cmdline);
 #endif
     return self/__PAGESIZE;

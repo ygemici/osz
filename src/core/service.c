@@ -37,10 +37,9 @@ extern uint64_t *drivers;
 extern uint64_t *drvptr;
 extern phy_t screen[2];
 extern phy_t pdpe;
-extern uint64_t isr_entropy[4];
 extern uint64_t *syslog_buf;
 extern uint64_t freq;
-extern sysinfo_t *sysinfostruc;
+extern sysinfo_t sysinfostruc;
 extern uint8_t sys_fault;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
@@ -103,11 +102,11 @@ void *service_loadelf(char *fn)
         kpanic("out of memory, text segment too big: %s", fn);
     }
     ret = i;
-    isr_entropy[(i+1)%4] ^= (uint64_t)elf;
-    isr_entropy[(i+3)%4] ^= (uint64_t)elf;
+    sysinfostruc.srand[(i+1)%4] ^= (uint64_t)elf;
+    sysinfostruc.srand[(i+3)%4] ^= (uint64_t)elf;
 
 #if DEBUG
-    if(debug&DBG_ELF)
+    if(sysinfostruc.debug&DBG_ELF)
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
 #endif
     // valid elf for this platform?
@@ -163,7 +162,7 @@ void *service_loadelf(char *fn)
 __inline__ void service_loadso(char *fn)
 {
 #if DEBUG
-    if(debug&DBG_ELF)
+    if(sysinfostruc.debug&DBG_ELF)
         kprintf("  ");
 #endif
     service_loadelf(fn);
@@ -443,7 +442,7 @@ void service_installirq(uint8_t irq, uint64_t offs)
         // find next free slot
         while(irq_routing_table[k]!=0&&k<last) k++;
 #if DEBUG
-        if(debug&DBG_IRQ)
+        if(sysinfostruc.debug&DBG_IRQ)
             kprintf("  IRQ %3d: irt[%4d]=%4x %s\n",
                 irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
 #endif
@@ -495,7 +494,7 @@ bool_t service_rtlink()
                 d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr->p_offset);
                 /* dynamic table */
 #if DEBUG
-                if(debug&DBG_RTIMPORT)
+                if(sysinfostruc.debug&DBG_RTIMPORT)
                     kprintf("  Import %x (%d bytes):\n",
                         phdr->p_offset + j*__PAGESIZE, (int)phdr->p_memsz
                     );
@@ -555,7 +554,7 @@ bool_t service_rtlink()
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(debug&DBG_RTIMPORT)
+                if(sysinfostruc.debug&DBG_RTIMPORT)
                     kprintf("    %x D %s +%x?\n", rel->offs,
                         strtable + s->st_name, relad->r_addend
                     );
@@ -577,7 +576,7 @@ bool_t service_rtlink()
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(debug&DBG_RTIMPORT)
+                if(sysinfostruc.debug&DBG_RTIMPORT)
                     kprintf("    %x T %s +%x?\n", rel->offs,
                         strtable + s->st_name, rela->r_addend
                     );
@@ -589,7 +588,7 @@ bool_t service_rtlink()
         }
     }
 #if DEBUG
-    if((debug&DBG_IRQ) && irq_routing_table!=NULL)
+    if((sysinfostruc.debug&DBG_IRQ) && irq_routing_table!=NULL)
         kprintf("\nIRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
 #endif
     if(irq_routing_table!=NULL)
@@ -637,7 +636,7 @@ bool_t service_rtlink()
         }
         /* dynamic symbol table */
 #if DEBUG
-        if(debug&DBG_RTEXPORT)
+        if(sysinfostruc.debug&DBG_RTEXPORT)
             kprintf("  Export %x (%d bytes):\n",
                 sym, strtable-(char*)sym
             );
@@ -650,7 +649,7 @@ bool_t service_rtlink()
             if(s->st_value) {
                 uint64_t offs = (uint64_t)s->st_value + j*__PAGESIZE+TEXT_ADDRESS;
 #if DEBUG
-                if(debug&DBG_RTEXPORT)
+                if(sysinfostruc.debug&DBG_RTEXPORT)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_routing_table
@@ -673,7 +672,7 @@ bool_t service_rtlink()
                     }
                     if(!kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG
-                        if(debug&DBG_IRQ)
+                        if(sysinfostruc.debug&DBG_IRQ)
                             kprintf("  IRQ m2v: irt[%4d]=%4x %s\n",
                                 (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
 #endif
@@ -692,7 +691,7 @@ bool_t service_rtlink()
                     OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
                     if(r->offs != 0 && !kstrcmp(r->sym, strtable + s->st_name)) {
 #if DEBUG
-                        if(debug&DBG_RTEXPORT)
+                        if(sysinfostruc.debug&DBG_RTEXPORT)
                             kprintf(" %x", r->offs);
 #endif
                         // save virtual address
@@ -702,7 +701,7 @@ bool_t service_rtlink()
                     }
                 }
 #if DEBUG
-                if(debug&DBG_RTEXPORT)
+                if(sysinfostruc.debug&DBG_RTEXPORT)
                     kprintf("\n");
 #endif
             }
@@ -864,9 +863,9 @@ void ui_init()
     if(service_rtlink()) {
         // allocate and map screen buffer B
         int i;
-        phy_t bss = sysinfostruc->screen_ptr;
+        phy_t bss = sysinfostruc.screen_ptr;
         i = ((bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);
+            __SLOTSIZE - 1) / __SLOTSIZE) * (sysinfostruc.display>=DSP_STEREO_MONO?2:1);
         while(i-->0) {
             vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             if(!screen[1]) {

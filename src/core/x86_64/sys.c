@@ -31,15 +31,13 @@
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
+extern sysinfo_t sysinfostruc;
 extern uint32_t fg;
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern uint64_t pt;
 extern OSZ_rela *relas;
 extern phy_t pdpe;
-extern uint64_t isr_ticks[];
-extern uint64_t isr_lastfps;
-extern uint64_t isr_currfps;
 extern uint64_t freq;
 extern uint64_t hpet_addr;
 extern uint64_t lapic_addr;
@@ -63,7 +61,6 @@ char __attribute__ ((section (".data"))) *drvs;
 char __attribute__ ((section (".data"))) *drvs_end;
 uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
-sysinfo_t __attribute__ ((section (".data"))) *sysinfostruc;
 char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
 
@@ -212,7 +209,7 @@ void sys_init()
 //    for(i=0;paging[i]!=0;i++);
     paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
 #if DEBUG
-    if(debug&DBG_ELF)
+    if(sysinfostruc.debug&DBG_ELF)
         kprintf("  map .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
 #endif
 
@@ -296,37 +293,32 @@ void sys_init()
     if(service_rtlink()) {
         /*** Static fields in System Info Block (returned by a syscall) ***/
         // calculate addresses for screen buffers
-        sysinfostruc->screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
-        sysinfostruc->fb_ptr = sysinfostruc->screen_ptr +
+        sysinfostruc.screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
+        sysinfostruc.fb_ptr = sysinfostruc.screen_ptr +
             (((bootboot.fb_width * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE) *
-            __SLOTSIZE * (display>=DSP_STEREO_MONO?2:1));
-        sysinfostruc->fb_width = bootboot.fb_width;
-        sysinfostruc->fb_height = bootboot.fb_height;
-        sysinfostruc->fb_scanline = bootboot.fb_scanline;
-        sysinfostruc->quantum = quantum;
-        sysinfostruc->debug = debug;
-        sysinfostruc->display = display;
-        sysinfostruc->rescueshell = rescueshell;
-        sysinfostruc->nropenmax = nropenmax;
+            __SLOTSIZE * (sysinfostruc.display>=DSP_STEREO_MONO?2:1));
+        sysinfostruc.fb_width = bootboot.fb_width;
+        sysinfostruc.fb_height = bootboot.fb_height;
+        sysinfostruc.fb_scanline = bootboot.fb_scanline;
         //system tables, platform specific
-        sysinfostruc->systables[systable_acpi_ptr] = bootboot.acpi_ptr;
-        sysinfostruc->systables[systable_smbi_ptr] = bootboot.smbi_ptr;
-        sysinfostruc->systables[systable_efi_ptr]  = bootboot.efi_ptr;
-        sysinfostruc->systables[systable_mp_ptr]   = bootboot.mp_ptr;
-        sysinfostruc->systables[systable_apic_ptr] = lapic_addr;
-        sysinfostruc->systables[systable_hpet_ptr] = hpet_addr;
-        sysinfostruc->systables[systable_dsdt_ptr] = dsdt_addr;
+        sysinfostruc.systables[systable_acpi_ptr] = bootboot.acpi_ptr;
+        sysinfostruc.systables[systable_smbi_ptr] = bootboot.smbi_ptr;
+        sysinfostruc.systables[systable_efi_ptr]  = bootboot.efi_ptr;
+        sysinfostruc.systables[systable_mp_ptr]   = bootboot.mp_ptr;
+        sysinfostruc.systables[systable_apic_ptr] = lapic_addr;
+        sysinfostruc.systables[systable_hpet_ptr] = hpet_addr;
+        sysinfostruc.systables[systable_dsdt_ptr] = dsdt_addr;
 
         /*** Timer stuff ***/
         isr_tmrinit();
-        sysinfostruc->freq = freq;
+        sysinfostruc.freq = freq;
 
         /*** Double Screen stuff ***/
         // allocate and map screen buffer A
-        virt_t bss = sysinfostruc->screen_ptr;
+        virt_t bss = sysinfostruc.screen_ptr;
         phy_t fbp=(phy_t)bootboot.fb_ptr;
         i = ((bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);
+            __SLOTSIZE - 1) / __SLOTSIZE) * (sysinfostruc.display>=DSP_STEREO_MONO?2:1);
         while(i-->0) {
             vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             // save it for SYS_swapbuf
@@ -336,7 +328,7 @@ void sys_init()
             bss += __SLOTSIZE;
         }
         // map framebuffer
-        bss = sysinfostruc->fb_ptr;
+        bss = sysinfostruc.fb_ptr;
         i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
         while(i-->0) {
             vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);

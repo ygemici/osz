@@ -47,6 +47,8 @@
 #include <sys/sysinfo.h>
 #include "env.h"
 
+extern sysinfo_t sysinfostruc;
+
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************
@@ -103,7 +105,7 @@ void main()
     /* step 4: stand up and prosper. */
     // load "init" or "sh" process
 /*
-    if(rescueshell)
+    if(sysinfostruc.rescueshell)
         service_init(SRV_USRFIRST, "bin/sh");
     else
         service_init(SRV_init, "sbin/init");

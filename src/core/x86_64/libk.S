@@ -362,6 +362,7 @@ kmap_getpte:
    and I didn't like the code gcc generated, that's why it's
    asm, otherwise this routine is not platform specific.
     IN: rdi: mq, rsi: event, rdx: arg0, rcx: arg1, r8: arg2
+    OUT: true on success
 */
 ksend:
     /* check if message queue is full */
@@ -409,7 +410,9 @@ ksend:
     movq    %r9, 40(%rax)
     movq    32(%rbp), %r9
     movq    %r9, 48(%rax)
-    movq    isr_ticks, %r9
+    movq    $sysinfostruc, %r9
+    addq    $sysinfo_ticks, %r9
+    movq    (%r9), %r9
     movq    %r9, 56(%rax)
     /* mqhdr->mq_start++ */
     incq    (%rdi)

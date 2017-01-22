@@ -55,16 +55,6 @@
 #define ISR_CTRL CTRL_PIC  //should be x2APIC, but kvm does not support it :-(
 #endif
 
-//isr_ticks indeces for counters
-#define TICKS_TS 0      //+00 timestamp sec counter
-#define TICKS_NTS 1     //+08 timestamp nanosec fraction
-#define TICKS_LO 2      //+16 overall ticks (jiffies, 128 bit)
-#define TICKS_HI 3      //+24
-#define TICKS_SEC 4     //+32 ticks / sec counter
-#define TICKS_QUANTUM 5 //+40 ticks / quantum counter
-#define TICKS_FPS 6     //+48 ticks / fps counter
-#define TICKS_QALL 7    //+56 overall quantum ticks
-
 // PIC, PIT constants
 #define PIC_MASTER		0x20
 #define PIC_MASTER_DATA	0x21

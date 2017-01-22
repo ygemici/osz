@@ -40,21 +40,17 @@ extern uint64_t sys_getts(char *p);
 
 extern phy_t core_mapping;
 extern uint64_t ioapic_addr;
+extern sysinfo_t sysinfostruc;
 
-/* counters and timestamps */
-uint64_t __attribute__ ((section (".data"))) isr_ticks[8];
-/* 256 bit random seed */
-uint64_t __attribute__ ((section (".data"))) isr_entropy[4];
-/* current fps counter and last sec value */
+/* current fps counter */
 uint64_t __attribute__ ((section (".data"))) isr_currfps;
-uint64_t __attribute__ ((section (".data"))) isr_lastfps;
 /* alarm queue stuff */
 uint64_t __attribute__ ((section (".data"))) freq;
 uint64_t __attribute__ ((section (".data"))) fpsdiv;
 uint64_t __attribute__ ((section (".data"))) quantumdiv;
 uint64_t __attribute__ ((section (".data"))) alarmstep;
 /* next task to schedule */
-extern uint64_t isr_next;
+uint64_t __attribute__ ((section (".data"))) isr_next;
 
 /* Initialize interrupts */
 void isr_init()
@@ -72,10 +68,6 @@ void isr_init()
         idt[i*2+0] = IDT_GATE_LO(i==2||i==8?IDT_NMI:(i==1||i==3?IDT_DBG:IDT_EXC), ptr);
         idt[i*2+1] = IDT_GATE_HI(ptr);
         ptr+=ISR_EXCMAX;
-#if DEBUG
-        if(i==13)
-            ptr+=ISR_EXCMAX;
-#endif
     }
     // 32-255 irq handlers
     ptr = &isr_irq0;
@@ -96,15 +88,15 @@ void isr_tmrinit()
             kpanic("unable to load timer driver");
         if(freq<1000)       freq=1000;      //min 1000 interrupts per sec
         if(freq>1000000000) freq=1000000000;//max 1GHz
-        if(quantum<10)      quantum=10;     //min 10 task switch per sec
-        if(quantum>freq/4)  quantum=freq/4; //max 1 switch per 4 interrupts
+        if(sysinfostruc.quantum<10)      sysinfostruc.quantum=10;     //min 10 task switch per sec
+        if(sysinfostruc.quantum>freq/4)  sysinfostruc.quantum=freq/4; //max 1 switch per 4 interrupts
         if(fps<5)           fps=5;          //min 5 frames per sec
         if(fps>freq/16)     fps=freq/16;    //max 1 mem2vid per 16 interrupts
         //calculate stepping in nanosec
         alarmstep = 1000000000/freq;
         //failsafes
         if(alarmstep<1)     alarmstep=1;    //unit to add to nanosec per interrupt
-        quantumdiv = freq/quantum;          //number of ints to a task switch
+        quantumdiv = freq/sysinfostruc.quantum;          //number of ints to a task switch
         fpsdiv = freq/fps;                  //number of ints to a mem2vid
         if(quantumdiv*4 > fpsdiv)
             fpsdiv = quantumdiv/4;
@@ -116,13 +108,13 @@ void isr_tmrinit()
             quantumdiv, fpsdiv
         );
         /* use bootboot.datetime and bootboot.timezone to calculate */
-        isr_ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
-        isr_ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
-        isr_ticks[TICKS_HI] = isr_ticks[TICKS_LO] = 0;
+        sysinfostruc.ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
+        sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
+        sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
         // set up system counters
-        isr_ticks[TICKS_SEC] = freq;
-        isr_ticks[TICKS_QUANTUM] = quantum;
-        isr_ticks[TICKS_FPS] = fpsdiv;
+        sysinfostruc.ticks[TICKS_SEC] = freq;
+        sysinfostruc.ticks[TICKS_QUANTUM] = sysinfostruc.quantum;
+        sysinfostruc.ticks[TICKS_FPS] = fpsdiv;
 }
 
 /* fallback exception handler */

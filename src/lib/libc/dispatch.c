@@ -28,6 +28,7 @@
 #include <osZ.h>
 #include <elf.h>
 #include <sysexits.h>
+#include <tcb.h>
 
 extern uint64_t mq_dispatchcall(
     uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5,
@@ -40,12 +41,14 @@ public uint64_t mq_dispatch()
     Elf64_Phdr *phdr = (Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
     Elf64_Sym *sym = NULL, *sym_end = NULL;
     uint64_t i, syment = 0;
-    uint16_t maxfunc;
+    uint16_t func, maxfunc;
+    msg_t *msg;
+    Elf64_Sym *symfunc;
 
     /* Program Header */
-    for(i = 0; i < ehdr->e_phnum; i++){
+    for(i = 0; i < ehdr->e_phnum; i++) {
         /* we only need the Dynamic header */
-        if(phdr->p_type==PT_DYNAMIC) {
+        if(phdr->p_type == PT_DYNAMIC) {
             /* Dynamic header */
             Elf64_Dyn *d;
             d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
@@ -72,7 +75,7 @@ public uint64_t mq_dispatch()
         syment = sizeof(Elf64_Sym);
     maxfunc = ((virt_t)sym_end - (virt_t)sym)/syment;
     /* checks */
-    if(sym==NULL || sym_end==NULL || sym_end<=sym || syment<8 || maxfunc>SHRT_MAX) {
+    if(sym == NULL || sym_end == NULL || sym_end <= sym || syment < 8 || maxfunc > SHRT_MAX) {
         seterr(ENOEXEC);
         return EX_SOFTWARE;
     }
@@ -80,9 +83,9 @@ public uint64_t mq_dispatch()
     /* endless loop */
     while(1) {
         /* get work */
-        msg_t *msg = mq_recv();
-        uint16_t func = EVT_FUNC(msg->evt);
-        Elf64_Sym *symfunc = (Elf64_Sym*)((virt_t)sym + (virt_t)(func * syment));
+        msg = mq_recv();
+        func = EVT_FUNC(msg->evt);
+        symfunc = (Elf64_Sym*)((virt_t)sym + (virt_t)(func * syment));
         /* is it a valid call? */
         if(func > 0 && func < maxfunc &&                       // within boundaries?
            ELF64_ST_BIND(symfunc->st_info) == STB_GLOBAL &&    // is it a global function?
@@ -100,7 +103,7 @@ public uint64_t mq_dispatch()
         }
         /* send positive or negative acknowledgement back to the caller */
         mq_send(msg->evt & ~USHRT_MAX, errno == SUCCESS ? SYS_ack : SYS_nack,
-            i/*return value*/, errno, 0, 0, 0, 0);
+            i/*return value*/, errno, func, 0, 0, 0);
     }
     /* should never reach this */
     return EX_OK;

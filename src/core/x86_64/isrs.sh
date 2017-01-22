@@ -123,9 +123,7 @@ cat >isrs.S <<EOF
 .global isr_irq0
 .global isr_enableirq
 .global isr_disableirq
-.global isr_next
 
-.extern isr_ticks
 .extern isr_gainentropy
 .extern isr_savecontext
 .extern isr_loadcontext
@@ -143,8 +141,6 @@ idt64:
     .word	(32+$numirq)*16-1
     .quad	0
     .align	8
-isr_next:
-    .quad	0
 EOF
 if [ "$ctrl" == "CTRL_PIC" ]; then
 	cat >>isrs.S <<-EOF
@@ -496,31 +492,6 @@ do
 	else
 		CORECHK=""
 	fi
-	if [ $i -eq 13 -a "$DEBUG" == "1" ]; then
-		read -r -d '' SIMIO <<-EOF
-		    /* simulate serial in / out for dbg_putchar() */
-		    cmpq    \$TEXT_ADDRESS, (%rsp)
-		    jb      2f
-		    cmpw    \$0x3f8, %dx
-		    jb      2f
-		    cmpw    \$0x3ff, %dx
-		    ja      2f
-		    movq    (%rsp), %rax
-		    cmpb    \$0xEC, (%rax)
-		    jne     1f
-		    inb     %dx, %al
-		    incq    (%rsp)
-		    iretq
-		1:  cmpb    \$0xEE, (%rax)
-		    jne     2f
-		    outb    %al, %dx
-		    incq    (%rsp)
-		    iretq
-		2:
-		EOF
-	else
-		SIMIO=""
-	fi
 	ist=1;
 	if [ $i -eq 1 -o $i -eq 3 ]; then
 		ist=3;
@@ -533,7 +504,6 @@ do
 	    cli
 	    $EXCERR
 	    $CORECHK
-	    $SIMIO
 	    $DBG
 	    callq	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist$ist

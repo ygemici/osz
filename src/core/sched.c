@@ -25,11 +25,10 @@
  * @brief Thread scheduler
  */
 
-#include <sys/sysinfo.h>
 #include "env.h"
 
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
-extern uint64_t isr_ticks[8];   //ticks counter (128 bit)
+extern sysinfo_t sysinfostruc;  //sysinfo structure
 extern uint64_t isr_next;       //next thread to map when isr finishes
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
@@ -53,7 +52,7 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
 void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 {
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_alarm(%x, %d.%d)\n", tcb->mypid, sec, nsec);
 #endif
     pid_t pid = tcb->mypid, next=ccb.hd_timerq, prev=0;
@@ -90,7 +89,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 void sched_sleep(OSZ_tcb *tcb)
 {
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_sleep(%x)\n", tcb->mypid);
 #endif
     /* TODO: ccb.hd_blocked -> swap */
@@ -102,7 +101,7 @@ void sched_awake(OSZ_tcb *tcb)
 {
     pid_t pid = tcb->mypid, next = tcb->next, prev = tcb->prev;
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_awake(%x)\n", tcb->mypid);
 #endif
     tcb->state = tcb_state_running;
@@ -112,7 +111,7 @@ void sched_awake(OSZ_tcb *tcb)
     } else
     if(tcb->state == tcb_state_blocked) {
         /* ccb.hd_blocked -> ccb.hd_active */
-        tcb->blkcnt += tcb->blktime - isr_ticks[TICKS_QALL];
+        tcb->blkcnt += tcb->blktime - sysinfostruc.ticks[TICKS_QALL];
         sched_add(tcb);
         if(ccb.hd_blocked == tcb->mypid) {
             ccb.hd_blocked = next;
@@ -134,7 +133,7 @@ void sched_add(OSZ_tcb *tcb)
 {
     pid_t pid = tcb->mypid;
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_add(%x) pri %d\n", pid, tcb->priority);
 #endif
     tcb->prev = 0;
@@ -152,7 +151,7 @@ void sched_remove(OSZ_tcb *tcb)
 {
     pid_t next = tcb->next, prev = tcb->prev;
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_remove(%x) pri %d\n", tcb->mypid, tcb->priority);
 #endif
     if(ccb.hd_active[tcb->priority] == tcb->mypid) {
@@ -172,14 +171,14 @@ void sched_remove(OSZ_tcb *tcb)
 void sched_block(OSZ_tcb *tcb)
 {
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_block(%x)\n", tcb);
 #endif
     /* never block the system task */
     if(tcb->mypid == services[-SRV_SYS] ||
        tcb->memroot == sys_mapping)
         return;
-    tcb->blktime = isr_ticks[TICKS_QALL];
+    tcb->blktime = sysinfostruc.ticks[TICKS_QALL];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
     pid_t pid = tcb->mypid;
@@ -237,7 +236,7 @@ phy_t sched_pick()
 found:
     tcb = sched_get_tcb(ccb.cr_active[i]);
 #if DEBUG
-    if(debug&DBG_SCHED)
+    if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_pick()=%x  \n", tcb->mypid);
 #endif
     ccb.cr_active[i] = tcb->next;

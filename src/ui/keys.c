@@ -31,19 +31,29 @@
 #define KEYFLAG_CTRL  (1<<1)
 #define KEYFLAG_ALT   (1<<2)
 #define KEYFLAG_SUPER (1<<3)
+
 // index to keymap
 uint64_t modmap[16] = {0,
+    // single modifiers
     1/*shft*/, 2/*ctrl*/, 4/*alt*/, 8/*super*/,
+    // pressed with Shift
     3/*shft+ctrl*/, 5/*shft+alt*/, 9/*shft+super*/,
+    // pressed with Control
     6/*ctrl+alt*/, 10/*ctrl+super*/,
+    // the last two key combination
     12/*alt+super*/,
+    // three key combinations
     7/*shft+ctrl+alt*/,11/*shft+ctrl+super*/,13/*shft+alt+super*/,14/*ctrl+alt+super*/,
+    // all modifier pressed
     15/*shft+ctrl+alt+super*/
 };
+
 // default or alternate map
 uint8_t altmap = 0;
+
 // current modifier status
 uint8_t keyflags = 0;
+
 // a three dimensional array of keycodes
 // 0: indexed by altmap (scalar)
 // 1: scancode
@@ -51,6 +61,7 @@ uint8_t keyflags = 0;
 keymap_t keymap[2*512*16];
 
 /* parse an UTF-8 text/plain keymap resource file into binary format */
+/* If API changed to support more keymaps, this should be uint8_t alt */
 private void keymap_parse(bool_t alt, char *keyrc, size_t len)
 {
     // local buffer pointers
@@ -108,17 +119,20 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
 /* receive a scancode or a pretranslated keycode */
 public void keypress(uint64_t scancode, keymap_t keycode)
 {
-    uint8_t k[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     uint64_t i = altmap*(512*16)+scancode*16;
+    uint64_t j = modmap[keyflags];
+    uint8_t k[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     // look up scancode
     if(scancode!=0) {
         // messages sent by keyboard comes with scancode
-        *((keymap_t*)&k) = keymap[i+modmap[keyflags]] ?
-            keymap[i+modmap[keyflags]] : keymap[i];
+        *((keymap_t*)&k) = keymap[i+j] ? keymap[i+j] : keymap[i];
     } else {
         // serial on the other hand transmits keycode and CSI multibytes
         *((keymap_t*)&k) = keycode;
     }
+#if DEBUG
+    dbg_printf("-------------keypress %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
+#endif
     // handle key modifiers
     if(k[0]=='L' || k[0]=='R') {
         if(k[1]=='S' && k[2]=='f' && k[3]=='t')
@@ -131,7 +145,9 @@ public void keypress(uint64_t scancode, keymap_t keycode)
             keyflags |= KEYFLAG_SUPER;
     }
 #if DEBUG
-    dbg_printf("-------------keypress %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
+    // handle break
+    if(k[0]=='^' && k[1]=='B' && k[2]=='r' && k[3]=='k')
+        breakpoint;
 #endif
 //asm("movl %0, %%eax;movq %1, %%rbx;xchg %%bx,%%bx;int $1"::"r"(*((uint32_t*)&k)),"r"(scancode):);
 }
@@ -144,12 +160,11 @@ public void keyrelease(uint64_t scancode, keymap_t keycode)
     // look up scancode
     if(scancode!=0) {
         // messages sent by keyboard comes with scancode
-        *((uint32_t*)&k) = keymap[i+j] ? keymap[i+j] : keymap[i];
+        *((keymap_t*)&k) = keymap[i+j] ? keymap[i+j] : keymap[i];
         // serial sends no release messages
     }
 #if DEBUG
     dbg_printf("------------keyrelease %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
-    dbg_printf("-------modifiers %x %d+%d\n", keyflags, i, j);
 #endif
     // handle key modifiers
     if(k[0]=='L' || k[0]=='R') {

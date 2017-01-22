@@ -33,23 +33,20 @@ uint64_t __attribute__ ((section (".data"))) nrmqmax;
 uint64_t __attribute__ ((section (".data"))) nrirqmax;
 uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
-uint64_t __attribute__ ((section (".data"))) nropenmax;
-uint64_t __attribute__ ((section (".data"))) debug;
-uint64_t __attribute__ ((section (".data"))) quantum;
 uint64_t __attribute__ ((section (".data"))) fps;
-uint64_t __attribute__ ((section (".data"))) display;
 uint64_t __attribute__ ((section (".data"))) keymap;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
+uint8_t __attribute__ ((section (".data"))) identity;
 
 /*** for overriding default or autodetected values ***/
+extern sysinfo_t sysinfostruc;
 extern uint64_t hpet_addr;
 extern uint64_t lapic_addr;
 extern uint64_t dsdt_addr;
 extern uint64_t ioapic_addr;
-extern uint64_t fpsdiv;
 
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
@@ -103,20 +100,24 @@ unsigned char *env_boolf(unsigned char *s, uint8_t *v)
 
 unsigned char *env_display(unsigned char *s)
 {
-    if(*s>='0' && *s<='9')
-        return env_dec(s, &display, 0, 3);
-    display = DSP_MONO_COLOR;
+    uint64_t tmp;
+    if(*s>='0' && *s<='9') {
+        s = env_dec(s, &tmp, 0, 3);
+        sysinfostruc.display = (uint8_t)tmp;
+        return s;
+    }
+    sysinfostruc.display = DSP_MONO_COLOR;
     // skip separators
     while(*s==' '||*s=='\t')
         s++;
-    if(s[0]=='m' && s[1]=='c')  display = DSP_MONO_COLOR;
-    if(s[0]=='M' && s[1]=='C')  display = DSP_MONO_COLOR;
-    if(s[0]=='s' && s[1]=='m')  display = DSP_STEREO_MONO;
-    if(s[0]=='S' && s[1]=='M')  display = DSP_STEREO_MONO;
-    if(s[0]=='a' && s[1]=='n')  display = DSP_STEREO_MONO;  //anaglyph
-    if(s[0]=='s' && s[1]=='c')  display = DSP_STEREO_COLOR;
-    if(s[0]=='S' && s[1]=='C')  display = DSP_STEREO_COLOR;
-    if(s[0]=='r' && s[1]=='e')  display = DSP_STEREO_COLOR; //real 3D
+    if(s[0]=='m' && s[1]=='c')  sysinfostruc.display = DSP_MONO_COLOR;
+    if(s[0]=='M' && s[1]=='C')  sysinfostruc.display = DSP_MONO_COLOR;
+    if(s[0]=='s' && s[1]=='m')  sysinfostruc.display = DSP_STEREO_MONO;
+    if(s[0]=='S' && s[1]=='M')  sysinfostruc.display = DSP_STEREO_MONO;
+    if(s[0]=='a' && s[1]=='n')  sysinfostruc.display = DSP_STEREO_MONO;  //anaglyph
+    if(s[0]=='s' && s[1]=='c')  sysinfostruc.display = DSP_STEREO_COLOR;
+    if(s[0]=='S' && s[1]=='C')  sysinfostruc.display = DSP_STEREO_COLOR;
+    if(s[0]=='r' && s[1]=='e')  sysinfostruc.display = DSP_STEREO_COLOR; //real 3D
     while(*s!=0 && *s!='\n')
         s++;
     return s;
@@ -125,9 +126,13 @@ unsigned char *env_display(unsigned char *s)
 #if DEBUG
 unsigned char *env_debug(unsigned char *s)
 {
-    if(*s>='0' && *s<='9')
-        return env_dec(s, &debug, 0, 0xFFFF);
-    debug = 0;
+    uint64_t tmp;
+    if(*s>='0' && *s<='9') {
+        s = env_dec(s, &tmp, 0, 0xFFFF);
+        sysinfostruc.debug = (uint16_t)tmp;
+        return s;
+    }
+    sysinfostruc.debug = 0;
     while(*s!=0 && *s!='\n') {
         // skip separators
         if(*s==' '||*s=='\t'||*s==',')
@@ -135,30 +140,30 @@ unsigned char *env_debug(unsigned char *s)
         // terminators
         if(((s[0]=='f'||s[0]=='F')&&(s[1]=='a'||s[1]=='A')) ||
            ((s[0]=='n'||s[0]=='N')&&(s[1]=='o'||s[1]=='O'))) {
-            debug = 0;
+            sysinfostruc.debug = 0;
             break;
         }
         // debug flags
-        if(s[0]=='m' && s[1]=='m')              debug |= DBG_MEMMAP;
-        if(s[0]=='M' && s[1]=='M')              debug |= DBG_MEMMAP;
-        if(s[0]=='t' && s[1]=='h')              debug |= DBG_THREADS;
-        if(s[0]=='T' && s[1]=='H')              debug |= DBG_THREADS;
-        if(s[0]=='e' && s[1]=='l')              debug |= DBG_ELF;
-        if(s[0]=='E' && s[1]=='L')              debug |= DBG_ELF;
-        if(s[0]=='r' && (s[1]=='i'||s[2]=='i')) debug |= DBG_RTIMPORT;
-        if(s[0]=='R' && (s[1]=='I'||s[2]=='I')) debug |= DBG_RTIMPORT;
-        if(s[0]=='r' && (s[1]=='e'||s[2]=='e')) debug |= DBG_RTEXPORT;
-        if(s[0]=='R' && (s[1]=='E'||s[2]=='E')) debug |= DBG_RTEXPORT;
-        if(s[0]=='i' && s[1]=='r')              debug |= DBG_IRQ;
-        if(s[0]=='I' && s[1]=='R')              debug |= DBG_IRQ;
-        if(s[0]=='d' && s[1]=='e')              debug |= DBG_DEVICES;
-        if(s[0]=='D' && s[1]=='E')              debug |= DBG_DEVICES;
-        if(s[0]=='s' && s[1]=='c')              debug |= DBG_SCHED;
-        if(s[0]=='S' && s[1]=='C')              debug |= DBG_SCHED;
-        if(s[0]=='m' && s[1]=='s')              debug |= DBG_MSG;
-        if(s[0]=='M' && s[1]=='S')              debug |= DBG_MSG;
-        if(s[0]=='l' && s[1]=='o')              debug |= DBG_LOG;
-        if(s[0]=='L' && s[1]=='O')              debug |= DBG_LOG;
+        if(s[0]=='m' && s[1]=='m')              sysinfostruc.debug |= DBG_MEMMAP;
+        if(s[0]=='M' && s[1]=='M')              sysinfostruc.debug |= DBG_MEMMAP;
+        if(s[0]=='t' && s[1]=='h')              sysinfostruc.debug |= DBG_THREADS;
+        if(s[0]=='T' && s[1]=='H')              sysinfostruc.debug |= DBG_THREADS;
+        if(s[0]=='e' && s[1]=='l')              sysinfostruc.debug |= DBG_ELF;
+        if(s[0]=='E' && s[1]=='L')              sysinfostruc.debug |= DBG_ELF;
+        if(s[0]=='r' && (s[1]=='i'||s[2]=='i')) sysinfostruc.debug |= DBG_RTIMPORT;
+        if(s[0]=='R' && (s[1]=='I'||s[2]=='I')) sysinfostruc.debug |= DBG_RTIMPORT;
+        if(s[0]=='r' && (s[1]=='e'||s[2]=='e')) sysinfostruc.debug |= DBG_RTEXPORT;
+        if(s[0]=='R' && (s[1]=='E'||s[2]=='E')) sysinfostruc.debug |= DBG_RTEXPORT;
+        if(s[0]=='i' && s[1]=='r')              sysinfostruc.debug |= DBG_IRQ;
+        if(s[0]=='I' && s[1]=='R')              sysinfostruc.debug |= DBG_IRQ;
+        if(s[0]=='d' && s[1]=='e')              sysinfostruc.debug |= DBG_DEVICES;
+        if(s[0]=='D' && s[1]=='E')              sysinfostruc.debug |= DBG_DEVICES;
+        if(s[0]=='s' && s[1]=='c')              sysinfostruc.debug |= DBG_SCHED;
+        if(s[0]=='S' && s[1]=='C')              sysinfostruc.debug |= DBG_SCHED;
+        if(s[0]=='m' && s[1]=='s')              sysinfostruc.debug |= DBG_MSG;
+        if(s[0]=='M' && s[1]=='S')              sysinfostruc.debug |= DBG_MSG;
+        if(s[0]=='l' && s[1]=='o')              sysinfostruc.debug |= DBG_LOG;
+        if(s[0]=='L' && s[1]=='O')              sysinfostruc.debug |= DBG_LOG;
         s++;
     }
     return s;
@@ -170,6 +175,7 @@ void env_init()
 {
     unsigned char *env = environment;
     unsigned char *env_end = environment+__PAGESIZE;
+    uint64_t tmp;
 
     // set up defaults
     networking = sound = true;
@@ -178,11 +184,11 @@ void env_init()
     nrirqmax = ISR_NUMHANDLER;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
-    nropenmax = 16;
-    quantum = 1024;
     fps = 10;
-    display = DSP_MONO_COLOR;
-    debug = DBG_NONE;
+    sysinfostruc.nropenmax = 16;
+    sysinfostruc.quantum = 1024;
+    sysinfostruc.display = DSP_MONO_COLOR;
+    sysinfostruc.debug = DBG_NONE;
     dsdt_addr = (uint64_t)fs_locate("etc/sys/dsdt");
     if(fs_size == 0)
         dsdt_addr = 0;
@@ -227,7 +233,8 @@ void env_init()
         // number of file descriptors per thread. With fopen, number is unlimited.
         if(!kmemcmp(env, "nropenmax=", 10)) {
             env += 10;
-            env = env_dec(env, &nropenmax, 4, 128);
+            env = env_dec(env, &tmp, 4, 128);
+            sysinfostruc.nropenmax = (uint8_t)tmp;
         } else
         // manually override HPET address
         if(!kmemcmp(env, "hpet=", 5)) {
@@ -260,7 +267,7 @@ void env_init()
         // rescue shell
         if(!kmemcmp(env, "rescueshell=", 12)) {
             env += 12;
-            env = env_boolt(env, &rescueshell);
+            env = env_boolt(env, &sysinfostruc.rescueshell);
         } else
         // run first time turn on's ask for identity task
         if(!kmemcmp(env, "identity=", 9)) {
@@ -271,13 +278,13 @@ void env_init()
         // to allocate CPU continously (1/quantum sec)
         if(!kmemcmp(env, "quantum=", 8)) {
             env += 8;
-            env = env_dec(env, &quantum, 100, 10000);
+            env = env_dec(env, &sysinfostruc.quantum, 100, 10000);
         } else
         // maximum frame rate per second
-        // suggested values 50-100
+        // suggested values 60-1000
         if(!kmemcmp(env, "fps=", 4)) {
             env += 4;
-            env = env_dec(env, &fps, 10, 200);
+            env = env_dec(env, &fps, 10, 10000);
         } else
         // display layout
         if(!kmemcmp(env, "display=", 8)) {

@@ -33,6 +33,7 @@
 #ifndef _AS
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/sysinfo.h>
 #include "../../loader/bootboot.h"
 #endif
 #include <syscall.h>

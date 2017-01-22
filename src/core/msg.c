@@ -30,7 +30,7 @@
 #include <sys/sysinfo.h>
 #include "env.h"
 
-extern sysinfo_t *sysinfostruc;
+extern sysinfo_t sysinfostruc;
 extern uint64_t nrservices;
 extern pid_t *services;
 extern pid_t isr_next;
@@ -94,7 +94,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     int bs = 0;
     void *p = (void *)(arg0 & ~(__PAGESIZE-1));
 #if DEBUG
-    if(debug&DBG_MSG) {
+    if(sysinfostruc.debug&DBG_MSG) {
         kprintf(" msg pid %x sending to pid %x (%d), event #%x",
             srctcb->mypid, thread, msghdr->mq_start, EVT_FUNC(event));
         if(event & MSG_PTRDATA)
@@ -112,13 +112,13 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         if(msghdr->mq_buffstart/__PAGESIZE + bs >= nrmqmax + 1 + msghdr->mq_buffsize)
             msghdr->mq_buffstart = (nrmqmax + 1)*__PAGESIZE;
         // core memory cannot be sent in range -512M..0
-        if(arg0!=(uint64_t)sysinfostruc &&
+        if(arg0!=(uint64_t)&sysinfostruc &&
             (int64_t)p < 0 && (uint64_t)p > FBUF_ADDRESS) {
             srctcb->errno = EACCES;
             return false;
         }
         // not mapping shared memory (not in the range -2^56..-512M).
-        if((int64_t)p > 0 || (uint64_t)p == (uint64_t)sysinfostruc) {
+        if((int64_t)p > 0 || (uint64_t)p == (uint64_t)&sysinfostruc) {
             // check size. Buffers over 1M must be sent in shared memory
             if(arg1 > (__SLOTSIZE/2)) {
                 srctcb->errno = EINVAL;
