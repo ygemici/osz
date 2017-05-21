@@ -164,7 +164,7 @@ extern void *kmap_init();
 extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
 /** temporarirly map a message queue at TMPQ_ADDRESS */
-extern void kmap_mq(phy_t tcbself);
+extern void kmap_mq(phy_t tcbmemroot);
 
 /** return a pointer to PTE for virtual address */
 extern uint64_t *kmap_getpte(virt_t virt);

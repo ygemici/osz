@@ -84,8 +84,8 @@ void *service_loadelf(char *fn)
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
     char *name = fn;
-    // if it's in core stack, we have to copy it to a permanent store
-    if(drvptr!=NULL && drvnames!=NULL && (uint64_t)fn > (uint64_t)&__bss_start) {
+    // copy filename to a permanent store
+    if(drvptr!=NULL && drvnames!=NULL) {
         name = drvnames;
         drvnames = kstrcpy(drvnames, fn);
     }

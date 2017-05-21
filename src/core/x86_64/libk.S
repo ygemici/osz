@@ -274,28 +274,35 @@ kmap_init:
     ret
 
 /* map a message queue temporairly
-   IN rdi: tcb->self */
+   IN rdi: tcb->memroot */
 kmap_mq:
-    pushq   %rdi
-    movb    $PG_CORE_NOCACHE, %dil
+    movq    %rdi, %rdx
+    movq    $MQ_ADDRESS, %rdi
+    callq   kmap_getpte2
+    movb    $PG_CORE_NOCACHE, %r12b
     movq    $tmpmqctrl, %rax
     addq    $__PAGESIZE-16, %rax
-    movq    %rdi, (%rax)
-    movq    $TMPQ_ADDRESS, %rax
+    movq    %r12, (%rax)
     movw    nrmqmax, %cx
+    movq    $MQ_ADDRESS / __PAGESIZE, %rax
+    addw    %ax, %cx
+    movq    $TMPQ_ADDRESS, %rax
 1:  invlpg  (%rax)
     addq    $__PAGESIZE, %rax
     decw    %cx
     jnz     1b
-    popq    %rsi
+/*
     movq    $tmp2map, %rdi
     movb    $PG_CORE_NOCACHE, %sil
     call    kmap
+*/
     ret
 
 /* IN rdi: virtual address
  * OUT rax: address of page entry in PT */
 kmap_getpte:
+    movq    %cr3, %rdx
+kmap_getpte2:
     /* we have tmpctrl, so we can map PTE */
     movq    kmap_tmp, %r10
     xorq    %r9, %r9
@@ -304,7 +311,6 @@ kmap_getpte:
     shrq    $12+9+9+9, %rax
     andl    $0x1FF, %eax
     shlq    $3, %rax
-    movq    %cr3, %rdx
     andw    $0xF000, %dx
     incw    %dx
     movq    %rdx, (%r10)
@@ -349,6 +355,7 @@ kmap_getpte:
     orq     %rdx, %rdx
     jz      1f
     incw    %dx
+    movq    %rdx, %r12
     movq    %rdx, (%r10)
     invlpg  tmpctrl
     addq    $tmpctrl, %rax

@@ -7,7 +7,10 @@ clrdd:
 	@rm bin/disk.dd 2>/dev/null || true
 
 todogen:
-	@grep -ni 'TODO:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >TODO.txt || true
+	@echo " --- Error fixes ---" >TODO.txt
+	@grep -ni 'FIXME:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >>TODO.txt || true
+	@echo " --- Features ---" >>TODO.txt
+	@grep -ni 'TODO:' `find . 2>/dev/null` 2>/dev/null | grep -v Binary | grep -v grep >>TODO.txt || true
 
 boot: loader/bootboot.bin loader/bootboot.efi
 

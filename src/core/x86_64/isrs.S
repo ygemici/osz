@@ -65,19 +65,9 @@ nopic:
 ioctrl:
     .asciz	"IOAPIC"
 
-enable:
-    .asciz "enable %d\n"
-disable:
-    .asciz "disable %d\n"
-
 .section .text
 /* void isr_enableirq(uint64_t irq) */
 isr_enableirq:
-push %rdi
-movq %rdi, %rsi
-movq $enable, %rdi
-call kprintf
-pop %rdi
     movl	%edi, %ecx
     andw	$0xF, %cx
     cmpb	$8, %cl
@@ -94,11 +84,6 @@ pop %rdi
 
 /* void isr_disableirq(uint64_t irq) */
 isr_disableirq:
-push %rdi
-movq %rdi, %rsi
-movq $disable, %rdi
-call kprintf
-pop %rdi
     cmpl	$2, %edi
     je		1f
     movl	%edi, %ecx
@@ -177,11 +162,11 @@ isr_inithw:
 	    incl	%edi
 	    cmpl	$24, %edi
 	    jne		1b
-    /* enable NMI */
-    inb		$0x70, %al
-    btrw	$8, %ax
-    outb	%al, $0x70
-    ret
+	    /* enable NMI */
+	    inb		$0x70, %al
+	    btrw	$8, %ax
+	    outb	%al, $0x70
+	    ret
 
 /* exception handler ISRs */
 	.align 128, 0x90

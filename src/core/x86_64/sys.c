@@ -207,7 +207,7 @@ void sys_init()
     paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
 #if DEBUG
     if(sysinfostruc.debug&DBG_ELF)
-        kprintf("  map .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
+        kprintf("  maptext .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
 #endif
 
     // allocate and map IRQ Routing Table right after
@@ -241,6 +241,7 @@ void sys_init()
     drvptr = drivers;
     // default timer frequency
     freq = 0;
+/*
     if(drvs==NULL) {
         // should never happen!
 #if DEBUG
@@ -275,6 +276,8 @@ void sys_init()
         pci_init();
         // ...enumarate other system buses
     }
+*/
+        service_loadso("lib/sys/proc/pitrtc.so");
     // log loaded drivers
     s = 0;
     syslog_early("Loaded drivers");

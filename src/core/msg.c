@@ -81,7 +81,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         dsttcb = srctcb;
     } else {
         isr_next = dsttcb->memroot;
-        kmap_mq(dsttcb->self);
+        kmap_mq(dsttcb->memroot);
     }
 
     // check if the dest is receiving from ANY (0) or from our pid

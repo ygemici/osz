@@ -43,6 +43,7 @@
 .extern sched_get_tcb
 .extern sched_awake
 .extern ccb
+.extern isr_next
 
 .section .text
 
@@ -232,7 +233,6 @@ isr_timer:
     addq    $1, 16(%rbx)
     adcq    $0, 24(%rbx)
 
-xchg %bx, %bx
     /* sysinfostruc.ticks[TICKS_NTS] += alarmstep; */
     movq    alarmstep, %rax
     addq    %rax, 8(%rbx)
@@ -324,17 +324,26 @@ xchg %bx, %bx
     jnz     1f
     mov     fpsdiv, %rax
     movq    %rax, 48(%rbx)
-    /* build and send a mem2vid message */
-    /* switch to system task */
+    /* build and send a swapbuf message to system task */
+    movq    $MQ_ADDRESS, %rdi
+    /* tcb->memroot == sys_mapping? if yes, use current mqueue */
     movq    sys_mapping, %rax
-    movq    %rax, %cr3
+    cmpq    %rax, tcb_memroot
+    je      2f
+    /* no, use temporary mqueue */
+    /* next task to pick will be system task */
+    movq    %rax, isr_next
+    /* kmap_mq(sys_mapping) */
+    movq    %rax, %rdi
+    callq   kmap_mq
+    movq    $TMPQ_ADDRESS + MQ_ADDRESS, %rdi
+2:
     /* msg_sends(EVT_DEST(SRV_CORE) | SYS_swapbuf, 0,0,0,0,0); */
     xorq    %rsi, %rsi
 #if DEBUG
     movq    %rsi, dbg_lastrip
 #endif
     movb    $SYS_swapbuf, %sil
-    movq    $MQ_ADDRESS, %rdi
     call    ksend
 1:
     ret

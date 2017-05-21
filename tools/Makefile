@@ -7,7 +7,10 @@ HOMEFILE = ../bin/home.part
 DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VMDKIMAGE = ../bin/disk.vmdk
-SRCS = $(wildcard *.c)
+SRCS = mkfs.c elftool.c
+ifneq ("$(wildcard /usr/include/efi/efi.h)","")
+SRCS += efirom.c
+endif
 OPT  = -g
 LIBS =
 OBJS = $(SRCS:.c=.o)
@@ -39,9 +42,9 @@ endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
 	@mkfs.vfat -F 12 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
 	@mkdir ../bin/tmp 2>/dev/null || true
-	@sudo mount -o loop $(ESPFILE) ../bin/tmp
-	@sudo cp -r ../bin/ESP/* ../bin/tmp/ || true
-	@sudo umount -f /dev/loop* 2>/dev/null || true
+	@sudo /usr/bin/mount -o loop,user $(ESPFILE) ../bin/tmp
+	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
+	@sudo /usr/bin/umount -f /dev/loop* 2>/dev/null || true
 	@rmdir ../bin/tmp
 
 initrd:
