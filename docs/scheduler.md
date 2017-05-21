@@ -26,7 +26,7 @@ OS/Z has 8 priority levels:
 | 6 | PRI_APPL | Application Low |
 | 7 | PRI_IDLE | Idle |
 
-The top priority level is PRI_SYS (zero). Only one taks, called "system" allowed to run at this level, and
+The top priority level is PRI_SYS (zero). Only one task, called "SYS" allowed to run at this level, and
 this level is uninterruptible meaning there's no one slice time for a lower priority task.
 
 After that comes PRI_RT (1) for real time tasks.

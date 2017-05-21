@@ -1,4 +1,5 @@
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
+./bin/usr/include/stdarg.h:36://TODO: this is x86_64 ABI specific
 ./loader/efi-x86_64/zlib_inflate/bootboot.c:21:    // TODO: debug why this isn't working. No errors, no output
 ./src/lib/libc/exit.c:6:    /* TODO: call atexit handlers and dtors */
 ./src/core/sched.c:95:    /* TODO: ccb.hd_blocked -> swap */

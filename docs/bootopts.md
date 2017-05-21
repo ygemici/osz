@@ -38,7 +38,7 @@ Boot Parameters
 | apic      | -      | hexdec | core | x86_64 override autodetected LAPIC address |
 | ioapic    | -      | hexdec | core | x86_64 override autodetected IOAPIC address |
 
-The available values for debug parameter and display can be found in [sysinfo.h](https://github.com/bztsrc/osz/blob/master/etc/include/sysinfo.h).
+The available values for debug parameter and display can be found in [sysinfo.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h).
 
 Debugging
 ---------

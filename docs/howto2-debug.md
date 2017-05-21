@@ -70,7 +70,7 @@ You can check the validity of a pid anytime with:
 ```
 
 Here we can see that the page starts with the magic `'THRD'` so identifies as a Thread Control Block. The
-number tells us that it's priority, in our case `priority queue 0`. Meaning it's "SYS" task we're watching.
+number tells us the thread's priority, in our case `priority queue 0`. Meaning it's "SYS" task we're watching.
 
 Save the first 8 bytes, the actual bitfields of this TCB page is platform specific as it's holding a copy of the CPU state as well.
 Each struct definition can be found in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).

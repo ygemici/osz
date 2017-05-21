@@ -48,6 +48,9 @@
 .extern pmm
 .extern sys_fault
 
+.extern enable
+.extern disable
+
 .section .data
     .align	16
 idt64:
@@ -61,9 +64,20 @@ nopic:
     .asciz	"%s not supported"
 ioctrl:
     .asciz	"IOAPIC"
+
+enable:
+    .asciz "enable %d\n"
+disable:
+    .asciz "disable %d\n"
+
 .section .text
 /* void isr_enableirq(uint64_t irq) */
 isr_enableirq:
+push %rdi
+movq %rdi, %rsi
+movq $enable, %rdi
+call kprintf
+pop %rdi
     movl	%edi, %ecx
     andw	$0xF, %cx
     cmpb	$8, %cl
@@ -80,6 +94,11 @@ isr_enableirq:
 
 /* void isr_disableirq(uint64_t irq) */
 isr_disableirq:
+push %rdi
+movq %rdi, %rsi
+movq $disable, %rdi
+call kprintf
+pop %rdi
     cmpl	$2, %edi
     je		1f
     movl	%edi, %ecx

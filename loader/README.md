@@ -183,7 +183,7 @@ SECTIONS
    }
 }
 ```
-See [src/core/(platform)/supervisor.ld](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld) for a more complex read life example.
+See [src/core/(platform)/supervisor.ld](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld) for a more complex real life example.
 
 Installation
 ------------

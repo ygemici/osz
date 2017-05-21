@@ -6,7 +6,7 @@ VARFILE = ../bin/var.part
 HOMEFILE = ../bin/home.part
 DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
-VDMKIMAGE = ../bin/disk.vdmk
+VMDKIMAGE = ../bin/disk.vmdk
 SRCS = $(wildcard *.c)
 OPT  = -g
 LIBS =
@@ -24,7 +24,7 @@ clean:
 	@rm *.o 2>/dev/null || true
 
 imgclean:
-	@rm -rf ../bin/*.txt ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vdmk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
+	@rm -rf ../bin/*.txt ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vmdk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
 
 esp: initrd
 	@echo "  mkfs		ESP"
@@ -71,9 +71,9 @@ vdi: $(DDIMAGE)
 	@VBoxManage convertfromraw $(DDIMAGE) $(VDIIMAGE)
 	@VBoxManage internalcommands sethduuid $(VDIIMAGE) 45a68a8d-9a2b-42ba-91f9-99c7259bfa8a 2>/dev/null || true
 
-vdmk: $(DDIMAGE)
+vmdk: $(DDIMAGE)
 	@#echo "  mkfs		bin/disk.vdmk"
-	@#VBoxManage convertfromraw $(DDIMAGE) $(VDMKIMAGE)
+	@VBoxManage convertdd $(DDIMAGE) $(VMDKIMAGE) --format VMDK
 
 selfcheck:
 ifeq ("$(wildcard ../bin)","")

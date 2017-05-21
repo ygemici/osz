@@ -79,7 +79,7 @@ bochs or VirtualBox.
 $ dd if=bin/disk.dd of=/dev/sdc
 $ make testq
 $ make testb
-$ make vdi
+$ make testv
 ```
 
 Non-EFI loader

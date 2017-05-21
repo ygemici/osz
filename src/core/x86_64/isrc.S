@@ -232,6 +232,7 @@ isr_timer:
     addq    $1, 16(%rbx)
     adcq    $0, 24(%rbx)
 
+xchg %bx, %bx
     /* sysinfostruc.ticks[TICKS_NTS] += alarmstep; */
     movq    alarmstep, %rax
     addq    %rax, 8(%rbx)

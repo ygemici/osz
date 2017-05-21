@@ -71,8 +71,9 @@ _main:
     movl    $0xB0070E01, %esi
     movb    $SYS_ack, %dil
 #if DEBUG
-    int     $3
+/*    int     $3
     xchg    %bx, %bx
+*/
 #endif
     movl     $0x646E6573, %eax # 'send'
     syscall

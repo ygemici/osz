@@ -170,14 +170,14 @@ void sched_remove(OSZ_tcb *tcb)
 // move a TCB from priority queue to blocked queue
 void sched_block(OSZ_tcb *tcb)
 {
-#if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
-        kprintf("sched_block(%x)\n", tcb);
-#endif
     /* never block the system task */
     if(tcb->mypid == services[-SRV_SYS] ||
        tcb->memroot == sys_mapping)
         return;
+#if DEBUG
+    if(sysinfostruc.debug&DBG_SCHED)
+        kprintf("sched_block(%x)\n", tcb);
+#endif
     tcb->blktime = sysinfostruc.ticks[TICKS_QALL];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */

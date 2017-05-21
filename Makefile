@@ -52,10 +52,10 @@ bin/disk.vdi: vdi
 vdi: images
 	@make -e --no-print-directory -C tools vdi | grep -v 'Nothing to be done' || true
 
-bin/disk.vdmk: vdmk
+bin/disk.vmdk: vmdk
 
-vdmk: images
-	@make -e --no-print-directory -C tools vdmk | grep -v 'Nothing to be done' || true
+vmdk: images
+	@make -e --no-print-directory -C tools vmdk | grep -v 'Nothing to be done' || true
 
 clean:
 	@make -e --no-print-directory -C loader/efi-x86_64/zlib_inflate clean

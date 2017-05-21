@@ -56,6 +56,7 @@ extern sysinfo_t sysinfostruc;
 void main()
 {
     kprintf("OS/Z starting...\n");
+breakpoint;
     // note: we cannot call syslog_early("starting") as syslog_buf
     // is not allocated yet.
 
@@ -110,6 +111,10 @@ void main()
     else
         service_init(SRV_init, "sbin/init");
 */
+#if DEBUG
+    service_init(SRV_USRFIRST, "bin/test");
+#endif
+
     // The "ready" message. Cover out "starting" message
     kprintf_ready();
 
