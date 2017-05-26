@@ -111,7 +111,7 @@ void sched_awake(OSZ_tcb *tcb)
     } else
     if(tcb->state == tcb_state_blocked) {
         /* ccb.hd_blocked -> ccb.hd_active */
-        tcb->blkcnt += tcb->blktime - sysinfostruc.ticks[TICKS_QALL];
+        tcb->blkcnt += tcb->blktime - sysinfostruc.ticks[TICKS_LO];
         sched_add(tcb);
         if(ccb.hd_blocked == tcb->mypid) {
             ccb.hd_blocked = next;
@@ -178,7 +178,7 @@ void sched_block(OSZ_tcb *tcb)
     if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_block(%x)\n", tcb);
 #endif
-    tcb->blktime = sysinfostruc.ticks[TICKS_QALL];
+    tcb->blktime = sysinfostruc.ticks[TICKS_LO];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
     pid_t pid = tcb->mypid;

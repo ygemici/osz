@@ -36,8 +36,9 @@ extern uint8_t networking;  // should start net service on boot?
 extern uint8_t sound;       // should start sound service?
 extern uint8_t rescueshell; // boot rescue shell instead of init?
 extern uint8_t identity;    // run first time setup
-extern uint64_t debug;      // see below
+extern uint8_t clocksource; // clock source
+extern uint64_t debug;      // debug flags
 extern uint64_t quantum;    // max CPU allocation time: 1/quantum sec
 extern uint64_t fps;        // max frame per sec
-extern uint64_t display;    // see below
+extern uint64_t display;    // display type
 #endif

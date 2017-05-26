@@ -281,7 +281,7 @@ void kprintf_putfps()
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
     fg=sysinfostruc.fps>=fps+fps/2?0x108010:(sysinfostruc.fps>=fps?0x101080:0x801010);
-    kprintf(" %d fps, ts %d ticks %d",sysinfostruc.fps,sysinfostruc.ticks[TICKS_TS],sysinfostruc.ticks[TICKS_LO]);
+    kprintf(" %d fps, ts %d",sysinfostruc.fps,sysinfostruc.ticks[TICKS_TS]);
 #if DEBUG
     dbg_putchar(13);
     dbg_putchar(10);
@@ -307,6 +307,10 @@ void kprintf_scrollscr()
             // display a message
             char *msg = " --- Press any key to continue --- ";
             kx = 0; ky=maxy-1;
+#if DEBUG
+	    dbg_putchar(13);
+	    dbg_putchar(10);
+#endif
             for(;*msg!=0;msg++) {
                     kprintf_putchar((int)(*msg));
                     kx++;
@@ -463,7 +467,7 @@ newline:        kx=fx;
                 ky++;
                 if(ky>=maxy) {
                     ky--;
-                    if(scry!=-1)
+//                    if(scry!=-1)
                         kprintf_scrollscr();
                 }
 #if DEBUG

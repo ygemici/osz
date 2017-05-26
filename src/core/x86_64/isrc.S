@@ -33,10 +33,9 @@
 
 .global isr_savecontext
 .global isr_loadcontext
-.global isr_gainentropy
 .global isr_syscall0
-.global isr_alarm
 .global isr_timer
+.global isr_gainentropy
 
 .extern alarmstep
 .extern alarmstepmax
@@ -89,8 +88,7 @@ isr_loadcontext:
 isr_gainentropy:
     pushq   %rdi
     pushq   %rsi
-    movq    $sysinfostruc, %rdi
-    addq    $sysinfo_srand0, %rdi
+    movq    $sysinfostruc + sysinfo_srand0, %rdi
     movq    %rdi, %rax
     movq    %rax, %rdx
     incq    %rdx
@@ -226,10 +224,11 @@ isr_syscall0:
     movq    __PAGESIZE-16, %rsp
     sysretq
 
+/* handle timers, called by PIT or HPET, modify global counters */
 isr_timer:
+/* global clocksource */
     /* uint128_t sysinfostruc.ticks[TICKS_LO]++ */
-    movq    $sysinfostruc, %rbx
-    addq    $sysinfo_ticks, %rbx
+    movq    $sysinfostruc + sysinfo_ticks, %rbx
     addq    $1, 16(%rbx)
     adcq    $0, 24(%rbx)
 
@@ -237,113 +236,79 @@ isr_timer:
     movq    alarmstep, %rax
     addq    %rax, 8(%rbx)
 
-    /* sysinfostruc.ticks[TICKS_SEC]--; */
-    decq    32(%rbx)
+    /* seccnt--; */
+    decq    seccnt
     /* a sec passed, sysinfostruc.ticks[TICKS_SEC]==0? */
     xorq    %rax, %rax
-    cmpq    %rax, 32(%rbx)
+    cmpq    %rax, seccnt
     jnz     1f
     /* sysinfostruc.ticks[TICKS_TS]++; sysinfostruc.ticks[TICKS_NTS]=0; */
     incq    (%rbx)
     movq    %rax, 8(%rbx)
-    /* sysinfostruc.ticks[TICKS_SEC] = freq; */
-    movq    freq, %rax
-    movq    %rax, 32(%rbx)
-    /* sysinfostruc.ticks[TICKS_QUANTUM] = quantumdiv; */
-    movq    quantumdiv, %rax
-    movq    %rax, 40(%rbx)
-    /* sysinfostruc.fps = isr_currfps */
-    movq    isr_currfps, %rax
-    movq    $sysinfostruc, %rbx
-    addq    $sysinfo_fps, %rbx
-    movq    %rax, (%rbx)
-    xorq    %rax, %rax
-    movq    %rax, isr_currfps
+    /* seccnt = tmrfreq; */
+    movq    tmrfreq, %rax
+    movq    %rax, seccnt
 #if DEBUG
     call    kprintf_putfps
 #endif
 1:
-    movq    $sysinfostruc, %rbx
-    addq    $sysinfo_ticks, %rbx
-    /* check timer queue's head and awake thread if time passed */
-    /* ccb.hd_timerq != 0? */
-    movq    ccb + 0x6A, %rax
-    orq     %rax, %rax
-    jz      1f
-    /* has a pid, it's tcb is mapped at tmpalarm then */
-    movq    $tmpalarm, %rdi
-    /* tcb->alarmsec <= sysinfostruc.ticks[TICKS_TS]? */
-    movq    728(%rdi), %rax
-    cmpq    (%rbx), %rax
-    jb      1f
-    /* tcb->alarmns <= sysinfostruc.ticks[TICKS_NTS]? */
-    movq    736(%rdi), %rax
-    cmpq    8(%rbx), %rax
-    jb      1f
-    movq    $tmpalarm, %rdi
-    /* isr_next = sched_awake(tcb); */
-    call    sched_awake
-    /* ccb.hd_timerq = tcb->alarm; */
-    movq    $tmpalarm, %rdi
-    movq    720(%rdi), %rsi
-    movq    %rsi, ccb + 0x6A
-    /* tcb->alarm != 0? */
-    orq     %rsi, %rsi
-    jz      1f
-    /* map next alarm thread, kmap(&tmpalarm, tcb->alarm, PG_CORE_NOCACHE); */
-    xorq    %rdx, %rdx
-    movw    $PG_CORE_NOCACHE, %dx
-    call    kmap
-    movq    $sysinfostruc, %rbx
-    addq    $sysinfo_ticks, %rbx
-1:
-    /* sysinfostruc.ticks[TICKS_QUANTUM]--; */
-    decq    40(%rbx)
-    cmpq    $0, 40(%rbx)
-    jnz     2f
-    /* sysinfostruc.ticks[TICKS_QALL]++; */
-    incq    56(%rbx)
-    /* sysinfostruc.ticks[TICKS_QUANTUM] = quantumdiv; */
-    movq    quantumdiv, %rax
-    movq    %rax, 40(%rbx)
-    /* if(tcb->rip < 0) tcb->syscnt++; else tcb->billcnt++; */
-    movq    $656, %rcx
+
+/* housekeeping */
+    /* if(tcb->rip > 0) tcb->billcnt++; else tcb->syscnt++; */
+    movq    $tcb_billcnt, %rcx
     movb    __PAGESIZE-33, %al
     cmpb    $0xFF, %al
     jne     1f
     addq    $8, %rcx
 1:  incq    (%rcx)
+
+/* preemption */
+    /* check timer queue's head and awake thread if time passed */
+    /* ccb.hd_timerq != 0? */
+    movq    ccb + ccb_hd_timerq, %rax
+    orq     %rax, %rax
+    jz      1f
+    /* has a pid, it's tcb is mapped at tmpalarm then */
+    movq    $sysinfostruc + sysinfo_ticks, %rbx
+    movq    $tmpalarm, %rdi
+    /* tcb->alarmsec < sysinfostruc.ticks[TICKS_TS]? */
+    movq    728(%rdi), %rax
+    cmpq    (%rbx), %rax
+    jb      1f
+    /* tcb->alarmsec > sysinfostruc.ticks[TICKS_TS]? */
+    ja      2f
+    /* tcb->alarmns <= sysinfostruc.ticks[TICKS_NTS]? */
+    movq    736(%rdi), %rax
+    cmpq    8(%rbx), %rax
+    jb      1f
+2:  movq    $tmpalarm, %rdi
+    /* isr_next = sched_awake(tcb); */
+    call    sched_awake
+    /* ccb.hd_timerq = tcb->alarm; */
+    movq    $tmpalarm, %rdi
+    movq    720(%rdi), %rsi
+    movq    %rsi, ccb + ccb_hd_timerq
+    /* tcb->alarm != 0? */
+    orq     %rsi, %rsi
+    jz      3f
+    /* map next alarm thread, kmap(&tmpalarm, tcb->alarm, PG_CORE_NOCACHE); */
+    xorq    %rdx, %rdx
+    movw    $PG_CORE_NOCACHE, %dx
+    call    kmap
+    jmp     3f
+1:
+
+    /* qcnt--; */
+    decq    qcnt
+    /* qcnt==0? */
+    xorq    %rax, %rax
+    cmpq    %rax, qcnt
+    jnz     1f
+
     /* switch to a new thread if any */
     call    sched_pick
-    movq    $sysinfostruc, %rbx
-    addq    $sysinfo_ticks, %rbx
-2:
-    /* sysinfostruc.ticks[TICKS_FPS]--; */
-    decq    48(%rbx)
-    cmpq    $0, 48(%rbx)
-    jnz     1f
-    mov     fpsdiv, %rax
-    movq    %rax, 48(%rbx)
-    /* build and send a swapbuf message to system task */
-    movq    $MQ_ADDRESS, %rdi
-    /* tcb->memroot == sys_mapping? if yes, use current mqueue */
-    movq    sys_mapping, %rax
-    cmpq    %rax, tcb_memroot
-    je      2f
-    /* no, use temporary mqueue */
-    /* next task to pick will be system task */
-    movq    %rax, isr_next
-    /* kmap_mq(sys_mapping) */
-    movq    %rax, %rdi
-    callq   kmap_mq
-    movq    $TMPQ_ADDRESS + MQ_ADDRESS, %rdi
-2:
-    /* msg_sends(EVT_DEST(SRV_CORE) | SYS_swapbuf, 0,0,0,0,0); */
-    xorq    %rsi, %rsi
-#if DEBUG
-    movq    %rsi, dbg_lastrip
-#endif
-    movb    $SYS_swapbuf, %sil
-    call    ksend
-1:
-    ret
+3:
+    /* qcnt = qdiv; */
+    movq    qdiv, %rax
+    movq    %rax, qcnt
+1:  ret

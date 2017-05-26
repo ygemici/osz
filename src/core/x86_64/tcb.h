@@ -33,6 +33,7 @@
 #define tcb_fx  128
 #define tcb_mypid 640
 #define tcb_memroot 648
+#define tcb_billcnt 656
 #define tcb_excerr 680
 #define tcb_sigmask 808
 #define tcb_sigpending 812

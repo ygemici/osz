@@ -38,10 +38,13 @@ uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) identity;
+uint8_t __attribute__ ((section (".data"))) clocksource;
 
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
-extern uint64_t ioapic_addr;
+// architecrue specific
+extern void envarch_init();
+extern unsigned char *envarch_parse(unsigned char *env);
 
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
@@ -180,6 +183,7 @@ unsigned char *env_debug(unsigned char *s)
 #endif
 
 /*** initialize environment ***/
+// architecture independent parameters
 void env_init()
 {
     unsigned char *env = environment;
@@ -189,21 +193,16 @@ void env_init()
     // set up defaults
     networking = sound = true;
     identity = false;
-    sysinfostruc.systables[systable_hpet_ptr] =
-        sysinfostruc.systables[systable_apic_ptr] =
-            ioapic_addr = 0;
     nrirqmax = ISR_NUMHANDLER;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
     fps = 10;
     sysinfostruc.nropenmax = 16;
-    sysinfostruc.quantum = 1024;
+    sysinfostruc.quantum = 100;
     sysinfostruc.display = DSP_MONO_COLOR;
     sysinfostruc.debug = DBG_NONE;
     kmemcpy(&sysinfostruc.keymap, "en_us", 6);
-    sysinfostruc.systables[systable_dsdt_ptr] = (uint64_t)fs_locate("etc/sys/dsdt");
-    if(fs_size == 0)
-        sysinfostruc.systables[systable_dsdt_ptr] = 0;
+    envarch_init();
 
     // parse ascii text
     while(env < env_end && *env!=0) {
@@ -248,24 +247,6 @@ void env_init()
             env = env_dec(env, &tmp, 4, 128);
             sysinfostruc.nropenmax = (uint8_t)tmp;
         } else
-        // manually override HPET address
-        if(!kmemcmp(env, "hpet=", 5)) {
-            env += 5;
-            // we only accept hex value for this parameter
-            env = env_hex(env, (uint64_t*)&sysinfostruc.systables[systable_hpet_ptr], 1024*1024, 0);
-        } else
-        // manually override APIC address
-        if(!kmemcmp(env, "apic=", 5)) {
-            env += 5;
-            // we only accept hex value for this parameter
-            env = env_hex(env, (uint64_t*)&sysinfostruc.systables[systable_apic_ptr], 1024*1024, 0);
-        } else
-        // manually override IOAPIC address
-        if(!kmemcmp(env, "ioapic=", 7)) {
-            env += 7;
-            // we only accept hex value for this parameter
-            env = env_hex(env, (uint64_t*)&ioapic_addr, 1024*1024, 0);
-        } else
         // disable networking
         if(!kmemcmp(env, "networking=", 11)) {
             env += 11;
@@ -290,7 +271,7 @@ void env_init()
         // to allocate CPU continously (1/quantum sec)
         if(!kmemcmp(env, "quantum=", 8)) {
             env += 8;
-            env = env_dec(env, &sysinfostruc.quantum, 100, 10000);
+            env = env_dec(env, &sysinfostruc.quantum, 10, 10000);
         } else
         // maximum frame rate per second
         // suggested values 60-1000
@@ -315,6 +296,7 @@ void env_init()
             env = env_debug(env);
         } else
 #endif
-            env++;
+		// architecture specific keys
+            env = envarch_parse(env);
     }
 }

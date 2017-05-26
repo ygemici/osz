@@ -80,8 +80,7 @@ _start:
 
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
-    movq    $sysinfostruc, %rdi
-    addq    $sysinfo_srand0, %rdi
+    movq    $sysinfostruc + sysinfo_srand0, %rdi
     xorq    %rax, %rax
     incb    %al
     cpuid
@@ -150,8 +149,7 @@ _start:
     movq    %rax, %cr4
 
     /* init entropy */
-    movq    $sysinfostruc, %rdi
-    addq    $sysinfo_srand0, %rdi
+    movq    $sysinfostruc + sysinfo_srand0, %rdi
     /* add bootboot structure, environment and core segments */
     movq    $bootboot, %rsi
 2:  lodsq

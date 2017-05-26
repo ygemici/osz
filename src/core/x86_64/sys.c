@@ -38,14 +38,13 @@ extern char poweroffsuffix[];
 extern uint64_t pt;
 extern OSZ_rela *relas;
 extern phy_t pdpe;
-extern uint64_t freq;
 
 extern void kprintf_center(int w, int h);
-extern void isr_initirq();
 extern void acpi_init();
 extern void acpi_early(ACPI_Header *hdr);
 extern void acpi_poweroff();
 extern void pci_init();
+extern void isr_clocksource();
 #if DEBUG
 extern void dbg_putchar(int c);
 #endif
@@ -239,9 +238,6 @@ void sys_init()
     service_loadso("lib/libc.so");
     // detect devices and load drivers (sharedlibs) for them
     drvptr = drivers;
-    // default timer frequency
-    freq = 0;
-/*
     if(drvs==NULL) {
         // should never happen!
 #if DEBUG
@@ -249,10 +245,12 @@ void sys_init()
 #endif
         syslog_early("WARNING missing /etc/sys/drivers\n");
         // hardcoded legacy devices if driver list not found
+        service_loadso("lib/sys/proc/pit.so");
         service_loadso("lib/sys/input/ps2.so");
         service_loadso("lib/sys/display/fb.so");
-        service_loadso("lib/sys/proc/pitrtc.so");
     } else {
+        // detect clock source
+        isr_clocksource();
         // load devices which don't have entry in any ACPI tables
         for(c=drvs;c<drvs_end;) {
             f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
@@ -276,8 +274,6 @@ void sys_init()
         pci_init();
         // ...enumarate other system buses
     }
-*/
-        service_loadso("lib/sys/proc/pitrtc.so");
     // log loaded drivers
     s = 0;
     syslog_early("Loaded drivers");
@@ -301,14 +297,13 @@ void sys_init()
         sysinfostruc.fb_height = bootboot.fb_height;
         sysinfostruc.fb_scanline = bootboot.fb_scanline;
         //system tables, platform specific
-        sysinfostruc.systables[systable_acpi_ptr] = bootboot.acpi_ptr;
-        sysinfostruc.systables[systable_smbi_ptr] = bootboot.smbi_ptr;
-        sysinfostruc.systables[systable_efi_ptr]  = bootboot.efi_ptr;
-        sysinfostruc.systables[systable_mp_ptr]   = bootboot.mp_ptr;
+        sysinfostruc.systables[systable_acpi_idx] = bootboot.acpi_ptr;
+        sysinfostruc.systables[systable_smbi_idx] = bootboot.smbi_ptr;
+        sysinfostruc.systables[systable_efi_idx]  = bootboot.efi_ptr;
+        sysinfostruc.systables[systable_mp_idx]   = bootboot.mp_ptr;
 
         /*** Timer stuff ***/
         isr_tmrinit();
-        sysinfostruc.freq = freq;
 
         /*** Double Screen stuff ***/
         // allocate and map screen buffer A

@@ -79,7 +79,7 @@ void acpi_early(ACPI_Header *hdr)
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
         ACPI_APIC *madt = (ACPI_APIC *)hdr;
-        sysinfostruc.systables[systable_apic_ptr] = madt->localApic;
+        sysinfostruc.systables[systable_apic_idx] = madt->localApic;
         // This header is 8 bytes longer than normal header
         len -= 8; ptr = (char*)(data+8);
         while(len>0) {
@@ -97,11 +97,11 @@ void acpi_early(ACPI_Header *hdr)
         }
     } else
     /* High Precision Event Timer */
-    if(!sysinfostruc.systables[systable_hpet_ptr] && !kmemcmp("HPET", hdr->magic, 4)) {
-        sysinfostruc.systables[systable_hpet_ptr] = (uint64_t)hdr;
+    if(!sysinfostruc.systables[systable_hpet_idx] && !kmemcmp("HPET", hdr->magic, 4)) {
+        sysinfostruc.systables[systable_hpet_idx] = (uint64_t)hdr;
 #if DEBUG
         if(sysinfostruc.debug&DBG_DEVICES)
-            kprintf("HPET  %x\n", sysinfostruc.systables[systable_hpet_ptr]);
+            kprintf("HPET  %x\n", sysinfostruc.systables[systable_hpet_idx]);
 #endif
     }
 }
@@ -209,13 +209,13 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
             SCI_EN = 1;
         }
         hdr = (ACPI_Header*)(fadt->x_dsdt && (fadt->x_dsdt>>48)==0 ? fadt->x_dsdt : fadt->dsdt);
-        if(!kmemcmp("SDT", hdr->magic+1, 3) && sysinfostruc.systables[systable_dsdt_ptr] == 0)
-            sysinfostruc.systables[systable_dsdt_ptr] = (uint64_t)hdr;
+        if(!kmemcmp("SDT", hdr->magic+1, 3) && sysinfostruc.systables[systable_dsdt_idx] == 0)
+            sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)hdr;
     } else
     /* Specific Description Tables */
     if(!kmemcmp("DSDT", hdr->magic, 4) || !kmemcmp("SSDT", hdr->magic, 4)) {
-        if(sysinfostruc.systables[systable_dsdt_ptr] == 0)
-            sysinfostruc.systables[systable_dsdt_ptr] = (uint64_t)hdr;
+        if(sysinfostruc.systables[systable_dsdt_idx] == 0)
+            sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)hdr;
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
@@ -314,22 +314,11 @@ bool_t acpi_init()
 #endif
         acpi_parse((ACPI_Header*)bootboot.acpi_ptr, 1);
     }
-    if(sysinfostruc.systables[systable_dsdt_ptr] != 0)
-        acpi_parseaml((ACPI_Header *)sysinfostruc.systables[systable_dsdt_ptr]);
+    if(sysinfostruc.systables[systable_dsdt_idx] != 0)
+        acpi_parseaml((ACPI_Header *)sysinfostruc.systables[systable_dsdt_idx]);
     // fallback to default if not found and not given either
     if(ioapic_addr==0)
         ioapic_addr=0xFEC00000;
-
-    /* load timer driver */
-    //   with PIC:  PIT and RTC
-    //   with APIC: HPET if detected, APIC timer otherwise
-    //   with x2APIC: HPET if detected, x2APIC timer otherwise
-    service_loadso(sysinfostruc.systables[systable_hpet_ptr]==0 ||
-        (sysinfostruc.systables[systable_hpet_ptr] & (__PAGESIZE-1))!=0?
-        (ISR_CTRL==CTRL_PIC?"lib/sys/proc/pitrtc.so":
-        (ISR_CTRL==CTRL_APIC?"lib/sys/proc/apic.so":
-            "lib/sys/proc/x2apic.so")):
-        "lib/sys/proc/hpet.so");
 
     if(PM1a_CNT==0)
         return false;

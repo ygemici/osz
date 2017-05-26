@@ -38,7 +38,9 @@ extern uint64_t *drvptr;
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
-extern uint64_t freq;
+extern uint64_t tmrisr;
+extern uint64_t tmrfreq;
+extern uint8_t tmrirq;
 extern sysinfo_t sysinfostruc;
 extern uint8_t sys_fault;
 
@@ -465,10 +467,10 @@ void service_installirq(uint8_t irq, uint64_t offs)
  *  - stack_ptr: physical address of thread's stack */
 bool_t service_rtlink()
 {
-    int i, j, k, l = -1, n = 0;
+    int i, j, k, l, n = 0, isTmr = 0;
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     OSZ_rela *rel = relas;
-    uint64_t *paging = (uint64_t *)&tmpmap;
+    uint64_t *paging = (uint64_t *)&tmpmap, lo = 0;
 
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
@@ -644,7 +646,7 @@ bool_t service_rtlink()
             );
 #endif
         //foreach(sym)
-        s=sym;
+        s=sym; isTmr = 0;
         for(i=0;i<(strtable-(char*)sym)/syment;i++) {
             if(s->st_name > strsz) break;
             // is it defined in this object?
@@ -671,6 +673,7 @@ bool_t service_rtlink()
                             k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
                         }
                         service_installirq(k, offs);
+                        l=k; lo=(uint64_t)s->st_value + (uint64_t)ehdr;
                     }
                     if(!kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG
@@ -683,8 +686,8 @@ bool_t service_rtlink()
                         irq_routing_table[(ISR_NUMIRQ*nrirqmax)+1] = offs;
                     }
                     if(!kmemcmp(strtable + s->st_name,"tmrfreq",8)) {
-                        freq = *((uint64_t*)((char*)ehdr + s->st_value));
-                        l = j;
+                        tmrfreq = *((uint64_t*)((char*)ehdr + s->st_value));
+                        isTmr = 1;
                     }
                 }
                 // look up in relas array which addresses require
@@ -710,6 +713,13 @@ bool_t service_rtlink()
             /* move pointer to next symbol */
             s = (Elf64_Sym *)((uint8_t *)s + syment);
         }
+        /* save timer irq and isr address */
+        if(isTmr && !tmrisr) {
+            tmrirq = (uint8_t)l;
+            /* only save isr if it's not a dummy function with a RET */
+            if(lo && *((uint8_t *)lo)!=0xC3)
+                tmrisr = lo;
+        }
     }
     // check if we have resolved all references
     for(i=0;i<n;i++){
@@ -718,8 +728,6 @@ bool_t service_rtlink()
             kpanic("shared library missing for %s()\n", r->sym);
         }
     }
-    if(l!=-1)
-        syslog_early("Timer: frequency set by %s\n", drivers[l]);
 
     // push entry point as the last callback
     // crt0 starts with a 'ret', so _start function address

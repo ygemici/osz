@@ -46,7 +46,8 @@
 #define ISR_EXCMAX 128      //maximum code size of exception ISRs
 #define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
-#define ISR_IRQTMR 0        //irq to trigger preemption and alarm
+#define ISR_IRQSCH 0        //irq to trigger preemption and alarm
+#define ISR_IRQTMR 8        //irq to handle timesource
 #if OPTIMIZE != 1
 /* you can change this, either PIC or APIC */
 #define ISR_CTRL CTRL_PIC

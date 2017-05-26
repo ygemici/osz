@@ -37,6 +37,7 @@ Boot Parameters
 | hpet      | -      | hexdec | core | x86_64 override autodetected HPET address |
 | apic      | -      | hexdec | core | x86_64 override autodetected LAPIC address |
 | ioapic    | -      | hexdec | core | x86_64 override autodetected IOAPIC address |
+| clocksource | -    | number | core | x86_64 override autodetected clock source |
 
 The available values for debug parameter and display can be found in [sysinfo.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h).
 
@@ -71,3 +72,18 @@ A numeric value or exactly one flag.
 | 2     | sc,re | DSP_STEREO_COLOR | two 2D pixelbuffers*, the way of combining left and right eye's view is 100% driver specific, real 3D |
 
 (* the two buffers are concatenated in a one big double heighted buffer)
+
+Clock Source
+------------
+
+Either a numeric value or exactly one flag.
+
+| Value | Flag | Arch   | Description |
+| ----: | ---- | ------ | ----------- |
+| 0     |      | -      | auto detect |
+| 1     | hp   | x86_64 | High Precision Event Timer (default) |
+| 2     | pi   | x86_64 | Programmable Interval Timer |
+| 3     | rt   | x86_64 | Real Time Clock |
+| 4     | la   | x86_64 | Local APIC Timer |
+| 5     | x2   | x86_64 | Local x2APIC Timer |
+

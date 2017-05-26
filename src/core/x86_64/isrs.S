@@ -34,6 +34,7 @@
 .global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
+.global isr_irqtmr
 .global isr_enableirq
 .global isr_disableirq
 
@@ -972,14 +973,29 @@ isr_exc31:
 
 /* IRQ handler ISRs */
     .align , 0x90
+isr_irqtmr:
+    /* we can't afford overhead of a taskswitch, so
+       call timer isr directly, mapped in core space */
+    cli
+    call	isr_savecontext
+    subq	$128, ccb + ccb_ist1
+    call	isr_timer
+    movq	tmrisr, %rax
+    orq		%rax, %rax
+    jz		1f
+    call	*%rax
+1:  /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
+    addq	$128, ccb + ccb_ist1
+    call	isr_loadcontext
+    iretq
+.align 128, 0x90
 .align 128, 0x90
 isr_irq0:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    /* isr_timer(SRV_core, SYS_IRQ, ISR_IRQTMR, 0,0,0,0); */
-    call	isr_timer
-    jmp		2f
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1014,7 +1030,6 @@ isr_irq1:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1049,7 +1064,6 @@ isr_irq2:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1084,7 +1098,6 @@ isr_irq3:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1119,7 +1132,6 @@ isr_irq4:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1154,7 +1166,6 @@ isr_irq5:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1189,7 +1200,6 @@ isr_irq6:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1224,7 +1234,6 @@ isr_irq7:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1259,7 +1268,6 @@ isr_irq8:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1295,7 +1303,6 @@ isr_irq9:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1331,7 +1338,6 @@ isr_irq10:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1367,7 +1373,6 @@ isr_irq11:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1403,7 +1408,6 @@ isr_irq12:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1439,7 +1443,6 @@ isr_irq13:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1475,7 +1478,6 @@ isr_irq14:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1511,7 +1513,6 @@ isr_irq15:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1547,7 +1548,6 @@ isr_irq16:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1583,7 +1583,6 @@ isr_irq17:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1619,7 +1618,6 @@ isr_irq18:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1655,7 +1653,6 @@ isr_irq19:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1691,7 +1688,6 @@ isr_irq20:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1727,7 +1723,6 @@ isr_irq21:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1763,7 +1758,6 @@ isr_irq22:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1799,7 +1793,6 @@ isr_irq23:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot
@@ -1835,7 +1828,6 @@ isr_irq24:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
-    
     /* tcb->memroot == sys_mapping? */
     movq	sys_mapping, %rax
     cmpq	%rax, tcb_memroot

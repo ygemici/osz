@@ -1,3 +1,3 @@
-TARGET = proc/pitrtc.so
+TARGET = proc/pit.so
 
 include ../../Makefile.rules
