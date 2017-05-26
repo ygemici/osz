@@ -15,7 +15,7 @@ The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd
 qemu-system-x86_64 -hda bin/disk.dd
 ```
 
-But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/src/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory
+But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory
 with TianoCore EFI. For that one should type
 
 ```shell

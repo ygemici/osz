@@ -2,9 +2,9 @@ OS/Z - an operating system for hackers
 ======================================
 
 <img align="left" style="margin-right:10px;" alt="OS/Z" src="https://github.com/bztsrc/osz/raw/master/logoa.png">
-<a href="https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true">Download live image, osZ-latest-x86_64.dd</a><br>
+<a href="https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true">Download live image, osZ-latest-x86_64.dd</a> (2M)<br>
 <a href="https://github.com/bztsrc/osz/tree/master/docs">Documentation</a><br>
-<a href="http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383">Support</a>
+<a href="http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383">Support</a><br><br>
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts
