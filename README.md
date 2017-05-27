@@ -46,13 +46,13 @@ The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd
 qemu-system-x86_64 -hda bin/disk.dd
 ```
 For more options, see [Testing How To](https://github.com/bztsrc/osz/tree/master/docs/howto1-testing.md). I usually test the image
-with [qemu](www.qemu.org/), [bochs](bochs.sourceforge.net/) and [virtualbox](https://www.virtualbox.org/).
+with [qemu](http://www.qemu.org/), [bochs](http://bochs.sourceforge.net/) and [virtualbox](https://www.virtualbox.org/).
 
 License
 -------
 
 The boot loader and the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol are Public Domain.
-All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) filesystem) licensed under CC-by-nc-sa-4.0.
+All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) filesystem) licensed under CC-by-nc-sa-4.0:
 
  Copyright 2017 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
  
