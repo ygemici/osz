@@ -81,7 +81,10 @@ Authors
 -------
 
 efirom: Michael Brown
+
 zlib: Mark Adler
+
 MurmurHash: Austin Appleby
+
 BOOTBOOT, OS/Z: bzt
 
