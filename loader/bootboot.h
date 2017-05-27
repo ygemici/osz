@@ -85,6 +85,7 @@ typedef struct {
 
 #define LOADER_BIOS 0
 #define LOADER_UEFI 1
+#define LOADER_RPI  2
 
 #ifdef  __cplusplus
 }
