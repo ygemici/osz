@@ -67,6 +67,7 @@ it's memory, finished with interrupts) and is about to leave privileged mode by 
 <img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png" alt="OS/Z Ready">
 You must see white on black "OS/Z ready." text on the top left corner of your screen,
 and something similar to this on debug console:
+
 ```
 (0) Magic breakpoint
 Next at t=22187507

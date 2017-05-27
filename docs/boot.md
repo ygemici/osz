@@ -37,7 +37,7 @@ After that it initializes subsystems (or system [services](https://github.com/bz
  1. first is the user space counterpart of core, "SYS" task. Loaded by `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal service, save it has the initrd entirely mapped in it's bss segment.
  3. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike networking and sound services which are optional.
- 4. initializes syslog service by `syslog_init()` in[src/core/syslog.c](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c).
+ 4. initializes syslog service by `syslog_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c).
  5. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `init` service daemon.
  6. says I'm "ready" covering out the "starting" message.
  7. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).

@@ -8,7 +8,7 @@ The boot options are kept on the first bootable partition on the first bootable 
 creating a disk image, the contents of that file are taken from [etc/CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG).
 
 This file is a plain ASCII file with key=value pairs parsed by [core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c). No whitespaces allowed, and each pair is separated by a newline (0x0A) character.
-The file has to be one page long (4096 bytes on x86_64), and filled up with spaces. You can put comments in it with '//'.
+The file has to be one page long (4096 bytes on x86_64), and filled up with newlines. You can put comments in it with '//'.
 
 Keys are ASCII names without spaces, values can be decimal and hexadecimal numbers, booleans or strings.
 
@@ -37,7 +37,7 @@ Boot Parameters
 | hpet      | -      | hexdec | core | x86_64 override autodetected HPET address |
 | apic      | -      | hexdec | core | x86_64 override autodetected LAPIC address |
 | ioapic    | -      | hexdec | core | x86_64 override autodetected IOAPIC address |
-| clocksource | -    | number | core | x86_64 override autodetected clock source |
+| clock     | 0      | number | core | x86_64 override autodetected clock source |
 
 The available values for debug parameter and display can be found in [sysinfo.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h).
 
@@ -82,7 +82,7 @@ Either a numeric value or exactly one flag.
 | ----: | ---- | ------ | ----------- |
 | 0     |      | -      | auto detect |
 | 1     | hp   | x86_64 | High Precision Event Timer (default) |
-| 2     | pi   | x86_64 | Programmable Interval Timer |
+| 2     | pi   | x86_64 | Programmable Interval Timer (fallback) |
 | 3     | rt   | x86_64 | Real Time Clock |
 | 4     | la   | x86_64 | Local APIC Timer |
 | 5     | x2   | x86_64 | Local x2APIC Timer |

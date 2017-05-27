@@ -24,7 +24,7 @@ Inside OS/Z
 Once you've booted up OS/Z, you can clone the running system with
 
 ```sh
-sys /dev/disk2
+sys install /dev/disk2
 ```
 
 Where `/dev/disk2` is the device where you want to install.
