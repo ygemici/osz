@@ -69,9 +69,9 @@ sysinfo_t *sysinfo();                   // query system information
 #define DBG_LOG      (1<<9) // lo 512
 
 /* display options */
-#define DSP_MONO_COLOR   1  // flat 2D color
-#define DSP_STEREO_MONO  2  // grayscale red-cyan 3D (anaglyph)
-#define DSP_STEREO_COLOR 3  // real 3D (polarized glass, VR helmet etc. driver specific)
+#define DSP_MONO_COLOR   1  // mc flat 2D color
+#define DSP_STEREO_MONO  2  // sm grayscale red-cyan 3D (anaglyph)
+#define DSP_STEREO_COLOR 3  // sc real 3D (polarized glass, VR helmet etc. driver specific)
 
 /* ticks indeces for counters */
 #define TICKS_TS 0      //+00 timestamp sec counter
@@ -108,19 +108,19 @@ sysinfo_t *sysinfo();                   // query system information
 #define sysinfo_srand3 128
 
 /*** Platform specific ***/
-#define sysinfo_systables 144
+#define sysinfo_systables 136
 
 #ifdef OSZ_ARCH_Aarch64
 #endif
 
 #ifdef OSZ_ARCH_x86_64
-#define sysinfo_acpi_ptr 144
-#define sysinfo_smbi_ptr 152
-#define sysinfo_efi_ptr 160
-#define sysinfo_mp_ptr 168
-#define sysinfo_apic_ptr 176
-#define sysinfo_hpet_ptr 184
-#define sysinfo_dsdt_ptr 192
+#define sysinfo_acpi_ptr 136
+#define sysinfo_smbi_ptr 144
+#define sysinfo_efi_ptr 152
+#define sysinfo_mp_ptr 160
+#define sysinfo_apic_ptr 168
+#define sysinfo_hpet_ptr 176
+#define sysinfo_dsdt_ptr 184
 
 #define systable_acpi_idx 0
 #define systable_smbi_idx 1

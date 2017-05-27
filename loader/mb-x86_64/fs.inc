@@ -11,8 +11,8 @@
 ;*                       File System Drivers                         *
 ;*********************************************************************
 
-; unlike the EFI loader here we have to parse the partition to locate
-; our data in it. So there's an extra method to every filesystem driver.
+; unlike the EFI loader here we have to parse the boot partition too to
+; locate initrd in it. So there's an extra method to every filesystem driver.
 ; methods:
 ;  *_1stpart_initrd: get initrd (not in EFI)
 ;  *_initrd: get kernel (common with EFI)
@@ -27,7 +27,7 @@ fsdrivers:  dw          gzip_1stpart_initrd, gzip_initrd
             dw          0, 0, 0
 
 ; ----------- FS/Z ----------
-; Find the initrd on EFI System Partition
+; Find the initrd on boot partition (EFI System Partition)
 ; IN:   esi: 1st partition pointer, ecx: 1st partition end
 ; OUT:  On Success
 ;         esi: pointer to initrd, ecx: size in bytes
@@ -179,6 +179,12 @@ fsz_initrd:
             ret
 
 ; ----------- cpio ----------
+; Find the initrd on boot partition (EFI System Partition)
+; IN:   esi: 1st partition pointer, ecx: 1st partition end
+; OUT:  On Success
+;         esi: pointer to initrd, ecx: size in bytes
+;       On Error
+;         esi: error message, ecx: 0
 cpio_1stpart_initrd:
             mov         ebx, ecx
             xor         ecx, ecx
@@ -259,6 +265,12 @@ cpio_initrd:
 .fs:        dd          0
 
 ; ----------- tar ----------
+; Find the initrd on boot partition (EFI System Partition)
+; IN:   esi: 1st partition pointer, ecx: 1st partition end
+; OUT:  On Success
+;         esi: pointer to initrd, ecx: size in bytes
+;       On Error
+;         esi: error message, ecx: 0
 tar_1stpart_initrd:
             mov         ebx, ecx
             xor         ecx, ecx
@@ -333,6 +345,12 @@ tar_initrd:
 .fs:        dd          0
 
 ; ----------- FAT12 ----------
+; Find the initrd on boot partition (EFI System Partition)
+; IN:   esi: 1st partition pointer, ecx: 1st partition end
+; OUT:  On Success
+;         esi: pointer to initrd, ecx: size in bytes
+;       On Error
+;         esi: error message, ecx: 0
 fat12_1stpart_initrd:
             mov         ebx, esi
             add         ebx, ecx
@@ -369,6 +387,12 @@ fat12_initrd:
             ret
 
 ; ----------- FAT16 ----------
+; Find the initrd on boot partition (EFI System Partition)
+; IN:   esi: 1st partition pointer, ecx: 1st partition end
+; OUT:  On Success
+;         esi: pointer to initrd, ecx: size in bytes
+;       On Error
+;         esi: error message, ecx: 0
 fat16_1stpart_initrd:
             mov         ebx, esi
             add         ebx, ecx
@@ -404,6 +428,13 @@ fat16_initrd:
             xor         ecx, ecx
             ret
 
+; ----------- Compressed initrd ----------
+; Find the initrd on boot partition (EFI System Partition)
+; IN:   esi: 1st partition pointer, ecx: 1st partition end
+; OUT:  On Success
+;         esi: pointer to initrd, ecx: size in bytes
+;       On Error
+;         esi: error message, ecx: 0
 gzip_1stpart_initrd:
             mov         ebx, ecx
             xor         ecx, ecx

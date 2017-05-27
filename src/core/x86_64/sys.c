@@ -33,6 +33,7 @@
 extern OSZ_ccb ccb;                   // CPU Control Block
 extern sysinfo_t sysinfostruc;
 extern uint32_t fg;
+extern char rebootprefix[];
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern uint64_t pt;
@@ -60,6 +61,29 @@ phy_t __attribute__ ((section (".data"))) screen[2];
 char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
 
+/* reboot computer */
+void sys_reset()
+{
+    //say we're finished (on serial too)
+    kprintf_init();
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
+    kprintf(rebootprefix);
+    // reboot computer
+    __asm__ __volatile__ ("movb $0xFE, %%al; outb %%al, $0x64" : : : );
+    // if it didn't work, show a message and freeze.
+    fg = 0x29283f;
+    kprintf_center(20, -8);
+    kprintf(poweroffsuffix);
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
+    __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
+}
+
 /* turn off computer */
 void sys_disable()
 {
@@ -70,8 +94,14 @@ void sys_disable()
     dbg_putchar(10);
 #endif
     kprintf(poweroffprefix);
-    //Poweroff platform
+    // Poweroff real hardware
     acpi_poweroff();
+    // Bochs poweroff hack
+    char *s = "Shutdown";
+    while (*s) {
+        __asm__ __volatile__ ("movw $0x8900, %%dx; outb %0, %%dx" : : "a"(*s) : );
+        s++;
+    }
     // if it didn't work, show a message and freeze.
     fg = 0x29283f;
     kprintf_center(20, -8);

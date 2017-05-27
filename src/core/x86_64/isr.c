@@ -108,18 +108,22 @@ void isr_clocksource()
     //   5 = Local x2APIC timer
     if(clocksource>5) clocksource=0;
     if(clocksource==0) {
-        clocksource=sysinfostruc.systables[systable_hpet_idx]==0 ||
-        (sysinfostruc.systables[systable_hpet_idx] & (__PAGESIZE-1))!=0?
+        clocksource=sysinfostruc.systables[systable_hpet_idx]==0?
         (ISR_CTRL==CTRL_PIC?2:
         (ISR_CTRL==CTRL_APIC?4:
             5)):
         1;
+#if DEBUG
+        if(sysinfostruc.debug&DBG_DEVICES)
+            kprintf("Autodetected clocksource %d\n",clocksource);
+#endif
     }
     //if HPET or LAPIC not found, fallback to PIT
-    if((clocksource==1 && (sysinfostruc.systables[systable_hpet_idx]==0 ||
-        (sysinfostruc.systables[systable_hpet_idx] & (__PAGESIZE-1))!=0)) ||
+/*
+    if((clocksource==1 && sysinfostruc.systables[systable_hpet_idx]==0) ||
        (clocksource==4 && sysinfostruc.systables[systable_apic_idx]==0))
         clocksource=2;
+*/
     service_loadso(
         clocksource==1?"lib/sys/proc/hpet.so":(
         clocksource==2?"lib/sys/proc/pit.so":(
@@ -132,42 +136,42 @@ void isr_clocksource()
 /* initialize timer values */
 void isr_tmrinit()
 {
-        /* checks */
-        if(tmrfreq<1000 || tmrfreq>TMRMAX)
-            kpanic("unable to load timer driver");
+    /* checks */
+    if(tmrfreq<1000 || tmrfreq>TMRMAX)
+        kpanic("unable to load timer driver");
 
-        /* relocate timer isr to core space, because we cannot switch to SYS task
-           normally this does not needed at all, save RTC */
-        if(tmrisr) {
-            kmap((uint64_t)isrmem,(uint64_t)(tmrisr&~(__PAGESIZE-1)),PG_CORE);
-            tmrisr = (uint64_t)isrmem + (tmrisr&(__PAGESIZE-1));
-        }
+    /* relocate timer isr to core space, because we cannot switch to SYS task
+       normally this does not needed at all, save RTC */
+    if(tmrisr) {
+        kmap((uint64_t)isrmem,(uint64_t)(tmrisr&~(__PAGESIZE-1)),PG_CORE);
+        tmrisr = (uint64_t)isrmem + (tmrisr&(__PAGESIZE-1));
+    }
 
-        /* override the default IRQ handler ISR with timer ISR */
-        idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr);
-        idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr);
+    /* override the default IRQ handler ISR with timer ISR */
+    idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr);
+    idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr);
 
-        if(sysinfostruc.quantum<10)
-            sysinfostruc.quantum=10;         //min 10 task switch per sec
-        if(sysinfostruc.quantum>tmrfreq/10)
-            sysinfostruc.quantum=tmrfreq/10; //max 1 switch per 10 interrupts
-        //calculate stepping in nanosec
-        alarmstep = 1000000000/tmrfreq;
-        //failsafes
-        if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
-        qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
+    if(sysinfostruc.quantum<10)
+        sysinfostruc.quantum=10;         //min 10 task switch per sec
+    if(sysinfostruc.quantum>tmrfreq/10)
+        sysinfostruc.quantum=tmrfreq/10; //max 1 switch per 10 interrupts
+    //calculate stepping in nanosec
+    alarmstep = 1000000000/tmrfreq;
+    //failsafes
+    if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
+    qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
 
-        syslog_early("Timer IRQ %d at %d Hz, step %d ns, tsw %d ints",
-            tmrirq, tmrfreq, alarmstep, qdiv
-        );
+    syslog_early("Timer IRQ %d at %d Hz, step %d ns, tsw %d ints",
+        tmrirq, tmrfreq, alarmstep, qdiv
+    );
 
-        /* use bootboot.datetime and bootboot.timezone to calculate */
-        sysinfostruc.ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
-        sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
-        sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
-        // set up system counters
-        seccnt = tmrfreq;
-        qcnt = sysinfostruc.quantum;
+    /* use bootboot.datetime and bootboot.timezone to calculate */
+    sysinfostruc.ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
+    sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
+    sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
+    // set up system counters
+    seccnt = 1;
+    qcnt = sysinfostruc.quantum;
 }
 
 /* fallback exception handler */

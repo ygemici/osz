@@ -138,6 +138,8 @@ extern void sys_enable();
 /** Turn the computer off */
 extern void sys_disable();
 
+/** Reboot the computer */
+extern void sys_reset();
 
 // ----- File System -----
 /** Initialize file system thread */

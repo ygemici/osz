@@ -716,8 +716,8 @@ bool_t service_rtlink()
         /* save timer irq and isr address */
         if(isTmr && !tmrisr) {
             tmrirq = (uint8_t)l;
-            /* only save isr if it's not a dummy function with a RET */
-            if(lo && *((uint8_t *)lo)!=0xC3)
+            /* only save isr if it's found and not a dummy function with a RET */
+            if(lo && *((uint8_t *)lo)!=0xC3 && *((uint8_t *)lo + 6)!=0xC3)
                 tmrisr = lo;
         }
     }

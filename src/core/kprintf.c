@@ -65,8 +65,10 @@ char kpanicsuffix2[] =
     "                       KEEP CALM                      \n"
     "               AND RESTART YOUR COMPUTER              \n"
     "                                                      \n";
+char rebootprefix[] =
+    "OS/Z rebooting...\n";
 char poweroffprefix[] =
-    "OS/Z shutdown finished. ";
+    "OS/Z shutdown finished.\n";
 char poweroffsuffix[] =
     "TURN OFF YOUR COMPUTER.\n";
 char nullstr[] = "(null)";
@@ -330,17 +332,19 @@ void kprintf_scrollscr()
                 tmp+=bootboot.fb_scanline;
             }
         }
-    }
-    // scroll the screen, two pixels at once
-    for(y=0;y<maxy*font->height;y++){
-        line=offs;
-        for(x=0;x<w;x++){
-            *((uint64_t*)(FBUF_ADDRESS + line)) =
-                *((uint64_t*)(FBUF_ADDRESS + line + shift));
-            line+=8;
-        }
-        offs+=bootboot.fb_scanline;
-    }
+	    // scroll the screen, two pixels at once
+	    for(y=0;y<maxy*font->height;y++){
+	        line=offs;
+	        for(x=0;x<w;x++){
+	            *((uint64_t*)(FBUF_ADDRESS + line)) =
+	                *((uint64_t*)(FBUF_ADDRESS + line + shift));
+	            line+=8;
+	        }
+	        offs+=bootboot.fb_scanline;
+	    }
+    } else {
+		ky = 0;
+	}
 }
 
 // for testing purposes

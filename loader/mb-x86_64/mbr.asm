@@ -51,7 +51,7 @@ end if
 bootboot_record:
             cli
             jmp         short .skipid
-.system:    db          "OS/Z",0
+.system:    db          "BOOTBOOT",0
 .skipid:    ;relocate our code to offset 600h
             xor         ax, ax
             mov         ss, ax
@@ -81,9 +81,6 @@ bootboot_record:
             mov         byte [lbapacket.size], 16
             mov         byte [lbapacket.count], 58
             mov         byte [lbapacket.addr0+1], 08h   ;to address 800h
-            push        dx
-            print       .system
-            pop         dx
             ;check for lba presistance - floppy not supported any more
             ;we use pendrive as removable media for a long time
             cmp         dl, byte 80h
@@ -129,6 +126,7 @@ xchg bx,bx
 ;*********************************************************************
 ;writes the reason, waits for a key and reboots.
 diefunc:
+            print       bootboot_record.system
             print       panic
             call        printfunc
             mov         si, found
@@ -171,7 +169,7 @@ panic:      db          "-PANIC: ",0
 lbanotf:    db          "LBA support",0
 stage2notf: db          "FS0:\BOOTBOOT\LOADER",0
 found:      db          " not found",10,13,0
-okay:       db          " booting...",10,13,0
+okay:       db          "Booting OS...",10,13,0
 drive:      db          0
 lba_packet: db          01B0h-($-$$) dup 0
 

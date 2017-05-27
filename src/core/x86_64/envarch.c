@@ -45,6 +45,7 @@ unsigned char *envarch_cs(unsigned char *s)
     // skip separators
     while(*s==' '||*s=='\t')
         s++;
+    clocksource=0;
     if(s[0]=='h' && s[1]=='p')  clocksource=1;  // HPET
     if(s[0]=='p' && s[1]=='i')  clocksource=2;  // PIT
     if(s[0]=='r' && s[1]=='t')  clocksource=3;  // RTC

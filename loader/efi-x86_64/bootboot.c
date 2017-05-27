@@ -36,6 +36,8 @@ EFI_STATUS
   OUT struct EFI_FILE_PROTOCOL                 **Root
   );
 
+/* Intel EFI headers has simple file protocol, but not GNU EFI */
+#ifndef EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_REVISION
 typedef struct _EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
   UINT64                                      Revision;
   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME OpenVolume;
@@ -54,6 +56,7 @@ typedef struct _EFI_FILE_PROTOCOL {
   EFI_FILE_SET_INFO     SetInfo;
   EFI_FILE_FLUSH        Flush;
 } EFI_FILE_PROTOCOL;
+#endif
 
 typedef struct _EFI_UGA_DRAW_PROTOCOL EFI_UGA_DRAW_PROTOCOL;
 
@@ -403,7 +406,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     INTN argc;
     UINTN i;
     CHAR8 *ptr;
-    CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE ] ]\n\nDESCRIPTION\n  Bootstraps the OS/Z (or any other compatible) operating system via\n  the BOOTBOOT Protocol. If not given, the loader defaults to\n    FS0:\\BOOTBOOT\\INITRD  as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG  for boot environment.\n  This is a loader, it is not supposed to return control to the shell.\n\n";
+    CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
 
     // Initialize UEFI Library
     InitializeLib(image, systab);
@@ -421,7 +424,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     argc = GetShellArgcArgv(image, &argv);
     if(argc>1) {
         if((argv[1][0]=='-'||argv[1][0]=='/')&&(argv[1][1]=='?'||argv[1][1]=='h')){
-            Print(L"OS/Z LOADER (build %s)\n\n%s",a2u(__DATE__),help);
+            Print(L"BOOTBOOT LOADER (build %s)\n\n%s",a2u(__DATE__),help);
             return EFI_SUCCESS;
         }
         initrdfile=argv[1];
@@ -433,7 +436,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     } else {
         configfile=L"\\BOOTBOOT\\CONFIG";
     }
-    Print(L"OS/Z booting...\n");
+    Print(L"Booting OS...\n");
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     RootDir = LibOpenRoot(loaded_image->DeviceHandle);

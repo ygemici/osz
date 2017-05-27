@@ -167,7 +167,7 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
         kprintf("%c%c%c%c\n", hdr->oemid[0], hdr->oemid[1], hdr->oemid[2], hdr->oemid[3]);
     }
 #endif
-    /* System tables pointer, should never get it, but just in case failsafe */
+    /* System tables pointer, should never get it, but just in case, failsafe */
     if(!kmemcmp("RSD PTR ", hdr->magic, 8)) {
         ACPI_RSDPTR *rsdptr = (ACPI_RSDPTR *)hdr;
         ptr = (char*)rsdptr->xsdt;
@@ -328,7 +328,8 @@ bool_t acpi_init()
     }
 #if DEBUG
     if(sysinfostruc.debug&DBG_DEVICES)
-        kprintf("ACPI PM1a_CNT %x SMI_CMD %x ACPI_ENABLE %x\n", PM1a_CNT, SMI_CMD, ACPI_ENABLE);
+        kprintf("ACPI PM1a_CNT %x SMI_CMD %x ACPI_ENABLE %x SLP_TYPa %x SLP_EN %x\n", 
+            PM1a_CNT, SMI_CMD, ACPI_ENABLE, SLP_TYPa,SLP_EN);
 #endif
     // check if acpi is enabled
     __asm__ __volatile__ (
@@ -377,10 +378,6 @@ void acpi_poweroff()
     uint64_t en;
     // APCI poweroff
     if(PM1a_CNT!=0) {
-#if DEBUG
-        if(sysinfostruc.debug&DBG_DEVICES)
-            kprintf("\nPM1a_CNT %x SLP_TYPa %x SLP_EN %x\n", PM1a_CNT,SLP_TYPa,SLP_EN);
-#endif
         en = SLP_TYPa | SLP_EN;
         __asm__ __volatile__ (
             "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :

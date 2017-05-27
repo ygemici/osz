@@ -49,8 +49,8 @@ _init:
     ret
 
 irq0:
-    /* nothing to do, but we still need a stub function */
-xchg %bx, %bx
+    /* nothing to do, but we still need a stub function 
+       to inform SYS task we need IRQ enabled */
     ret
 
 .section .data
