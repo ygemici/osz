@@ -35,7 +35,7 @@ Hardware Requirements
  - 3 Mb free disk space
  - 32 Mb RAM
  - 800 x 600 / ARGB display
- - x86_64 processor with AVX
+ - x86_64 processor
 
 Testing
 -------

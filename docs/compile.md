@@ -21,13 +21,13 @@ the filesystem subsystem will be recompiled.
 So to compile all the things, simply type
 
 ```shell
-$ make
+$ make all
 ```
 
 You should see something similar to this:
 
 ```
-$ make clean all testq
+$ make all
 TOOLS
   src		mkfs.c
   src		efirom.c
@@ -41,7 +41,7 @@ LOADER
 CORE
   src		lib/sys/core (x86_64)
   src		lib/libc.so (x86_64)
-USERSPACE
+BASE
   src		sbin/ui
   src		bin/sh
   src		sbin/syslog
@@ -64,22 +64,6 @@ IMAGES
   mkfs		var partition
   mkfs		home partition
   mkfs		bin/disk.dd
-TEST
-
-qemu-system-x86_64 -name OS/Z -sdl -m 256 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -monitor stdio
-QEMU 2.7.0 monitor - type 'help' for more information
-(qemu)
-```
-
-The live disk image is generated to [bin/disk.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true). Use the
-`dd` command to write it on a USB stick or boot it with qemu,
-bochs or VirtualBox.
-
-```
-$ dd if=bin/disk.dd of=/dev/sdc
-$ make testq
-$ make testb
-$ make testv
 ```
 
 Non-EFI loader
@@ -90,7 +74,17 @@ Unfortunately GAS is not good at mixing 16, 32 and 64 bit instuctions, which is 
 I've added those images to the source. With those pre-built binaries you should be able to compile the source using
 GNU toolchain only.
 
-The `loader/bootboot.bin` can be booted via 
- - `loader/mbr.bin` installed in MBR or VBR (see [mkfs](https://github.com/bztsrc/osz/blob/master/tools/mkfs.c) utility)
- - BIOS extension ROM (tested with qemu and bochs at 0D0000h)
- - GRUB using the MultiBoot protocol (not tested, but should be fine).
+See what you've done!
+---------------------
+
+The live disk image is generated to [bin/disk.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true). Use the
+`dd` command to write it on a USB stick or boot with qemu, bochs or VirtualBox.
+
+```
+$ dd if=bin/disk.dd of=/dev/sdc
+$ make testq
+$ make testb
+$ make testv
+```
+
+You can find a detailed [tutorial on testing](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md).

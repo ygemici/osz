@@ -80,7 +80,7 @@ job is to map the first task and start executing it.
 
 
 As the stack stores user mode segment selectors, the CPU will drop
-privileged mode, and normal user space execution began.
+privileged mode, and normal user space (ring 3) execution will began.
 ```
 <bochs:2> print-stack
 Stack address size 8
@@ -118,31 +118,8 @@ Next at t=22686813
 <bochs:8>
 ```
 
-You can count on me when I say we're still on "SYS" task (if in doubt type `x /5bc 0`). So load
-it's symbols, and check code.
-
-```
-<bochs:8> ldsym global "bin/sys.sym"
-<bochs:9> u /8 rip
-0020004c: (            _init+4c): mov eax, 0x646e6573       ; b873656e64 'send'
-00200051: (            _init+51): syscall                   ; 0f05
-00200053: (           getwork+0): call .+153                ; e899000000 call mq_recv
-00200058: (           getwork+5): cmp word ptr ds:[rax], 0x0000 ; 66833800
-0020005c: (           getwork+9): jnz .-11                  ; 75f5
-0020005e: (           getwork+b): mov rdi, qword ptr ds:[rax+8] ; 488b7808
-00200062: (           getwork+f): mov rsi, 0x0000000000201000 ; 48c7c600102000
-00200069: (          getwork+16): xor rcx, rcx              ; 4831c9
-<bochs:10>
-```
-
 The execution stopped right before the kernel call. After that comes [getwork](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) function that calls mq_recv()
 to get some work. When there's no more messages left, it blocks and scheduler picks the next
 task to run. The OS will switch to the next task every time an interrupt fires or the current task blocks.
-
-Further Break Points
---------------------
-
-No more breakpoints (no more planned break points that is).
-Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to interrupt and get to bochs console any time you want.
 
 If you are interested in debugging, read the [next tutorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
