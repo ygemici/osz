@@ -1,4 +1,4 @@
-APPS = $(filter-out Makefile,$(wildcard *))
+APPS = $(filter-out Makefile README.md,$(wildcard *))
 ifeq (gensyms,$(firstword $(MAKECMDGOALS)))
 CMD = gensyms
 else

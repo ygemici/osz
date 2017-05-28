@@ -1,6 +1,6 @@
 DRVS = $(wildcard drivers/*/*/*) $(wildcard drivers/*/*)
-LIBS = $(filter-out libc drivers Makefile,$(wildcard lib/*))
-APPS = $(filter-out core lib drivers Makefile,$(wildcard *))
+LIBS = $(filter-out libc drivers Makefile README.md,$(wildcard lib/*))
+APPS = $(filter-out core lib drivers Makefile README.md,$(wildcard *))
 ifeq (gensyms,$(firstword $(MAKECMDGOALS)))
 CMD = gensyms
 else
