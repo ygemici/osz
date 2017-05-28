@@ -46,8 +46,6 @@
 #define ISR_EXCMAX 128      //maximum code size of exception ISRs
 #define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
-#define ISR_IRQSCH 0        //irq to trigger preemption and alarm
-#define ISR_IRQTMR 8        //irq to handle timesource
 #if OPTIMIZE != 1
 /* you can change this, either PIC or APIC */
 #define ISR_CTRL CTRL_PIC
@@ -56,7 +54,7 @@
 #define ISR_CTRL CTRL_PIC  //should be x2APIC, but kvm does not support it :-(
 #endif
 
-// PIC, PIT constants
+// PIC constants
 #define PIC_MASTER		0x20
 #define PIC_MASTER_DATA	0x21
 #define PIC_SLAVE		0xA0

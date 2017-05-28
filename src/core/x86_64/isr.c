@@ -37,7 +37,8 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
-extern void isr_irqtmr();
+extern void isr_irqtmr_simple();
+extern void isr_irqtmr_extra();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 extern uint64_t sys_getts(char *p);
 
@@ -140,16 +141,19 @@ void isr_tmrinit()
     if(tmrfreq<1000 || tmrfreq>TMRMAX)
         kpanic("unable to load timer driver");
 
-    /* relocate timer isr to core space, because we cannot switch to SYS task
-       normally this does not needed at all, save RTC */
     if(tmrisr) {
+        /* relocate timer isr to core space, because we cannot switch to SYS task
+           normally this does not needed at all, save RTC */
         kmap((uint64_t)isrmem,(uint64_t)(tmrisr&~(__PAGESIZE-1)),PG_CORE);
         tmrisr = (uint64_t)isrmem + (tmrisr&(__PAGESIZE-1));
+        /* override the default IRQ handler ISR with timer ISR */
+        idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr_extra);
+        idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr_extra);
+    } else {
+        /* override the default IRQ handler ISR with timer ISR */
+        idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr_simple);
+        idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr_simple);
     }
-
-    /* override the default IRQ handler ISR with timer ISR */
-    idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr);
-    idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr);
 
     if(sysinfostruc.quantum<10)
         sysinfostruc.quantum=10;         //min 10 task switch per sec

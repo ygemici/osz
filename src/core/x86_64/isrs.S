@@ -34,7 +34,8 @@
 .global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
-.global isr_irqtmr
+.global isr_irqtmr_simple
+.global isr_irqtmr_extra
 .global isr_enableirq
 .global isr_disableirq
 
@@ -48,9 +49,7 @@
 .extern excabort
 .extern pmm
 .extern sys_fault
-
-.extern enable
-.extern disable
+.extern isrtmr
 
 .section .data
     .align	16
@@ -157,20 +156,20 @@ isr_inithw:
     outb	%al, $PIC_SLAVE_DATA
     btrw	$2, %ax /* enable cascade irq 2 */
     outb	%al, $PIC_MASTER_DATA
-	    /* setup IRQs, mask them all */
-	    xorq	%rdi, %rdi
-	1:  call	isr_disableirq
-	    incl	%edi
-	    cmpl	$24, %edi
-	    jne		1b
-	    /* enable NMI */
-	    inb		$0x70, %al
-	    btrw	$8, %ax
-	    outb	%al, $0x70
-	    ret
+    /* setup IRQs, mask them all */
+    xorq	%rdi, %rdi
+1:  call	isr_disableirq
+    incl	%edi
+    cmpl	$24, %edi
+    jne		1b
+    /* enable NMI */
+    inb		$0x70, %al
+    btrw	$8, %ax
+    outb	%al, $0x70
+    ret
 
 /* exception handler ISRs */
-	.align 128, 0x90
+.align 128, 0x90
 isr_exc00divzero:
     cli
     /* tcb->excerr = 0; */
@@ -972,26 +971,37 @@ isr_exc31:
 .align 128, 0x90
 
 /* IRQ handler ISRs */
-    .align , 0x90
-isr_irqtmr:
+
+isr_irqtmr_simple:
+    /* no timer isr needed */
+    cli
+    call	isr_savecontext
+    subq	$128, ccb + ccb_ist1
+    call	isr_timer
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
+    addq	$128, ccb + ccb_ist1
+    call	isr_loadcontext
+    iretq
+.align 64, 0x90
+
+isr_irqtmr_extra:
     /* we can't afford overhead of a taskswitch, so
        call timer isr directly, mapped in core space */
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
     call	isr_timer
-    movq	tmrisr, %rax
-    orq		%rax, %rax
-    jz		1f
-    call	*%rax
-1:  /* PIC EOI */
+    call	*tmrisr
+    /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
 .align 128, 0x90
-.align 128, 0x90
+
 isr_irq0:
     cli
     call	isr_savecontext
@@ -1025,7 +1035,6 @@ isr_irq0:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq1:
     cli
     call	isr_savecontext
@@ -1059,7 +1068,6 @@ isr_irq1:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq2:
     cli
     call	isr_savecontext
@@ -1093,7 +1101,6 @@ isr_irq2:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq3:
     cli
     call	isr_savecontext
@@ -1127,7 +1134,6 @@ isr_irq3:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq4:
     cli
     call	isr_savecontext
@@ -1161,7 +1167,6 @@ isr_irq4:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq5:
     cli
     call	isr_savecontext
@@ -1195,7 +1200,6 @@ isr_irq5:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq6:
     cli
     call	isr_savecontext
@@ -1229,7 +1233,6 @@ isr_irq6:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq7:
     cli
     call	isr_savecontext
@@ -1263,7 +1266,6 @@ isr_irq7:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq8:
     cli
     call	isr_savecontext
@@ -1298,7 +1300,6 @@ isr_irq8:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq9:
     cli
     call	isr_savecontext
@@ -1333,7 +1334,6 @@ isr_irq9:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq10:
     cli
     call	isr_savecontext
@@ -1368,7 +1368,6 @@ isr_irq10:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq11:
     cli
     call	isr_savecontext
@@ -1403,7 +1402,6 @@ isr_irq11:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq12:
     cli
     call	isr_savecontext
@@ -1438,7 +1436,6 @@ isr_irq12:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq13:
     cli
     call	isr_savecontext
@@ -1473,7 +1470,6 @@ isr_irq13:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq14:
     cli
     call	isr_savecontext
@@ -1508,7 +1504,6 @@ isr_irq14:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq15:
     cli
     call	isr_savecontext
@@ -1543,7 +1538,6 @@ isr_irq15:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq16:
     cli
     call	isr_savecontext
@@ -1578,7 +1572,6 @@ isr_irq16:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq17:
     cli
     call	isr_savecontext
@@ -1613,7 +1606,6 @@ isr_irq17:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq18:
     cli
     call	isr_savecontext
@@ -1648,7 +1640,6 @@ isr_irq18:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq19:
     cli
     call	isr_savecontext
@@ -1683,7 +1674,6 @@ isr_irq19:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq20:
     cli
     call	isr_savecontext
@@ -1718,7 +1708,6 @@ isr_irq20:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq21:
     cli
     call	isr_savecontext
@@ -1753,7 +1742,6 @@ isr_irq21:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq22:
     cli
     call	isr_savecontext
@@ -1788,7 +1776,6 @@ isr_irq22:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq23:
     cli
     call	isr_savecontext
@@ -1823,7 +1810,6 @@ isr_irq23:
     iretq
 .align 128, 0x90
 
-.align 128, 0x90
 isr_irq24:
     cli
     call	isr_savecontext
