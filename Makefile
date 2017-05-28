@@ -1,7 +1,7 @@
 include Config
 export O = @
 
-all: clrdd todogen util boot system apps images
+all: clrdd todogen util boot system apps usrs images
 
 clrdd:
 	@rm bin/disk.dd 2>/dev/null || true
@@ -37,7 +37,7 @@ system: src
 	@make -e --no-print-directory -C src system | grep -v 'Nothing to be done'
 
 apps: src
-	@echo "USERSPACE"
+	@echo "BASE"
 	@make -e --no-print-directory -C src libs | grep -v 'Nothing to be done' || true
 	@make -e --no-print-directory -C src apps | grep -v 'Nothing to be done' || true
 	@echo "DRIVERS"
@@ -45,6 +45,10 @@ apps: src
 ifeq ($(DEBUG),1)
 	@make -e --no-print-directory -C src gensyms 2>&1 | grep -v 'Nothing to be done' | grep -v 'No rule to make target' || true
 endif
+
+usrs: usr
+	@echo "USERSPACE"
+	@make -e --no-print-directory -C usr all | grep -v 'Nothing to be done' || true
 
 images: tools
 	@echo "IMAGES"

@@ -1,0 +1,27 @@
+include ../../Config
+BINTARGET = ../../bin/usr/bin/$(TARGET)
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
+LIBS += -lc
+
+CFLAGS += -g -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -L../../bin/root/lib -L../../bin/usr/lib
+ifeq ($(LINKER),sharedlib)
+LDFLAGS += -shared -Bsymbolic -Bshareable
+endif
+
+ifeq ($(LINKER),)
+LINKER = executable
+endif
+
+all: $(OBJS) $(BINTARGET)
+
+%.o: %.c
+	$(O)$(CC) -nostdinc -I../../etc/include $(OPT) $(CFLAGS) -c $< -o $@
+
+$(BINTARGET): $(OBJS) $(EXTOBJ)
+	@echo "  src		$(TARGET)"
+	$(O)$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+
+clean:
+	@rm *.o $(BINTARGET) 2>/dev/null || true
