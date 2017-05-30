@@ -1,5 +1,5 @@
 /*
- * drivers/proc/rtc.S
+ * core/x86_64/rtc.S
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -28,11 +28,9 @@
 #define _AS 1
 #include <osZ.h>
 
-.global _init
-.global irq8
-.global tmrfreq
+.global rtc_init
 
-_init:
+rtc_init:
 /* initialize RTC */
 
     /* reprogram RTC to 1024Hz */
@@ -65,21 +63,7 @@ _init:
     /* reenable NMI */
     xorb    %al, %al
     outb    %al, $0x70
-    ret
 
-irq8:
-    /* acknowledge irq8 in RTC */
-    movb    $0x0C, %al
-    outb    %al, $0x70
-    jmp     1f
-1:  inb     $0x71, %al
-    /* reenable NMI */
-    xorb    %al, %al
-    outb    %al, $0x70
-    movb	$0x20, %al
-    outb	%al, $0xA0
+    movq    $1024, tmrfreq
+    movb    $8, tmrirq
     ret
-
-.section .data
-tmrfreq:
-    .quad 1024

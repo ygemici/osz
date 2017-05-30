@@ -30,7 +30,7 @@
 #include "pci.h"
 
 /* external resources */
-extern OSZ_ccb ccb;                   // CPU Control Block
+//extern OSZ_ccb ccb;                   // CPU Control Block
 extern sysinfo_t sysinfostruc;
 extern uint32_t fg;
 extern char rebootprefix[];
@@ -42,10 +42,8 @@ extern phy_t pdpe;
 
 extern void kprintf_center(int w, int h);
 extern void acpi_init();
-extern void acpi_early(ACPI_Header *hdr);
 extern void acpi_poweroff();
 extern void pci_init();
-extern void isr_clocksource();
 #if DEBUG
 extern void dbg_putchar(int c);
 #endif
@@ -56,7 +54,6 @@ uint64_t __attribute__ ((section (".data"))) *drvptr;
 char __attribute__ ((section (".data"))) *drvnames;
 char __attribute__ ((section (".data"))) *drvs;
 char __attribute__ ((section (".data"))) *drvs_end;
-uint64_t __attribute__ ((section (".data"))) *safestack;
 phy_t __attribute__ ((section (".data"))) screen[2];
 char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
@@ -117,7 +114,7 @@ void sys_disable()
 __inline__ void sys_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *systcb = (OSZ_tcb*)(&tmpmap);
+    OSZ_tcb *fstcb = (OSZ_tcb*)(&tmpmap);
 
 #if DEBUG
     // initialize debugger, it can be used only with thread mappings
@@ -125,19 +122,19 @@ __inline__ void sys_enable()
 #endif
     sys_fault = false;
 
-    // map "SYS" task's TCB
-    kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_SYS]*__PAGESIZE), PG_CORE_NOCACHE);
+    // map "FS" task's TCB
+    kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_FS]*__PAGESIZE), PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to force first task switch
     __asm__ __volatile__ (
-        // switch to system task's address space
+        // switch to filesystem task's address space
         "mov %0, %%rax; mov %%rax, %%cr3;"
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
         "movq %1, %%rsp; movq %2, %%rbp;\n#if DEBUG\nxchg %%bx, %%bx;\n#endif\n iretq" :
         :
-        "r"(systcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
+        "r"(fstcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
 }
 
@@ -209,18 +206,6 @@ void sys_init()
     kmemcpy(&fn[0], "lib/sys/", 8);
 
     /*** Platform specific initialization ***/
-    // CPU Control Block (TSS64 in kernel bss)
-    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
-    ccb.magic = OSZ_CCB_MAGICH;
-    //usr stack (userspace, first page)
-    ccb.ist1 = __PAGESIZE;
-    //nmi stack (separate page in kernel space, 512 bytes)
-    ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
-    //debug stack (rest of the page)
-    ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE - 512;
-
-    // parse MADT to get IOAPIC address
-    acpi_early(NULL);
     // interrupt service routines (idt, pic, ioapic etc.)
     isr_init();
 
@@ -275,12 +260,9 @@ void sys_init()
 #endif
         syslog_early("WARNING missing /etc/sys/drivers\n");
         // hardcoded legacy devices if driver list not found
-        service_loadso("lib/sys/proc/pit.so");
         service_loadso("lib/sys/input/ps2.so");
         service_loadso("lib/sys/display/fb.so");
     } else {
-        // detect clock source
-        isr_clocksource();
         // load devices which don't have entry in any ACPI tables
         for(c=drvs;c<drvs_end;) {
             f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
@@ -331,9 +313,6 @@ void sys_init()
         sysinfostruc.systables[systable_smbi_idx] = bootboot.smbi_ptr;
         sysinfostruc.systables[systable_efi_idx]  = bootboot.efi_ptr;
         sysinfostruc.systables[systable_mp_idx]   = bootboot.mp_ptr;
-
-        /*** Timer stuff ***/
-        isr_tmrinit();
 
         /*** Double Screen stuff ***/
         // allocate and map screen buffer A

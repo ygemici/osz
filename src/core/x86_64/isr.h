@@ -54,6 +54,10 @@
 #define ISR_CTRL CTRL_PIC  //should be x2APIC, but kvm does not support it :-(
 #endif
 
+#define TMR_HPET		1
+#define TMR_PIT			2
+#define TMR_RTC			3
+
 // PIC constants
 #define PIC_MASTER		0x20
 #define PIC_MASTER_DATA	0x21

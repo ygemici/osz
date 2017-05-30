@@ -67,11 +67,10 @@ void main()
     pmm_init();
     // this is early, we don't have "FS" subsystem yet.
 
-    // initialize the "SYS" task, service_init(SRV_SYS, "sbin/system")
-    // this will also detect device drivers
-    sys_init();
+    // initialize interrupt controller and timers
+    isr_init();
     // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
-//    fs_init();
+    fs_init();
 
     /* step 2: communication */
     // initialize "UI" task to handle user input / output

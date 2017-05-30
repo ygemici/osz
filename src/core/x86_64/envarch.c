@@ -26,6 +26,7 @@
  */
 
 #include <sys/sysinfo.h>
+#include "isr.h"
 
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
@@ -38,7 +39,7 @@ unsigned char *envarch_cs(unsigned char *s)
 {
     uint64_t tmp;
     if(*s>='0' && *s<='9') {
-        s = env_dec(s, &tmp, 0, 5);
+        s = env_dec(s, &tmp, 0, 3);
         clocksource=(uint8_t)tmp;
         return s;
     }
@@ -46,11 +47,12 @@ unsigned char *envarch_cs(unsigned char *s)
     while(*s==' '||*s=='\t')
         s++;
     clocksource=0;
-    if(s[0]=='h' && s[1]=='p')  clocksource=1;  // HPET
-    if(s[0]=='p' && s[1]=='i')  clocksource=2;  // PIT
-    if(s[0]=='r' && s[1]=='t')  clocksource=3;  // RTC
-    if(s[0]=='l' && s[1]=='a')  clocksource=4;  // LAPIC
-    if(s[0]=='x' && s[1]=='2')  clocksource=5;  // Lx2APIC
+    if(s[0]=='h' && s[1]=='p')  clocksource=TMR_HPET; // HPET
+    if(s[0]=='H' && s[1]=='P')  clocksource=TMR_HPET; // HPET
+    if(s[0]=='p' && s[1]=='i')  clocksource=TMR_PIT;  // PIT
+    if(s[0]=='P' && s[1]=='I')  clocksource=TMR_PIT;  // PIT
+    if(s[0]=='r' && s[1]=='t')  clocksource=TMR_RTC;  // RTC
+    if(s[0]=='R' && s[1]=='T')  clocksource=TMR_RTC;  // RTC
     while(*s!=0 && *s!='\n')
         s++;
     return s;

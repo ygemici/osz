@@ -37,19 +37,26 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
-extern void isr_irqtmr_simple();
-extern void isr_irqtmr_extra();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
+extern void isr_enableirq(uint8_t irq);
 extern uint64_t sys_getts(char *p);
+extern void hpet_init();
+extern void pit_init();
+extern void rtc_init();
+extern void isr_irqtmr();
+extern void isr_irqtmr_rtc();
+extern void acpi_early(void *hdr);
 
 extern phy_t core_mapping;
 extern uint64_t ioapic_addr;
 extern sysinfo_t sysinfostruc;
 
+/* safe stack for interrupt routines */
+uint64_t __attribute__ ((section (".data"))) *safestack;
+
 /* current fps counter */
 uint64_t __attribute__ ((section (".data"))) isr_currfps;
 /* alarm queue stuff */
-uint64_t __attribute__ ((section (".data"))) tmrisr;
 uint64_t __attribute__ ((section (".data"))) tmrfreq;
 uint8_t  __attribute__ ((section (".data"))) tmrirq;
 uint64_t __attribute__ ((section (".data"))) qdiv;
@@ -63,18 +70,30 @@ uint64_t __attribute__ ((section (".data"))) isr_next;
 
 /* allocated memory */
 uint64_t __attribute__ ((section (".data"))) *idt;
-uint64_t __attribute__ ((section (".data"))) *isrmem;
 
 /* Initialize interrupts */
 void isr_init()
 {
+    char *tmrname[] = { "HPET", "PIT", "RTC" };
     void *ptr;
     int i;
+
+    // CPU Control Block (TSS64 in kernel bss)
+    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
+    ccb.magic = OSZ_CCB_MAGICH;
+    //usr stack (userspace, first page)
+    ccb.ist1 = __PAGESIZE;
+    //nmi stack (separate page in kernel space, 512 bytes)
+    ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
+    //debug stack (rest of the page)
+    ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE - 512;
+
+    // parse MADT to get IOAPIC address
+    acpi_early(NULL);
 
     isr_next = 0;
 
     idt = kalloc(1);                                 //allocate Interrupt Descriptor Table
-    isrmem = pmm.bss_end; pmm.bss_end += __PAGESIZE; //"allocate" space for isr mapping
 
     // generate Interrupt Descriptor Table
     ptr = &isr_exc00divzero;
@@ -95,19 +114,14 @@ void isr_init()
     isr_inithw(idt, &ccb);
 
     // default timer frequency and IRQ
-    tmrfreq = tmrisr = 0; tmrirq = 0;
-}
+    tmrfreq = 0; tmrirq = 0;
 
-void isr_clocksource()
-{
     /* load timer driver */
     //   0 = autodetect
     //   1 = HPET
     //   2 = PIT
     //   3 = RTC
-    //   4 = Local APIC timer
-    //   5 = Local x2APIC timer
-    if(clocksource>5) clocksource=0;
+    if(clocksource>3) clocksource=0;
     if(clocksource==0) {
         clocksource=sysinfostruc.systables[systable_hpet_idx]==0?
         (ISR_CTRL==CTRL_PIC?2:
@@ -125,35 +139,27 @@ void isr_clocksource()
        (clocksource==4 && sysinfostruc.systables[systable_apic_idx]==0))
         clocksource=2;
 */
-    service_loadso(
-        clocksource==1?"lib/sys/proc/hpet.so":(
-        clocksource==2?"lib/sys/proc/pit.so":(
-        clocksource==3?"lib/sys/proc/rtc.so":(
-        clocksource==4?"lib/sys/proc/apic.so":
-        "lib/sys/proc/x2apic.so"
-    ))));
-}
+    ptr = clocksource==TMR_RTC ? &isr_irqtmr_rtc : &isr_irqtmr;
 
-/* initialize timer values */
-void isr_tmrinit()
-{
+    if(clocksource==TMR_HPET)
+        hpet_init();
+    else if(clocksource==TMR_RTC)
+        rtc_init();
+    else {
+        pit_init();
+        clocksource=TMR_PIT;
+    }
+    syslog_early("Timer %s (#%d) IRQ %d at %d Hz",
+        tmrname[clocksource-1], clocksource, tmrirq, tmrfreq
+    );
+
     /* checks */
     if(tmrfreq<1000 || tmrfreq>TMRMAX)
         kpanic("unable to load timer driver");
 
-    if(tmrisr) {
-        /* relocate timer isr to core space, because we cannot switch to SYS task
-           normally this does not needed at all, save RTC */
-        kmap((uint64_t)isrmem,(uint64_t)(tmrisr&~(__PAGESIZE-1)),PG_CORE);
-        tmrisr = (uint64_t)isrmem + (tmrisr&(__PAGESIZE-1));
-        /* override the default IRQ handler ISR with timer ISR */
-        idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr_extra);
-        idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr_extra);
-    } else {
-        /* override the default IRQ handler ISR with timer ISR */
-        idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, &isr_irqtmr_simple);
-        idt[(tmrirq+32)*2+1] = IDT_GATE_HI(&isr_irqtmr_simple);
-    }
+    /* override the default IRQ handler ISR with timer ISR */
+    idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
+    idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
 
     if(sysinfostruc.quantum<10)
         sysinfostruc.quantum=10;         //min 10 task switch per sec
@@ -165,8 +171,8 @@ void isr_tmrinit()
     if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
     qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
 
-    syslog_early("Timer IRQ %d at %d Hz, step %d ns, tsw %d ints",
-        tmrirq, tmrfreq, alarmstep, qdiv
+    syslog_early("Timer step %d ns, taskswitch %d/sec",
+        alarmstep, qdiv
     );
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
@@ -176,6 +182,8 @@ void isr_tmrinit()
     // set up system counters
     seccnt = 1;
     qcnt = sysinfostruc.quantum;
+
+    isr_enableirq(tmrirq);
 }
 
 /* fallback exception handler */

@@ -120,8 +120,8 @@ cat >isrs.S <<EOF
 .global isr_inithw
 .global isr_exc00divzero
 .global isr_irq0
-.global isr_irqtmr_simple
-.global isr_irqtmr_extra
+.global isr_irqtmr
+.global isr_irqtmr_rtc
 .global isr_enableirq
 .global isr_disableirq
 
@@ -135,7 +135,6 @@ cat >isrs.S <<EOF
 .extern excabort
 .extern pmm
 .extern sys_fault
-.extern isrtmr
 
 .section .data
     .align	16
@@ -526,7 +525,7 @@ done
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
 
-isr_irqtmr_simple:
+isr_irqtmr:
     /* no timer isr needed */
     cli
     call	isr_savecontext
@@ -537,22 +536,38 @@ isr_irqtmr_simple:
     call	isr_loadcontext
     iretq
 .align 64, 0x90
+EOF
 
-isr_irqtmr_extra:
+if [ "$EOI2" != "" ]
+then
+	EOIRTC="$EOI2";
+else
+	EOIRTC="$EOI";
+fi
+cat >>isrs.S <<-EOF
+isr_irqtmr_rtc:
     /* we can't afford overhead of a taskswitch, so
-       call timer isr directly, mapped in core space */
+       we use inline code here */
     cli
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
     call	isr_timer
-    call	*tmrisr
-    $EOI
+    /* acknowledge irq8 in RTC */
+    movb	\$0x0C, %al
+    outb	%al, \$0x70
+    jmp		1f
+1:  inb		\$0x71, %al
+    /* reenable NMI */
+    xorb	%al, %al
+    outb	%al, \$0x70
+    $EOIRTC
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
 .align $isrirqmax, 0x90
 
 EOF
+
 for isr in `seq 0 $numirq`
 do
 	echo "			irq$isr" >&2
