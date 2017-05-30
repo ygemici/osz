@@ -126,7 +126,7 @@ extern void isr_init();
 extern void isr_fini();
 extern void isr_enableirq(uint8_t irq);
 extern void isr_disableirq(uint8_t irq);
-extern int  isr_installirq(uint8_t irq, pid_t pid);
+extern int  isr_installirq(uint8_t irq, phy_t memroot);
 
 // ----- System -----
 /** Initialize system (idle thread and device drivers) */
