@@ -153,7 +153,7 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     sysinfostruc.srand[(len+1)%4] -= (uint64_t)hdr;
     sysinfostruc.srand[(len+2)%4] += ((uint64_t)hdr<<1);
     sysinfostruc.srand[(len+4)%4] -= (uint64_t)((uint64_t)hdr>>1);
-    isr_gainentropy();
+    kentropy();
 
     /* maximum tree depth */
     if(level>8)

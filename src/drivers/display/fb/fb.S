@@ -32,6 +32,7 @@
 .global mem2vid
 .global aaa
 .global printf
+//.type mem2vid, STT_FUNC
 
 _init:
     call    printf@PLT

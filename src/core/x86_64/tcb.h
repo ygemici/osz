@@ -28,6 +28,7 @@
 #include <limits.h>
 
 /* WARNING: must match tcb struct, for asm */
+#define tcb_priority 4
 #define tcb_errno 6
 #define tcb_gpr   8
 #define tcb_fx  128

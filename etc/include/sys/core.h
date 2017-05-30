@@ -36,18 +36,20 @@
 #define SYS_dl 3
 #define SYS_sched_yield 4
 #define SYS_seterr 5
-#define SYS_exit 6
-#define SYS_sysinfo 7
-#define SYS_swapbuf 8
-#define SYS_regservice 9
-#define SYS_stimebcd 10     // SYS to CORE, cmos local date
-#define SYS_stime 11
-#define SYS_alarm 12
-#define SYS_mmap 13
-#define SYS_munmap 14
-#define SYS_mapfile 15
-#define SYS_fork 16
-#define SYS_exec 17
+#define SYS_setirq 6 //FIXME
+#define SYS_exit 7
+#define SYS_sysinfo 8
+#define SYS_swapbuf 9
+#define SYS_regservice 10
+#define SYS_stimebcd 11     // SYS to CORE, cmos local date
+#define SYS_stime 12
+#define SYS_alarm 13
+#define SYS_mmap 14
+#define SYS_munmap 15
+#define SYS_mapfile 16
+#define SYS_fork 17
+#define SYS_exec 18
+#define SYS_sync 19
 
 // rdi: FFFFFFFFFFFFxxxx File system services
 // see sys/fs.h
@@ -82,6 +84,7 @@ void munmap(virt_t bss, size_t size);   // unmap bss (free physical pages)
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
 pid_t fork();                           // fork thread
 pid_t exec(uchar *cmd);                 // start a new process in the background
+void sync();                            // flush cache buffers
 
 //File System
 size_t read(fid_t fid, void *buf, size_t size);

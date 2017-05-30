@@ -32,9 +32,6 @@
 /* external resources */
 extern uint8_t _code;
 extern uint64_t *stack_ptr;
-extern char *drvnames;
-extern uint64_t *drivers;
-extern uint64_t *drvptr;
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
@@ -56,8 +53,6 @@ OSZ_rela __attribute__ ((section (".data"))) *relas;
 /* pids of services. Negative pids are service ids and looked up in this */
 pid_t  __attribute__ ((section (".data"))) *services;
 uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_USRFIRST;
-/* irq routing */
-uint64_t __attribute__ ((section (".data"))) *irq_routing_table;
 /* dynsym */
 unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no symbol)";
 #if DEBUG
@@ -82,12 +77,6 @@ void *service_loadelf(char *fn)
     // so we have to rely on identity mapping to locate the files
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
-    char *name = fn;
-    // copy filename to a permanent store
-    if(drvptr!=NULL && drvnames!=NULL) {
-        name = drvnames;
-        drvnames = kstrcpy(drvnames, fn);
-    }
     /* locate elf on initrd */
     Elf64_Ehdr *elf=(Elf64_Ehdr *)fs_locate(fn);
     /* get program headers */
@@ -134,8 +123,6 @@ void *service_loadelf(char *fn)
         paging[i]=(uint64_t)((char*)elf + (i-ret)*__PAGESIZE + PG_USER_RO);
         fs_size -= __PAGESIZE;
         tcb->linkmem++;
-        if(drvptr!=NULL)
-            drvptr[i] = (uint64_t)name;
         i++;
     }
     // failsafe
@@ -150,8 +137,6 @@ void *service_loadelf(char *fn)
         kmemcpy(pm,(char *)elf + (i-ret)*__PAGESIZE,__PAGESIZE);
         paging[i]=((uint64_t)(pm) + PG_USER_RW)|((uint64_t)1<<63);
         tcb->allocmem++;
-        if(drvptr!=NULL)
-            drvptr[i] = (uint64_t)name;
         i++;
     }
 
@@ -172,7 +157,6 @@ __inline__ void service_loadso(char *fn)
 #if DEBUG
 virt_t service_lookupsym(uchar *name, size_t size)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
     uchar c = name[size];
     name[size]=0;
@@ -205,17 +189,6 @@ virt_t service_lookupsym(uchar *name, size_t size)
     if(size==2 && !kmemcmp(name,"bt",3)) {
         name[size] = c;
         return (virt_t)(ccb.ist3+ISR_STACK-40);
-    }
-    /* SYS task only */
-    if(tcb->memroot == sys_mapping) {
-        if(size==5 && !kmemcmp(name,"_main",6)) {
-            name[size] = c;
-            return TEXT_ADDRESS;
-        }
-        if(size==3 && !kmemcmp(name,"irt",4)) {
-            name[size] = c;
-            return TEXT_ADDRESS + __PAGESIZE;
-        }
     }
     name[size] = c;
     /* otherwise look for elf and parse for symbols */
@@ -329,16 +302,13 @@ uchar *service_sym(virt_t addr)
     sys_fault = false;
     while(!sys_fault && ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
         ptr -= __PAGESIZE;
-    /* one special case, SYS task, which does not have an elf header */
-    if(ptr == TEXT_ADDRESS && tcb->memroot == sys_mapping) {
-        if(addr<TEXT_ADDRESS+__PAGESIZE)
-            return (uchar*)"_main (irq dispatcher)";
-        if(addr>=TEXT_ADDRESS+__PAGESIZE && addr<=TEXT_ADDRESS+3*__PAGESIZE) {
+    /* one special case, idle task, which does not have an elf header */
+    if(ptr == TEXT_ADDRESS && tcb->memroot == idle_mapping) {
 #if DEBUG
-            lastsym = TEXT_ADDRESS + __PAGESIZE;
+        lastsym = TEXT_ADDRESS + __PAGESIZE;
 #endif
-            return (uchar*)"irt";
-        }
+        if(addr<TEXT_ADDRESS+__PAGESIZE)
+            return (uchar*)"idle";
         return nosym;
     }
     ehdr = (Elf64_Ehdr*)ptr;
@@ -434,28 +404,6 @@ uchar *service_sym(virt_t addr)
 }
 
 c_assert(ISR_NUMIRQ < 224);
-
-void service_installirq(uint8_t irq, uint64_t offs)
-{
-    uint k=((irq)*nrirqmax)+1;
-    uint last=(irq+1)*nrirqmax;
-    if(irq>=0 && irq<ISR_NUMIRQ && k<ISR_NUMIRQ*nrirqmax-1) {
-        // find next free slot
-        while(irq_routing_table[k]!=0&&k<last) k++;
-#if DEBUG
-        if(sysinfostruc.debug&DBG_IRQ)
-            kprintf("  IRQ %3d: irt[%4d]=%4x %s\n",
-                irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
-#endif
-        syslog_early(" %3d: irt[%4d]=%4x %s",
-            irq, k, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
-        if(irq_routing_table[k]!=0)
-            syslog_early("too many (%d+) IRQ handlers for %d\n", nrirqmax, irq);
-        irq_routing_table[k] = offs;
-    } else {
-            syslog_early("WARNING irq_routing_table[%d] for %x out of range", k, offs);
-    }
-}
 
 /* Fill in GOT entries. Relies on identity mapping
  *  - tmpmap: the text segment's PT mapped,
@@ -588,12 +536,6 @@ bool_t service_rtlink()
             }
         }
     }
-#if DEBUG
-    if((sysinfostruc.debug&DBG_IRQ) && irq_routing_table!=NULL)
-        kprintf("\nIRQ Routing Table (%d IRQs, %d handlers per IRQ):\n", ISR_NUMIRQ, nrirqmax);
-#endif
-    if(irq_routing_table!=NULL)
-        syslog_early("IRQ Routing Table (%d IRQs, %d handlers per IRQ)", ISR_NUMIRQ, nrirqmax);
 
     /*** resolve addresses ***/
     for(j=0; j<__PAGESIZE/8; j++) {
@@ -654,10 +596,11 @@ bool_t service_rtlink()
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_routing_table
-                if(irq_routing_table != NULL) {
+                if(((OSZ_tcb*)(pmm.bss_end))->priority == PRI_DRV) {
                     if(!kmemcmp(strtable + s->st_name,"irq",3)) {
-                        //at least one number
-                        if(*(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
+                        //function, and at least one number
+                        if(ELF64_ST_TYPE(s->st_info)==STT_FUNC &&
+                            *(strtable + s->st_name + 3)>='0' && *(strtable + s->st_name + 3)<='9' &&
                             //strlen() = 4 | 5 | 6
                             (*(strtable + s->st_name + 4)==0 ||
                             *(strtable + s->st_name + 5)==0 ||
@@ -666,20 +609,24 @@ bool_t service_rtlink()
                             // irq number from function name
                             env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
                         } else {
-                            // get autodetected irq number
-                            k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
+                            if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && *(strtable + s->st_name + 3)==0) {
+                                // get autodetected irq number
+                                k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
+                            } else if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT && 
+                                !kmemcmp(strtable + s->st_name,"irqnum",7)) {
+                                // if it's a variable with IRQ number
+                                k = *((uint64_t*)((char*)ehdr + s->st_value));
+                            }
                         }
-                        service_installirq(k, offs);
+                        isr_installirq(k, ((OSZ_tcb*)(pmm.bss_end))->memroot);
                     }
-                    if(!kmemcmp(strtable + s->st_name,"mem2vid",8)) {
+                    if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && 
+                        !kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG
                         if(sysinfostruc.debug&DBG_IRQ)
-                            kprintf("  IRQ m2v: irt[%4d]=%4x %s\n",
-                                (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
+                            kprintf("IRQ m2v: %6x\n", ISR_NUMIRQ, ((OSZ_tcb*)(pmm.bss_end))->memroot);
 #endif
-                        syslog_early(" m2v: irt[%4d]=%4x %s",
-                                (ISR_NUMIRQ*nrirqmax)+1, offs, drivers[(offs-TEXT_ADDRESS)/__PAGESIZE]);
-                        irq_routing_table[(ISR_NUMIRQ*nrirqmax)+1] = offs;
+                        irq_routing_table[ISR_NUMIRQ] = ((OSZ_tcb*)(pmm.bss_end))->memroot;
                     }
                 }
                 // look up in relas array which addresses require
@@ -717,22 +664,12 @@ bool_t service_rtlink()
     // push entry point as the last callback
     // crt0 starts with a 'ret', so _start function address
     // will be popped up and executed.
-
-    // if we're linking system task, save it's entry point (no ELF header)
-    if(irq_routing_table!=NULL) {
-        // at TEXT_ADDRESS (_usercode) is a 'ret',
-        // so main() comes after that
-        *stack_ptr = TEXT_ADDRESS + (&_main - &_usercode);
-        stack_ptr--;
-        tcb->rsp -= 8;
-    } else {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
-        if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG) || ehdr->e_phoff==ehdr->e_entry)
-            kpanic("no executor?");
-        *stack_ptr = ehdr->e_entry + TEXT_ADDRESS;
-        stack_ptr--;
-        tcb->rsp -= 8;
-    }
+    Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
+    if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG) || ehdr->e_phoff==ehdr->e_entry)
+        kpanic("no executor?");
+    *stack_ptr = ehdr->e_entry + TEXT_ADDRESS;
+    stack_ptr--;
+    tcb->rsp -= 8;
 
     // go again (other way around) and save entry points onto stack,
     // but skip the first ELF as executor's entry point is already
@@ -913,5 +850,46 @@ void syslog_init()
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
     } else {
         kprintf("WARNING thread check failed for /sbin/syslog\n");
+    }
+}
+
+/* Initialize the system logger service, the "syslog" task */
+void drv_init(char *driver)
+{
+    int i = kstrlen(driver);
+//    int i=0,j=0;
+//    uint64_t *paging = (uint64_t *)&tmpmap;
+    char *drvname=driver + i;
+    while(drvname>driver && *(drvname-1)!='/') drvname--;
+    if(drvname>driver) {
+        drvname--;
+        while(drvname>driver && *(drvname-1)!='/') drvname--;
+    }
+    while(i>0 && driver[i]!='.') i--;
+    driver[i]=0;
+    pid_t pid = thread_new(drvname);
+    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_DRV;
+    driver[i]='.';
+    // map file system dispatcher
+    if(service_loadelf("lib/sys/drv") == (void*)(-1)) {
+        syslog_early("unable to load ELF from /lib/sys/drv");
+    }
+    // map libc
+    service_loadso("lib/libc.so");
+    //map driver
+    service_loadso(driver);
+
+    // dynamic linker
+    if(service_rtlink()) {
+        //set IOPL=3 in rFlags to permit IO address space
+        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        driver[i]=0;
+        syslog_early(" %s %x pid %x",drvname,((OSZ_tcb*)(pmm.bss_end))->memroot,pid);
+        driver[i]='.';
+    } else {
+        kprintf("WARNING thread check failed for %s\n", driver);
     }
 }

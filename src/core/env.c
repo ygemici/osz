@@ -30,7 +30,6 @@
 /*** parsed values ***/
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
-uint64_t __attribute__ ((section (".data"))) nrirqmax;
 uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
 uint64_t __attribute__ ((section (".data"))) fps;
@@ -193,7 +192,6 @@ void env_init()
     // set up defaults
     networking = sound = true;
     identity = false;
-    nrirqmax = ISR_NUMHANDLER;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
     fps = 10;
@@ -225,11 +223,6 @@ void env_init()
         if(!kmemcmp(env, "nrmqmax=", 8)) {
             env += 8;
             env = env_dec(env, &nrmqmax, 1, NRMQ_MAX);
-        } else
-        // maximum number of handlers per IRQ
-        if(!kmemcmp(env, "nrirqmax=", 9)) {
-            env += 9;
-            env = env_dec(env, &nrirqmax, 4, 32);
         } else
         // number of services pages
         if(!kmemcmp(env, "nrsrvmax=", 9)) {

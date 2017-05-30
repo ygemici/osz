@@ -1,7 +1,7 @@
 /*
- * core/x86_64/user.S
+ * drivers/input/ps2/dispatch.S
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -22,21 +22,40 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Idle task
+ * @brief PS2 event dispatcher (we can't use drv as we serve 2 IRQs)
  */
 
-.section .text.user
-.global _init
+#define _AS 1
+#include <osZ.h>
 
-    .align  4096
+.global _init
+.extern mouse_init
+
+.section .text
+
 _init:
-    /* send core a sync syscall */
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_sync, %dil
+    /* initialize */
+    call    mouse_init@PLT
+    /* wait for an IRQ message */
+1:  call    mq_recv@PLT
+    /* failsafe */
+    cmpw    $SYS_IRQ, (%rax)
+    jne     1b
+    /* irq==1? */
+    cmpw    $1, 8(%rax)
+    je      2f
+    /* irq==12? */
+    cmpw    $12, 8(%rax)
+    jne     1b
+    call    irq12@PLT
+    /* IRQ ack to re-enable */
+    movq    $12, %rsi
+    jmp     3f
+2:  call    irq1@PLT
+    /* IRQ ack to re-enable */
+    movq    $1, %rsi
+3:  xorq    %rdi, %rdi
+    movb    $SYS_ack, %dil
     movl     $0x646E6573, %eax # 'send'
     syscall
-    /* stop cpu until an interrupt arrives */
-    hlt
-    /* loop forever */
-    jmp     _init
+    jmp     1b

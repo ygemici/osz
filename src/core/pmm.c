@@ -33,9 +33,6 @@ extern uint8_t pmm_entries;
 extern uint64_t isr_entropy[4];
 /* memory pointers to allocate */
 extern OSZ_rela *relas;
-extern char *drvnames;
-extern uint64_t *drivers;
-extern uint64_t *drvptr;
 extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
@@ -66,7 +63,7 @@ void* pmm_alloc()
         /* add entropy */
         sysinfostruc.srand[(i+0)%4] ^= (uint64_t)fmem->base;
         sysinfostruc.srand[(i+2)%4] ^= (uint64_t)fmem->base;
-        isr_gainentropy();
+        kentropy();
         /* allocate page */
         if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
             kmap((virt_t)&tmp2map, fmem->base, PG_CORE_NOCACHE);
@@ -99,7 +96,7 @@ again:
         /* add entropy */
         sysinfostruc.srand[(i+0)%4] ^= fmem->base;
         sysinfostruc.srand[(i+3)%4] ^= fmem->base;
-        isr_gainentropy();
+        kentropy();
         /* alignment */
         if(fmem->base & (__SLOTSIZE-1)){
             if(fmem->size<(__SLOTSIZE + (fmem->base & (__SLOTSIZE-1)))/__PAGESIZE) {
@@ -230,8 +227,6 @@ void pmm_init()
     // These are compile time configurable buffer sizes,
     // but that's ok, sized to the needs of this source
     relas = (OSZ_rela*)kalloc(2);
-    drivers = (uint64_t*)kalloc(1);
-    drvnames = (char*)kalloc(2);
     //allocate stack for ISRs and syscall
     safestack = kalloc(1);
     //allocate services structure

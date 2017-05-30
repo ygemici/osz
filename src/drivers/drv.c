@@ -1,5 +1,5 @@
 /*
- * core/x86_64/user.S
+ * drivers/drv.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,21 +22,14 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Idle task
+ * @brief Common event dispatcher for device drivers
  */
+#include <osZ.h>
 
-.section .text.user
-.global _init
-
-    .align  4096
-_init:
-    /* send core a sync syscall */
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_sync, %dil
-    movl     $0x646E6573, %eax # 'send'
-    syscall
-    /* stop cpu until an interrupt arrives */
-    hlt
-    /* loop forever */
-    jmp     _init
+void _init()
+{
+    /* TODO: use mq_dispatch on common function scheme */
+    while(1) {
+//        mq_recv();
+    }
+}

@@ -29,6 +29,7 @@
 #include <osZ.h>
 
 .global irq1
+.type irq1, STT_FUNC
 
 .section .text
 

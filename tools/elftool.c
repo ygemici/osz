@@ -58,6 +58,9 @@ unsigned long int hextoi(char *s)
 /* entry point */
 int main(int argc,char** argv)
 {
+    char *binds[] = { "L", "G", "W", "N" };
+    char *types[] = { "NOT", "OBJ", "FNC", "SEC", "FLE", "COM", "TLS", "NUM", "LOS", "IFC", "HOS", "LPR", "HPR" };
+
     int i=0, dump=0, strsz, syment;
     unsigned long int reloc=-1;
     if(argc<2) {
@@ -277,7 +280,10 @@ int main(int argc,char** argv)
         s = sym;
         for(i=0;i<(strtable-(char*)sym)/syment;i++) {
             if(s->st_name > strsz) break;
-            printf("%3d. %08lx %s\n", i, s->st_value, strtable + s->st_name);
+            printf("%3d. %08lx %x %s %x %s %s\n", i, s->st_value, 
+                ELF64_ST_BIND(s->st_info), binds[ELF64_ST_BIND(s->st_info)],
+                ELF64_ST_TYPE(s->st_info), types[ELF64_ST_TYPE(s->st_info)],
+                strtable + s->st_name);
             s++;
         }
         return 0;
@@ -329,7 +335,7 @@ output:
                 printf("%08lx %s\n", s->st_value+reloc, strtable + s->st_name);
             else
             /* don't include entry point... GNU ld can't set private entry points */
-            if(s->st_size && strcmp(strtable + s->st_name, "mq_dispatch"))
+            if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && s->st_size && strcmp(strtable + s->st_name, "mq_dispatch"))
                 printf("#define SYS_%s\t(%3d)\n", strtable + s->st_name, i);
         }
         s++;

@@ -26,7 +26,6 @@ Boot Parameters
 | nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
 | nrlogmax  | 8      | number | core | the number of pages for early syslog buffer |
 | nropenmax | 16     | number | core | the number of open file descriptors per thread |
-| nrirqmax  | 8      | number | core | the maximum number of IRQ handlers per IRQ |
 | quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |
 | display   | 0      | number | core | selects output mode (see below) |

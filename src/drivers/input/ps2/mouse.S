@@ -28,12 +28,13 @@
 #define _AS 1
 #include <osZ.h>
 
-.global _init
+.global mouse_init
 .global irq12
+.type irq12, STT_FUNC
 
 .section .text
 
-_init:
+mouse_init:
     /* initialize legacy ps2 user input */
     xorq    %rax, %rax
     movb    $2, %dl

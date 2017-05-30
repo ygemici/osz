@@ -26,10 +26,10 @@ OS/Z has 8 priority levels:
 | 6 | PRI_APPL | Application Low |
 | 7 | PRI_IDLE | Idle |
 
-The top priority level is PRI_SYS (zero). Only one task, called "SYS" allowed to run at this level, and
-this level is uninterruptible meaning there's no one slice time for a lower priority task.
+The top priority level is PRI_SYS (zero). This level is uninterruptible meaning there's no time slice for a lower priority tasks.
+This queue normally is empty, and it's reserved for emergenceny tasks.
 
-After that comes PRI_RT (1) for real time tasks.
+After that comes PRI_RT (1) for real time tasks. These have the highest priority a user task can own.
 
 That's followed by PRI_DRV (2) for user space device and filesystem drivers.
 
@@ -40,9 +40,9 @@ for example video players and games, PRI_APP (5, normal priority) for example ed
 (6, low priority) for example some background tasks.
 
 Finally PRI_IDLE (7). The last level just like the first one is special. Normally this level is never reached, only
-if there're no other runnable (non-blocked) threads at higher priority levels. The screensaver and memory defragmenter
+when there're no other runnable (non-blocked) threads at higher priority levels. The screensaver and memory defragmenter
 runs at this level for example. If even this level is empty or blocked, then a special function is scheduled in the
-"system" task that halts the CPU.
+"idle" task that halts the CPU.
 
 Example
 -------

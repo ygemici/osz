@@ -65,12 +65,11 @@ exc31
 EOF
 
 numirq=`grep "ISR_NUMIRQ" isr.h|cut -d ' ' -f 3`
-numhnd=`grep "ISR_NUMHANDLER" isr.h|cut -d ' ' -f 3`
 isrexcmax=`grep "ISR_EXCMAX" isr.h|cut -d ' ' -f 3`
 isrirqmax=`grep "ISR_IRQMAX" isr.h|cut -d ' ' -f 3`
 isrstack=`grep "ISR_STACK" isr.h|cut -d ' ' -f 3`
 ctrl=`grep "ISR_CTRL" isr.h|head -1|cut -d ' ' -f 3`
-idtsz=$[(($numirq*$numhnd*8+4095)/4096)*4096]
+idtsz=$[(($numirq*8+4095)/4096)*4096]
 DEBUG=`grep "DEBUG" ../../../Config |cut -d ' ' -f 3`
 OPTIMIZE=`grep "OPTIMIZE" ../../../Config |cut -d ' ' -f 3`
 if [ "$DEBUG" -eq "1" ]; then
@@ -81,7 +80,7 @@ fi
 if [ "$OPTIMIZE" -eq "1" -a "$ctrl" == "CTRL_APIC" ]; then
     ctrl="CTRL_x2APIC"
 fi
-echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq (x$numhnd), idtsz $idtsz)"
+echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq, idtsz $idtsz)"
 
 cat >isrs.S <<EOF
 /*
@@ -125,12 +124,13 @@ cat >isrs.S <<EOF
 .global isr_enableirq
 .global isr_disableirq
 
-.extern isr_gainentropy
 .extern isr_savecontext
 .extern isr_loadcontext
 .extern isr_syscall0
 .extern isr_alarm
 .extern isr_timer
+.extern isr_routeirq
+.extern kentropy
 .extern gdt64_tss
 .extern excabort
 .extern pmm
@@ -531,11 +531,19 @@ isr_irqtmr:
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
     call	isr_timer
+    /* switch to a new thread if any */
+    movq	isr_next, %rax
+    cmpq	\$__PAGESIZE, %rax
+    jb		1f
+    movq	%rax, %cr3
+1:  xorq	%rax, %rax
+    movq	%rax, isr_next
     $EOI
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 64, 0x90
+.align $isrirqmax, 0x90
+
 EOF
 
 if [ "$EOI2" != "" ]
@@ -546,8 +554,8 @@ else
 fi
 cat >>isrs.S <<-EOF
 isr_irqtmr_rtc:
-    /* we can't afford overhead of a taskswitch, so
-       we use inline code here */
+    /* we can't afford overhead of messaging and taskswitch,
+       so we use inline code here */
     cli
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
@@ -560,6 +568,14 @@ isr_irqtmr_rtc:
     /* reenable NMI */
     xorb	%al, %al
     outb	%al, \$0x70
+    /* switch to a new thread if any */
+    movq	isr_next, %rax
+    cmpq	\$__PAGESIZE, %rax
+    jb		1f
+xchg %bx, %bx
+    movq	%rax, %cr3
+1:  xorq	%rax, %rax
+    movq	%rax, isr_next
     $EOIRTC
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
@@ -575,16 +591,19 @@ do
 	then
 		EOI="$EOI2";
 	fi
+	pos=$[$isr*8]
 	cat >>isrs.S <<-EOF
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist1
-	    /* tcb->memroot == sys_mapping? */
-	    movq	sys_mapping, %rax
+	    /* tcb->memroot == irq_routing[isr]? */
+	    movq	irq_routing_table, %rax
+	    addq	\$$pos, %rax
+	    movq	(%rax), %rax
 	    cmpq	%rax, tcb_memroot
 	    je		1f
-	    /* no, switch to system task */
+	    /* no, switch to the task */
 	    movq	%rax, %cr3
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi
@@ -594,13 +613,13 @@ do
 	    movb	\$$isr, %dil
 	    pushq   %rdi
 	    call	isr_disableirq
-	    /* ksend(EVT_DEST(SRV_CORE) | SYS_IRQ, irq, 0,0,0,0,0); */
+	    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
 	    popq    %rdx
 	    xorq	%rcx, %rcx
 	    xorq	%rsi, %rsi
 	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend
-	2:  call	isr_gainentropy
+	    call	kentropy
 	    $EOI
 	    addq	\$$isrstack, ccb + ccb_ist1
 	    call	isr_loadcontext

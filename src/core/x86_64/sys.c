@@ -30,7 +30,7 @@
 #include "pci.h"
 
 /* external resources */
-//extern OSZ_ccb ccb;                   // CPU Control Block
+extern OSZ_ccb ccb;                   // CPU Control Block
 extern sysinfo_t sysinfostruc;
 extern uint32_t fg;
 extern char rebootprefix[];
@@ -49,9 +49,6 @@ extern void dbg_putchar(int c);
 #endif
 
 /* device drivers loaded into "system" address space */
-uint64_t __attribute__ ((section (".data"))) *drivers;
-uint64_t __attribute__ ((section (".data"))) *drvptr;
-char __attribute__ ((section (".data"))) *drvnames;
 char __attribute__ ((section (".data"))) *drvs;
 char __attribute__ ((section (".data"))) *drvs_end;
 phy_t __attribute__ ((section (".data"))) screen[2];
@@ -122,8 +119,10 @@ __inline__ void sys_enable()
 #endif
     sys_fault = false;
 
-    // map "FS" task's TCB
-    kmap((uint64_t)&tmpmap, (uint64_t)(services[-SRV_FS]*__PAGESIZE), PG_CORE_NOCACHE);
+    // map first device driver or FS task's TCB
+    kmap((uint64_t)&tmpmap,
+        (uint64_t)((ccb.hd_active[PRI_DRV]!=0?ccb.hd_active[PRI_DRV]:services[-SRV_FS])*__PAGESIZE),
+        PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to force first task switch
     __asm__ __volatile__ (
@@ -186,16 +185,12 @@ uint64_t sys_getts(char *p)
     return r;
 }
 
-/* Initialize the "SYS" task, a very special process in many ways:
- *  1. it's text segment is loaded from .text.user section
- *  2. there's an IRT after that
- *  3. instead of libraries, it has drivers
- *  4. lot of hardware specific initialization is executed here */
+/* Initialize the "idle" task and device drivers */
 void sys_init()
 {
     /* this code should go in service.c, but has platform dependent parts */
     uint64_t *paging = (uint64_t *)&tmpmap;
-    uint64_t i=0, s;
+    uint64_t i=0;
 
     // get the physical page of .text.user section
     uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
@@ -206,53 +201,27 @@ void sys_init()
     kmemcpy(&fn[0], "lib/sys/", 8);
 
     /*** Platform specific initialization ***/
+    syslog_early("Device drivers");
+
     // interrupt service routines (idt, pic, ioapic etc.)
     isr_init();
 
+    /* create idle thread */
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    pid_t pid = thread_new("SYS");
-    sys_mapping = tcb->memroot;
-
-    // map device driver dispatcher
-
-//    if(service_loadelf("sbin/system") == (void*)(-1))
-//        kpanic("unable to load ELF from /sbin/system");
-//    for(i=0;paging[i]!=0;i++);
+    thread_new("idle");
     paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
 #if DEBUG
     if(sysinfostruc.debug&DBG_ELF)
         kprintf("  maptext .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
 #endif
+    // modify TCB for idle task
+    tcb->priority = PRI_IDLE;
+    //start executing at the begining of the text segment
+    tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
+    // add to queue so that scheduler will know about this thread
+    sched_add((OSZ_tcb*)(pmm.bss_end));
 
-    // allocate and map IRQ Routing Table right after
-    // the user mode dispatcher code
-    irq_routing_table = NULL;
-    s = ((ISR_NUMIRQ * nrirqmax * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
-    // failsafe
-    if(s<1)
-        s=1;
-#if DEBUG
-    if(s>1)
-        kprintf("WARNING irq_routing_table bigger than a page\n");
-#endif
-    // add extra space to allow dynamic expansion
-    s++;
-    // allocate IRT
-    while(s--) {
-        uint64_t t = (uint64_t)pmm_alloc();
-        if(irq_routing_table == NULL) {
-            // initialize IRT
-            irq_routing_table = (uint64_t*)t;
-            irq_routing_table[0] = nrirqmax;
-        }
-        // map IRT
-        paging[i++] = t + PG_USER_RO;
-    }
-
-    // map libc
-    service_loadso("lib/libc.so");
-    // detect devices and load drivers (sharedlibs) for them
-    drvptr = drivers;
+    /* detect devices and load drivers for them */
     if(drvs==NULL) {
         // should never happen!
 #if DEBUG
@@ -260,8 +229,8 @@ void sys_init()
 #endif
         syslog_early("WARNING missing /etc/sys/drivers\n");
         // hardcoded legacy devices if driver list not found
-        service_loadso("lib/sys/input/ps2.so");
-        service_loadso("lib/sys/display/fb.so");
+        drv_init("lib/sys/input/ps2.so");
+        drv_init("lib/sys/display/fb.so");
     } else {
         // load devices which don't have entry in any ACPI tables
         for(c=drvs;c<drvs_end;) {
@@ -272,7 +241,7 @@ void sys_init()
                 if(c-f<255-8) {
                     kmemcpy(&fn[8], f, c-f);
                     fn[c-f+8]=0;
-                    service_loadso(fn);
+                    drv_init(fn);
                 }
                 continue;
             }
@@ -280,27 +249,17 @@ void sys_init()
             if(c>=drvs_end || *c==0) break;
             if(*c=='\n') c++;
         }
+/*
         // parse ACPI
         acpi_init();
         // enumerate PCI BUS
         pci_init();
         // ...enumarate other system buses
+*/
     }
-    // log loaded drivers
-    s = 0;
-    syslog_early("Loaded drivers");
-    for(i=0;i<__PAGESIZE/8;i++) {
-        if(drvptr[i]!=0 && drvptr[i] != s) {
-            syslog_early(" %4x %s", TEXT_ADDRESS + i*__PAGESIZE, drvptr[i]);
-            s = drvptr[i];
-        }
-    }
-    drvptr = NULL;
-
-    // dynamic linker
-    if(service_rtlink()) {
         /*** Static fields in System Info Block (returned by a syscall) ***/
         // calculate addresses for screen buffers
+/*
         sysinfostruc.screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
         sysinfostruc.fb_ptr = sysinfostruc.screen_ptr +
             (((bootboot.fb_width * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE) *
@@ -313,9 +272,10 @@ void sys_init()
         sysinfostruc.systables[systable_smbi_idx] = bootboot.smbi_ptr;
         sysinfostruc.systables[systable_efi_idx]  = bootboot.efi_ptr;
         sysinfostruc.systables[systable_mp_idx]   = bootboot.mp_ptr;
-
+*/
         /*** Double Screen stuff ***/
         // allocate and map screen buffer A
+/*
         virt_t bss = sysinfostruc.screen_ptr;
         phy_t fbp=(phy_t)bootboot.fb_ptr;
         i = ((bootboot.fb_width * bootboot.fb_height * 4 +
@@ -336,27 +296,7 @@ void sys_init()
             bss += __SLOTSIZE;
             fbp += __SLOTSIZE;
         }
-
-        /*** IRQ routing stuff ***/
-        // don't link other elfs against irq_routing_table
-        irq_routing_table = NULL;
-        // modify TCB for system task
-        tcb->priority = PRI_SYS;
-        //set IOPL=3 in rFlags to permit IO address space
-        tcb->rflags |= (3<<12);
-        //clear IF flag, interrupts will be enabled only
-        //when system task tells to do so. It is important
-        //to initialize device driver with IRQs masked.
-        tcb->rflags &= ~(0x200);
-        //start executing at the begining of the text segment
-        tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
-
-        // add to queue so that scheduler will know about this thread
-        sched_add((OSZ_tcb*)(pmm.bss_end));
-        // register system service (subsystem)
-        services[-SRV_SYS] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_SYS,"SYS",pid);
-    } else {
-        kpanic("unable to start \"SYS\" task");
-    }
+*/
+    // log irq routing table
+    isr_fini();
 }

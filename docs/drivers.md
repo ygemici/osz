@@ -1,20 +1,22 @@
 OS/Z Device Drivers
 ===================
 
-They are shared libs which are loaded to "SYS" task's address space and allowed to map MMIO and use in/out instructions.
+/* FIME: rewrite, drivers are now separated into threads */
+They are shared libs which are loaded to device driver task's address space and allowed to map MMIO and use in/out instructions.
+They have a common, platform independent event dispatcher, [src/drivers/drv.c](https://github.com/bztsrc/osz/blob/master/src/drivers/drv.c).
 
 Supported devices
 -----------------
 
- * VESA2.0 VGA, GOP, UGA (set up by loader)
+ * VESA2.0 VGA, GOP, UGA (set up by loader, 32 bit frame buffer)
  * x86_64 syscall, NX protection
  * PIC / IOAPIC + APIC, x2APIC, see [ISRs](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh)
+ * PIT, RTC
  * PS2 [keyboard](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/keyboard.S) and [mouse](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/mouse.S)
 
 Planned drivers
 ---------------
 
- * PIT, RTC
  * HPET
 
 Directories
@@ -35,7 +37,7 @@ Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/m
 | memory   | Memory controller |
 | mmedia   | Multimedia controller |
 | network  | Network controller (wired) |
-| proc     | Processor (and related controllers, like timers) |
+| proc     | Processor (and related controllers) |
 | satellite | Satellite communications controller |
 | serial   | Serial bus controller |
 | signal   | Signal processing controller |
@@ -49,7 +51,9 @@ The resemblance with [PCI device classes](http://pci-ids.ucw.cz/read/PD) is not 
 
 Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have drivers, they
 are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
-switch among them, you'll have to edit `ISR_CTRL` define in [isr.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.h).
+switch among them, you'll have to edit `ISR_CTRL` define in [isr.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.h) and recompile.
+
+Timers are also built into the core, but you can switch among HPET, PIT and RTC with a boot time configurable environment variable.
 
 Files
 -----
@@ -67,8 +71,7 @@ has special entries:
 | Entry | Description |
 | ----- | ----------- |
 | *     | Any, means the driver should be loaded regardless to bus enumeration. Such as ISA devices, like PS2 and file system drivers, like [vfat](https://github.com/bztsrc/osz/blob/master/src/drivers/fs/vfat) |
-| isa   | ISA device drivers that you don't want to autoload, like Real Time Clock |
-| hpet  | High Precision Event Timer |
+| isa   | ISA device drivers that you don't want to autoload |
 | pciXXX:XXX | A PCI vendor and device id pair |
 | (etc) |  |
 
@@ -79,5 +82,8 @@ device.
 
 Platform files just list platforms, like "x86_64". At compilation time it will be checked,
 and if the platform it's compiling for not listed there, the driver won't be compiled. This
-is an easy to avoid having PS2 driver and such when creating for example an AArch64 image.
+is an easy to avoid having PS2 driver and such when creating for example an AArch64 image, yet
+you won't have to rewrite drivers for every architecture that supports it (like a usb storage
+driver).
+
 

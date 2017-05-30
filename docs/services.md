@@ -13,7 +13,7 @@ group is divided into another two fractions: critical and non-critical
         +-----------------------------+
 ring 0  |              CORE           | (supervisor)
 --------+-----------+--------+--------+--------------------------
-ring 3  |    SYS    |   FS   |   UI   | (critical services)
+ring 3  |  drivers  |   FS   |   UI   | (critical services)
         +-----------------------------+
         | syslog | net | sound | init | (respawnable, non-critical system services)
         +----------------------+      |
@@ -35,15 +35,6 @@ user mode (ring 3).
 
 Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve().
 
-SYS
----
-
-The user space counterpart of CORE that runs in non-privileged mode.
-This process has all the device drivers mapped in as shared libraries. Whenever an IRQ occurs, the core
-switches to this process. It's also the idle thread. Has mappings shared with "FS", "UI" and "syslog" tasks.
-
-Functions: only one, SYS_IRQ event handler.
-
 FS
 --
 
@@ -60,7 +51,7 @@ UI
 User Interface service. It's job is to manage tty consoles, window surfaces and GL contexts. And
 when it's required, composites all of them in a single frame and tells the hardware to flush video memory.
 It receives scancode from input devices and sends keycode messages to the focused application in return. It shares one half
-of a double screen buffer with the video card driver in "SYS" task which can hold a stereographic composited image.
+of a double screen buffer with the video card driver which can hold a stereographic composited image.
 
 Typical functions: draw_box(), draw_arc(), glPush(), SDL_Init().
 
@@ -68,8 +59,8 @@ Syslog
 ------
 
 The system logger daemon. Syslog's bss segment is a circular buffer that periodically flushed to disk. On boot,
-CORE is gathering it's logs in a temporary buffer. The size can be configured with `nrlogmax=4`. That buffer is flushed to
-the "syslog" task as soon as it starts, and other services can use the normal buffer.
+CORE is gathering it's logs in a temporary buffer (using syslong_early() function). The size of the buffer can be
+configured with `nrlogmax=4`. That buffer is shared with the "syslog" task.
 
 Typical functions: syslog(), setlogmask().
 
@@ -94,7 +85,8 @@ Typical functions: speak(), setvolume().
 Init
 ----
 
-This service manages all the other, non-system services. Those includes user session daemon, mailer daemon, print daemon, web server etc. 
+This service manages all the other, non-system services. Those include user session daemon, mailer daemon, 
+print daemon, web server etc. 
 You can skip init and start a rescue shell instead with the boot patamerer `rescueshell=true`.
 
 Typical functions: start(), stop(), restart(), status().

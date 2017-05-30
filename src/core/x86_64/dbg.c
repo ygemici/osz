@@ -106,7 +106,7 @@ char __attribute__ ((section (".data"))) *prio[] = {
     "SYSTEM   ",
     "RealTime ",
     "Driver   ",
-    "Server   ",
+    "Service  ",
     "Important",
     "Normal   ",
     "Low prio ",

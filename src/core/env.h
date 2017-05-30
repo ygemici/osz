@@ -28,7 +28,6 @@
 #ifndef _AS
 extern uint64_t nrphymax;   // number of hysical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
-extern uint64_t nrirqmax;   // number of interrupt routing pages
 extern uint64_t nrsrvmax;   // number of services pages
 extern uint64_t nrlogmax;   // number of syslog_buf pages
 extern uint64_t nropenmax;  // number of open file descriptors per thread

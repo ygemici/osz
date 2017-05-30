@@ -41,6 +41,7 @@
 .global kstrcmp
 .global ksend
 .global kwaitkey
+.global kentropy
 .extern kmap_tmp
 .extern tmpctrl
 .extern tmpmqctrl
@@ -50,6 +51,34 @@
 .extern kpanicsuffix
 .extern kpanicsuffix2
 .extern sys_fault
+
+/* shuffle bits of random seed */
+kentropy:
+    pushq   %rdi
+    pushq   %rsi
+    movq    $sysinfostruc + sysinfo_srand0, %rdi
+    movq    %rdi, %rax
+    movq    %rax, %rdx
+    incq    %rdx
+    movq    %rdx, %rcx
+    andq    $3, %rdx
+    shlq    $3, %rdx
+    andq    $3, %rax
+    shlq    $3, %rax
+    addq    %rdi, %rax
+    addq    %rdi, %rdx
+    andb    $0x3f, %cl
+    rolq    %cl, (%rax)
+    pushq   %rdx
+    movq    (%rax), %rsi
+    xorq    %rsi, (%rdx)
+    movq    $4*8, %rsi
+    callq   MurmurHash64A
+    popq    %rdi
+    stosq
+    popq    %rsi
+    popq    %rdi
+    ret
 
 /* kernel panic */
 kpanic:
@@ -366,7 +395,7 @@ kmap_getpte2:
     call    kpanic
 
 /* send a message to a message queue. This has to be effective
-   and I didn't like the code gcc generated, that's why it's
+   and I didn't liked the code gcc generated, that's why it's
    asm, otherwise this routine is not platform specific.
     IN: rdi: mq, rsi: event, rdx: arg0, rcx: arg1, r8: arg2
     OUT: true on success
@@ -383,15 +412,7 @@ ksend:
     jne      2f
     cmpq    $1, 8(%rdi)
     jne     2f
-1:  /* we won't block if we're sending to system thread,
-       rather remove the last item from the message queue
-       to make space and we continue */
-    movq    %rsi, %rax
-    /* destination pid == -1 ? */
-    shrq    $16, %rax
-    cmpl    $SRV_SYS, %eax
-    jne     4f
-    /* mqhdr->mq_end++ */
+1:  /* mqhdr->mq_end++ */
     incq    8(%rdi)
     movq    8(%rdi), %rax
     cmpq    16(%rdi), %rax

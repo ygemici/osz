@@ -30,6 +30,7 @@
 #include "isr.h"
 #include "ccb.h"
 #include "tcb.h"
+#include "../tcb.h"
 
 .global isr_savecontext
 .global isr_loadcontext
@@ -84,34 +85,6 @@ isr_loadcontext:
     movq    tcb_gpr + 112, %rbp
     ret
 
-/* shuffle bits of random seed */
-isr_gainentropy:
-    pushq   %rdi
-    pushq   %rsi
-    movq    $sysinfostruc + sysinfo_srand0, %rdi
-    movq    %rdi, %rax
-    movq    %rax, %rdx
-    incq    %rdx
-    movq    %rdx, %rcx
-    andq    $3, %rdx
-    shlq    $3, %rdx
-    andq    $3, %rax
-    shlq    $3, %rax
-    addq    %rdi, %rax
-    addq    %rdi, %rdx
-    andb    $0x3f, %cl
-    rolq    %cl, (%rax)
-    pushq   %rdx
-    movq    (%rax), %rsi
-    xorq    %rsi, (%rdx)
-    movq    $4*8, %rsi
-    callq   MurmurHash64A
-    popq    %rdi
-    stosq
-    popq    %rsi
-    popq    %rdi
-    ret
-
 /* syscall dispatcher, platform dependent wrapper */
 .align  16, 0x90
 isr_syscall0:
@@ -146,26 +119,23 @@ isr_syscall0:
     /* shortcut for yield */
     cmpb    $SYS_sched_yield, %dil
     je      7f
-2:
-    /*** "SYS" task only ***/
-    /* tcb->memroot == sys_mapping? */
-    movq    sys_mapping, %rcx
-    cmpq    %rcx, tcb_memroot
-    jne     3f
 
+    /*** drivers tasks only ***/
+    cmpb    $PRI_DRV, tcb_priority
+    jne     3f
     /* shortcut to ack syscall */
     cmpb    $SYS_ack, %dil
     jne     3f
-    /* drivers initialized, IRQs enabled acknowledge */
-    cmpl    $0xB0070E01, %esi
-    jne     2f
-    /* tcb->rflags |= 0x200; turn on interrupt flag */
-    orl     $0x200, __PAGESIZE-24
-    jmp     9f
+    movq    %rsi, %rdi
+    /* tcb->memroot == irq_routing_table[irq]? */
+    shlq    $3, %rsi
+    addq    irq_routing_table, %rsi
+    movq    (%rsi), %rsi
+    cmpq    tcb_memroot, %rsi
+    jne     1f
     /* enable the given irq */
-2:  movq    %rsi, %rdi
     call    isr_enableirq
-    cmpq    $0, isr_next
+1:  cmpq    $0, isr_next
     jnz     7f
     jmp     9f
 
@@ -238,7 +208,7 @@ isr_timer:
 
     /* seccnt--; */
     decq    seccnt
-    /* a sec passed, sysinfostruc.ticks[TICKS_SEC]==0? */
+    /* a sec passed, seccnt==0? */
     xorq    %rax, %rax
     cmpq    %rax, seccnt
     jnz     1f
@@ -305,10 +275,10 @@ isr_timer:
     cmpq    %rax, qcnt
     jnz     1f
 
-    /* switch to a new thread if any */
+    /* pick the next thread to run */
     call    sched_pick
-3:
-    /* qcnt = qdiv; */
+
+3:  /* qcnt = qdiv; */
     movq    qdiv, %rax
     movq    %rax, qcnt
 1:  ret

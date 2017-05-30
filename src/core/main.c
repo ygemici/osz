@@ -67,8 +67,9 @@ void main()
     pmm_init();
     // this is early, we don't have "FS" subsystem yet.
 
-    // initialize interrupt controller and timers
-    isr_init();
+    // initialize the system, "idle" task and
+    // also detect device drivers
+    sys_init();
     // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
     fs_init();
 
@@ -117,11 +118,12 @@ void main()
     // The "ready" message. Cover out "starting" message
     kprintf_ready();
 
-    // enable system task. That will initialize devices and then blocks.
-    // When that happens, scheduler will choose a task to run and...
+    // enable system multitasking. That will start by iterating
+    // through device driver's initialization routines. Eeach in different
+    // task, scheduler will choose them one by one and...
     sys_enable();
-    // ...we should never return here. Instead sched_pick() will
-    // call sys_disable() when no tasks left during shutdown procedure.
+    // ...we should never return here. Instead a syscall by "init" will
+    // call sys_disable() as the last step in the shutdown procedure.
     // But just in case of unwanted return, we call poweroff anyway.
 
     /* step 5: go to dreamless sleep. */

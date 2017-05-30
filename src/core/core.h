@@ -64,7 +64,7 @@ extern uint8_t __bss_start;           // start of bss segment
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
-extern uint64_t sys_mapping;          // paging tables for "system" task
+extern uint64_t idle_mapping;         // paging tables for "idle" task
 extern OSZ_pmm pmm;                   // Physical Memory Manager data
 extern int scry;                      // scroll counter
 
@@ -123,16 +123,16 @@ extern void vmm_mapbss(OSZ_tcb *tcb,virt_t bss, phy_t phys, size_t size, uint64_
 
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
-extern void isr_tmrinit();
+extern void isr_fini();
 extern void isr_enableirq(uint8_t irq);
 extern void isr_disableirq(uint8_t irq);
-extern void isr_gainentropy();
+extern int  isr_installirq(uint8_t irq, pid_t pid);
 
 // ----- System -----
-/** Initialize system thread */
+/** Initialize system (idle thread and device drivers) */
 extern void sys_init();
 
-/** Switch to system task and start executing user space code */
+/** Switch to idle task and start executing user space code */
 extern void sys_enable();
 
 /** Turn the computer off */
@@ -198,6 +198,9 @@ extern void* kalloc(int pages);
 /** Free kernel bss */
 extern void kfree(void* ptr);
 
+/** Add entropy to random generator **/
+extern void kentropy();
+
 // ----- Threads -----
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);
@@ -242,6 +245,9 @@ extern void service_init(int subsystem, char *fn);
 
 /** Register a user service */
 extern uint64_t service_register(pid_t thread);
+
+/** Initialize a device driver service */
+extern void drv_init(char *fn);
 
 // ----- Message Queue -----
 /** normal message senders */

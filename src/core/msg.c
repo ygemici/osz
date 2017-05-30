@@ -49,8 +49,8 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // negative pid if a service referenced.
     int64_t thread = ((int64_t)(event&~0xFFFF)/(int64_t)65536);
 
-    // only ISRs allowed to send SYS_IRQ message, and it's send
-    // on a more efficient way
+    // only ISRs allowed to send SYS_IRQ message, and they are sent
+    // on a more efficient way, directly with ksend
     if(EVT_FUNC(event)==0) {
         srctcb->errno = EPERM;
         return false;
@@ -69,17 +69,17 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
      *  tmp2map: destination thread's self (paging)
      *  TMPQ_ADDRESS: destination thread's self (message queue) */
 
-    // map thread's message queue
-    kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
-    if(dsttcb->magic != OSZ_TCB_MAGICH) {
-        srctcb->errno = EINVAL;
-        return false;
-    }
     // if we're sending to the current task, we've a shortcut
-    if(srctcb->self==dsttcb->self) {
+    if(srctcb->mypid==thread) {
         msghdr = (msghdr_t*)(MQ_ADDRESS);
         dsttcb = srctcb;
     } else {
+        // map thread's message queue
+        kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
+        if(dsttcb->magic != OSZ_TCB_MAGICH) {
+            srctcb->errno = EINVAL;
+            return false;
+        }
         isr_next = dsttcb->memroot;
         kmap_mq(dsttcb->memroot);
     }
@@ -144,14 +144,13 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         EVT_DEST((uint64_t)thread) | (event&0xFFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
-        if(thread==0)
-            srctcb->errno = EAGAIN;
-        else
+        if(srctcb->mypid!=dsttcb->mypid)
             sched_block(dsttcb);
         return false;
     } else {
         srctcb->errno = SUCCESS;
-        sched_awake(dsttcb);
+        if(srctcb->mypid!=dsttcb->mypid)
+            sched_awake(dsttcb);
     }
     return true;
 }

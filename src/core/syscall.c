@@ -82,7 +82,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
-            if(tcb->memroot == sys_mapping || thread_allowed("stime", A_WRITE)) {
+            if(tcb->priority == PRI_DRV || thread_allowed("stime", A_WRITE)) {
                 sysinfostruc.ticks[TICKS_TS] = arg0;
                 sysinfostruc.ticks[TICKS_NTS] = 0;
             }

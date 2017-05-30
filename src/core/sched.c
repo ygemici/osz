@@ -170,9 +170,8 @@ void sched_remove(OSZ_tcb *tcb)
 // move a TCB from priority queue to blocked queue
 void sched_block(OSZ_tcb *tcb)
 {
-    /* never block the system task */
-    if(tcb->mypid == services[-SRV_SYS] ||
-       tcb->memroot == sys_mapping)
+    /* never block the idle task */
+    if(tcb->memroot == idle_mapping)
         return;
 #if DEBUG
     if(sysinfostruc.debug&DBG_SCHED)
@@ -214,10 +213,19 @@ phy_t sched_pick()
     /* we came here for two reasons:
      * 1. all queues turned around
      * 2. there are no threads to run
-     * in the first case we choose SYS task, in the second we
-     * step to IDLE queue */
-    if(!nonempty && ccb.hd_active[PRI_IDLE] != 0) {
+     * in the first case we choose the highest priority task, in the second
+     * case we step to IDLE queue */
+    if(!nonempty) {
         i = PRI_IDLE;
+        /* if there's nothing to schedule, use idle task */
+        if(ccb.hd_active[i]==0) {
+#if DEBUG
+        if(sysinfostruc.debug&DBG_SCHED)
+            kprintf("sched_pick()=idle  \n");
+#endif
+            isr_next = idle_mapping;
+            return idle_mapping;
+        }
         //if we're on the end of the list, go to head
         if(ccb.cr_active[i] == 0)
             ccb.cr_active[i] = ccb.hd_active[i];

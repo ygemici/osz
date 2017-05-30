@@ -170,7 +170,7 @@ _start:
     addq    %rax, 24(%rdi)
     cmp     $__bss_start, %rsi
     jb      2b
-    call    isr_gainentropy
+    call    kentropy
 
 /* jump to C function main() in 64 bit code segment */
     pushq   $0x08

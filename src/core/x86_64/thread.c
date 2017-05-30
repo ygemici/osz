@@ -27,7 +27,7 @@
 
 extern sysinfo_t sysinfostruc;
 
-phy_t __attribute__ ((section (".data"))) sys_mapping;
+phy_t __attribute__ ((section (".data"))) idle_mapping;
 phy_t __attribute__ ((section (".data"))) core_mapping;
 phy_t __attribute__ ((section (".data"))) identity_mapping;
 phy_t __attribute__ ((section (".data"))) *stack_ptr;

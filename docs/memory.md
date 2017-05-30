@@ -11,35 +11,9 @@ Memory Mapping
 --------------
 
 All processes have their own memory mappings. Some pages are different,
-some are shared. There's a special task, called "SYS" which has
-a slightly different mapping than normal user tasks.
-
-System Task
------------
-
-| Virtual Address | Scope | Description |
-| --------------- | ----- | ----------- |
-| -2^56 .. -512M-1 | global  | global shared memory space (user accessible, read/write) |
-| -512M .. 0      | global  | core memory (supervisor only) |
-|     0 .. 4096   | thread  | Thread Control Block (read only) |
-|  4096 .. x      | thread  | [Message Queue](https://github.com/bztsrc/osz/tree/master/docs/messages.md) (read/write, growing upwards) |
-|     x .. 2M-1   | thread  | local stack (growing downwards) |
-|    2M .. 2M+1p-1| [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | [message queue dispatcher](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S), loaded from .text.user section |
-| 2M+1p .. x      | process | IRQ Routing Table |
-|     x .. 4G-1   | process | device drivers (shared objects) |
-|    4G .. 2^56   | process | dynamically allocated driver memory and MMIO mappings |
-
-The system task is the only one that allowed to execute in/out instructions, and it maps MMIO areas as user writable
-pages in it's bss segment. Each device in the system should have a device driver loaded in the system process.
-When an IRQ occurs, the Core sends a message to the system task and it's dispatcher calls the irq handler in the
-appropriate shared library.
-
-Also the system task is accounted for the idle task.
-
-IRQ Routing Table is an array of entry points, save the first item, which is the maximum number of handlers
-per IRQ (`irt[0]`). The list of functions to call on IRQ x is at `irt[x * irt[0] + 1]` and `irt[(x + 1) * irt[0]]` inclusive.
-The table is filled up at boot time when the device [drivers](https://github.com/bztsrc/osz/tree/master/docs/drivers.md) are detected.
-The variable `irt[0]` can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrirqmax" [boot option](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
+some are shared. Device [drivers](https://github.com/bztsrc/osz/tree/master/docs/drivers.md) are a special tasks,
+with a slightly different mapping, as MMIO areas are writable in their bss segment. They are also allowed to 
+execute in/out instructions, and therefore access IO address space.
 
 User Tasks
 ----------
