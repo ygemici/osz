@@ -13,14 +13,11 @@
 #include <efiprot.h>
 #define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
-#include "zlib_inflate/zlib.h"
+#include "tinf.h"
 
-//#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
-#define DBG(fmt, ...)
+#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
+//#define DBG(fmt, ...)
 
-
-extern EFI_STATUS zlib_inflate_blob(void *gunzip_buf, unsigned int sz,
-              const void *buf, unsigned int len);
 extern EFI_GUID GraphicsOutputProtocol;
 extern EFI_GUID LoadedImageProtocol;
 struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL;
@@ -217,7 +214,7 @@ GetLFB()
            info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor &&
           (info->PixelFormat != PixelBitMask || info->PixelInformation.ReservedMask!=0)))
             continue;
-        DBG(L"    %c%d %d x %d\n", i==nativeMode?'-':' ', i, info->HorizontalResolution, info->VerticalResolution);
+        DBG(L"    %c%d %d x %d\n", i==nativeMode?'>':' ', i, info->HorizontalResolution, info->VerticalResolution);
         // get the mode for the closest resolution
         if( info->HorizontalResolution >= (unsigned int)reqwidth && 
             info->VerticalResolution >= (unsigned int)reqheight &&
@@ -256,7 +253,7 @@ GetLFB()
 EFI_STATUS
 LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
 {
-    EFI_STATUS          Status;
+    EFI_STATUS          status;
     EFI_FILE_HANDLE     FileHandle;
     EFI_FILE_INFO       *FileInfo;
     UINT64              ReadSize;
@@ -267,11 +264,11 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
         return report(EFI_NOT_FOUND,L"Empty Root or FileName\n");
     }
 
-    Status = uefi_call_wrapper(RootDir->Open, 5, RootDir, &FileHandle, FileName, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
-    if (EFI_ERROR(Status)) {
-        report(Status,L"Open error");
+    status = uefi_call_wrapper(RootDir->Open, 5, RootDir, &FileHandle, FileName, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
+    if (EFI_ERROR(status)) {
+        report(status,L"Open error");
         Print(L"  File: %s\n",FileName);
-        return Status;
+        return status;
     }
     FileInfo = LibFileInfo(FileHandle);
     if (FileInfo == NULL) {
@@ -286,18 +283,18 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
     FreePool(FileInfo);
 
     BufferSize = (UINTN)((ReadSize+PAGESIZE-1)/PAGESIZE);
-    Status = uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, BufferSize, (EFI_PHYSICAL_ADDRESS*)&Buffer);
+    status = uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, BufferSize, (EFI_PHYSICAL_ADDRESS*)&Buffer);
     if (Buffer == NULL) {
         uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
         return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
     }
-    Status = uefi_call_wrapper(FileHandle->Read, 3, FileHandle, &ReadSize, Buffer);
+    status = uefi_call_wrapper(FileHandle->Read, 3, FileHandle, &ReadSize, Buffer);
     uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR(status)) {
         uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)(Buffer), BufferSize);
-        report(Status,L"Read error");
+        report(status,L"Read error");
         Print(L"  File: %s\n",FileName);
-        return Status;
+        return status;
     }
 
     *FileData = Buffer;
@@ -311,34 +308,15 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
 EFI_STATUS
 LoadCore(UINT8 *initrd_ptr)
 {
-    int i=0,len=0;
+    int i=0;
     UINT8 *ptr;
-    EFI_STATUS rc;
-    //check if initrd is gzipped
-    if(initrd_ptr[0]==0x1f&&initrd_ptr[1]==0x8b){
-        unsigned char *addr;
-        CopyMem(&len,initrd_ptr+initrd_len-4,4);
-        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (len+PAGESIZE-1)/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&addr);
-        if(addr==0)
-            return report(EFI_OUT_OF_RESOURCES,L"gzip inflate\n");
-        DBG(L" * Gzip detected, uncompressed initrd @%lx %d bytes\n",addr,len);
-        return report(EFI_LOAD_ERROR,L"compressed initrd not supported yet");
-        // this ain't workin'
-        rc = zlib_inflate_blob(addr, len, initrd_ptr, initrd_len);
-        if(EFI_ERROR(rc))
-            return report(rc,L"inflating initrd");
-        // swap initrd_ptr with the uncompressed buffer
-        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
-        initrd_ptr=addr;
-        initrd_len=len;
-    }
 
     core_ptr=ptr=NULL;
     core_len=0;
     while(ptr==NULL && fsdrivers[i]!=NULL) {
         ptr=(UINT8*)(*fsdrivers[i++])((unsigned char*)initrd_ptr,kernelname);
     }
-    // if every driver failed, try brute force scan
+    // if every driver failed, try brute force, scan for the first elf
     if(ptr==NULL) {
         i=initrd_len;
         ptr=initrd_ptr;
@@ -395,7 +373,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     EFI_MEMORY_DESCRIPTOR *memory_map = NULL, *mement;
     UINTN i, memory_map_size=0, map_key=0, desc_size=0;
     UINT32 desc_version=0;
-    MMapEnt *mmapent;
+    MMapEnt *mmapent, *last=NULL;
     CHAR16 **argv, *initrdfile, *configfile, *help=
         L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
@@ -446,6 +424,45 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     // load ramdisk
     status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
     if(status==EFI_SUCCESS){
+        //check if initrd is gzipped
+        if(initrd_ptr[0]==0x1f && initrd_ptr[1]==0x8b){
+            unsigned char *addr,f;
+            int len=0, r;
+            TINF_DATA d;
+            DBG(L" * Gzip compressed initrd @%lx %d bytes\n",initrd_ptr,initrd_len);
+            // skip gzip header
+            addr=initrd_ptr+2;
+            if(*addr++!=8) goto gzerr;
+            f=*addr++; addr+=6;
+            if(f&4) { r=*addr++; r+=(*addr++ << 8); addr+=r; }
+            if(f&8) { while(*addr++ != 0); }
+            if(f&16) { while(*addr++ != 0); }
+            if(f&2) addr+=2;
+            d.source = addr;
+            // allocate destination buffer
+            CopyMem(&len,initrd_ptr+initrd_len-4,4);
+            uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (len+PAGESIZE-1)/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&addr);
+            if(addr==NULL)
+                return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
+            // decompress
+            d.bitcount = 0;
+            d.bfinal = 0;
+            d.btype = -1;
+            d.dict_size = 0;
+            d.dict_ring = NULL;
+            d.dict_idx = 0;
+            d.curlen = 0;
+            d.dest = addr;
+            d.destSize = 1;
+            do { r = uzlib_uncompress(&d); } while (!r);
+            if (r != TINF_DONE) {
+gzerr:          return report(EFI_LOAD_ERROR,L"Corrupted initrd");
+            }
+            // swap initrd_ptr with the uncompressed buffer
+            uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
+            initrd_ptr=addr;
+            initrd_len=len;
+        }
         DBG(L" * Initrd loaded @%lx %d bytes\n",initrd_ptr,initrd_len);
         kne=NULL;
         // if there's an environment file, load it
@@ -596,12 +613,12 @@ get_memory_map:
         if (EFI_ERROR(status)) {
             return report(status,L"GetMemoryMap");
         }
+        last=NULL;
         for(mement=memory_map;mement<memory_map+memory_map_size;mement=NextMemoryDescriptor(mement,desc_size)) {
             // failsafe
             if(bootboot->size>=PAGESIZE || 
                 (mement->PhysicalStart==0 && mement->NumberOfPages==0))
                 break;
-            // FIXME: merge continous areas of the same type
             mmapent->ptr=mement->PhysicalStart;
             mmapent->size=(mement->NumberOfPages*PAGESIZE)+
                 ((mement->Type>0&&mement->Type<5)||mement->Type==7?MMAP_FREE:
@@ -610,8 +627,17 @@ get_memory_map:
                 (mement->Type==10?MMAP_ACPINVS:
                 (mement->Type==11||mement->Type==12?MMAP_MMIO:
                 MMAP_RESERVED)))));
-            bootboot->size+=16;
-            mmapent++;
+            // merge continous areas of the same type
+            if(last!=NULL && 
+                MMapEnt_Type(last) == MMapEnt_Type(mmapent) &&
+                MMapEnt_Ptr(last)+MMapEnt_Size(last) == MMapEnt_Ptr(mmapent)){
+                    last->size+=MMapEnt_Size(last);
+                    mmapent->ptr=mmapent->size=0;
+            } else {
+                last=mmapent;
+                bootboot->size+=16;
+                mmapent++;
+            }
         }
         // --- NO PRINT AFTER THIS POINT ---
 

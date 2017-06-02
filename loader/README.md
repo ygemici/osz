@@ -152,7 +152,7 @@ their own filesystem.
 For boot partition, Multiboot version uses magic bytes to locate initrd, so it's 100% filesystem independent.
 EFI version relies on any filesystem that's supported by EFI Simple FileSystem Protocol. As for initrd, 
 the reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
-Gzip compressed initrds are coming soon in EFI version.
+Gzip compressed initrds are only handled by the EFI version, sopport in the BIOS version coming soon.
 
 Example kernel
 --------------
@@ -244,16 +244,16 @@ mkdir -r tmp/lib/sys
 cp kernel tmp/lib/sys/core
 # copy more files to tmp/ directory
 cd tmp
-find . | cpio -H hpodc -o ../INITRD
+find . | cpio -H hpodc -o | gzip > ../INITRD
 ```
 
 Or if you prefer ustar format, the last line could be:
 
 ```
-tar -cf ../INITRD *
+tar -czf ../INITRD *
 ```
 
-Don't use comperssion, it's not supported (yet ;-) ).
+You can compress it with gzip or "z" flag, but note that currently only EFI version supports decompression.
 
 2. Create FS0:\BOOTBOOT directory, and copy the archive you've created
             into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG)

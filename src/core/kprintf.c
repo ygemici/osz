@@ -111,7 +111,7 @@ void kprintf_init()
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
         for(x=0;x<bootboot.fb_width;x++){
-            *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)0x10;
+            *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)0;
             line+=4;
         }
         offs+=bootboot.fb_scanline;

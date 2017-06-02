@@ -10,23 +10,18 @@ LDFLAGS += -shared -Bsymbolic -L. $(GNUEFI_CRT_OBJS)
 
 TARGET  = bootboot.efi
 
-all: zlib efirom/efirom $(TARGET)
-
-zlib: efirom/efirom
-	@make -e --no-print-directory -C zlib_inflate all | grep -v 'Nothing to be done' || true
-
-efirom/efirom: efirom/efirom.c
-	@echo "  src		efirom/efirom.c"
-	@$(CC) -I/usr/include/efi -I/usr/include/efi/x86_64 -Wall -fshort-wchar efirom/efirom.c -o efirom/efirom $(LIBS)
+all: tinflate.o $(TARGET)
 
 %.efi: %.so
 	@echo "  src		efi-x86_64 (UEFI)"
 	@objcopy -j .text -j .sdata -j .data -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-$(ARCH) --subsystem=13 $^ $@
-	@efirom/efirom $(TARGET) ../bootboot.rom || true
+	@$(CC) -I/usr/include/efi -I/usr/include/efi/x86_64 -Wall -fshort-wchar efirom.c -o efirom $(LIBS)
+	@./efirom $(TARGET) ../bootboot.rom || true
 	@mv $(TARGET) ../$(TARGET)
+	@rm tinflate.o efirom
 
 %.so: %.o
-	@$(LD) $(LDFLAGS) $^ zlib_inflate/*.o -o $@ -lefi -lgnuefi -T $(GNUEFI_LDS)
+	@$(LD) $(LDFLAGS) tinflate.o $^ -o $@ -lefi -lgnuefi -T $(GNUEFI_LDS)
 
 %.o: %.c
 	@$(CC) -I../../src/core $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
@@ -35,6 +30,5 @@ efirom/efirom: efirom/efirom.c
 	@$(CC) -I../../src/core $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
 
 clean:
-	@make -e --no-print-directory -C zlib_inflate clean
-	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi efirom/efirom ../../bin/ESP/EFI/BOOT/BOOTX64.EFI 2>/dev/null || true
+	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi 2>/dev/null || true
 

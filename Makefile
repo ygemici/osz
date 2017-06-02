@@ -65,7 +65,6 @@ vmdk: images
 	@make -e --no-print-directory -C tools vmdk | grep -v 'Nothing to be done' || true
 
 clean:
-	@make -e --no-print-directory -C loader/efi-x86_64/zlib_inflate clean
 	@make -e --no-print-directory -C src clean
 	@make -e --no-print-directory -C tools clean
 	@make -e --no-print-directory -C tools imgclean
