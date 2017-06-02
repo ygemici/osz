@@ -30,6 +30,8 @@ SECTIONS
         *(.data)
         *(.got*)
         . = ALIGN(4096);
+        sysinfostruc = .;
+        . += 4096;
         /* user mode code */
         _usercode = .;
         *(.text.user)
@@ -56,8 +58,6 @@ SECTIONS
     . += 4096;
     /* CPU Control Block. We need static address for that */
     ccb = .;
-    . += 4096;
-    sysinfostruc = .;
     . += 4096;
     /* physical memory manager free memory entries */
     pmm_entries = .;

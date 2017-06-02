@@ -1,4 +1,5 @@
  --- Error fixes ---
+./loader/efi-x86_64/bootboot.c:604:            // FIXME: merge continous areas of the same type
 ./src/core/AArch64/executable.ld:91:      FIXME: Why do we need it? When there is no .bss section, we don't
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto

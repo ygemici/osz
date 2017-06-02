@@ -1034,6 +1034,8 @@ protmode_start:
             jne         .nextph
             ;got it
             mov         dword [core_ptr], ebx
+            mov         eax, dword [esi+32]         ; p_filesz
+            mov         dword [core_len], eax
 
             ; ------- set video resolution -------
             prot_realmode
@@ -1198,7 +1200,9 @@ protmode_start:
             mov         edi, 0D010h
             mov         eax, dword[core_ptr]    ;map ELF text segment
             inc         eax
-            mov         ecx, 509
+            mov         ecx, dword[core_len]
+            shr         ecx, 12
+            inc         ecx
 @@:         stosd
             add         edi, 4
             add         eax, 4096
@@ -1327,6 +1331,7 @@ GDT_value:  dw          $-GDT_table
             align       16
 entrypoint: dq          0
 core_ptr:   dd          0
+core_len:   dd          0
 ebdaptr:    dd          0
 hw_stack:   dd          0
 lastmsg:    dd          0

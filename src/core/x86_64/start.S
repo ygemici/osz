@@ -166,7 +166,7 @@ _start:
     addq    %rax, 16(%rdi)
     lodsq
     addq    %rax, 24(%rdi)
-    cmp     $__bss_start, %rsi
+    cmp     $sysinfostruc, %rsi
     jb      2b
     call    kentropy
 

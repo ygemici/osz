@@ -121,16 +121,13 @@ void kprintf_init()
     maxy = bootboot.fb_height / font->height;
     // default fg and bg, cursor at home
     kprintf_reset();
-kprintf("%x %d x %d\n",FBUF_ADDRESS, maxx, maxy);
-dbg_putchar('D');
-kprintf(" sc %d %dx%d %d\n",bootboot.fb_scanline,bootboot.fb_width,bootboot.fb_height,offs);
+
     // display boot logo
     char *data = &_binary_logo_tga_start + 0x255;
     char *palette = &_binary_logo_tga_start + 0x12;
     offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
            ((bootboot.fb_width/2-32) * 4);
     for(y=0;y<64;y++){
-dbg_putchar('.');
         line=offs;
         for(x=0;x<64;x++){
             if(data[0]!=0) {
@@ -146,9 +143,6 @@ dbg_putchar('.');
         }
         offs+=bootboot.fb_scanline;
     }
-dbg_putchar('E');
-ee:goto ee;
-
 }
 
 void kprintf_ready()
@@ -196,7 +190,6 @@ void kprintf_putlogo()
 
 void kprintf_putchar(int c)
 {
-/*
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     unsigned char *glyph = (unsigned char*)&_binary_font_start +
      font->headersize +
@@ -220,7 +213,6 @@ void kprintf_putchar(int c)
     }
     sysinfostruc.srand[offs%4] += (uint64_t)c;
     sysinfostruc.srand[(offs+1)%4] -= (uint64_t)glyph;
-*/
 #if DEBUG
     dbg_putchar(c);
 #endif

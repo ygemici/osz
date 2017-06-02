@@ -217,7 +217,7 @@ GetLFB()
            info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor &&
           (info->PixelFormat != PixelBitMask || info->PixelInformation.ReservedMask!=0)))
             continue;
-        DBG(L"    %s%d %d x %d\n", i==nativeMode?"-":" ", i, info->HorizontalResolution, info->VerticalResolution);
+        DBG(L"    %c%d %d x %d\n", i==nativeMode?'-':' ', i, info->HorizontalResolution, info->VerticalResolution);
         // get the mode for the closest resolution
         if( info->HorizontalResolution >= (unsigned int)reqwidth && 
             info->VerticalResolution >= (unsigned int)reqheight &&
@@ -372,7 +372,8 @@ LoadCore(UINT8 *initrd_ptr)
                 core_len = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                 core_ptr = (UINT8 *)ehdr;
                 entrypoint=ehdr->e_entry;
-                DBG(L" * Entry point @%lx, text @%lx %d bytes\n",entrypoint, core_ptr, core_len);
+                DBG(L" * Entry point @%lx, text @%lx %d bytes @%lx\n",entrypoint, 
+                    core_ptr, core_len, (entrypoint/PAGESIZE)*PAGESIZE+core_len);
                 return EFI_SUCCESS;
             }
             phdr=(Elf64_Phdr *)((UINT8 *)phdr+ehdr->e_phentsize);
@@ -596,6 +597,11 @@ get_memory_map:
             return report(status,L"GetMemoryMap");
         }
         for(mement=memory_map;mement<memory_map+memory_map_size;mement=NextMemoryDescriptor(mement,desc_size)) {
+            // failsafe
+            if(bootboot->size>=PAGESIZE || 
+                (mement->PhysicalStart==0 && mement->NumberOfPages==0))
+                break;
+            // FIXME: merge continous areas of the same type
             mmapent->ptr=mement->PhysicalStart;
             mmapent->size=(mement->NumberOfPages*PAGESIZE)+
                 ((mement->Type>0&&mement->Type<5)||mement->Type==7?MMAP_FREE:
@@ -606,8 +612,6 @@ get_memory_map:
                 MMAP_RESERVED)))));
             bootboot->size+=16;
             mmapent++;
-            // failsafe
-            if(bootboot->size>=PAGESIZE) break;
         }
         // --- NO PRINT AFTER THIS POINT ---
 
