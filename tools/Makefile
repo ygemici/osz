@@ -8,9 +8,6 @@ DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VMDKIMAGE = ../bin/disk.vmdk
 SRCS = mkfs.c elftool.c
-ifneq ("$(wildcard /usr/include/efi/efi.h)","")
-SRCS += efirom.c
-endif
 OPT  = -g
 LIBS =
 OBJS = $(SRCS:.c=.o)

@@ -10,16 +10,19 @@ LDFLAGS += -shared -Bsymbolic -L. $(GNUEFI_CRT_OBJS)
 
 TARGET  = bootboot.efi
 
-all: zlib $(TARGET)
+all: zlib efirom/efirom $(TARGET)
 
-zlib:
-	@make -e --no-print-directory -C zlib_inflate all
+zlib: efirom/efirom
+	@make -e --no-print-directory -C zlib_inflate all | grep -v 'Nothing to be done' || true
+
+efirom/efirom: efirom/efirom.c
+	@echo "  src		efirom/efirom.c"
+	@$(CC) -I/usr/include/efi -I/usr/include/efi/x86_64 -Wall -fshort-wchar efirom/efirom.c -o efirom/efirom $(LIBS)
 
 %.efi: %.so
 	@echo "  src		efi-x86_64 (UEFI)"
 	@objcopy -j .text -j .sdata -j .data -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-$(ARCH) --subsystem=13 $^ $@
-	@cp $(TARGET) ../../bin/ESP/EFI/BOOT/BOOTX64.EFI
-	@../../tools/efirom.o $(TARGET) ../bootboot.rom
+	@efirom/efirom $(TARGET) ../bootboot.rom || true
 	@mv $(TARGET) ../$(TARGET)
 
 %.so: %.o
@@ -33,5 +36,5 @@ zlib:
 
 clean:
 	@make -e --no-print-directory -C zlib_inflate clean
-	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi ../../bin/ESP/EFI/BOOT/BOOTX64.EFI 2>/dev/null || true
+	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi efirom/efirom ../../bin/ESP/EFI/BOOT/BOOTX64.EFI 2>/dev/null || true
 

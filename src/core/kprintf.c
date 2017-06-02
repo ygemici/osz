@@ -111,7 +111,7 @@ void kprintf_init()
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
         for(x=0;x<bootboot.fb_width;x++){
-            *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)0;
+            *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)0x10;
             line+=4;
         }
         offs+=bootboot.fb_scanline;
@@ -121,15 +121,16 @@ void kprintf_init()
     maxy = bootboot.fb_height / font->height;
     // default fg and bg, cursor at home
     kprintf_reset();
+kprintf("%x %d x %d\n",FBUF_ADDRESS, maxx, maxy);
+dbg_putchar('D');
+kprintf(" sc %d %dx%d %d\n",bootboot.fb_scanline,bootboot.fb_width,bootboot.fb_height,offs);
     // display boot logo
     char *data = &_binary_logo_tga_start + 0x255;
     char *palette = &_binary_logo_tga_start + 0x12;
     offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
            ((bootboot.fb_width/2-32) * 4);
-dbg_putchar('D');
-kprintf(" sc %d %dx%d %d\n",bootboot.fb_scanline,bootboot.fb_width,bootboot.fb_height,offs);
-kprintf("%x\n",FBUF_ADDRESS);
     for(y=0;y<64;y++){
+dbg_putchar('.');
         line=offs;
         for(x=0;x<64;x++){
             if(data[0]!=0) {
@@ -139,7 +140,6 @@ kprintf("%x\n",FBUF_ADDRESS);
                     (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
                     (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
                 );
-                sysinfostruc.srand[((uint64_t)(data+data[0]))%4] ^= (uint64_t)data;
             }
             data++;
             line+=4;

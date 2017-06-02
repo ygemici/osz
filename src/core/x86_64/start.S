@@ -73,7 +73,6 @@ _start:
 /* setup stack frame */
     xorq    %rsp, %rsp
     xorq    %rbp, %rbp
-
     /* initialize console so that we can report errors and stats */
     callq   kprintf_init
 
