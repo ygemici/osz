@@ -15,11 +15,8 @@
 #include "../bootboot.h"
 #include "zlib_inflate/zlib.h"
 
-#if PRINT_DEBUG
-#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
-#else
+//#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
 #define DBG(fmt, ...)
-#endif
 
 
 extern EFI_STATUS zlib_inflate_blob(void *gunzip_buf, unsigned int sz,
@@ -58,23 +55,6 @@ typedef struct _EFI_FILE_PROTOCOL {
 } EFI_FILE_PROTOCOL;
 #endif
 
-typedef struct _EFI_UGA_DRAW_PROTOCOL EFI_UGA_DRAW_PROTOCOL;
-
-typedef
-EFI_STATUS
-(EFIAPI *EFI_UGA_DRAW_PROTOCOL_SET_MODE) (
-  IN  EFI_UGA_DRAW_PROTOCOL * This,
-  IN  UINT32                HorizontalResolution,
-  IN  UINT32                VerticalResolution,
-  IN  UINT32                ColorDepth,
-  IN  UINT32                RefreshRate
-);
-
-typedef struct _EFI_UGA_DRAW_PROTOCOL {
-  EFI_UGA_DRAW_PROTOCOL_SET_MODE  GetMode;
-  EFI_UGA_DRAW_PROTOCOL_SET_MODE  SetMode;
-} EFI_UGA_DRAW_PROTOCOL;
-
 typedef struct {
     UINT8 magic[8];
     UINT8 chksum;
@@ -100,12 +80,11 @@ UINT64 entrypoint;
 EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *Volume;
 EFI_FILE_HANDLE                 RootDir;
 EFI_FILE_PROTOCOL               *Root;
-int reqwidth, reqheight;
-char *kernelname="lib/sys/core";
 unsigned char *kne;
-#if PRINT_DEBUG
-int dbg=0;
-#endif
+
+// default environment variables
+int reqwidth = 800, reqheight = 600;
+char *kernelname="lib/sys/core";
 
 int atoi(unsigned char*c)
 {
@@ -120,7 +99,7 @@ int atoi(unsigned char*c)
 CHAR16 *
 a2u (char *str)
 {
-    static CHAR16 mem[4096];
+    static CHAR16 mem[PAGESIZE];
     int i;
 
     for (i = 0; str[i]; ++i)
@@ -150,6 +129,9 @@ int oct2bin(unsigned char *str,int size)
 
 #include "fs.h"
 
+/**
+ * Parse FS0:\BOOTBOOT\CONFIG
+ */
 EFI_STATUS
 ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
 {
@@ -195,11 +177,82 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
             }
         }
     }
-    if(reqwidth<640) { reqwidth=640; }
-    if(reqheight<400) { reqheight=400; }
     return EFI_SUCCESS;
 }
 
+/**
+ * Get a linear frame buffer
+ */
+EFI_STATUS
+GetLFB()
+{
+    EFI_STATUS status;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+    EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+    EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
+    UINTN i, imax, SizeOfInfo, nativeMode, selectedMode=9999, sw=0, sh=0;
+
+    //GOP
+    status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void**)&gop);
+    if(EFI_ERROR(status))
+        return status;
+
+    // minimum resolution
+    if(reqwidth < 640)  reqwidth = 640;
+    if(reqheight < 480) reqheight = 480;
+
+    // get current video mode
+    status = uefi_call_wrapper(gop->QueryMode, 4, gop, gop->Mode==NULL?0:gop->Mode->Mode, &SizeOfInfo, &info);
+    if (status == EFI_NOT_STARTED)
+        status = uefi_call_wrapper(gop->SetMode, 2, gop, 0);
+    if(EFI_ERROR(status))
+        return status;
+    nativeMode = gop->Mode->Mode;
+    imax=gop->Mode->MaxMode;
+    for (i = 0; i < imax; i++) {
+        status = uefi_call_wrapper(gop->QueryMode, 4, gop, i, &SizeOfInfo, &info);
+        // failsafe
+        if (EFI_ERROR(status) || (
+           info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
+           info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor &&
+          (info->PixelFormat != PixelBitMask || info->PixelInformation.ReservedMask!=0)))
+            continue;
+        DBG(L"    %s%d %d x %d\n", i==nativeMode?"-":" ", i, info->HorizontalResolution, info->VerticalResolution);
+        // get the mode for the closest resolution
+        if( info->HorizontalResolution >= (unsigned int)reqwidth && 
+            info->VerticalResolution >= (unsigned int)reqheight &&
+            (selectedMode==9999||(info->HorizontalResolution<sw && info->VerticalResolution < sh))) {
+                selectedMode = i;
+                sw = info->HorizontalResolution;
+                sh = info->VerticalResolution;
+        }
+    }
+    // if we have found a new, better mode
+    if(selectedMode != 9999 && selectedMode != nativeMode) {
+        status = uefi_call_wrapper(gop->SetMode, 2, gop, selectedMode);
+        if(!EFI_ERROR(status))
+            nativeMode = selectedMode;
+    }
+    // get framebuffer properties
+    bootboot->fb_ptr=(void*)gop->Mode->FrameBufferBase;
+    bootboot->fb_size=gop->Mode->FrameBufferSize;
+    bootboot->fb_scanline=4*gop->Mode->Info->PixelsPerScanLine;
+    bootboot->fb_width=gop->Mode->Info->HorizontalResolution;
+    bootboot->fb_height=gop->Mode->Info->VerticalResolution;
+    bootboot->fb_type=
+        gop->Mode->Info->PixelFormat==PixelBlueGreenRedReserved8BitPerColor ||
+        (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.BlueMask==0)? FB_ARGB : (
+            gop->Mode->Info->PixelFormat==PixelRedGreenBlueReserved8BitPerColor ||
+            (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.RedMask==0)? FB_ABGR : (
+                gop->Mode->Info->PixelInformation.BlueMask==8? FB_RGBA : FB_BGRA
+        ));
+    DBG(L" * Screen %d x %d, scanline %d, fb @%lx %d bytes, mode %d\n",bootboot->fb_width,bootboot->fb_height,bootboot->fb_scanline,bootboot->fb_ptr,bootboot->fb_size, gop->Mode->Mode);
+    return EFI_SUCCESS;
+}
+
+/**
+ * Load a file from FS0 into memory
+ */
 EFI_STATUS
 LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
 {
@@ -232,7 +285,7 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
         ReadSize = 16*1024*1024;
     FreePool(FileInfo);
 
-    BufferSize = (UINTN)((ReadSize+4095)/4096);
+    BufferSize = (UINTN)((ReadSize+PAGESIZE-1)/PAGESIZE);
     Status = uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, BufferSize, (EFI_PHYSICAL_ADDRESS*)&Buffer);
     if (Buffer == NULL) {
         uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
@@ -252,70 +305,9 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
     return EFI_SUCCESS;
 }
 
-EFI_STATUS
-SetMode(int mode,EFI_GRAPHICS_OUTPUT_PROTOCOL *gop)
-{
-    EFI_STATUS rc;
-    bootboot->fb_ptr=0;
-    bootboot->fb_size=0;
-    rc = uefi_call_wrapper(gop->SetMode, 2, gop, mode);
-    if(!EFI_ERROR(rc)){
-        bootboot->fb_ptr=(void*)gop->Mode->FrameBufferBase;
-        bootboot->fb_size=gop->Mode->FrameBufferSize;
-        bootboot->fb_scanline=4*gop->Mode->Info->PixelsPerScanLine;
-        bootboot->fb_width=gop->Mode->Info->HorizontalResolution;
-        bootboot->fb_height=gop->Mode->Info->VerticalResolution;
-
-        bootboot->fb_type=
-            gop->Mode->Info->PixelFormat==PixelBlueGreenRedReserved8BitPerColor ||
-            (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.BlueMask==0)? FB_ARGB : (
-                gop->Mode->Info->PixelFormat==PixelRedGreenBlueReserved8BitPerColor ||
-                (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.RedMask==0)? FB_ABGR : (
-                    gop->Mode->Info->PixelInformation.BlueMask==8? FB_RGBA : FB_BGRA
-            ));
-    }
-    DBG(L" * Screen %d x %d, scanline %d, fb @%lx %d bytes\n",bootboot->fb_width,bootboot->fb_height,bootboot->fb_scanline,bootboot->fb_ptr,bootboot->fb_size);
-    return rc;
-}
-
-EFI_STATUS
-SetScreenRes(EFI_GRAPHICS_OUTPUT_PROTOCOL *gop)
-{
-    int i, firstgood=-1, imax=gop->Mode->MaxMode;
-    EFI_STATUS rc;
-    EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
-    UINTN SizeOfInfo;
-
-    for (i = 0; i < imax; i++) {
-        rc = uefi_call_wrapper(gop->QueryMode, 4, gop, i, &SizeOfInfo,
-                    &info);
-        if (EFI_ERROR(rc) && rc == EFI_NOT_STARTED) {
-            rc = uefi_call_wrapper(gop->SetMode, 2, gop,
-                gop->Mode->Mode);
-            rc = uefi_call_wrapper(gop->QueryMode, 4, gop, i,
-                &SizeOfInfo, &info);
-        }
-
-        if (EFI_ERROR(rc)) {
-            continue;
-        }
-        if(info->PixelFormat!=PixelRedGreenBlueReserved8BitPerColor &&
-           info->PixelFormat!=PixelBlueGreenRedReserved8BitPerColor &&
-          (info->PixelFormat!=PixelBitMask||info->PixelInformation.ReservedMask!=0))
-            continue;
-        if(firstgood==-1)
-            firstgood=gop->Mode->Mode;
-        if(info->HorizontalResolution==(unsigned int)reqwidth && info->VerticalResolution==(unsigned int)reqheight) {
-            return SetMode(i, gop);
-        }
-    }
-    if(firstgood!=-1) {
-        return SetMode(firstgood, gop);
-    }
-
-    return EFI_SUCCESS;
-}
-
+/**
+ * Locate and load the elf kernel in initrd
+ */
 EFI_STATUS
 LoadCore(UINT8 *initrd_ptr)
 {
@@ -326,7 +318,7 @@ LoadCore(UINT8 *initrd_ptr)
     if(initrd_ptr[0]==0x1f&&initrd_ptr[1]==0x8b){
         unsigned char *addr;
         CopyMem(&len,initrd_ptr+initrd_len-4,4);
-        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (len+4095)/4096, (EFI_PHYSICAL_ADDRESS*)&addr);
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (len+PAGESIZE-1)/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&addr);
         if(addr==0)
             return report(EFI_OUT_OF_RESOURCES,L"gzip inflate\n");
         DBG(L" * Gzip detected, uncompressed initrd @%lx %d bytes\n",addr,len);
@@ -336,7 +328,7 @@ LoadCore(UINT8 *initrd_ptr)
         if(EFI_ERROR(rc))
             return report(rc,L"inflating initrd");
         // swap initrd_ptr with the uncompressed buffer
-        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+4095)/4096);
+        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
         initrd_ptr=addr;
         initrd_len=len;
     }
@@ -377,7 +369,7 @@ LoadCore(UINT8 *initrd_ptr)
         Elf64_Phdr *phdr=(Elf64_Phdr *)((UINT8 *)ehdr+ehdr->e_phoff);
         for(i=0;i<ehdr->e_phnum;i++){
             if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
-                core_len = ((phdr->p_filesz+4096-1)/4096)*4096;
+                core_len = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                 core_ptr = (UINT8 *)ehdr;
                 entrypoint=ehdr->e_entry;
                 DBG(L" * Entry point @%lx, text @%lx %d bytes\n",entrypoint, core_ptr, core_len);
@@ -397,27 +389,20 @@ EFI_STATUS
 efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 {
     EFI_LOADED_IMAGE *loaded_image = NULL;
-    EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+    EFI_GUID lipGuid = LOADED_IMAGE_PROTOCOL;
     EFI_STATUS status=EFI_SUCCESS;
-
-    CHAR16 *initrdfile;
-    CHAR16 *configfile;
-    CHAR16 **argv;
+    EFI_MEMORY_DESCRIPTOR *memory_map = NULL, *mement;
+    UINTN i, memory_map_size=0, map_key=0, desc_size=0;
+    UINT32 desc_version=0;
+    MMapEnt *mmapent;
+    CHAR16 **argv, *initrdfile, *configfile, *help=
+        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
-    UINTN i;
     CHAR8 *ptr;
-    CHAR16 *help=L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
 
     // Initialize UEFI Library
     InitializeLib(image, systab);
-    status = uefi_call_wrapper(systab->BootServices->HandleProtocol,
-                3,
-                image,
-                &LoadedImageProtocol,
-                (void **) &loaded_image);
-    if (EFI_ERROR(status)) {
-        return report(status, L"HandleProtocol");
-    }
+    BS = systab->BootServices;
 
     // Parse command line arguments
     // BOOTX86.EFI [-?|-h|/?|/h] [initrd [config]]
@@ -436,7 +421,23 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     } else {
         configfile=L"\\BOOTBOOT\\CONFIG";
     }
+    status = uefi_call_wrapper(systab->BootServices->HandleProtocol,
+                3,
+                image,
+                &lipGuid,
+                (void **) &loaded_image);
+    if (EFI_ERROR(status)) {
+        return report(status, L"HandleProtocol LoadedImageProtocol");
+    }
+
     Print(L"Booting OS...\n");
+
+    // get memory for bootboot structure
+    uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&bootboot);
+    if (bootboot == NULL)
+        return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+    ZeroMem((void*)bootboot,PAGESIZE);
+    CopyMem(bootboot->magic,BOOTPARAMS_MAGIC,4);
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     RootDir = LibOpenRoot(loaded_image->DeviceHandle);
@@ -445,28 +446,26 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
     if(status==EFI_SUCCESS){
         DBG(L" * Initrd loaded @%lx %d bytes\n",initrd_ptr,initrd_len);
-        // get memory for bootboot structure
-        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&bootboot);
-        if (bootboot == NULL) {
-            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
-        }
         kne=NULL;
-        // if there's an evironment file, load it
+        // if there's an environment file, load it
         if(LoadFile(configfile,&env_ptr,&env_len)==EFI_SUCCESS)
             ParseEnvironment(env_ptr,env_len, argc, argv);
         else {
             env_len=0;
             uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
             if (env_ptr == NULL) {
-                return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
+                return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
             }
-            ZeroMem((void*)env_ptr,4096);
+            ZeroMem((void*)env_ptr,PAGESIZE);
             CopyMem((void*)env_ptr,"// N/A",8);
         }
 
-        // Ok, it's time to collect information on system
-        ZeroMem((void*)bootboot,4096);
-        CopyMem(bootboot->magic,BOOTPARAMS_MAGIC,4);
+        // get linear frame buffer
+        status = GetLFB();
+        if (EFI_ERROR(status) || bootboot->fb_width==0 || bootboot->fb_ptr==0)
+                return report(status, L"GOP failed, no framebuffer");
+
+        // collect information on system
         __asm__ __volatile__ (
             "mov $1, %%eax;"
             "cpuid;"
@@ -481,7 +480,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         bootboot->size=128;
         bootboot->pagesize=PAGESIZE;
         CopyMem((void *)&(bootboot->initrd_ptr),&initrd_ptr,8);
-        bootboot->initrd_size=((initrd_len+4095)/4096)*4096;
+        bootboot->initrd_size=((initrd_len+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
         UINT64 p=0xFFFFFFFFFFE00000+(uint64_t)(&(bootboot->mmap))-(uint64_t)(&(bootboot->magic));
         CopyMem(&(bootboot->mmap_ptr),&p,8);
         CopyMem((void *)&(bootboot->efi_ptr),&systab,8);
@@ -497,7 +496,6 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
             // scan for the real rsd ptr, as AcpiTableGuid returns bad address
             for(i=1;i<256;i++) {
                 if(!CompareMem(ptr+i, (const CHAR8 *)"RSD PTR ", 8)){
-                    bootboot->acpi_ptr+=i;
                     ptr+=i;
                     break;
                 }
@@ -535,89 +533,71 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         if (EFI_ERROR(status))
             return status;
         if(kne!=NULL)
-            *kne=' ';
+            *kne='\n';
 
-        //WaitForSingleEvent(ST->ConIn->WaitForKey, 0);
-
-        //GOP
-        status = LibLocateProtocol(&GraphicsOutputProtocol, (void **)&gop);
-        if (!EFI_ERROR(status))
-            status = SetScreenRes(gop);
-        // if GOP fails, fallback to UGA
-        if (EFI_ERROR(status)) {
-            EFI_UGA_DRAW_PROTOCOL *uga;
-            EFI_GUID UGAProtocol;
-            UGAProtocol.Data1 = 0x982c298b;
-            UGAProtocol.Data2 = 0xf4fa;
-            UGAProtocol.Data3 = 0x41cb;
-            UGAProtocol.Data4[0]=0xb8;
-            UGAProtocol.Data4[1]=0x38;
-            UGAProtocol.Data4[2]=0x77;
-            UGAProtocol.Data4[3]=0xaa;
-            UGAProtocol.Data4[4]=0x68;
-            UGAProtocol.Data4[5]=0x8f;
-            UGAProtocol.Data4[6]=0xb8;
-            UGAProtocol.Data4[7]=0x39;
-            UINT64 depth=32, rate=60;
-            status = LibLocateProtocol(&UGAProtocol, (void **)&uga);
-            if (EFI_ERROR(status))
-                return report(status,L"Locate GOP or UGA\n");
-            status = uefi_call_wrapper(uga->SetMode, 5, uga,
-                reqwidth, reqheight, depth, rate);
-            if (EFI_ERROR(status))
-                return report(EFI_DEVICE_ERROR,L"Initialize screen\n");
+        // query size of memory map
+        status = uefi_call_wrapper(BS->GetMemoryMap, 5,
+            &memory_map_size, memory_map, NULL, &desc_size, NULL);
+        if (status!=EFI_BUFFER_TOO_SMALL || memory_map_size==0) {
+            return report(EFI_OUT_OF_RESOURCES,L"GetMemoryMap getSize");
         }
+        // allocate memory for memory descriptors. We assume that one or two new memory
+        // descriptor may created by our next allocate calls and we round up to page size
+        memory_map_size+=2*desc_size;
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 
+            (memory_map_size+PAGESIZE-1)/PAGESIZE, 
+            (EFI_PHYSICAL_ADDRESS*)&memory_map);
+        if (memory_map == NULL) {
+            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+        }
+
         // create page tables
         uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 23, (EFI_PHYSICAL_ADDRESS*)&paging);
         if (paging == NULL) {
-            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
+            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
         }
-        ZeroMem((void*)paging,23*4096);
+        ZeroMem((void*)paging,23*PAGESIZE);
         DBG(L" * Pagetables PML4 @%lx\n",paging);
         //PML4
-        paging[0]=(UINT64)((UINT8 *)paging+4*4096)+1;   // pointer to 2M PDPE (16G RAM identity mapped)
-        paging[511]=(UINT64)((UINT8 *)paging+4096)+1;   // pointer to 4k PDPE (core mapped at -2M)
+        paging[0]=(UINT64)((UINT8 *)paging+4*PAGESIZE)+1;   // pointer to 2M PDPE (16G RAM identity mapped)
+        paging[511]=(UINT64)((UINT8 *)paging+PAGESIZE)+1;   // pointer to 4k PDPE (core mapped at -2M)
         //4k PDPE
-        paging[512+511]=(UINT64)((UINT8 *)paging+2*4096+1);
+        paging[512+511]=(UINT64)((UINT8 *)paging+2*PAGESIZE+1);
         //4k PDE
         for(i=0;i<255;i++)
             paging[2*512+256+i]=(UINT64)(((UINT8 *)(bootboot->fb_ptr)+(i<<21))+0x81);   //map framebuffer
-        paging[2*512+511]=(UINT64)((UINT8 *)paging+3*4096+1);
+        paging[2*512+511]=(UINT64)((UINT8 *)paging+3*PAGESIZE+1);
         //4k PT
         paging[3*512+0]=(UINT64)(bootboot)+1;
         paging[3*512+1]=(UINT64)(env_ptr)+1;
-        for(i=0;i<(core_len/4096);i++)
-            paging[3*512+2+i]=(UINT64)((UINT8 *)core_ptr+i*4096+1);
-        paging[3*512+511]=(UINT64)((UINT8 *)paging+22*4096+1);
+        for(i=0;i<(core_len/PAGESIZE);i++)
+            paging[3*512+2+i]=(UINT64)((UINT8 *)core_ptr+i*PAGESIZE+1);
+        paging[3*512+511]=(UINT64)((UINT8 *)paging+22*PAGESIZE+1);
         //identity mapping
         //2M PDPE
         for(i=0;i<16;i++)
-            paging[4*512+i]=(UINT64)((UINT8 *)paging+(7+i)*4096+1);
+            paging[4*512+i]=(UINT64)((UINT8 *)paging+(7+i)*PAGESIZE+1);
         //first 2M mapped per page
-        paging[7*512]=(UINT64)((UINT8 *)paging+5*4096+1);
+        paging[7*512]=(UINT64)((UINT8 *)paging+5*PAGESIZE+1);
         for(i=0;i<512;i++)
-            paging[5*512+i]=(UINT64)(i*4096+1);
+            paging[5*512+i]=(UINT64)(i*PAGESIZE+1);
         //2M PDE
         for(i=1;i<512*16;i++)
             paging[7*512+i]=(UINT64)((i<<21)+0x81);
 
         // Get memory map
-        int cnt=10;
-        UINTN                 memory_map_size;
-        EFI_MEMORY_DESCRIPTOR *memory_map, *mement;
-        UINTN                 map_key;
-        UINTN                 desc_size;
-        UINT32                desc_version;
-        MMapEnt               *mmapent;
+        int cnt=3;
 get_memory_map:
+        DBG(L" * Memory Map @%lx %d bytes #%d\n",memory_map, memory_map_size, 4-cnt);
         mmapent=(MMapEnt *)&(bootboot->mmap);
-        memory_map = LibMemoryMap(&memory_map_size, &map_key, &desc_size, &desc_version);
-        if (memory_map == NULL) {
-            return report(EFI_OUT_OF_RESOURCES,L"LibMemoryMap\n");
+        status = uefi_call_wrapper(BS->GetMemoryMap, 5,
+            &memory_map_size, memory_map, &map_key, &desc_size, &desc_version);
+        if (EFI_ERROR(status)) {
+            return report(status,L"GetMemoryMap");
         }
         for(mement=memory_map;mement<memory_map+memory_map_size;mement=NextMemoryDescriptor(mement,desc_size)) {
             mmapent->ptr=mement->PhysicalStart;
-            mmapent->size=(mement->NumberOfPages*4096)+
+            mmapent->size=(mement->NumberOfPages*PAGESIZE)+
                 ((mement->Type>0&&mement->Type<5)||mement->Type==7?MMAP_FREE:
                 (mement->Type==8?MMAP_BAD:
                 (mement->Type==9?MMAP_ACPIFREE:
@@ -626,7 +606,8 @@ get_memory_map:
                 MMAP_RESERVED)))));
             bootboot->size+=16;
             mmapent++;
-            if(bootboot->size>=4096) break;
+            // failsafe
+            if(bootboot->size>=PAGESIZE) break;
         }
         // --- NO PRINT AFTER THIS POINT ---
 
@@ -646,14 +627,14 @@ get_memory_map:
 
         //call _start() in lib/sys/core
         __asm__ __volatile__ (
-            "xor %%rsp, %%rsp;"
-            "push %0;"
-            "mov $0x544f4f42544f4f42,%%rax;"    // boot magic 'BOOTBOOT'
-            "mov $0xffffffffffe00000,%%rbx;"    // bootboot virtual address
-            "mov $0xffffffffffe01000,%%rcx;"    // environment virtual address
-            "mov $0xffffffffe0000000,%%rdx;"    // framebuffer virtual address
-            "ret"
-            : : "r"(entrypoint): "memory" );
+            "xorq %%rsp, %%rsp;"
+            "pushq %0;"
+            "movq $0x544f4f42544f4f42,%%rax;"    // boot magic 'BOOTBOOT'
+            "movq $0xffffffffffe00000,%%rbx;"    // bootboot virtual address
+            "movq $0xffffffffffe01000,%%rcx;"    // environment virtual address
+            "movq $0xffffffffe0000000,%%rdx;"    // framebuffer virtual address
+            "retq"
+            : : "a"(entrypoint): "memory" );
     }
 
     return status;

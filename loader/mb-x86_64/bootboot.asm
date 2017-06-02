@@ -33,6 +33,8 @@
 ;*  At first big enough free hole, initrd. Usually at 1Mbyte.
 ;*
 
+DEBUG equ 0
+
 ;get Core boot parameter block
 include "bootboot.inc"
 
@@ -85,6 +87,22 @@ virtual at 0
     fsdriver.locate_kernel: dw 0
 end virtual
 
+macro       DBG msg
+{
+if DEBUG eq 1
+            real_print      msg
+end if
+}
+
+macro       DBG32 msg
+{
+if DEBUG eq 1
+            prot_realmode
+            real_print      msg
+            real_protmode
+end if
+}
+
 ;*********************************************************************
 ;*                             header                                *
 ;*********************************************************************
@@ -136,19 +154,22 @@ MB_FLAGS    equ         0D43h
 multiboot_start:
             cld
             cli
-            lgdt        [GDT_value]
-            cmp         eax, 2BADB002h
-            je          @f
+            xor         dl, dl
             ;no GRUB environment available?
-            ;something really nasty happened, restart computer
-            mov         al, 0FEh
-            out         64h, al
-            hlt
-@@:
+            cmp         eax, 2BADB002h
+            jne         @f
             ;save drive code for boot device
             mov         dl, byte [ebx+12]
-            prot_realmode
-            ;fall into realmode start code
+@@:         jmp         CODE_BOOT:.real ;load 16 bit mode segment into cs
+            USE16
+.real:      mov         eax, CR0
+            and         al, 0FEh        ;switching back to real mode
+            mov         CR0, eax
+            xor         ax, ax
+            mov         ds, ax          ;load registers 2nd turn
+            mov         es, ax
+            mov         ss, ax
+            jmp         0:realmode_start
 
 ;-----------realmode-protmode stub-------------
 realmode_start:
@@ -178,6 +199,16 @@ realmode_start:
             jnz         @f
             mov         dl, 80h
 @@:         mov         byte [bootdev], dl
+
+            ;-----initialize serial port COM1,115200,8N1------
+            mov         ax, 0401h
+            xor         bx, bx
+            mov         cx, 030Bh
+            xor         dx, dx
+            int         14h
+            real_print  starting
+
+            DBG         dbg_cpu
 
             ;-----check CPU-----
             ;at least 286?
@@ -244,6 +275,8 @@ realmode_start:
             jmp         real_diefunc
 .cpuok:     ;okay, we can do 64 bit!
 
+            DBG         dbg_A20
+
             ;-----enable A20-----
             ;no problem even if a20 is already turned on.
             stc
@@ -286,8 +319,12 @@ realmode_start:
             ret
 .a20ok:
 
+
             ;-----detect memory map-----
-getmemmap:  xor         eax, eax
+getmemmap:
+            DBG         dbg_mem
+
+            xor         eax, eax
             mov         dword [bootboot.acpi_ptr], eax
             mov         dword [bootboot.smbi_ptr], eax
             mov         dword [bootboot.initrd_ptr], eax
@@ -423,8 +460,12 @@ getmemmap:  xor         eax, eax
             mov         si, noenmem
             jmp         real_diefunc
 .enoughmem:
+
             ;-----detect system structures-----
-.detacpi:   ;do we need that scanning shit?
+.detacpi:
+            DBG         dbg_systab
+
+            ;do we need that scanning shit?
             mov         eax, dword [bootboot.acpi_ptr]
             or          eax, eax
             jz          @f
@@ -509,6 +550,8 @@ getmemmap:  xor         eax, eax
 .detend:    push        ds
             pop         es
 
+            DBG         dbg_time
+
             ; ------- BIOS date and time -------
             mov         ah, 4
             int         1Ah
@@ -566,9 +609,16 @@ real_printfunc:
             lodsb
             or          al, al
             jz          .end
+            push        si
+            push        ax
             mov         ah, byte 0Eh
             mov         bx, word 11
             int         10h
+            pop         ax
+            mov         ah, byte 01h
+            xor         dx, dx
+            int         14h
+            pop         si
             jmp         real_printfunc
 .end:       ret
 
@@ -773,6 +823,8 @@ protmode_start:
             dec         ecx
             jnz         .loadnext
 @@:
+            DBG32       dbg_env
+
             ;Locate and parse configuration
             ; *_locate_config
             mov         esi, dword [bootboot.initrd_ptr]
@@ -885,6 +937,7 @@ protmode_start:
 .parseend:
 
             ; locate INITRD in ESP
+            DBG32       dbg_initrd
             ; *_1stpart_initrd
             mov         edx, fsdrivers
 .nextfs1:   xor         ebx, ebx
@@ -957,6 +1010,8 @@ protmode_start:
 .badcore:   mov         esi, badcore
             jmp         prot_diefunc
 @@:
+            DBG32       dbg_elf
+
             mov         ebx, esi
             mov         eax, dword [esi+0x18]
             mov         dword [entrypoint], eax
@@ -982,6 +1037,9 @@ protmode_start:
 
             ; ------- set video resolution -------
             prot_realmode
+
+            DBG         dbg_vesa
+
             xor         ax, ax
             mov         es, ax
             mov         word [vbememsize], ax
@@ -1096,6 +1154,7 @@ protmode_start:
             int         10h
             cmp         ax, 004fh
             jne         .viderr
+            ;no debug output after this point
 
             ;inform firmware that we're about to leave it's realm
             mov         ax, 0EC00h
@@ -1177,31 +1236,30 @@ protmode_start:
 
             ;generate new 64 bit gdt
             mov         edi, GDT_table+8
-            ;8h core data
+            ;8h core code
             xor         eax, eax        ;supervisor mode (ring 0)
-            stosd
-            mov         eax, 00809200h
-            stosd
-            ;10h core code
-            xor         eax, eax        ;flat data segment
+            mov         ax, 0FFFFh
             stosd
             mov         eax, 00209800h
             stosd
+            ;10h core data
+            xor         eax, eax        ;flat data segment
+            mov         ax, 0FFFFh
+            stosd
+            mov         eax, 00809200h
+            stosd
             ;18h mandatory tss
             xor         eax, eax        ;required by vt-x
+            mov         al, 068h
             stosd
             mov         eax, 00008900h
             stosd
-            ;patch gdtr size
-            mov         eax, edi
-            sub         eax, GDT_table
-            mov         word [GDT_value], ax
-            ;clear old segment
             xor         eax, eax
             stosd
             stosd
 
             ;Enter long mode
+            cli
             mov         al, 0FFh        ;disable PIC
             out         021h, al
             out         0A1h, al
@@ -1209,7 +1267,7 @@ protmode_start:
             or          al, 80h
             out         70h, al
 
-            mov         eax, 10100000b  ;Set PAE and PGE
+            mov         eax, 11101000b  ;Set PAE, MCE, PGE and DBG
             mov         cr4, eax
             mov         eax, 0A000h
             mov         cr3, eax
@@ -1219,27 +1277,34 @@ protmode_start:
             wrmsr
 
             mov         eax, cr0
-            or          eax, 80000001h
-            mov         cr0, eax        ;enable paging
+            or          eax, 0C0000001h
+            mov         cr0, eax        ;enable paging wich cache disabled
             lgdt        [GDT_value]     ;read 80 bit address
+            jmp         @f
+            nop
+@@:         jmp         8:longmode_init
+            USE64
+longmode_init:
             xor         eax, eax
-            mov         ax, 8
+            mov         ax, 10h
             mov         ds, ax
             mov         es, ax
             mov         ss, ax
             mov         fs, ax
             mov         gs, ax
-            jmp         16:longmode_init
-            USE64
-longmode_init:
+
             xor         rsp, rsp
             mov         rax, 'BOOTBOOT'             ; magic
             mov         rbx, 0FFFFFFFFFFE00000h     ; bootboot virtual address
             mov         rcx, 0FFFFFFFFFFE01000h     ; environment virtual address
             mov         rdx, 0FFFFFFFFE0000000h     ; framebuffer virtual address
             ;call _start() at qword[entrypoint]
-            push        qword[entrypoint]
-            ret
+            jmp         qword[entrypoint]
+            nop
+            nop
+            nop
+            nop
+
             USE32
             include     "fs.inc"
 
@@ -1276,6 +1341,18 @@ reqwidth:   dd          0
 reqheight:  dd          0
 bootdev:    db          0
 vbememsize: dw          0
+if DEBUG eq 1
+dbg_cpu     db          " * Detecting CPU",10,13,0
+dbg_A20     db          " * Enabling A20",10,13,0
+dbg_mem     db          " * E820 Memory Map",10,13,0
+dbg_systab  db          " * System Tables",10,13,0
+dbg_time    db          " * System Time",10,13,0
+dbg_env     db          " * Parse environment",10,13,0
+dbg_initrd  db          " * Locate initrd",10,13,0
+dbg_elf     db          " * Parse ELF64",10,13,0
+dbg_vesa    db          " * VESA VBE",10,13,0
+end if
+starting:   db          "Booting OS...",10,13,0
 panic:      db          "-PANIC: ",0
 noarch:     db          "Hardware not supported",0
 a20err:     db          "Failed to enable A20",0

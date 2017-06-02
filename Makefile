@@ -79,7 +79,7 @@ endif
 
 gdb:
 	@gdb -w -x "etc/script.gdb"
-	@killall qemu-system-x86_64
+	@pkill qemu
 
 test: testq
 
@@ -87,7 +87,8 @@ testefi:
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -option-rom loader/bootboot.rom -d guest_errors -monitor stdio
-	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
+	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
+	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 128 -hda bin/disk.dd -serial mon:stdio
 
 testq:
 	@echo "TEST"
@@ -99,6 +100,7 @@ testq:
 testb:
 	@echo "TEST"
 	@echo
+	@rm bin/disk.dd.lock 2>dev/null || true
 ifneq ($(wildcard /usr/local/bin/bochs),)
 	/usr/local/bin/bochs -f etc/bochs.rc -q
 else
@@ -108,4 +110,4 @@ endif
 testv: bin/disk.vdi
 	@echo "TEST"
 	@echo
-	VBoxManage startvm --type sdl "OS/Z"
+	VBoxManage startvm "OS/Z"

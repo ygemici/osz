@@ -126,6 +126,9 @@ void kprintf_init()
     char *palette = &_binary_logo_tga_start + 0x12;
     offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
            ((bootboot.fb_width/2-32) * 4);
+dbg_putchar('D');
+kprintf(" sc %d %dx%d %d\n",bootboot.fb_scanline,bootboot.fb_width,bootboot.fb_height,offs);
+kprintf("%x\n",FBUF_ADDRESS);
     for(y=0;y<64;y++){
         line=offs;
         for(x=0;x<64;x++){
@@ -143,6 +146,9 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
+dbg_putchar('E');
+ee:goto ee;
+
 }
 
 void kprintf_ready()
@@ -161,6 +167,7 @@ void kprintf_ready()
     scry = -1;
 }
 
+/* put red coloured logo on panic screen */
 void kprintf_putlogo()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
@@ -189,6 +196,7 @@ void kprintf_putlogo()
 
 void kprintf_putchar(int c)
 {
+/*
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     unsigned char *glyph = (unsigned char*)&_binary_font_start +
      font->headersize +
@@ -212,6 +220,7 @@ void kprintf_putchar(int c)
     }
     sysinfostruc.srand[offs%4] += (uint64_t)c;
     sysinfostruc.srand[(offs+1)%4] -= (uint64_t)glyph;
+*/
 #if DEBUG
     dbg_putchar(c);
 #endif

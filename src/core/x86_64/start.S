@@ -63,20 +63,19 @@ _start:
     lgdt    (%rax)
     jmp     1f
     nop
-1:  movl    $0x10, %eax
-    movl    %eax, %es
-    movl    %eax, %ss
-    movl    $0x1b, %eax
+1:  movl    $0x1b, %eax
     movl    %eax, %ds
     movl    %eax, %es
     movl    %eax, %fs
     movl    %eax, %gs
-/* setup stack frame (should be ok, but be sure) */
+    movl    $0x10, %eax
+    movl    %eax, %ss
+/* setup stack frame */
     xorq    %rsp, %rsp
     xorq    %rbp, %rbp
 
     /* initialize console so that we can report errors and stats */
-    call    kprintf_init
+    callq   kprintf_init
 
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
@@ -181,12 +180,12 @@ _start:
 1:  movq    $nocpu, %rdi
     call    kpanic
 
-/* placed in text intentionally, it's rodata. Yes, GDT too. */
+/* placed in text intentionally, it's rodata. Yes, GDT too, we never change it. */
 nocpu:
 .asciz "CPU feature %a not supported"
     .align  16
 gdt64:
-    .word   1f-gdt64_start-1
+    .word   1f-gdt64_start
     .quad   gdt64_start
     .align  64
 gdt64_start:

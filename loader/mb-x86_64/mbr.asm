@@ -111,7 +111,6 @@ bootboot_record:
             jne         .nostage2
             cmp         byte [ldr.header+3], 0E9h
             jne         .nostage2
-xchg bx,bx
             ;invoke stage2 real mode code
             print       okay
             mov         ax, [ldr.executor]
@@ -169,7 +168,7 @@ panic:      db          "-PANIC: ",0
 lbanotf:    db          "LBA support",0
 stage2notf: db          "FS0:\BOOTBOOT\LOADER",0
 found:      db          " not found",10,13,0
-okay:       db          "Booting OS...",10,13,0
+okay:       db          "Booting LOADER...",10,13,0
 drive:      db          0
 lba_packet: db          01B0h-($-$$) dup 0
 
