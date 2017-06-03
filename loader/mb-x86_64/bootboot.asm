@@ -76,13 +76,8 @@ macro       prot_realmode
 ;edx:eax sector, edi:pointer
 macro       prot_readsector
 {
-            call            prot_readsectorfunc
+            call            near prot_readsectorfunc
 }
-
-virtual at 0
-    fsdriver.locate_initrd: dw 0
-    fsdriver.locate_kernel: dw 0
-end virtual
 
 macro       DBG msg
 {
@@ -99,6 +94,40 @@ if DEBUG eq 1
             real_protmode
 end if
 }
+
+virtual at 0
+    bpb.jmp             db 3 dup 0
+    bpb.oem             db 8 dup 0
+    bpb.bps             dw 0
+    bpb.spc             db 0
+    bpb.rsc             dw 0
+    bpb.nf              db 0 ;16
+    bpb.nr              dw 0
+    bpb.ts16            dw 0
+    bpb.media           db 0
+    bpb.spf16           dw 0 ;22
+    bpb.spt             dw 0
+    bpb.nh              dw 0
+    bpb.hs              dd 0
+    bpb.ts32            dd 0
+    bpb.spf32           dd 0 ;36
+    bpb.flg             dd 0
+    bpb.rc              dd 0 ;44
+    bpb.vol             db 6 dup 0
+    bpb.fst             db 8 dup 0 ;54
+    bpb.dmy             db 20 dup 0
+    bpb.fst2            db 8 dup 0 ;84
+end virtual
+
+virtual at 0
+    fatdir.name         db 8 dup 0
+    fatdir.ext          db 3 dup 0
+    fatdir.attr         db 9 dup 0
+    fatdir.ch           dw 0
+    fatdir.attr2        dd 0
+    fatdir.cl           dw 0
+    fatdir.size         dd 0
+end virtual
 
 ;*********************************************************************
 ;*                             header                                *
@@ -1073,53 +1102,74 @@ protmode_start:
             jnz         @b
 
             mov         esi, dword [bootboot.initrd_ptr]
+            push        esi
             cmp         word [esi], 08b1fh
             jne         .noinflate
             DBG32       dbg_gzinitrd
-
             mov         edi, esi
-            mov         ecx, dword [bootboot.initrd_size]
-            add         edi, ecx
+            mov         eax, dword [bootboot.initrd_size]
+            add         edi, eax
             sub         edi, 4
-            mov         eax, dword [edi]
+            mov         ecx, dword [edi]
             add         edi, 4095
             shr         edi, 12
             shl         edi, 12
-            mov         dword [bootboot.initrd_size], eax
+            mov         dword [bootboot.initrd_size], ecx
             add         eax, ecx
             cmp         eax, (INITRD_MAXSIZE+2)*1024*1024
             jb          @f
             mov         esi, nogzmem
             jmp         prot_diefunc
 @@:         mov         dword [bootboot.initrd_ptr], edi
-            ; TODO: inflate initrd
-            ; esi: gzipped initrd
-            ; ecx: compressed size
-            ; edi: output buffer
-xchg bx,bx
-            mov         esi, nogzip
-            jmp         prot_diefunc
-.noinflate: ; exclude initrd from free mmap
-            mov         ebx, dword [bootboot.initrd_ptr]
-            mov         edx, dword [bootboot.initrd_size];
-            add         edx, ebx
+            ; inflate initrd
+            xor         eax, eax
+            add         esi, 2
+            lodsb
+            cmp         al, 8
+            jne         tinf_err
+            lodsb
+            mov         bl, al
+            add         esi, 6
+            test        bl, 4
+            jz          @f
+            lodsw
+            add         esi, eax
+@@:         test        bl, 8
+            jz          .noname
+@@:         lodsb
+            or          al, al
+            jnz         @b
+.noname:    test        bl, 16
+            jz          .nocmt
+@@:         lodsb
+            or          al, al
+            jnz         @b
+.nocmt:     test        bl, 2
+            jz          @f
+            add         esi, 2
+@@:         call        tinf_uncompress
+.noinflate: pop         ebx
+
+            ; exclude initrd area from free mmap
+            mov         edx, dword [bootboot.initrd_ptr]
+            add         edx, dword [bootboot.initrd_size]
             mov         esi, bootboot.mmap
             mov         cx, 248
-.nextfree:  cmp         byte[esi+15], MMAP_FREE
-            jne         .notfree
             ;  +---------------------+    free
-            ;  #######                    initrd
-            cmp         ebx, dword [esi]
-            jb          .notfree
-            mov         eax, dword [esi+8]
-            and         al, 0F0h
-            add         eax, dword [esi]
-            cmp         edx, eax
-            ja          .notfree
+            ;  #######                    initrd (ebx..edx)
+.nextfree:  cmp         dword [esi], ebx
+            jne         .notini
+            ; ptr = initr_ptr+initrd_size
             mov         dword [esi], edx
-.notfree:   add         esi, 16
+            sub         edx, ebx
+            and         dl, 0F0h
+            ; size -= initrd_size
+            sub         dword [esi+8], edx
+            jmp         @f
+.notini:    add         esi, 16
             dec         cx
             jnz         .nextfree
+@@:
 
             ;-----load /lib/sys/core------
             ; *_initrd
@@ -1469,40 +1519,7 @@ longmode_init:
 
             USE32
             include     "fs.inc"
-
-virtual at 0
-    bpb.jmp             db 3 dup 0
-    bpb.oem             db 8 dup 0
-    bpb.bps             dw 0
-    bpb.spc             db 0
-    bpb.rsc             dw 0
-    bpb.nf              db 0 ;16
-    bpb.nr              dw 0
-    bpb.ts16            dw 0
-    bpb.media           db 0
-    bpb.spf16           dw 0 ;22
-    bpb.spt             dw 0
-    bpb.nh              dw 0
-    bpb.hs              dd 0
-    bpb.ts32            dd 0
-    bpb.spf32           dd 0 ;36
-    bpb.flg             dd 0
-    bpb.rc              dd 0 ;44
-    bpb.vol             db 6 dup 0
-    bpb.fst             db 8 dup 0 ;54
-    bpb.dmy             db 20 dup 0
-    bpb.fst2            db 8 dup 0 ;84
-end virtual
-
-virtual at 0
-    fatdir.name         db 8 dup 0
-    fatdir.ext          db 3 dup 0
-    fatdir.attr         db 9 dup 0
-    fatdir.ch           dw 0
-    fatdir.attr2        dd 0
-    fatdir.cl           dw 0
-    fatdir.size         dd 0
-end virtual
+            include     "tinf.inc"
 
 ;*********************************************************************
 ;*                               Data                                *
@@ -1570,7 +1587,7 @@ nolib:      db          "/lib/sys not found in initrd",0
 nocore:     db          "Kernel not found in initrd",0
 badcore:    db          "Kernel is not an executable ELF64 for x86_64",0
 novbe:      db          "VESA VBE error, no framebuffer",0
-nogzip:     db          "Compressed initrd not supported yet",0
+nogzip:     db          "Unable to uncompress",0
 kernel:     db          "lib/sys/core"
             db          (256-($-kernel)) dup 0
 ;-----------padding to be multiple of 512----------

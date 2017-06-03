@@ -35,5 +35,5 @@ all: tinflate.o $(TARGET)
 	@$(CC) $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
 
 clean:
-	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi 2>/dev/null || true
+	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi efirom tinflate.o 2>/dev/null || true
 
