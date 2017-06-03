@@ -1,15 +1,12 @@
 /*
  * loader/efi-x86_64/fs.h
  * 
- * Copyright 2016 Public Domain BOOTBOOT bztsrc@github
+ * Copyright 2017 Public Domain BOOTBOOT bztsrc@github
  * 
  * This file is part of the BOOTBOOT Protocol package.
  * @brief Filesystem drivers for initial ramdisk.
  * 
  */
-
-// just comment out this include if you don't want FS/Z support
-#include "../../etc/include/fsZ.h"
 
 #ifdef _FS_Z_H_
 /**

@@ -1,7 +1,7 @@
 ;*
 ;* loader/mb-x86_64/bootboot.asm
 ;*
-;* Copyright 2016 Public Domain BOOTBOOT bztsrc@github
+;* Copyright 2017 Public Domain BOOTBOOT bztsrc@github
 ;*
 ;* This file is part of the BOOTBOOT Protocol package.
 ;* @brief Booting code for BIOS and MultiBoot
@@ -37,9 +37,6 @@ DEBUG equ 0
 
 ;get Core boot parameter block
 include "bootboot.inc"
-
-;maximum size of core, 1 page directory, 2M on x86_64
-CORE_MAX = 2*1024*1024
 
 ;VBE filter (available, has additional info, color, graphic, linear fb)
 VBE_MODEFLAGS   equ         1+2+8+16+128
@@ -388,9 +385,8 @@ getmemmap:
 .freemem:   ;do we have a ramdisk area?
             cmp         dword [bootboot.initrd_ptr], 0
             jnz         .entryok
-            ;is it big enough for the core and the ramdisk?
-            mov         ebp, INITRD_MAXSIZE*1024*1024 + CORE_MAX
-;            add         ebp, 1024*1024-1
+            ;is it big enough for the compressed and the inflated ramdisk?
+            mov         ebp, (INITRD_MAXSIZE+2)*1024*1024
             shr         ebp, 20
             shl         ebp, 20
             ;is this free memory hole big enough? (first fit)
@@ -457,7 +453,7 @@ getmemmap:
             xor         ecx, ecx
             cmp         dword [bootboot.initrd_ptr], ecx
             jnz         .enoughmem
-            mov         si, noenmem
+.nomem:     mov         si, noenmem
             jmp         real_diefunc
 .enoughmem:
 
@@ -1078,11 +1074,52 @@ protmode_start:
 
             mov         esi, dword [bootboot.initrd_ptr]
             cmp         word [esi], 08b1fh
-            jne         @f
-            ; TODO: inflate initrd and replace bootboot.initrd_ptr and initrd_size
+            jne         .noinflate
+            DBG32       dbg_gzinitrd
+
+            mov         edi, esi
+            mov         ecx, dword [bootboot.initrd_size]
+            add         edi, ecx
+            sub         edi, 4
+            mov         eax, dword [edi]
+            add         edi, 4095
+            shr         edi, 12
+            shl         edi, 12
+            mov         dword [bootboot.initrd_size], eax
+            add         eax, ecx
+            cmp         eax, (INITRD_MAXSIZE+2)*1024*1024
+            jb          @f
+            mov         esi, nogzmem
+            jmp         prot_diefunc
+@@:         mov         dword [bootboot.initrd_ptr], edi
+            ; TODO: inflate initrd
+            ; esi: gzipped initrd
+            ; ecx: compressed size
+            ; edi: output buffer
+xchg bx,bx
             mov         esi, nogzip
             jmp         prot_diefunc
-@@:
+.noinflate: ; exclude initrd from free mmap
+            mov         ebx, dword [bootboot.initrd_ptr]
+            mov         edx, dword [bootboot.initrd_size];
+            add         edx, ebx
+            mov         esi, bootboot.mmap
+            mov         cx, 248
+.nextfree:  cmp         byte[esi+15], MMAP_FREE
+            jne         .notfree
+            ;  +---------------------+    free
+            ;  #######                    initrd
+            cmp         ebx, dword [esi]
+            jb          .notfree
+            mov         eax, dword [esi+8]
+            and         al, 0F0h
+            add         eax, dword [esi]
+            cmp         edx, eax
+            ja          .notfree
+            mov         dword [esi], edx
+.notfree:   add         esi, 16
+            dec         cx
+            jnz         .nextfree
 
             ;-----load /lib/sys/core------
             ; *_initrd
@@ -1511,18 +1548,20 @@ if DEBUG eq 1
 dbg_cpu     db          " * Detecting CPU",10,13,0
 dbg_A20     db          " * Enabling A20",10,13,0
 dbg_mem     db          " * E820 Memory Map",10,13,0
-dbg_systab  db          " * System Tables",10,13,0
-dbg_time    db          " * System Time",10,13,0
-dbg_env     db          " * Parse environment",10,13,0
-dbg_initrd  db          " * Locate initrd",10,13,0
-dbg_elf     db          " * Parse ELF64",10,13,0
-dbg_vesa    db          " * VESA VBE",10,13,0
+dbg_systab  db          " * System tables",10,13,0
+dbg_time    db          " * System time",10,13,0
+dbg_env     db          " * Environment",10,13,0
+dbg_initrd  db          " * Initrd loaded",10,13,0
+dbg_gzinitrd db         " * Gzip compressed initrd",10,13,0
+dbg_elf     db          " * Parsing ELF64",10,13,0
+dbg_vesa    db          " * Screen VESA VBE",10,13,0
 end if
 starting:   db          "Booting OS...",10,13,0
 panic:      db          "-PANIC: ",0
 noarch:     db          "Hardware not supported",0
 a20err:     db          "Failed to enable A20",0
 memerr:     db          "E820 memory map not found",0
+nogzmem:    db          "Inflating: "
 noenmem:    db          "Not enough memory",0
 noacpi:     db          "ACPI not found",0
 nogpt:      db          "Boot partition not found or corrupt",0

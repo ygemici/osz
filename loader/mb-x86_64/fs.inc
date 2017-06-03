@@ -1,7 +1,7 @@
 ;*
 ;* loader/mb-x86_64/fs.inc
 ;*
-;* Copyright 2016 Public Domain BOOTBOOT bztsrc@github
+;* Copyright 2017 Public Domain BOOTBOOT bztsrc@github
 ;*
 ;* This file is part of the BOOTBOOT Protocol package.
 ;* @brief Filesystem drivers for initial ramdisk.

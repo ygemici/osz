@@ -206,6 +206,7 @@ void pmm_init()
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
             fmem->base = MMapEnt_Ptr(entry);
             fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
+            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
             if(fmem->size!=0) {
                 pmm.size++;
                 pmm.totalpages += fmem->size;

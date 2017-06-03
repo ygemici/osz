@@ -1,10 +1,12 @@
  --- Error fixes ---
+./src/core/pmm.c:209:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
 ./src/core/AArch64/executable.ld:91:      FIXME: Why do we need it? When there is no .bss section, we don't
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./loader/efi-x86_64/tinflate.c:545:            // Uncompressed size. TODO: Check
-./loader/mb-x86_64/bootboot.asm:1082:            ; TODO: inflate initrd and replace bootboot.initrd_ptr and initrd_size
+./loader/mb-x86_64/bootboot.asm:1095:            ; TODO: inflate initrd
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
+./bin/usr/include/stdarg.h:36://TODO: this is x86_64 ABI specific
 ./src/drivers/drv.c:31:    /* TODO: use mq_dispatch on common function scheme */
 ./src/core/syscall.c:69:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/x86_64/pci.c:59:// TODO: load drivers and save autodetected irq number in ehdr->e_machine

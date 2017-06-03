@@ -1,7 +1,7 @@
 ;*
 ;* loader/mb-x86_64/bootboot.inc
 ;*
-;* Copyright 2016 Public Domain BOOTBOOT bztsrc@github
+;* Copyright 2017 Public Domain BOOTBOOT bztsrc@github
 ;*
 ;* This file is part of the BOOTBOOT Protocol package.
 ;* @brief The BOOTBOOT structure
@@ -55,7 +55,7 @@ MMAP_ACPINVS      equ 4
 MMAP_BAD          equ 5
 MMAP_MMIO         equ 6
 
-INITRD_MAXSIZE     equ 2 ; Mb
+INITRD_MAXSIZE     equ 16 ; Mb
 
 virtual at bootboot
     bootboot.magic:       dd	0

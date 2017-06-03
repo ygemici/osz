@@ -1,7 +1,7 @@
 /*
  * loader/bootboot.h
  *
- * Copyright 2016 Public Domain BOOTBOOT bztsrc@github
+ * Copyright 2017 Public Domain BOOTBOOT bztsrc@github
  *
  * This file is part of the BOOTBOOT Protocol package.
  * @brief The BOOTBOOT structure
@@ -55,7 +55,7 @@ typedef struct {
 #define MMAP_BAD      5
 #define MMAP_MMIO     6
 
-#define INITRD_MAXSIZE 2 //Mb
+#define INITRD_MAXSIZE 16 //Mb
 
 typedef struct {
   uint8_t    magic[4];    // BOOT

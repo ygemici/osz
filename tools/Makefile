@@ -28,7 +28,7 @@ imgclean:
 
 esp: initrd
 	@echo "  mkfs		ESP"
-	@#gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 	@cp -f ../etc/CONFIG ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.efi)","")
 	@cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true

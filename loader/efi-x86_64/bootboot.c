@@ -1,7 +1,7 @@
 /*
- * loader/efi-x86_64/bootboot.c
+ * loader/efi-x86_64/bootboot->c
  *
- * Copyright 2016 Public Domain BOOTBOOT bztsrc@github
+ * Copyright 2017 Public Domain BOOTBOOT bztsrc@github
  *
  * This file is part of the BOOTBOOT Protocol package.
  * @brief Booting code for EFI
@@ -242,7 +242,9 @@ GetLFB()
             (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.RedMask==0)? FB_ABGR : (
                 gop->Mode->Info->PixelInformation.BlueMask==8? FB_RGBA : FB_BGRA
         ));
-    DBG(L" * Screen %d x %d, scanline %d, fb @%lx %d bytes, mode %d\n",bootboot->fb_width,bootboot->fb_height,bootboot->fb_scanline,bootboot->fb_ptr,bootboot->fb_size, gop->Mode->Mode);
+    DBG(L" * Screen %d x %d, scanline %d, fb @%lx %d bytes, mode %d\n",
+        bootboot->fb_width, bootboot->fb_height, bootboot->fb_scanline,
+        bootboot->fb_ptr, bootboot->fb_size, gop->Mode->Mode);
     return EFI_SUCCESS;
 }
 
@@ -263,18 +265,17 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
         return report(EFI_NOT_FOUND,L"Empty Root or FileName\n");
     }
 
-    status = uefi_call_wrapper(RootDir->Open, 5, RootDir, &FileHandle, FileName, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
+    status = uefi_call_wrapper(RootDir->Open, 5, RootDir, &FileHandle, FileName, 
+        EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
     if (EFI_ERROR(status)) {
-        report(status,L"Open error");
-        Print(L"  File: %s\n",FileName);
-        return status;
+        Print(L"%s not found\n",FileName);
+        return report(status,L"Open error");
     }
     FileInfo = LibFileInfo(FileHandle);
     if (FileInfo == NULL) {
         uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
-        report(EFI_NOT_FOUND,L"FileInfo error");
-        Print(L"  File: %s\n",FileName);
-        return EFI_NOT_FOUND;
+        Print(L"%s not found\n",FileName);
+        return report(EFI_NOT_FOUND,L"FileInfo error");
     }
     ReadSize = FileInfo->FileSize;
     if (ReadSize > 16*1024*1024)
@@ -291,9 +292,8 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
     uefi_call_wrapper(FileHandle->Close, 1, FileHandle);
     if (EFI_ERROR(status)) {
         uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)(Buffer), BufferSize);
-        report(status,L"Read error");
-        Print(L"  File: %s\n",FileName);
-        return status;
+        Print(L"%s not found\n",FileName);
+        return report(status,L"Read error");
     }
 
     *FileData = Buffer;
@@ -374,7 +374,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     UINT32 desc_version=0;
     MMapEnt *mmapent, *last=NULL;
     CHAR16 **argv, *initrdfile, *configfile, *help=
-        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
+        L"SYNOPSIS\n  bootboot->EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
     CHAR8 *ptr;
 
@@ -609,7 +609,9 @@ get_memory_map:
             return report(status,L"GetMemoryMap");
         }
         last=NULL;
-        for(mement=memory_map;mement<memory_map+memory_map_size;mement=NextMemoryDescriptor(mement,desc_size)) {
+        for(mement=memory_map;
+            mement<memory_map+memory_map_size;
+            mement=NextMemoryDescriptor(mement,desc_size)) {
             // failsafe
             if(bootboot->size>=PAGESIZE || 
                 (mement->PhysicalStart==0 && mement->NumberOfPages==0))
@@ -632,6 +634,38 @@ get_memory_map:
                 last=mmapent;
                 bootboot->size+=16;
                 mmapent++;
+            }
+            // remove initrd from free mmap
+            if(MMapEnt_IsFree(last)) {
+                //  +--------------------------+    free
+                //               #################  initrd
+                if(MMapEnt_Ptr(last) <= bootboot->initrd_ptr && 
+                    MMapEnt_Ptr(last)+MMapEnt_Size(last) > bootboot->initrd_ptr) {
+                        UINT64 s = MMapEnt_Size(last);
+                        last->size = ((bootboot->initrd_ptr-last->ptr)&0xFFFFFFFFFFFFFFF0) + MMapEnt_Type(last);
+                //  +-----------+...........+--+    free
+                //               ###########        initrd
+                        if(MMapEnt_Ptr(last)+s > bootboot->initrd_ptr + bootboot->initrd_size) {
+                            mmapent->ptr = bootboot->initrd_ptr + bootboot->initrd_size;
+                            mmapent->size = ((s-mmapent->ptr)&0xFFFFFFFFFFFFFFF0) + MMapEnt_Type(last);
+                            last = mmapent;
+                            bootboot->size+=16;
+                            mmapent++;
+                        }
+                }
+                //             +-------------------+    free
+                //         #################            initrd
+                if(MMapEnt_Ptr(last) <= bootboot->initrd_ptr + bootboot->initrd_size && 
+                    MMapEnt_Ptr(last)+MMapEnt_Size(last) <= bootboot->initrd_ptr + bootboot->initrd_size) {
+                //             +--------+               free
+                //         #################            initrd
+                    if(MMapEnt_Ptr(last) >= bootboot->initrd_ptr) {
+                        last->size &= 0xFFFFFFFFFFFFFFF0;
+                        last->size |= MMAP_RESERVED;
+                    } else {
+                        last->ptr = bootboot->initrd_ptr + bootboot->initrd_size;
+                    }
+                }
             }
         }
         // --- NO PRINT AFTER THIS POINT ---
