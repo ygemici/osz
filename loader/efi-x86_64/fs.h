@@ -8,10 +8,9 @@
  * 
  */
 
-#include "../../etc/include/fsZ.h"
-
+#ifdef _FS_Z_H_
 /**
- * FS/Z (BOOTBOOT's and OS/Z's native file system)
+ * FS/Z initrd (OS/Z's native file system)
  */
 unsigned char *fsz_initrd(unsigned char *initrd_p, char *kernel)
 {
@@ -76,6 +75,7 @@ again:
     }
     return NULL;
 }
+#endif
 
 /**
  * cpio hpodc archive
@@ -148,7 +148,9 @@ unsigned char *fat16_initrd(unsigned char *initrd_p, char *kernel)
  * Static file system drivers registry
  */
 unsigned char* (*fsdrivers[]) (unsigned char *, char *) = {
+#ifdef _FS_Z_H_
     fsz_initrd,
+#endif
     cpio_initrd,
     tar_initrd,
     fat12_initrd,

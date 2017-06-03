@@ -14,6 +14,8 @@
 #define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
 #include "tinf.h"
+// just comment out this include if you don't want FS/Z support
+#include "../../etc/include/fsZ.h"
 
 #define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
 //#define DBG(fmt, ...)
@@ -123,7 +125,6 @@ int oct2bin(unsigned char *str,int size)
     }
     return s;
 }
-
 #include "fs.h"
 
 /**
