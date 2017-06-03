@@ -8,6 +8,9 @@
  * 
  */
 
+// just comment out this include if you don't want FS/Z support
+#include "../../etc/include/fsZ.h"
+
 #ifdef _FS_Z_H_
 /**
  * FS/Z initrd (OS/Z's native file system)
@@ -121,30 +124,6 @@ unsigned char *tar_initrd(unsigned char *initrd_p, char *kernel)
 }
 
 /**
- * FAT 12
- */
-unsigned char *fat12_initrd(unsigned char *initrd_p, char *kernel)
-{
-    if(initrd_p==NULL || kernel==NULL || CompareMem(initrd_p+0x36,"FAT12",5)) {
-        return NULL;
-    }
-    DBG(L" * FAT12 %s unimplemented\n",a2u(kernel));
-    return NULL;
-}
-
-/**
- * FAT 16
- */
-unsigned char *fat16_initrd(unsigned char *initrd_p, char *kernel)
-{
-    if(initrd_p==NULL || kernel==NULL || CompareMem(initrd_p+0x36,"FAT16",5)){
-        return NULL;
-    }
-    DBG(L" * FAT16 %s unimplemented\n",a2u(kernel));
-    return NULL;
-}
-
-/**
  * Static file system drivers registry
  */
 unsigned char* (*fsdrivers[]) (unsigned char *, char *) = {
@@ -153,7 +132,5 @@ unsigned char* (*fsdrivers[]) (unsigned char *, char *) = {
 #endif
     cpio_initrd,
     tar_initrd,
-    fat12_initrd,
-    fat16_initrd,
     NULL
 };

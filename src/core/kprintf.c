@@ -107,6 +107,8 @@ void kprintf_init()
 {
     int x, y, line, offs = 0;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
+dbg_putchar('O');
+dbg_putchar('K');
     // clear screen
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
@@ -121,6 +123,7 @@ void kprintf_init()
     maxy = bootboot.fb_height / font->height;
     // default fg and bg, cursor at home
     kprintf_reset();
+ee:goto ee;
 
     // display boot logo
     char *data = &_binary_logo_tga_start + 0x255;
@@ -190,6 +193,7 @@ void kprintf_putlogo()
 
 void kprintf_putchar(int c)
 {
+/*
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     unsigned char *glyph = (unsigned char*)&_binary_font_start +
      font->headersize +
@@ -213,6 +217,7 @@ void kprintf_putchar(int c)
     }
     sysinfostruc.srand[offs%4] += (uint64_t)c;
     sysinfostruc.srand[(offs+1)%4] -= (uint64_t)glyph;
+*/
 #if DEBUG
     dbg_putchar(c);
 #endif

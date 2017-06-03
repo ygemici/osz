@@ -17,50 +17,32 @@ extern "C" {
 
 #define BOOTPARAMS_MAGIC "BOOT"
 
+// minimum protocol level:
+//  hardcoded kernel name, static kernel memory addresses
+#define PROTOCOL_MINIMAL 0
+// static protocol level:
+//  kernel name parsed from environment, static kernel memory addresses
+#define PROTOCOL_STATIC  1
+// dynamic protocol level:
+//  kernel name parsed from environment, kernel memory addresses parsed from ELF symbols
+#define PROTOCOL_DYNAMIC 2
+
+// loader types, just informational
+#define LOADER_BIOS 0
+#define LOADER_UEFI 1
+#define LOADER_RPI  2
+
+// framebuffer pixel format, only 32 bits supported
 #define FB_ARGB   0
 #define FB_RGBA   1
 #define FB_ABGR   2
 #define FB_BGRA   3
 
-#define INITRD_MAXSIZE 2 //Mb
-
-typedef struct {
-  uint8_t    magic[4];    // BOOT
-  uint32_t   size;        // length of bootboot structure
-  uint64_t   datetime;    // in BCD yyyymmddhhiiss
-
-  // 4 architecture specific pointers. This is for x86_64
-  uint64_t   acpi_ptr;    // system table pointers
-  uint64_t   smbi_ptr;
-  uint64_t   efi_ptr;
-  uint64_t   mp_ptr;
-
-  uint64_t   initrd_ptr;  // ramdisk image position and size
-  uint64_t   initrd_size;
-  uint64_t   mmap_ptr;    // virtual address of mmap
-  uint64_t   unused0;
-  uint32_t   unused1;
-  uint32_t   bspid;       // Local APIC id of BSP
-  uint8_t    *fb_ptr;     // framebuffer pointer and dimensions
-  uint32_t   fb_size;
-  uint32_t   fb_width;
-  uint32_t   fb_height;
-  uint32_t   fb_scanline;
-  uint32_t   pagesize;    // 4096
-  uint8_t    protocol;    // 1, static addresses
-  uint8_t    loader_type; // LOADER_BIOS or LOADER_UEFI
-  uint16_t   flags[3];
-  int16_t    timezone;    //in minutes -1440..1440
-  uint16_t   fb_type;
-  uint8_t    mmap; /* MMapEnt[] */
-} __attribute__((packed)) BOOTBOOT;
-
-// mmap, type is stored in least significant byte of size
+// mmap entry, type is stored in least significant byte of size
 typedef struct {
   uint64_t   ptr;
   uint64_t   size;
 } __attribute__((packed)) MMapEnt;
-
 #define MMapEnt_Ptr(a)  (a->ptr)
 #define MMapEnt_Size(a) (a->size & 0xFFFFFFFFFFFFFFF0)
 #define MMapEnt_Type(a) (a->size & 0xF)
@@ -73,19 +55,60 @@ typedef struct {
 #define MMAP_BAD      5
 #define MMAP_MMIO     6
 
-// minimum protocol level:
-//  hardcoded kernel name, static kernel memory addresses
-#define PROTOCOL_MINIMAL 0
-// static protocol level:
-//  kernel name parsed from environment, static kernel memory addresses
-#define PROTOCOL_STATIC  1
-// dynamic protocol level:
-//  kernel name parsed from environment, kernel memory addresses parsed from ELF symbols
-#define PROTOCOL_DYNAMIC 2
+#define INITRD_MAXSIZE 2 //Mb
 
-#define LOADER_BIOS 0
-#define LOADER_UEFI 1
-#define LOADER_RPI  2
+typedef struct {
+  uint8_t    magic[4];    // BOOT
+  uint32_t   size;        // length of bootboot structure
+
+  uint8_t    protocol;    // 1, static addresses, see PROTOCOL_* above
+  uint8_t    loader_type; // see LOADER_* above
+  uint16_t   flags;
+  int16_t    timezone;    // in minutes -1440..1440
+  uint16_t   fb_type;     // framebuffer type, see FB_* above
+
+  uint32_t   pagesize;    // 4096
+  uint32_t   bspid;       // Local APIC id of BSP
+
+  uint8_t    datetime[8]; // in BCD yyyymmddhhiiss
+
+  uint64_t   initrd_ptr;  // ramdisk image position and size
+  uint64_t   initrd_size;
+
+  uint8_t    *fb_ptr;     // framebuffer pointer and dimensions
+  uint32_t   fb_size;
+  uint32_t   fb_width;
+  uint32_t   fb_height;
+  uint32_t   fb_scanline;
+
+  // architecture specific pointers
+  union {
+    struct {
+      uint64_t acpi_ptr;
+      uint64_t smbi_ptr;
+      uint64_t efi_ptr;
+      uint64_t mp_ptr;
+      uint64_t unused0;
+      uint64_t unused1;
+      uint64_t unused2;
+      uint64_t unused3;
+    } x86_64;
+    struct {
+      uint64_t unused0;
+      uint64_t unused1;
+      uint64_t unused2;
+      uint64_t unused3;
+      uint64_t unused4;
+      uint64_t unused5;
+      uint64_t unused6;
+      uint64_t unused7;
+    } AArch64;
+  };
+
+  MMapEnt    mmap; /* MMapEnt[], more records may follow */
+  /* use like this: MMapEnt *mmap_ent = bootboot.mmap; mmap_ent++; */
+} __attribute__((packed)) BOOTBOOT;
+
 
 #ifdef  __cplusplus
 }

@@ -45,21 +45,23 @@ Glossary
 --------
 
 * _boot partition_: the first bootable partition of the first disk,
-  a rather small one. Most likely an EFI System Partition with FAT32,
-  but can be any other FS as well if the partition is bootable (bit 2 set in flags).
+  a rather small one. Most likely an EFI System Partition, but can be
+  any other FAT partition as well if the partition is bootable (bit 2 set in flags).
 
-* _environment file_: a one page long utf-8 file on boot partition
-  with "key=value" pairs (separated by newlines). The protocol only
-  specifies three of the keys: "width" and "height" for screen size,
+* _environment file_: a one page long utf-8 file on boot partition at
+  BOOTBOOT\CONFIG with "key=value" pairs (separated by newlines). The protocol
+  only specifies three of the keys: "width" and "height" for screen size,
   and "kernel" for the name of the ELF executable inside the initrd.
 
-* _initrd file_: initial ramdisk image on boot partition. It's
-  filesystem should have a filesystem driver (see below).
+* _initrd file_: initial ramdisk image on boot partition at
+  BOOTBOOT\INITRD. It can be gzip compressed andiIt's filesystem should have a
+  filesystem driver (see below).
 
 * _loader_: a native executable on the boot partition. For multi-
   bootable disks more loader can co-exists.
 
-* _filesystem driver_: a plug-in that parses initrd for the kernel
+* _filesystem driver_: a plug-in that parses initrd for the kernel. Without
+  one the first ELF executable in the initrd will be loaded as kernel.
 
 * _kernel file_: an ELF executable inside initrd, optionally with
   the following symbols: fb, environment, bootboot (see linker script).
@@ -72,7 +74,7 @@ Boot process
 
 1. the firmware locates the loader, loads it and passes control to it.
 2. the loader initializes hardware (long mode, screen resolution, memory map etc.)
-3. then loads initrd file and environment file from the boot partition.
+3. then loads environment file and initrd file from the boot partition.
 4. iterates on filesystem drivers, and loads kernel from initrd.
 5. if filesystem is not recognized, scans for the first ELF executable in initrd.
 6. parses ELF program header and symbols to get link addresses.
@@ -108,7 +110,7 @@ Interrups are turned off, GDT unspecified, but valid and code segment
 running on ring 0. The stack is at the top of the memory, starting at
 zero and growing downwards.
 
-You can locate the initrd in memory using the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
+You can locate your initrd in memory using the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
 
 The boot time and a platform independent memory map is also provided.
 
@@ -121,7 +123,7 @@ Filesystem drivers
 
 Luckily the EFI loader can load files from the boot partition with the
 help of the firmware. MultiBoot implementation is not so lucky,
-therefore it needs an extra function to do that. That function however
+therefore it needs an extra functions to do that. That function however
 is out of the scope of this specification: the BOOTBOOT Protocol only
 states that a compatible loader must be able to load initrd and environment
 from the boot partition, but does not describe how.
@@ -140,16 +142,16 @@ The protocol expects that a compliant loader iterates on a list of
 drivers until one returns a non-NULL.
 
 If all filesystem drivers failed, BOOTBOOT compliant loader will brute-force
-scan for the first ELF image in the first initrd image on the first partition,
-which is quite comfortable specially when you boot it from ROM. You just copy
-your initrd on the EFI System Partition, and ready to rock and roll!
+scan for the first ELF image in the initrd, which is quite comfortable specially
+when you want to use your own filesystem but you don't have an fs driver for it.
+You just copy your initrd on the EFI System Partition, and ready to rock and roll!
 
 The BOOTBOOT Protocol expects the [filesystem drivers](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/fs.h) to be separated from
 the rest of the loader in source. This is so because it was designed to
 help the needs of hobby OS developers, specially those who want to write
 their own filesystem.
 
-For boot partition, Multiboot version uses magic bytes to locate initrd, so it's 100% filesystem independent.
+For boot partition, Multiboot version expects *defragmented* FAT12, FAT16 or FAT32 filesystems.
 EFI version relies on any filesystem that's supported by EFI Simple FileSystem Protocol. As for initrd, 
 the reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
 Gzip compressed initrds are only handled by the EFI version, sopport in the BIOS version coming soon.
@@ -241,7 +243,7 @@ Installation
 
 ```shell
 mkdir -r tmp/lib/sys
-cp kernel tmp/lib/sys/core
+cp yourkernel tmp/lib/sys/core
 # copy more files to tmp/ directory
 cd tmp
 find . | cpio -H hpodc -o | gzip > ../INITRD
@@ -255,11 +257,10 @@ tar -czf ../INITRD *
 
 You can compress it with gzip or "z" flag, but note that currently only EFI version supports decompression.
 
-2. Create FS0:\BOOTBOOT directory, and copy the archive you've created
+2. Create FS0:\BOOTBOOT directory on ESP, and copy the archive you've created
             into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG)
-            there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there. Start it
-            with a comment "// BOOTBOOT" and fill up with newlines so that
-            the file became exactly 4096 bytes (1 page) long. Temporary variables will be copied there.
+            there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there.
+            Fill up with newlines so that the file became exactly 4096 bytes (1 page) long. Temporary variables will be copied there.
 
 ```
 // BOOTBOOT Options
@@ -278,7 +279,7 @@ otherstuff=enabled
 
 3. copy the BOOTBOOT loader on the boot partition:
 
-3.1. *EFI disk*: copy __bootboot.efi__ to **_FS0:\EFI\BOOT\BOOTX64.EFI_**. Done!
+3.1. *EFI disk*: copy __bootboot.efi__ to **_FS0:\EFI\BOOT\BOOTX64.EFI_**.
 
 3.2. *EFI ROM*: use __bootboot.rom__ which is a standard **_PCI Option ROM image_**.
 
@@ -301,18 +302,19 @@ Really old hardware. This message is generated by 1st stage loader.
 BOOTBOOT-PANIC: FS0:\BOOTBOOT\LOADER not found
 ```
 
-The 2nd stage loader is not on the boot partition or it's starting LBA
+The 2nd stage loader is not on the disk or it's starting LBA
 address is not recorded in (P)MBR at dword [0x1B0]. This message is
 generated by 1st stage loader.
 
 
 ```
-BOOTBOOT-PANIC: GUID Partition Table not found or corrupt
+BOOTBOOT-PANIC: Boot partition not found or corrupt
 ```
 
 Either the disk does not have a GPT, or there's no EFI System Partition
-nor any other bootable partition on it. If that's the case, BOOTBOOT
-Protocol compatible loaders should try to use the first partition if any.
+nor any other bootable FAT partition on it. Or the FAT filesystem is
+found but inconsistent, or doesn't have a BOOTBOOT subdirectory in it's root
+directory.
 
 ```
 BOOTBOOT-PANIC: FS0:\BOOTBOOT\INITRD not found
@@ -325,7 +327,8 @@ BOOTBOOT-PANIC: Kernel not found in initrd
 ```
 
 Kernel is not included in the initrd, or initrd's fileformat is not
-recognized by any of the filesystem drivers.
+recognized by any of the filesystem drivers, and scanning haven't found a
+valid ELF64 header in it.
 
 ```
 BOOTBOOT-PANIC: Kernel is not an executable ELF64 for x86_64

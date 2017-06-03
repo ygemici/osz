@@ -99,12 +99,12 @@ testq:
 testb:
 	@echo "TEST"
 	@echo
-	@rm bin/disk.dd.lock 2>dev/null || true
 ifneq ($(wildcard /usr/local/bin/bochs),)
 	/usr/local/bin/bochs -f etc/bochs.rc -q
 else
 	bochs -f etc/bochs.rc -q
 endif
+	@rm bin/disk.dd.lock 2>dev/null || true
 
 testv: bin/disk.vdi
 	@echo "TEST"

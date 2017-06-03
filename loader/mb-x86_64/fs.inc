@@ -7,51 +7,23 @@
 ;* @brief Filesystem drivers for initial ramdisk.
 ;*
 
+FSZ_SUPPORT equ 1
+
 ;*********************************************************************
 ;*                       File System Drivers                         *
 ;*********************************************************************
 
-; unlike the EFI loader here we have to parse the boot partition too to
-; locate initrd in it. So there's an extra method to every filesystem driver.
-; methods:
-;  *_1stpart_initrd: get initrd (not in EFI)
-;  *_initrd: get kernel (common with EFI)
-
             USE32
-fsdrivers:  dw          gzip_1stpart_initrd, gzip_initrd
-            dw          fsz_1stpart_initrd, fsz_initrd
-            dw          cpio_1stpart_initrd, cpio_initrd
-            dw          tar_1stpart_initrd, tar_initrd
-            ;dw         fat12_1stpart_initrd, fat12_initrd
-            ;dw         fat16_1stpart_initrd, fat16_initrd
-            dw          0, 0, 0
+fsdrivers:
+if FSZ_SUPPORT eq 1
+            dw          fsz_initrd
+end if
+            dw          cpio_initrd
+            dw          tar_initrd
+            dw          0
 
+if FSZ_SUPPORT eq 1
 ; ----------- FS/Z ----------
-; Find the initrd on boot partition (EFI System Partition)
-; IN:   esi: 1st partition pointer, ecx: 1st partition end
-; OUT:  On Success
-;         esi: pointer to initrd, ecx: size in bytes
-;       On Error
-;         esi: error message, ecx: 0
-fsz_1stpart_initrd:
-            mov         ebx, ecx
-            xor         ecx, ecx
-            mov         eax, 'FS/Z'
-@@:         add         esi, 512
-            cmp         dword [esi+512], eax    ; FSZ_SuperBlock.magic
-            jne         .not
-            cmp         dword [esi+1016], eax   ; FSZ_SuperBlock.magic2
-            je          @f
-.not:       cmp         esi, ebx
-            jb          @b
-            xor         ecx, ecx
-            ret
-            ; get total number of sectors
-@@:         mov         ecx, dword [esi+520]
-            ; sec*4096
-            shl         ecx, 12
-            ret
-
 ; Find the ELF kernel on initrd
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
@@ -68,11 +40,9 @@ fsz_initrd:
             add         esi, eax
             cmp         dword [esi], 'FSIN'
             je          @f
-.noroot:    mov         esi, noroot
+.nolib:     mov         esi, nolib
 .err:       xor         ecx, ecx
             ret
-.nolib:     mov         esi, nolib
-            jmp         .err
 .nocore:    mov         esi, nocore
             jmp         .err
 @@:         ; it has inlined data?
@@ -85,7 +55,7 @@ fsz_initrd:
             mov         esi, dword [bootboot.initrd_ptr]
             add         esi, eax
             cmp         dword [esi], 'FSDR'
-            jne         .noroot
+            jne         .nolib
 .srchlib:   ; find lib/
             mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
             mov         eax, 'lib/'                 ; don't allow other
@@ -177,31 +147,9 @@ fsz_initrd:
             mov         esi, dword [bootboot.initrd_ptr]
             add         esi, eax
             ret
+end if
 
 ; ----------- cpio ----------
-; Find the initrd on boot partition (EFI System Partition)
-; IN:   esi: 1st partition pointer, ecx: 1st partition end
-; OUT:  On Success
-;         esi: pointer to initrd, ecx: size in bytes
-;       On Error
-;         esi: error message, ecx: 0
-cpio_1stpart_initrd:
-            mov         ebx, ecx
-            xor         ecx, ecx
-            mov         eax, '0707'
-@@:         add         esi, 512
-            cmp         dword [esi], eax    ; cpio magic
-            jne         .not
-            cmp         word [esi+4], ax    ; cpio magic
-            je          @f
-.not:       cmp         esi, ebx
-            jb          @b
-            xor         ecx, ecx
-            ret
-            ; get total number of sectors
-@@:         mov         ecx, 2*1024*1024
-            ret
-
 ; Find the ELF kernel on initrd
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
@@ -265,29 +213,6 @@ cpio_initrd:
 .fs:        dd          0
 
 ; ----------- tar ----------
-; Find the initrd on boot partition (EFI System Partition)
-; IN:   esi: 1st partition pointer, ecx: 1st partition end
-; OUT:  On Success
-;         esi: pointer to initrd, ecx: size in bytes
-;       On Error
-;         esi: error message, ecx: 0
-tar_1stpart_initrd:
-            mov         ebx, ecx
-            xor         ecx, ecx
-            mov         eax, 'usta'
-@@:         add         esi, 512
-            cmp         dword [esi+257], eax    ; tar magic
-            jne         .not
-            cmp         byte [esi+261], 'r'     ; tar magic
-            je          @f
-.not:       cmp         esi, ebx
-            jb          @b
-            xor         ecx, ecx
-            ret
-            ; get total number of sectors
-@@:         mov         ecx, 2*1024*1024
-            ret
-
 ; Find the ELF kernel on initrd
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
@@ -343,122 +268,3 @@ tar_initrd:
             ret
 .ks:        dd          0
 .fs:        dd          0
-
-; ----------- FAT12 ----------
-; Find the initrd on boot partition (EFI System Partition)
-; IN:   esi: 1st partition pointer, ecx: 1st partition end
-; OUT:  On Success
-;         esi: pointer to initrd, ecx: size in bytes
-;       On Error
-;         esi: error message, ecx: 0
-fat12_1stpart_initrd:
-            mov         ebx, esi
-            add         ebx, ecx
-            mov         eax, 'FAT1'
-@@:         add         esi, 512
-            cmp         dword [esi+036h], eax   ; FAT12 magic
-            jne         .not
-            cmp         byte [esi+03Ah], '2'    ; FAT12 magic
-            je          @f
-.not:       cmp         esi, ebx
-            jb          @b
-            xor         ecx, ecx
-            ret
-            ; get total number of sectors
-@@:         mov         ecx, dword [esi+020h]
-            or          ecx, ecx
-            jnz         @f
-            xor         ecx, ecx
-            mov         cx, word [esi+013h]
-            ; sec*512
-            shl         ecx, 9
-            ret
-
-fat12_initrd:
-            cmp         dword [esi+036h], 'FAT1'    ; FAT12 magic
-            jne         .not
-            cmp         byte [esi+03Ah], '2'        ; FAT12 magic
-            je          @f
-.not:       xor         ecx, ecx
-            ret
-@@:         mov         ebx, esi
-            add         ebx, ecx
-            xor         ecx, ecx
-            ret
-
-; ----------- FAT16 ----------
-; Find the initrd on boot partition (EFI System Partition)
-; IN:   esi: 1st partition pointer, ecx: 1st partition end
-; OUT:  On Success
-;         esi: pointer to initrd, ecx: size in bytes
-;       On Error
-;         esi: error message, ecx: 0
-fat16_1stpart_initrd:
-            mov         ebx, esi
-            add         ebx, ecx
-            mov         eax, 'FAT1'
-@@:         add         esi, 512
-            cmp         dword [esi+036h], eax   ; FAT16 magic
-            jne         .not
-            cmp         byte [esi+03Ah], '6'    ; FAT16 magic
-            je          @f
-.not:       cmp         esi, ebx
-            jb          @b
-            xor         ecx, ecx
-            ret
-            ; get total number of sectors
-@@:         mov         ecx, dword [esi+020h]
-            or          ecx, ecx
-            jnz         @f
-            xor         ecx, ecx
-            mov         cx, word [esi+013h]
-            ; sec*512
-            shl         ecx, 9
-            ret
-
-fat16_initrd:
-            cmp         dword [esi+036h], 'FAT1'    ; FAT16 magic
-            jne         .not
-            cmp         byte [esi+03Ah], '6'        ; FAT16 magic
-            je          @f
-.not:       xor         ecx, ecx
-            ret
-@@:         mov         ebx, esi
-            add         ebx, ecx
-            xor         ecx, ecx
-            ret
-
-; ----------- Compressed initrd ----------
-; Find the initrd on boot partition (EFI System Partition)
-; IN:   esi: 1st partition pointer, ecx: 1st partition end
-; OUT:  On Success
-;         esi: pointer to initrd, ecx: size in bytes
-;       On Error
-;         esi: error message, ecx: 0
-gzip_1stpart_initrd:
-            mov         ebx, ecx
-            xor         ecx, ecx
-@@:         add         esi, 512
-            cmp         word [esi], 08B1Fh          ; gzip magic
-            jne         .not
-            cmp         dword [esi+10], 'init'      ; original filename
-            jne         .not
-            cmp         word [esi+14], 'rd'
-            jne         .not
-            cmp         byte [esi+16], 0
-            je          @f
-.not:       cmp         esi, ebx
-            jb          @b
-            xor         ecx, ecx
-            ret
-            ; get total number of sectors
-@@:         mov         ecx, 2*1024*1024
-            ret
-
-gzip_initrd:
-            cmp         word [esi], 08B1Fh          ; gzip magic
-            je          @f
-            xor         ecx, ecx
-            ret
-@@:         mov         esi, nogzip
-            jmp         prot_diefunc

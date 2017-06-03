@@ -56,7 +56,7 @@ void acpi_early(ACPI_Header *hdr)
 {
     /* get root pointer */
     if(hdr==NULL)
-        hdr = (ACPI_Header*)bootboot.acpi_ptr;
+        hdr = (ACPI_Header*)bootboot.x86_64.acpi_ptr;
     char *ptr = (char*)hdr;
     uint32_t len = hdr->length - sizeof(ACPI_Header);
     uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
@@ -298,9 +298,9 @@ bool_t acpi_init()
     uint16_t tmp;
     SLP_EN = PM1a_CNT = 0;
 
-    if(bootboot.acpi_ptr==0 ||
-        ((char)(*((uint64_t*)bootboot.acpi_ptr))!='R' &&
-        (char)(*((uint64_t*)bootboot.acpi_ptr))!='X')
+    if(bootboot.x86_64.acpi_ptr==0 ||
+        ((char)(*((uint64_t*)bootboot.x86_64.acpi_ptr))!='R' &&
+        (char)(*((uint64_t*)bootboot.x86_64.acpi_ptr))!='X')
     ) {
         // should never happen!
 #if DEBUG
@@ -312,7 +312,7 @@ bool_t acpi_init()
         if(sysinfostruc.debug&DBG_DEVICES)
             kprintf("\nACPI System Tables\n");
 #endif
-        acpi_parse((ACPI_Header*)bootboot.acpi_ptr, 1);
+        acpi_parse((ACPI_Header*)bootboot.x86_64.acpi_ptr, 1);
     }
     if(sysinfostruc.systables[systable_dsdt_idx] != 0)
         acpi_parseaml((ACPI_Header *)sysinfostruc.systables[systable_dsdt_idx]);

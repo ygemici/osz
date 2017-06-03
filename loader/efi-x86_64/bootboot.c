@@ -14,11 +14,9 @@
 #define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
 #include "tinf.h"
-// just comment out this include if you don't want FS/Z support
-#include "../../etc/include/fsZ.h"
 
-#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
-//#define DBG(fmt, ...)
+//#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
+#define DBG(fmt, ...)
 
 extern EFI_GUID GraphicsOutputProtocol;
 extern EFI_GUID LoadedImageProtocol;
@@ -500,17 +498,15 @@ gzerr:          return report(EFI_LOAD_ERROR,L"Corrupted initrd");
         bootboot->pagesize=PAGESIZE;
         CopyMem((void *)&(bootboot->initrd_ptr),&initrd_ptr,8);
         bootboot->initrd_size=((initrd_len+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
-        UINT64 p=0xFFFFFFFFFFE00000+(uint64_t)(&(bootboot->mmap))-(uint64_t)(&(bootboot->magic));
-        CopyMem(&(bootboot->mmap_ptr),&p,8);
-        CopyMem((void *)&(bootboot->efi_ptr),&systab,8);
+        CopyMem((void *)&(bootboot->x86_64.efi_ptr),&systab,8);
 
         // System tables and structures
-        LibGetSystemConfigurationTable(&AcpiTableGuid,(void *)&(bootboot->acpi_ptr));
-        LibGetSystemConfigurationTable(&SMBIOSTableGuid,(void *)&(bootboot->smbi_ptr));
-        LibGetSystemConfigurationTable(&MpsTableGuid,(void *)&(bootboot->mp_ptr));
+        LibGetSystemConfigurationTable(&AcpiTableGuid,(void *)&(bootboot->x86_64.acpi_ptr));
+        LibGetSystemConfigurationTable(&SMBIOSTableGuid,(void *)&(bootboot->x86_64.smbi_ptr));
+        LibGetSystemConfigurationTable(&MpsTableGuid,(void *)&(bootboot->x86_64.mp_ptr));
 
         // FIX ACPI table pointer on TianoCore...
-        ptr = (CHAR8 *)(bootboot->acpi_ptr);
+        ptr = (CHAR8 *)(bootboot->x86_64.acpi_ptr);
         if(CompareMem(ptr,(const CHAR8 *)"RSDT", 4) && CompareMem(ptr,(const CHAR8 *)"XSDT", 4)) {
             // scan for the real rsd ptr, as AcpiTableGuid returns bad address
             for(i=1;i<256;i++) {
@@ -522,24 +518,22 @@ gzerr:          return report(EFI_LOAD_ERROR,L"Corrupted initrd");
             // get ACPI system table
             ACPI_RSDPTR *rsd = (ACPI_RSDPTR*)ptr;
             if(rsd->xsdt!=0)
-                bootboot->acpi_ptr = rsd->xsdt;
+                bootboot->x86_64.acpi_ptr = rsd->xsdt;
             else
-                bootboot->acpi_ptr = (UINT64)((UINT32)rsd->rsdt);
+                bootboot->x86_64.acpi_ptr = (UINT64)((UINT32)rsd->rsdt);
         }
 
         // Date and time
         EFI_TIME t;
-        uint8_t bcd[8];
         uefi_call_wrapper(ST->RuntimeServices->GetTime, 2, &t, NULL);
-        bcd[0]=DecimaltoBCD(t.Year/100);
-        bcd[1]=DecimaltoBCD(t.Year%100);
-        bcd[2]=DecimaltoBCD(t.Month);
-        bcd[3]=DecimaltoBCD(t.Day);
-        bcd[4]=DecimaltoBCD(t.Hour);
-        bcd[5]=DecimaltoBCD(t.Minute);
-        bcd[6]=DecimaltoBCD(t.Second);
-        bcd[7]=DecimaltoBCD(t.Daylight);
-        CopyMem((void *)&bootboot->datetime, &bcd, 8);
+        bootboot->datetime[0]=DecimaltoBCD(t.Year/100);
+        bootboot->datetime[1]=DecimaltoBCD(t.Year%100);
+        bootboot->datetime[2]=DecimaltoBCD(t.Month);
+        bootboot->datetime[3]=DecimaltoBCD(t.Day);
+        bootboot->datetime[4]=DecimaltoBCD(t.Hour);
+        bootboot->datetime[5]=DecimaltoBCD(t.Minute);
+        bootboot->datetime[6]=DecimaltoBCD(t.Second);
+        bootboot->datetime[7]=DecimaltoBCD(t.Daylight);
         CopyMem((void *)&bootboot->timezone, &t.TimeZone, 2);
         if(bootboot->timezone<-1440||bootboot->timezone>1440)   // TZ in mins
             bootboot->timezone=0;

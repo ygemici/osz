@@ -332,8 +332,8 @@ getmemmap:
             mov         dword [bootboot.magic], eax
             mov         dword [bootboot.size], 128
             mov         dword [bootboot.pagesize], 4096
-            mov         dword [bootboot.mmap_ptr], 0FFE00000h + 128
-            mov         dword [bootboot.mmap_ptr+4], 0FFFFFFFFh
+            mov         dword [bootboot.protocol_ver], PROTOCOL_STATIC
+            mov         dword [bootboot.loader_type], LOADER_BIOS
             mov         di, bootboot.mmap
             mov         cx, 800h
             xor         ax, ax
@@ -809,49 +809,161 @@ protmode_start:
             jz          .nogpt
             or          eax, eax
             jz          .nogpt
-            sub         ecx, eax
-            shr         ecx, 3
-
+            mov         dword [bpb_sec], eax
+            ;load BPB
             mov         edi, dword [bootboot.initrd_ptr]
-.loadnext:  push        ecx
+            prot_readsector
+            cmp         dword [edi + bpb.fst2], 'FAT3'
+            je          @f
+            cmp         dword [edi + bpb.fst], 'FAT1'
+            jne         .nogpt
+@@:         cmp         word [edi + bpb.bps], 512
+            jne         .nogpt
+            ;calculations
+            xor         eax, eax
+            xor         ebx, ebx
+            xor         ecx, ecx
+            xor         edx, edx
+            mov         bx, word [edi + bpb.spf16]
+            or          bx, bx
+            jnz         @f
+            mov         ebx, dword [edi + bpb.spf32]
+@@:         mov         al, byte [edi + bpb.nf]
+            mov         cx, word [edi + bpb.rsc]
+            ;data_sec = numFat*secPerFat
+            mul         ebx
+            ;data_sec += reservedSec
+            add         eax, ecx
+            ;data_sec += ESPsec
+            add         eax, dword [bpb_sec]
+            mov         dword [data_sec], eax
+            mov         dword [root_sec], eax
+            xor         eax, eax
+            mov         al, byte [edi + bpb.spc]
+            mov         dword [clu_sec], eax
+            ;FAT12 and FAT16
+            ;data_sec += (numRootEnt*32+511)/512
+            cmp         word [edi + bpb.spf16], 0
+            je          .fat32bpb
+            xor         eax, eax
+            mov         ax, word [edi + bpb.nr]
+            shl         eax, 5
+            add         eax, 511
+            shr         eax, 9
+            add         dword [data_sec], eax
+            mov         byte [fattype], 0
+            jmp         @f
+.fat32bpb:  ;FAT32
+            ;root_sec += (rootCluster-2)*secPerCluster
+            mov         eax, dword [edi + bpb.rc]
+            sub         eax, 2
+            xor         edx, edx
+            mov         ebx, dword [clu_sec]
+            mul         ebx
+            add         dword [root_sec], eax
+            mov         byte [fattype], 1
+@@:         mov         eax, dword [root_sec]
+            xor         edx, edx
+            prot_readsector
+
+            ;look for BOOTBOOT directory
+            mov         esi, edi
+            mov         eax, 'BOOT'
+            mov         ecx, 255
+.nextroot:  cmp         dword [esi], eax
+            jne         @f
+            cmp         dword [esi+4], eax
+            jne         @f
+            cmp         word [esi+8], '  '
+            je          .foundroot
+@@:         add         esi, 32
+            dec         ecx
+            jnz         .nextroot
+            jmp         .nogpt
+.foundroot: xor         eax, eax
+            cmp         byte [fattype], 0
+            jz          @f
+            mov         ax, word [esi + fatdir.ch]
+            shl         eax, 16
+@@:         mov         ax, word [esi + fatdir.cl]
+            ;sec = (cluster-2)*secPerCluster+data_sec
+            sub         eax, 2
+            xor         edx, edx
+            mov         ebx, dword [clu_sec]
+            mul         ebx
+            add         eax, dword [data_sec]
+            prot_readsector
+
+            mov         dword [9000h], 0
+
+            ;look for CONFIG and INITRD
+            mov         esi, edi
+            mov         ecx, 255
+.nextdir:   cmp         dword [esi], 'CONF'
+            jne         .notcfg
+            cmp         dword [esi+4], 'IG  '
+            jne         .notcfg
+            cmp         dword [esi+7], '    '
+            jne         .notcfg
+
+            xor         eax, eax
+            cmp         byte [fattype], 0
+            jz          @f
+            mov         ax, word [esi + fatdir.ch]
+            shl         eax, 16
+@@:         mov         ax, word [esi + fatdir.cl]
+            ;sec = (cluster-2)*secPerCluster+data_sec
+            sub         eax, 2
+            xor         edx, edx
+            mov         ebx, dword [clu_sec]
+            mul         ebx
+            add         eax, dword [data_sec]
+            push        esi
+            push        edi
+            push        ecx
+            mov         edi, 9000h
             prot_readsector
             pop         ecx
-            or          bl, bl
-;           jnz         @f
-            add         edi, 4096
-            add         eax, 8
-            dec         ecx
-            jnz         .loadnext
-@@:
-            DBG32       dbg_env
+            pop         edi
+            pop         esi
+            jmp         .notinit
 
-            ;Locate and parse configuration
-            ; *_locate_config
-            mov         esi, dword [bootboot.initrd_ptr]
-            mov         ecx, INITRD_MAXSIZE*1024*1024
-            mov         ebx, esi
-            add         ebx, ecx
-@@:         add         esi, 512
-            cmp         dword [esi+0], '// B'
-            jne         .no
-            cmp         dword [esi+4], 'OOTB'
-            jne         .no
-            cmp         dword [esi+8], 'OOT '
-            jne         .no
-            mov         dl, 1
-            jmp         @f
-.no:        cmp         esi, ebx
-            jb          @b
-            xor         dl, dl
-@@:
-            mov         ebx, 09000h
-            mov         edi, ebx
-            mov         ecx, 1024
-            or          dl,dl
+.notcfg:    cmp         dword [esi], 'INIT'
+            jne         .notinit
+            cmp         dword [esi+4], 'RD  '
+            jne         .notinit
+            cmp         dword [esi+7], '    '
+            jne         .notinit
+
+            mov         eax, dword [esi + fatdir.size]
+            mov         dword [bootboot.initrd_size], eax
+            xor         eax, eax
+            cmp         byte [fattype], 0
+            jz          @f
+            mov         ax, word [esi + fatdir.ch]
+            shl         eax, 16
+@@:         mov         ax, word [esi + fatdir.cl]
+            ;sec = (cluster-2)*secPerCluster+data_sec
+            sub         eax, 2
+            xor         edx, edx
+            mov         ebx, dword [clu_sec]
+            mul         ebx
+            add         eax, dword [data_sec]
+            mov         dword [init_sec], eax
+
+.notinit:   add         esi, 32
+            dec         ecx
+            jnz         .nextdir
+
+            ;do we have an environment configuration?
+            mov         ebx, 9000h
+            cmp         byte [ebx], 0
             jz          .noconf
-            repnz       movsd
+
             ;parse
-            mov         esi, ebx
+            push        ebx
+            DBG32       dbg_env
+            pop         esi
             jmp         .getnext
 
 .nextvar:   cmp         word[esi], '//'
@@ -931,45 +1043,54 @@ protmode_start:
             cmp         byte [esi], 13
             jbe         @b
             jmp         .nextvar
-.noconf:    repnz       stosd
+.noconf:    mov         edi, ebx
+            mov         ecx, 1024
+            mov         eax, 0A0A0A0Ah
+            repnz       stosd
             mov         dword [ebx+0], '// N'
             mov         dword [ebx+4], '/A\n'
 .parseend:
 
-            ; locate INITRD in ESP
+            ; load INITRD
+            mov         esi, nord
+            cmp         dword [init_sec], 0
+            jz          prot_diefunc
+            cmp         dword [bootboot.initrd_size], 0
+            jz          prot_diefunc
+
             DBG32       dbg_initrd
-            ; *_1stpart_initrd
-            mov         edx, fsdrivers
-.nextfs1:   xor         ebx, ebx
-            mov         bx, word [edx]
-            or          bx, bx
-            jz          .errfs1
+
+            mov         ecx, dword [bootboot.initrd_size]
+            add         ecx, 4095
+            shr         ecx, 12
+            
+            mov         eax, dword [init_sec]     ;first sector
+            xor         edx, edx
+
+            mov         edi, dword [bootboot.initrd_ptr]
+@@:         push        ecx
+            prot_readsector
+            pop         ecx
+            add         edi, 4096
+            add         eax, 8
+            dec         ecx
+            jnz         @b
+
             mov         esi, dword [bootboot.initrd_ptr]
-            mov         ecx, INITRD_MAXSIZE*1024*1024
-            add         ecx, esi
-            push        edx
-            call        ebx
-            pop         edx
-            or          ecx, ecx
-            jnz         @f
-            add         edx, 4
-            jmp         .nextfs1
-.errfs1:    mov         si, nord
+            cmp         word [esi], 08b1fh
+            jne         @f
+            ; TODO: inflate initrd and replace bootboot.initrd_ptr and initrd_size
+            mov         esi, nogzip
             jmp         prot_diefunc
 @@:
-            mov         dword [bootboot.initrd_size], ecx
-            ; move initrd to initrd_ptr (overwrite fat tables)
-            mov         edi, dword [bootboot.initrd_ptr]
-            shr         ecx, 2
-            repnz       movsd
 
             ;-----load /lib/sys/core------
             ; *_initrd
             mov         edx, fsdrivers
-.nextfs2:   xor         ebx, ebx
-            mov         bx, word [edx+2]
+.nextfs:    xor         ebx, ebx
+            mov         bx, word [edx]
             or          bx, bx
-            jz          .errfs2
+            jz          .errfs
             mov         esi, dword [bootboot.initrd_ptr]
             mov         ecx, dword [bootboot.initrd_size]
             add         ecx, esi
@@ -979,18 +1100,18 @@ protmode_start:
             pop         edx
             or          ecx, ecx
             jnz         .coreok
-            add         edx, 4
-            jmp         .nextfs2
-.errfs3:    mov         si, nocore
+            add         edx, 2
+            jmp         .nextfs
+.errfs2:    mov         esi, nocore
             jmp         prot_diefunc
-.errfs2:    ; if all drivers failed, search for the first elf executable
+.errfs:     ; if all drivers failed, search for the first elf executable
             mov         esi, dword [bootboot.initrd_ptr]
             mov         ecx, dword [bootboot.initrd_size]
             add         ecx, esi
             dec         esi
 @@:         inc         esi
             cmp         esi, ecx
-            jae         .errfs3
+            jae         .errfs2
             cmp         dword [esi], 5A2F534Fh ; OS/Z magic
             je          .alt
             cmp         dword [esi], 464C457Fh ; ELF magic
@@ -1312,6 +1433,40 @@ longmode_init:
             USE32
             include     "fs.inc"
 
+virtual at 0
+    bpb.jmp             db 3 dup 0
+    bpb.oem             db 8 dup 0
+    bpb.bps             dw 0
+    bpb.spc             db 0
+    bpb.rsc             dw 0
+    bpb.nf              db 0 ;16
+    bpb.nr              dw 0
+    bpb.ts16            dw 0
+    bpb.media           db 0
+    bpb.spf16           dw 0 ;22
+    bpb.spt             dw 0
+    bpb.nh              dw 0
+    bpb.hs              dd 0
+    bpb.ts32            dd 0
+    bpb.spf32           dd 0 ;36
+    bpb.flg             dd 0
+    bpb.rc              dd 0 ;44
+    bpb.vol             db 6 dup 0
+    bpb.fst             db 8 dup 0 ;54
+    bpb.dmy             db 20 dup 0
+    bpb.fst2            db 8 dup 0 ;84
+end virtual
+
+virtual at 0
+    fatdir.name         db 8 dup 0
+    fatdir.ext          db 3 dup 0
+    fatdir.attr         db 9 dup 0
+    fatdir.ch           dw 0
+    fatdir.attr2        dd 0
+    fatdir.cl           dw 0
+    fatdir.size         dd 0
+end virtual
+
 ;*********************************************************************
 ;*                               Data                                *
 ;*********************************************************************
@@ -1335,6 +1490,11 @@ core_len:   dd          0
 ebdaptr:    dd          0
 hw_stack:   dd          0
 lastmsg:    dd          0
+bpb_sec:    dd          0 ;ESP's first sector
+root_sec:   dd          0 ;root directory's first sector
+data_sec:   dd          0 ;first data sector
+clu_sec:    dd          0 ;sector per cluster
+init_sec:   dd          0
 lbapacket:              ;lba packet for BIOS
 .size:      dw          10h
 .count:     dw          8
@@ -1345,6 +1505,7 @@ lbapacket:              ;lba packet for BIOS
 reqwidth:   dd          0
 reqheight:  dd          0
 bootdev:    db          0
+fattype:    db          0
 vbememsize: dw          0
 if DEBUG eq 1
 dbg_cpu     db          " * Detecting CPU",10,13,0
@@ -1364,10 +1525,9 @@ a20err:     db          "Failed to enable A20",0
 memerr:     db          "E820 memory map not found",0
 noenmem:    db          "Not enough memory",0
 noacpi:     db          "ACPI not found",0
-nogpt:      db          "GUID Partition Table not found or corrupt",0
+nogpt:      db          "Boot partition not found or corrupt",0
 nord:       db          "FS0:\BOOTBOOT\INITRD not found",0
-noroot:     db          "Root directory not found in initrd",0
-nolib:      db          "/lib directory not found in initrd",0
+nolib:      db          "/lib/sys not found in initrd",0
 nocore:     db          "Kernel not found in initrd",0
 badcore:    db          "Kernel is not an executable ELF64 for x86_64",0
 novbe:      db          "VESA VBE error, no framebuffer",0
