@@ -139,7 +139,7 @@ tinf_build_tree:
             mov         cl, 16
             mov         edi, ebp
             repnz       stosw
-            mov         ecx, dword [rsp]
+            mov         ecx, dword [esp]
 
             ; scan symbol lengths, and sum code length counts
             push        ebx
@@ -183,11 +183,195 @@ tinf_build_tree:
             ret
 
 tinf_decode_trees:
+            mov         word [num], 0
+
+            ; get 5 bits HLIT (257-286)
+            xor         ecx, ecx
+            mov         cl, 5
+            mov         ebx, 257
+            call        tinf_read_bits
+            mov         byte [hlit], al
+            mov         byte [num], al
+
+            ; get 5 bits HDIST (1-32)
+            mov         cl, 5
+            xor         ebx, ebx
+            inc         ebx
+            call        tinf_read_bits
+            mov         byte [hdist], al
+            mov         word [num], ax
+
+            ; get 4 bits HCLEN (4-19)
+            mov         cl, 4
+            mov         ebx, ecx
+            call        tinf_read_bits
+            mov         byte [hclen], al
+
+            push        edi
+            mov         cl, 19
+            mov         edi, lengths
+            xor         ax, ax
+            repnz       stosw
+            pop         edi
+
+            ; read code lengths for code length alphabet
+            mov         edx, clcidx
+            ; get 3 bits code length (0-7)
+@@:         mov         cl, 3
+            xor         ebx, ebx
+            call        tinf_read_bits
+            mov         bx, word [edx]  ;clcidx[i]
+            mov         byte[ebx+lengths], al
+            add         edx, 2
+            dec         byte [hclen]
+            jnz         @b
+
+            ; build code length tree, temporarily use length tree
+            mov         ebp, d_ltree
+            mov         ebx, lengths
+            xor         ecx, ecx
+            mov         cl, 19
+            call        tinf_build_tree
+            
+            ; decode code lengths for the dynamic trees
+            mov         edx, lengths
+.decode:    mov         ebp, d_ltree
+            call        tinf_decode_symbol
+            xor         ebx, ebx
+            cmp         al, 16
+            jne         .not16
+            ; copy previous code length 3-6 times (read 2 bits)
+            mov         cl, 2
+            mov         bl, 3
+            call        tinf_read_bits
+            mov         cl, al
+            mov         al, byte [edx-2]    ;lengths[num-1]
+@@:         mov         byte [edx], al
+            add         edx, 2
+            dec         word [num]
+            dec         cl
+            jnz         @b
+            jmp         .next
+
+.not16:     cmp         al, 17
+            jne         .not17
+            ; repeat code length 0 for 3-10 times (read 3 bits)
+            mov         cl, 3
+            mov         bl, cl
+            call        tinf_read_bits
+            mov         cl, al
+@@:         mov         byte [edx], 0
+            add         edx, 2
+            dec         word [num]
+            dec         cl
+            jnz         @b
+            jmp         .next
+
+.not17:     cmp         al, 18
+            jne         .not18
+            ; repeat code length 0 for 11-138 times (read 7 bits)
+            mov         cl, 7
+            mov         bl, 11
+            call        tinf_read_bits
+            mov         cl, al
+@@:         mov         byte [edx], 0
+            add         edx, 2
+            dec         word [num]
+            dec         cl
+            jnz         @b
+            jmp         .next
+
+.not18:     ; values 0-15 represent the actual code lengths
+            mov         byte [edx], al
+            add         edx, 2
+            dec         word [num]
+      
+.next:      cmp         word [num], 0
+            jnz         .decode
+
+            ; build dynamic trees
+            mov         ebp, d_ltree
+            mov         ebx, lengths
+            xor         ecx, ecx
+            mov         cl, byte [hlit]
+            call        tinf_build_tree
+
+            mov         ebp, d_dtree
+            mov         ebx, lengths
+            xor         ecx, ecx
+            mov         cl, byte [hlit]
+            add         ebx, ecx
+            mov         cl, byte [hdist]
+            call        tinf_build_tree
             ret
 
 ;OUT:
 ; al: status
 tinf_inflate_block_data:
+            cmp         word [d_curlen], 0
+            jne         .notnull
+            mov         ebp, d_ltree
+            call        tinf_decode_symbol
+
+            ; literal byte
+            cmp         ax, 256
+            jae         @f
+            call        tinf_put
+            xor         al, al
+            ret
+@@:         cmp         ax, 256
+            jne         @f
+            ; end of block
+            mov         al, 1
+            ret
+@@:         ; substring from sliding dictionary
+            sub         eax, 257
+            ; possibly get more bits from length code
+            xor         ecx, ecx
+            mov         cl, byte [length_bits+eax]
+            xor         ebx, ebx
+            mov         bx, word [length_base+2*eax]
+            call        tinf_read_bits
+            mov         word [d_curlen], ax
+            ; possibly get more bits from distance code
+            mov         ebp, d_dtree
+            call        tinf_decode_symbol
+            xor         ecx, ecx
+            mov         cl, byte [dist_bits+eax]
+            xor         ebx, ebx
+            mov         bx, word [dists_base+2*eax]
+            call        tinf_read_bits
+            cmp         dword [d_dict_ring], 0
+            jz          .noring1
+            cmp         eax, dword [d_dict_size]
+            ja          tinf_err
+            mov         ebx, dword [d_dict_idx]
+            sub         ebx, eax
+            jns         @f
+            add         ebx, dword [d_dict_size]
+@@:         mov         dword [d_lzOff], ebx
+            jmp         .notnull
+.noring1:   neg         eax
+            mov         dword [d_lzOff], eax
+.notnull:
+
+            ; copy next byte from dict substring
+            cmp         dword [d_dict_ring], 0
+            jz          .noring2
+            mov         eax, dword [d_lzOff]
+            add         eax, dword [d_dict_ring]
+            call        tinf_put
+            inc         dword [d_lzOff]
+            mov         eax, dword [d_lzOff]
+            cmp         eax, dword [d_dict_size]
+            jne         @f
+            mov         dword [d_lzOff], 0
+            jmp         @f
+.noring2:   mov         eax, edi
+            add         eax, dword [d_lzOff]
+            mov         al, byte [eax]
+            stosb
+@@:         dec         word [d_curlen]
             ret
 
 ;OUT:
@@ -235,8 +419,8 @@ tinf_getbit:
 ; cl: num
 ;OUT:
 ; eax: bits
-;ruins: edx
 tinf_read_bits:
+            push        edx
             or          cl, cl
             jnz         @f
             mov         eax, ebx
@@ -251,6 +435,7 @@ tinf_read_bits:
             dec         cl
             jnz         .next
             add         eax, ebx
+            pop         edx
             ret
 
 ;IN:
@@ -258,6 +443,7 @@ tinf_read_bits:
 ;OUT:
 ; eax: trans
 tinf_decode_symbol:
+            push        edx
             xor         eax, eax
             xor         ebx, ebx ;cur
             xor         ecx, ecx ;len
@@ -273,12 +459,13 @@ tinf_decode_symbol:
             jns         @b
             add         edx, ebx
             mov         ax, word [ebp+2*edx+32]
+            pop         edx
             ret
 
 ;IN:
 ; al: char
-;ruins: ebx
 tinf_put:
+            push        ebx
             stosb
             cmp         dword [d_dict_ring], 0
             jz          @f
@@ -290,7 +477,8 @@ tinf_put:
             cmp         ebx, dword [d_dict_idx]
             jne         @f
             mov         dword [d_dict_idx], 0
-@@:         ret
+@@:         pop         ebx
+            ret
 
 tinf_err:
             mov         esi, nogzip
@@ -321,9 +509,7 @@ clcidx:
             db          10, 5, 11, 4, 12, 3, 13, 2
             db          14, 1, 15
 
-d_destStart:dd          0
 d_destSize: dd          0
-d_destRemaing:dd        0
 d_lzOff:    dd          0
 d_dict_ring:dd          0
 d_dict_size:dd          0
@@ -344,6 +530,7 @@ d_dtree_table:
 d_dtree_trans:
             dw          288 dup 0
 offs:       dw          16 dup 0
+num:        dw          0
 lengths:    db          288+32 dup 0
 hlit:       db          0
 hdist:      db          0
