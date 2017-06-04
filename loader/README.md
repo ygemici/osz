@@ -154,7 +154,7 @@ their own filesystem.
 For boot partition, Multiboot version expects *defragmented* FAT12, FAT16 or FAT32 filesystems.
 EFI version relies on any filesystem that's supported by EFI Simple FileSystem Protocol. As for initrd, 
 the reference implementations support cpio, tar and [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
-Gzip compressed initrds are only handled by the EFI version, sopport in the BIOS version coming soon.
+Gzip compressed initrds also supported to save disk space and load time.
 
 Example kernel
 --------------
