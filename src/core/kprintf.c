@@ -123,7 +123,6 @@ dbg_putchar('K');
     maxy = bootboot.fb_height / font->height;
     // default fg and bg, cursor at home
     kprintf_reset();
-ee:goto ee;
 
     // display boot logo
     char *data = &_binary_logo_tga_start + 0x255;
@@ -146,6 +145,7 @@ ee:goto ee;
         }
         offs+=bootboot.fb_scanline;
     }
+ee:goto ee;
 }
 
 void kprintf_ready()
