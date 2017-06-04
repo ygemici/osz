@@ -11,4 +11,5 @@ interrupt_handlers:
 .quad 0
 .quad 0
 
+.ascii "BOOTBOOT"
 _start:

@@ -87,9 +87,7 @@ SECTIONS
    *(COMMON)
    /* Align here to ensure that the .bss section occupies space up to
       _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.
-      FIXME: Why do we need it? When there is no .bss section, we don't
-      pad the .data section.  */
+      .bss section disappears because there are no input sections. */
    . = ALIGN(. != 0 ? 64 / 8 : 1);
   }
   _end = .;

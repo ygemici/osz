@@ -455,7 +455,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
             d.destSize = 1;
             do { r = uzlib_uncompress(&d); } while (!r);
             if (r != TINF_DONE) {
-gzerr:          return report(EFI_LOAD_ERROR,L"Corrupted initrd");
+gzerr:          return report(EFI_LOAD_ERROR,L"Unable to uncompress");
             }
             // swap initrd_ptr with the uncompressed buffer
             uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
