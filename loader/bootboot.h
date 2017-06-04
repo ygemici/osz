@@ -58,7 +58,7 @@ typedef struct {
 #define INITRD_MAXSIZE 16 //Mb
 
 typedef struct {
-  uint8_t    magic[4];    // BOOT
+  uint8_t    magic[4];    // BOOT, first 64 bytes architecture independent
   uint32_t   size;        // length of bootboot structure
 
   uint8_t    protocol;    // 1, static addresses, see PROTOCOL_* above
@@ -81,7 +81,7 @@ typedef struct {
   uint32_t   fb_height;
   uint32_t   fb_scanline;
 
-  // architecture specific pointers
+  // architecture specific pointers, second 64 bytes arch dependent
   union {
     struct {
       uint64_t acpi_ptr;
@@ -105,8 +105,8 @@ typedef struct {
     } AArch64;
   };
 
-  MMapEnt    mmap; /* MMapEnt[], more records may follow */
-  /* use like this: MMapEnt *mmap_ent = bootboot.mmap; mmap_ent++; */
+  MMapEnt    mmap; /* MMapEnt[], more records may follow, all the rest of the page */
+  /* use like this: MMapEnt *mmap_ent = &bootboot.mmap; mmap_ent++; */
 } __attribute__((packed)) BOOTBOOT;
 
 
