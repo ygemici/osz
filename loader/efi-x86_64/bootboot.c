@@ -374,7 +374,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     UINT32 desc_version=0;
     MMapEnt *mmapent, *last=NULL;
     CHAR16 **argv, *initrdfile, *configfile, *help=
-        L"SYNOPSIS\n  bootboot->EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" arguments will be appended to environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
+        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended\n  to the environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
     CHAR8 *ptr;
 
@@ -383,7 +383,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     BS = systab->BootServices;
 
     // Parse command line arguments
-    // BOOTX86.EFI [-?|-h|/?|/h] [initrd [config]]
+    // BOOTBOOT.EFI [-?|-h|/?|/h] [initrd [config [key=value...]]
     argc = GetShellArgcArgv(image, &argv);
     if(argc>1) {
         if((argv[1][0]=='-'||argv[1][0]=='/')&&(argv[1][1]=='?'||argv[1][1]=='h')){
