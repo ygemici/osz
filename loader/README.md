@@ -54,8 +54,7 @@ Glossary
   and "kernel" for the name of the ELF executable inside the initrd.
 
 * _initrd file_: initial ramdisk image on boot partition at
-  BOOTBOOT\INITRD. It can be gzip compressed andiIt's filesystem should have a
-  filesystem driver (see below).
+  BOOTBOOT\INITRD. It's format is not specified and can be gzip compressed.
 
 * _loader_: a native executable on the boot partition. For multi-
   bootable disks more loader can co-exists.
@@ -255,9 +254,7 @@ Or if you prefer ustar format, the last line could be:
 tar -czf ../INITRD *
 ```
 
-You can compress it with gzip or "z" flag, but note that currently only EFI version supports decompression.
-
-2. Create FS0:\BOOTBOOT directory on ESP, and copy the archive you've created
+2. Create FS0:\BOOTBOOT directory on boot partition, and copy the archive you've created
             into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG)
             there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there.
             Fill up with newlines so that the file became exactly 4096 bytes (1 page) long. Temporary variables will be copied there.
