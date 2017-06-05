@@ -487,7 +487,6 @@ getmemmap:
 .enoughmem:
 
             ;-----detect system structures-----
-.detacpi:
             DBG         dbg_systab
 
             ;do we need that scanning shit?

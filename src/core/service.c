@@ -872,7 +872,7 @@ void drv_init(char *driver)
     driver[i]='.';
     // map file system dispatcher
     if(service_loadelf("lib/sys/drv") == (void*)(-1)) {
-        syslog_early("unable to load ELF from /lib/sys/drv");
+        kpanic("unable to load ELF from /lib/sys/drv");
     }
     // map libc
     service_loadso("lib/libc.so");

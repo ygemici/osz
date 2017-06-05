@@ -32,12 +32,13 @@ uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
 uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
+uint64_t __attribute__ ((section (".data"))) clocksource;
 uint64_t __attribute__ ((section (".data"))) fps;
 uint8_t __attribute__ ((section (".data"))) identity;
+uint8_t __attribute__ ((section (".data"))) syslog;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) identity;
-uint8_t __attribute__ ((section (".data"))) clocksource;
 
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
@@ -239,6 +240,11 @@ void env_init()
             env += 10;
             env = env_dec(env, &tmp, 4, 128);
             sysinfostruc.nropenmax = (uint8_t)tmp;
+        } else
+        // disable syslog
+        if(!kmemcmp(env, "syslog=", 7)) {
+            env += 7;
+            env = env_boolf(env, &syslog);
         } else
         // disable networking
         if(!kmemcmp(env, "networking=", 11)) {

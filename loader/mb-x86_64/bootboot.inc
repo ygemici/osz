@@ -52,7 +52,7 @@ MMAP_FREE         equ 1
 MMAP_RESERVED     equ 2
 MMAP_ACPIFREE     equ 3
 MMAP_ACPINVS      equ 4
-MMAP_BAD          equ 5
+MMAP_USED         equ 5
 MMAP_MMIO         equ 6
 
 INITRD_MAXSIZE     equ 16 ; Mb

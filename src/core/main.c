@@ -55,20 +55,17 @@ extern sysinfo_t sysinfostruc;
 */
 void main()
 {
-    kprintf("OS/Z starting...\n");
-
     // note: we cannot call syslog_early("starting") as syslog_buf
     // is not allocated yet.
+    kprintf("OS/Z starting...\n");
 
     /* step 1: motoric reflexes */
     // parse environment
     env_init();
     // initialize physical memory manager, required by new thread creation
     pmm_init();
-    // this is early, we don't have "FS" subsystem yet.
 
-    // initialize the system, "idle" task and
-    // also detect device drivers
+    // initialize the system, "idle" task and device driver tasks
     sys_init();
     // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
     fs_init();
@@ -79,10 +76,12 @@ void main()
     ui_init();
 
     // other means of communication
-    // start "syslog" task so others can log errors
-    // special service_init(SRV_syslog, "sbin/syslog")
 /*
-    syslog_init();
+    if(syslog) {
+        // start "syslog" task so others can log errors
+        // special service_init(SRV_syslog, "sbin/syslog")
+        syslog_init();
+    }
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
         service_init(SRV_net, "sbin/net");
@@ -96,6 +95,9 @@ void main()
 //    service_init(SRV_USRLAST, "sbin/scrsvr");
 
     /* step 3: who am I */
+#if DEBUG
+    service_init(SRV_USRFIRST, "bin/test");
+#else
 /*
     fs_locate("etc/hostname");
     if(identity || fs_size==0) {
@@ -111,15 +113,13 @@ void main()
     else
         service_init(SRV_init, "sbin/init");
 */
-#if DEBUG
-    service_init(SRV_USRFIRST, "bin/test");
 #endif
 
     // The "ready" message. Cover out "starting" message
     kprintf_ready();
 
     // enable system multitasking. That will start by iterating
-    // through device driver's initialization routines. Eeach in different
+    // through device driver's initialization routines. Each in different
     // task, scheduler will choose them one by one and...
     sys_enable();
     // ...we should never return here. Instead a syscall by "init" will

@@ -13,7 +13,7 @@ group is divided into another two fractions: critical and non-critical
         +-----------------------------+
 ring 0  |              CORE           | (supervisor)
 --------+-----------+--------+--------+--------------------------
-ring 3  |  drivers  |   FS   |   UI   | (critical services)
+ring 3  |  Drivers  |   FS   |   UI   | (critical services)
         +-----------------------------+
         | syslog | net | sound | init | (respawnable, non-critical system services)
         +----------------------+      |
@@ -30,15 +30,21 @@ CORE
 
 Special service which runs in privileged supervisor mode. It's always mapped in all memory map.
 The lowest level code of OS/Z like ISRs, physical memory allocation, task switch, timers and such
-are implemented here. All the other services (including the "SYS" task) are running in non-privileged
+are implemented here. All the other services (including the driver tasks) are running in non-privileged
 user mode (ring 3).
 
 Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve().
 
+Drivers
+-------
+
+Each device driver has it's own task. They are allowed to map MMIO into their bss, and to access i/o address space.
+Only "FS" task and CORE allowed to send message to them.
+
 FS
 --
 
-The file system service. It's a big database server, that emulates all layers as files. 
+The file system service. It's a big database server, that emulates all layers as files.
 OS/Z shares [Plan 9](https://en.wikipedia.org/wiki/Plan_9_from_Bell_Labs)'s famous "everything is a file" approach.
 This process has the initrd mapped in it's bss segment, and uses free memory as a disk cache. On boot, the file system
 drivers are loaded into it's address space as shared libraries. It has a couple built-in file systems, like "sysfs".

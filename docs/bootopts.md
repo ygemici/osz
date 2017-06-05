@@ -29,8 +29,9 @@ Boot Parameters
 | quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |
 | display   | 0      | number | core | selects output mode (see below) |
-| networking | true | boolean | core | disable networking [system service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
-| sound | true | boolean | core | disable sound service |
+| syslog    | true   | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
+| networking | true  | boolean | core | disable networking service |
+| sound     | true   | boolean | core | disable sound service |
 | identity  | false  | boolean | core | force running first time setup to get machine's identity, such as hostname |
 | rescueshell | false | boolean | core | if true, starts `/bin/sh` instead of `/sbin/init` |
 | hpet      | -      | hexdec | core | x86_64 override autodetected HPET address |
@@ -59,6 +60,18 @@ This can be a numeric value, or a comma separated list of flags.
 | 256   | ms   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
 | 512   | lo   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
 
+Clock Source
+------------
+
+Either a numeric value or exactly one flag.
+
+| Value | Flag | Arch   | Description |
+| ----: | ---- | ------ | ----------- |
+| 0     |      | -      | auto detect |
+| 1     | hp   | x86_64 | High Precision Event Timer (default) |
+| 2     | pi   | x86_64 | Programmable Interval Timer (fallback) |
+| 3     | rt   | x86_64 | Real Time Clock |
+
 Display
 -------
 
@@ -71,18 +84,4 @@ A numeric value or exactly one flag.
 | 2     | sc,re | DSP_STEREO_COLOR | two 2D pixelbuffers*, the way of combining left and right eye's view is 100% driver specific, real 3D |
 
 (* the two buffers are concatenated in a one big double heighted buffer)
-
-Clock Source
-------------
-
-Either a numeric value or exactly one flag.
-
-| Value | Flag | Arch   | Description |
-| ----: | ---- | ------ | ----------- |
-| 0     |      | -      | auto detect |
-| 1     | hp   | x86_64 | High Precision Event Timer (default) |
-| 2     | pi   | x86_64 | Programmable Interval Timer (fallback) |
-| 3     | rt   | x86_64 | Real Time Clock |
-| 4     | la   | x86_64 | Local APIC Timer |
-| 5     | x2   | x86_64 | Local x2APIC Timer |
 

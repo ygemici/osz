@@ -23,7 +23,7 @@ all: $(OBJS) $(BINTARGET)
 $(BINTARGET): $(SRCS)
 	@$(CC) $(OPT) $(CFLAGS) -c $(ARCH)/crt0.S -o ../../../bin/root/lib/crt0.o
 	@$(CC) $(OPT) $(CFLAGS) -c service.c -o ../../../bin/service.o
-	@echo "  src		$(TARGET) ($(ARCH))"
+	@echo "  lnk		$(TARGET) ($(ARCH))"
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 	@$(CC) -nostdlib -nodefaultlibs -nostartfiles -shared -Bsymbolic -Bshareable -L../../../bin/root/lib *.o $(ARCH)/*.o -Xlinker --build-id=sha1 -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 

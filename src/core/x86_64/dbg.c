@@ -704,8 +704,7 @@ void dbg_msg()
             kprintf("* empty *\n");
         } else {
             kprintf("from %x ", *((uint64_t*)m) >>16);
-            if((*((uint64_t*)m) >>16) == services[-SRV_CORE] ||
-                tcb->mypid == services[-SRV_SYS]) {
+            if((*((uint64_t*)m) >>16) == services[-SRV_CORE]) {
                 switch(*((uint8_t*)m)) {
                     case SYS_IRQ: kprintf("IRQ"); break;
                     case SYS_ack: kprintf("ack"); break;

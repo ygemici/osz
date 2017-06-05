@@ -73,7 +73,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
              *  SRV_UI sent SYS_swapbuf to SRV_CORE
              * And now
              *  SRV_CORE sends SYS_swapbuf to SRV_SYS */
-            msg_sends(EVT_DEST(SRV_SYS) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
+            //msg_sends(EVT_DEST(SRV_SYS) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
             break;
 
         case SYS_stimebcd:

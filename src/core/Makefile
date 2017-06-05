@@ -20,6 +20,7 @@ endif
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
+	@echo "  src		$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 platform:
@@ -34,7 +35,7 @@ logo.o:
 	$(O)objcopy -O elf64-x86-64 -B i386 -I binary logo.tga logo.o
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
-	@echo "  src		$(TARGET) ($(ARCH))"
+	@echo "  lnk		$(TARGET) ($(ARCH))"
 	$(O)$(CC) $(LDFLAGS) $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -T $(ARCH)/supervisor.ld -Xlinker --build-id=none -Xlinker --nmagic -Xlinker -static -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
 	@echo "0000000000200000 _init" >../../bin/core.sym

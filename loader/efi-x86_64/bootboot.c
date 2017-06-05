@@ -415,7 +415,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     if (bootboot == NULL)
         return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
     ZeroMem((void*)bootboot,PAGESIZE);
-    CopyMem(bootboot->magic,BOOTPARAMS_MAGIC,4);
+    CopyMem(bootboot->magic,BOOTBOOT_MAGIC,4);
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     RootDir = LibOpenRoot(loaded_image->DeviceHandle);
@@ -613,13 +613,26 @@ get_memory_map:
             mement<memory_map+memory_map_size;
             mement=NextMemoryDescriptor(mement,desc_size)) {
             // failsafe
-            if(bootboot->size>=PAGESIZE || 
+            if(mement==NULL || bootboot->size>=PAGESIZE-128 || 
                 (mement->PhysicalStart==0 && mement->NumberOfPages==0))
                 break;
+            // failsafe, don't report our own structures as free
+            if( mement->NumberOfPages==0 ||
+                ((mement->PhysicalStart <= (UINT64)bootboot &&
+                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)bootboot) ||
+                 (mement->PhysicalStart <= (UINT64)env_ptr &&
+                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)env_ptr) ||
+                 (mement->PhysicalStart <= (UINT64)initrd_ptr &&
+                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)initrd_ptr) ||
+                 (mement->PhysicalStart <= (UINT64)paging &&
+                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)paging)
+                )) {
+                    continue;
+            }
             mmapent->ptr=mement->PhysicalStart;
             mmapent->size=(mement->NumberOfPages*PAGESIZE)+
                 ((mement->Type>0&&mement->Type<5)||mement->Type==7?MMAP_FREE:
-                (mement->Type==8?MMAP_BAD:
+                (mement->Type==8?MMAP_USED:
                 (mement->Type==9?MMAP_ACPIFREE:
                 (mement->Type==10?MMAP_ACPINVS:
                 (mement->Type==11||mement->Type==12?MMAP_MMIO:
@@ -627,45 +640,13 @@ get_memory_map:
             // merge continous areas of the same type
             if(last!=NULL && 
                 MMapEnt_Type(last) == MMapEnt_Type(mmapent) &&
-                MMapEnt_Ptr(last)+MMapEnt_Size(last) == MMapEnt_Ptr(mmapent)){
-                    last->size+=MMapEnt_Size(last);
+                MMapEnt_Ptr(last)+MMapEnt_Size(last) == MMapEnt_Ptr(mmapent)) {
+                    last->size+=MMapEnt_Size(mmapent);
                     mmapent->ptr=mmapent->size=0;
             } else {
                 last=mmapent;
                 bootboot->size+=16;
                 mmapent++;
-            }
-            // remove initrd from free mmap
-            if(MMapEnt_IsFree(last)) {
-                //  +--------------------------+    free
-                //               #################  initrd
-                if(MMapEnt_Ptr(last) <= bootboot->initrd_ptr && 
-                    MMapEnt_Ptr(last)+MMapEnt_Size(last) > bootboot->initrd_ptr) {
-                        UINT64 s = MMapEnt_Size(last);
-                        last->size = ((bootboot->initrd_ptr-last->ptr)&0xFFFFFFFFFFFFFFF0) + MMapEnt_Type(last);
-                //  +-----------+...........+--+    free
-                //               ###########        initrd
-                        if(MMapEnt_Ptr(last)+s > bootboot->initrd_ptr + bootboot->initrd_size) {
-                            mmapent->ptr = bootboot->initrd_ptr + bootboot->initrd_size;
-                            mmapent->size = ((s-mmapent->ptr)&0xFFFFFFFFFFFFFFF0) + MMapEnt_Type(last);
-                            last = mmapent;
-                            bootboot->size+=16;
-                            mmapent++;
-                        }
-                }
-                //             +-------------------+    free
-                //         #################            initrd
-                if(MMapEnt_Ptr(last) <= bootboot->initrd_ptr + bootboot->initrd_size && 
-                    MMapEnt_Ptr(last)+MMapEnt_Size(last) <= bootboot->initrd_ptr + bootboot->initrd_size) {
-                //             +--------+               free
-                //         #################            initrd
-                    if(MMapEnt_Ptr(last) >= bootboot->initrd_ptr) {
-                        last->size &= 0xFFFFFFFFFFFFFFF0;
-                        last->size |= MMAP_RESERVED;
-                    } else {
-                        last->ptr = bootboot->initrd_ptr + bootboot->initrd_size;
-                    }
-                }
             }
         }
         // --- NO PRINT AFTER THIS POINT ---

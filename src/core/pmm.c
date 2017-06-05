@@ -135,7 +135,8 @@ panic:
 
 void pmm_init()
 {
-    char *types[] = { "????", "free", "resv", "ACPI", "ACPI", "used", "MMIO" };
+    char *types[] = { "????", "free", "resv", "ACPI", "ANVS", "used", "MMIO" };
+
     // memory map provided by the loader
     MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
     // our new free pages directory, pmm.entries
@@ -143,6 +144,8 @@ void pmm_init()
     uint num = (bootboot.size-128)/16;
     uint i;
     uint64_t m = 0;
+    if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || num>504)
+        kpanic("Memory map corrupt");
 
     // allocate at least 2 pages for free memory entries
     // that's 2*4096/16 = 512 maximum fragments
@@ -187,7 +190,7 @@ void pmm_init()
     // iterate through memory map again but this time
     // record free areas in pmm.entries
     num = (bootboot.size-128)/16;
-    entry = (MMapEnt*)&bootboot.mmap;
+    entry = &bootboot.mmap;
     pmm.totalpages = 0;
 #if DEBUG
     if(sysinfostruc.debug&DBG_MEMMAP)

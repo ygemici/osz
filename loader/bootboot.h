@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-#define BOOTPARAMS_MAGIC "BOOT"
+#define BOOTBOOT_MAGIC "BOOT"
 
 // minimum protocol level:
 //  hardcoded kernel name, static kernel memory addresses
@@ -52,13 +52,13 @@ typedef struct {
 #define MMAP_RESERVED 2
 #define MMAP_ACPIFREE 3
 #define MMAP_ACPINVS  4
-#define MMAP_BAD      5
+#define MMAP_USED     5
 #define MMAP_MMIO     6
 
 #define INITRD_MAXSIZE 16 //Mb
 
 typedef struct {
-  uint8_t    magic[4];    // BOOT, first 64 bytes architecture independent
+  uint8_t    magic[4];    // BOOT, first 72 bytes architecture independent
   uint32_t   size;        // length of bootboot structure
 
   uint8_t    protocol;    // 1, static addresses, see PROTOCOL_* above
@@ -81,7 +81,7 @@ typedef struct {
   uint32_t   fb_height;
   uint32_t   fb_scanline;
 
-  // architecture specific pointers, second 64 bytes arch dependent
+  // architecture specific pointers, second 56 bytes arch dependent
   union {
     struct {
       uint64_t acpi_ptr;
@@ -91,7 +91,6 @@ typedef struct {
       uint64_t unused0;
       uint64_t unused1;
       uint64_t unused2;
-      uint64_t unused3;
     } x86_64;
     struct {
       uint64_t unused0;
@@ -101,7 +100,6 @@ typedef struct {
       uint64_t unused4;
       uint64_t unused5;
       uint64_t unused6;
-      uint64_t unused7;
     } AArch64;
   };
 

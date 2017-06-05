@@ -47,6 +47,7 @@
 .extern tmpmqctrl
 .extern tmppte
 .extern mq_mapping
+.extern ccb
 .extern kpanicprefix
 .extern kpanicsuffix
 .extern kpanicsuffix2
@@ -98,8 +99,10 @@ kpanic:
     addq    $8, %rsp
     call    kprintf
     movq    __PAGESIZE-40, %rsi
-    /* canonized url? */
+    /* canonized address in rip? */
     movq    %rsi, %rax
+    orq     %rax, %rax
+    jz      2f
     shrq    $48, %rax
     cmpw    $0xFFFF, %ax
     je      1f

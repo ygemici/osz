@@ -75,6 +75,9 @@ _start:
     xorq    %rbp, %rbp
     /* initialize console so that we can report errors and stats */
     callq   kprintf_init
+    /* clear thread rip to avoid symbol lookup in case of panic */
+    xorq    %rax, %rax
+    movq    %rax, __PAGESIZE-40
 
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
