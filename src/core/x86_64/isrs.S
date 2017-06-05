@@ -174,7 +174,7 @@ isr_exc00divzero:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -199,7 +199,7 @@ isr_exc01debug:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -224,7 +224,7 @@ isr_exc02nmi:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -249,7 +249,7 @@ isr_exc03chkpoint:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -274,7 +274,7 @@ isr_exc04overflow:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -299,7 +299,7 @@ isr_exc05bound:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -324,7 +324,7 @@ isr_exc06invopcode:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -349,7 +349,7 @@ isr_exc07devunavail:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -374,7 +374,7 @@ isr_exc08dblfault:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -399,7 +399,7 @@ isr_exc09coproc:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -424,7 +424,7 @@ isr_exc10invtss:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -449,7 +449,7 @@ isr_exc11segfault:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -474,7 +474,7 @@ isr_exc12stackfault:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -499,7 +499,7 @@ isr_exc13genprot:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -524,7 +524,7 @@ isr_exc14pagefault:
     cli
     /* tcb->excerr = errcode; */
     popq	tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -549,7 +549,7 @@ isr_exc15unknown:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -574,7 +574,7 @@ isr_exc16float:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -599,7 +599,7 @@ isr_exc17alignment:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -624,7 +624,7 @@ isr_exc18machinecheck:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -649,7 +649,7 @@ isr_exc19double:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -674,7 +674,7 @@ isr_exc20:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -699,7 +699,7 @@ isr_exc21:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -724,7 +724,7 @@ isr_exc22:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -749,7 +749,7 @@ isr_exc23:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -774,7 +774,7 @@ isr_exc24:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -799,7 +799,7 @@ isr_exc25:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -824,7 +824,7 @@ isr_exc26:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -849,7 +849,7 @@ isr_exc27:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -874,7 +874,7 @@ isr_exc28:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -899,7 +899,7 @@ isr_exc29:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -924,7 +924,7 @@ isr_exc30:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
@@ -949,7 +949,7 @@ isr_exc31:
     cli
     /* tcb->excerr = 0; */
     movq	$0, tcb_excerr
-    xchg %bx, %bx
+    
     /* fault in core */
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f

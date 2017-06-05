@@ -1,7 +1,7 @@
 # OS/Z keyboard map format
 # scancode: base shft+ ctrl+ alt+ super+ shft+ctrl+ shft+alt+ shft+super+ ctrl+alt+ ctrl+super+ alt+super+
 
-1: Esc CDI CDI Esc Esc ^Brk
+1: Esc CDI CDI ^Brk
 2: 1 !
 3: 2 @ 2 2 2 NUL
 4: 3 #

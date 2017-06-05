@@ -27,7 +27,7 @@ debugger_log: -
 magic_break: enabled=1
 port_e9_hack: enabled=1
 private_colormap: enabled=0
-clock: sync=none, time0=local, rtc_sync=0
+clock: sync=realtime, time0=local, rtc_sync=1
 # no cmosimage
 # no loader
 log: -
@@ -47,4 +47,4 @@ com3: enabled=0
 com4: enabled=0
 #usb_uhci: enabled=0
 #usb_ohci: enabled=0
-debug_symbols: file=bin/core.sym, offset=0
+#debug_symbols: file=bin/core.sym, offset=0

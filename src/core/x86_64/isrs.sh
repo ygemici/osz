@@ -73,7 +73,8 @@ idtsz=$[(($numirq*8+4095)/4096)*4096]
 DEBUG=`grep "DEBUG" ../../../Config |cut -d ' ' -f 3`
 OPTIMIZE=`grep "OPTIMIZE" ../../../Config |cut -d ' ' -f 3`
 if [ "$DEBUG" -eq "1" ]; then
-    DBG="xchg %bx, %bx"
+    #DBG="xchg %bx, %bx"
+    DBG=""
 else
     DBG=""
 fi
