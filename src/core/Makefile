@@ -2,7 +2,7 @@ include ../../Config
 include ../../etc/etc/os-release
 TARGET = lib/sys/core
 
-BINTARGET = ../../bin/root/$(TARGET)
+BINTARGET = ../../bin/initrd/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS =
@@ -26,12 +26,12 @@ all: $(OBJS) $(BINTARGET)
 platform:
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 
-font.o:
+font.o: ../../etc/system.8x16.psf
 	@cp ../../etc/system.8x16.psf ./font
 	$(O)objcopy -O elf64-x86-64 -B i386 -I binary font font.o
 	@rm font
 
-logo.o:
+logo.o: logo.tga
 	$(O)objcopy -O elf64-x86-64 -B i386 -I binary logo.tga logo.o
 
 $(BINTARGET): platform font.o logo.o $(SRCS)

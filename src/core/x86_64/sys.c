@@ -137,54 +137,6 @@ __inline__ void sys_enable()
         "%rsp" );
 }
 
-/* get system timestamp from a BCD date */
-uint64_t sys_getts(char *p)
-{
-    uint64_t j,r=0,y,m,d,h,i,s;
-    /* detect BCD and binary formats */
-    if(p[0]>=0x20 && p[0]<=0x30 && p[1]<=0x99 &&    //year
-       p[2]>=0x01 && p[2]<=0x12 &&                  //month
-       p[3]>=0x01 && p[3]<=0x31 &&                  //day
-       p[4]<=0x23 && p[5]<=0x59 && p[6]<=0x60       //hour, min, sec
-    ) {
-        /* decode BCD */
-        y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
-        m = ((p[2]>>4)*10)+(p[2]&0x0F);
-        d = ((p[3]>>4)*10)+(p[3]&0x0F);
-        h = ((p[4]>>4)*10)+(p[4]&0x0F);
-        i = ((p[5]>>4)*10)+(p[5]&0x0F);
-        s = ((p[6]>>4)*10)+(p[6]&0x0F);
-    } else {
-        /* binary */
-        y = (p[1]<<8)+p[0];
-        m = p[2];
-        d = p[3];
-        h = p[4];
-        i = p[5];
-        s = p[6];
-    }
-    uint64_t md[12] = {31,0,31,30,31,30,31,31,30,31,30,31};
-    /* is year leap year? then tweak February */
-    md[1]=((y&3)!=0 ? 28 : ((y%100)==0 && (y%400)!=0?28:29));
-
-    // get number of days since Epoch, cheating
-    r = 16801; // precalculated number of days (1970.jan.1-2017.jan.1.)
-    for(j=2016;j<y;j++)
-        r += ((j&3)!=0 ? 365 : ((j%100)==0 && (j%400)!=0?365:366));
-    // in this year
-    for(j=1;j<m;j++)
-        r += md[j-1];
-    // in this month
-    r += d-1;
-    // convert to sec
-    r *= 24*60*60;
-    // add time with timezone correction to get UTC timestamp
-    r += h*60*60 + (bootboot.timezone + i)*60 + s;
-    // we don't honor leap sec here, but this timestamp should
-    // be overwritten by SYS_stime with a more accurate value
-    return r;
-}
-
 /* Initialize the "idle" task and device drivers */
 void sys_init()
 {

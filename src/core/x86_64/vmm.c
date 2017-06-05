@@ -30,11 +30,11 @@ phy_t __attribute__ ((section (".data"))) pdpe;
 
 void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
-#if DEBUG
-    dbg_enable(rip,rsp,"page fault");
-#else
+//#if DEBUG
+//    dbg_enable(rip,rsp,"page fault");
+//#else
     kpanic(" --- page fault %d ---",excno);
-#endif
+//#endif
 }
 
 /* map memory into thread's address space */

@@ -6,7 +6,7 @@ OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
 	      "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_init)
-SEARCH_DIR("../bin/root/lib");
+SEARCH_DIR("../bin/initrd/lib");
 SEARCH_DIR("../lib");
 SEARCH_DIR("../../lib");
 SEARCH_DIR("../../../lib");

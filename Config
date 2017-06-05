@@ -2,7 +2,8 @@ ARCH = x86_64
 DEBUG = 1
 OPTIMIZE = 0
 
-ESPSIZE = 2048
+# EFI doesn't like smaller ESP partitions
+ESPSIZE = 1024
 USRSIZE = 768
 VARSIZE = 4
 HOMESIZE = 4

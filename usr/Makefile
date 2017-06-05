@@ -15,4 +15,4 @@ gensyms: $(APPS)
 	@test -f $@/Makefile && make -e -C $@ $(CMD) | grep -v 'Nothing to be done' || true
 
 clean:
-	@rm ../bin/usr/bin/* */*.o */*/*.o */*/*/*.o */*/*/*/*.o 2>/dev/null || true
+	@rm -rf ../bin/usr */*.o */*/*.o */*/*/*.o */*/*/*/*.o 2>/dev/null || true

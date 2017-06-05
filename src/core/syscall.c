@@ -33,10 +33,10 @@
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
 
-extern uint64_t sys_getts(char *p);
-extern sysinfo_t sysinfostruc;
+extern uint64_t isr_getts(char *p);
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
+extern sysinfo_t sysinfostruc;
 
 /* System call dispatcher for messages sent to SRV_core */
 uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
@@ -78,13 +78,15 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 
         case SYS_stimebcd:
             /* set system time stamp in BCD date format (local time) */
-            arg0 = sys_getts((char*)&arg0);
+            arg0 = isr_getts((char*)&arg0);
             /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
             if(tcb->priority == PRI_DRV || thread_allowed("stime", A_WRITE)) {
                 sysinfostruc.ticks[TICKS_TS] = arg0;
                 sysinfostruc.ticks[TICKS_NTS] = 0;
+            } else {
+                tcb->errno = EACCES;
             }
             break;
 
@@ -130,7 +132,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             return fs_size;
 
         default:
-            tcb->errno = EINVAL;
+            tcb->errno = ENXIO;
             return (uint64_t)false;
     }
     return (uint64_t)true;

@@ -80,7 +80,7 @@ fi
 if [ "$OPTIMIZE" -eq "1" -a "$ctrl" == "CTRL_APIC" ]; then
     ctrl="CTRL_x2APIC"
 fi
-echo "  gen		src/core/$1/isrs.S (${ctrl:5}, numirq $numirq, idtsz $idtsz)"
+echo "  gen		$1/isrs.S (${ctrl:5}, numirq $numirq, idtsz $idtsz)"
 
 cat >isrs.S <<EOF
 /*

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-out="../../../../bin/root/etc/sys/drivers"
+out="../../../../bin/initrd/etc/sys/drivers"
 a=$1
 [ "${a%/*}" == "fs" ] && echo "*	$1" >>$out
 [ ! -f devices ] && exit

@@ -4,7 +4,7 @@ Additional assets
 Skeletons for directories
 
 - *etc* classic UNIX etc directory
-- *include* C header files, will be mounted as /usr/include
+- *include* C header files, will be mounted as /usr/core/include
 - *root* the root user's home
 
 Files

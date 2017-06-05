@@ -34,7 +34,7 @@ util: tools
 
 system: src
 	@echo "CORE"
-	@make -e --no-print-directory -C src system | grep -v 'Nothing to be done'
+	@make -e --no-print-directory -C src system | grep -v 'Nothing to be done' || true
 
 apps: src
 	@echo "BASE"
@@ -99,7 +99,7 @@ testq:
 testb:
 	@echo "TEST"
 	@echo
-	@rm bin/disk.dd.lock 2>dev/null || true
+	@rm bin/disk.dd.lock 2>&1 >dev/null || true
 ifneq ($(wildcard /usr/local/bin/bochs),)
 	/usr/local/bin/bochs -f etc/bochs.rc -q
 else

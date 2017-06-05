@@ -39,7 +39,6 @@ extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 extern void isr_enableirq(uint8_t irq);
-extern uint64_t sys_getts(char *p);
 extern void hpet_init();
 extern void pit_init();
 extern void rtc_init();
@@ -71,6 +70,54 @@ uint64_t __attribute__ ((section (".data"))) isr_next;
 uint64_t __attribute__ ((section (".data"))) *idt;
 /* irq routing */
 pid_t __attribute__ ((section (".data"))) *irq_routing_table;
+
+/* get system timestamp from a BCD date */
+uint64_t isr_getts(char *p)
+{
+    uint64_t j,r=0,y,m,d,h,i,s;
+    /* detect BCD and binary formats */
+    if(p[0]>=0x20 && p[0]<=0x30 && p[1]<=0x99 &&    //year
+       p[2]>=0x01 && p[2]<=0x12 &&                  //month
+       p[3]>=0x01 && p[3]<=0x31 &&                  //day
+       p[4]<=0x23 && p[5]<=0x59 && p[6]<=0x60       //hour, min, sec
+    ) {
+        /* decode BCD */
+        y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
+        m = ((p[2]>>4)*10)+(p[2]&0x0F);
+        d = ((p[3]>>4)*10)+(p[3]&0x0F);
+        h = ((p[4]>>4)*10)+(p[4]&0x0F);
+        i = ((p[5]>>4)*10)+(p[5]&0x0F);
+        s = ((p[6]>>4)*10)+(p[6]&0x0F);
+    } else {
+        /* binary */
+        y = (p[1]<<8)+p[0];
+        m = p[2];
+        d = p[3];
+        h = p[4];
+        i = p[5];
+        s = p[6];
+    }
+    uint64_t md[12] = {31,0,31,30,31,30,31,31,30,31,30,31};
+    /* is year leap year? then tweak February */
+    md[1]=((y&3)!=0 ? 28 : ((y%100)==0 && (y%400)!=0?28:29));
+
+    // get number of days since Epoch, cheating
+    r = 16801; // precalculated number of days (1970.jan.1-2017.jan.1.)
+    for(j=2016;j<y;j++)
+        r += ((j&3)!=0 ? 365 : ((j%100)==0 && (j%400)!=0?365:366));
+    // in this year
+    for(j=1;j<m;j++)
+        r += md[j-1];
+    // in this month
+    r += d-1;
+    // convert to sec
+    r *= 24*60*60;
+    // add time with timezone correction to get UTC timestamp
+    r += h*60*60 + (bootboot.timezone + i)*60 + s;
+    // we don't honor leap sec here, but this timestamp should
+    // be overwritten anyway by SYS_stime with a more accurate value
+    return r;
+}
 
 /* Initialize interrupts */
 void isr_init()
@@ -166,7 +213,7 @@ void isr_init()
         tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
-    sysinfostruc.ticks[TICKS_TS] = sys_getts((char *)&bootboot.datetime);
+    sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime);
     sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
     sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
     // set up system counters
@@ -190,7 +237,7 @@ void isr_fini()
         if(i==tmrirq || irq_routing_table[i])
             isr_enableirq(i);
     }
-    // "soft" IRQ, mem2vid in display driver
+    // "soft" IRQ #1, mem2vid in display driver
     if(irq_routing_table[ISR_NUMIRQ]!=0)
         syslog_early(" m2v: %x", irq_routing_table[ISR_NUMIRQ] );
 

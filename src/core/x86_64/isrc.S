@@ -194,7 +194,7 @@ isr_syscall0:
     movq    __PAGESIZE-16, %rsp
     sysretq
 
-/* handle timers, called by PIT or HPET, modify global counters */
+/* handle timers, called by PIT, RTC or HPET, modify global counters */
 isr_timer:
 /* global clocksource */
     /* uint128_t sysinfostruc.ticks[TICKS_LO]++ */

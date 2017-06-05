@@ -12,22 +12,22 @@ OPT  = -g
 LIBS =
 OBJS = $(SRCS:.c=.o)
 
-CFLAGS = -g -Wall -fshort-wchar
+CFLAGS = -Wall -fshort-wchar
 
 all: selfcheck $(OBJS)
 
 %.o: %.c
 	@echo "  src		$<"
-	@$(CC) -I/usr/include/efi -I/usr/include/efi/x86_64 $(OPT) $(CFLAGS) $< -o $@ $(LIBS)
+	@$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS)
 
 clean:
 	@rm *.o 2>/dev/null || true
 
 imgclean:
-	@rm -rf ../bin/*.txt ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vmdk ../bin/root ../bin/usr ../bin/ESP 2>/dev/null || true
+	@rm -rf ../bin/*.txt ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vmdk ../bin/initrd ../bin/usr ../bin/ESP 2>/dev/null || true
 
 esp: initrd
-	@echo "  mkfs		ESP"
+	@echo "  mkfs		boot (ESP)"
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 	@cp -f ../etc/CONFIG ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.efi)","")
@@ -46,22 +46,28 @@ endif
 
 initrd:
 	@echo "  mkfs		initrd"
-	@./mkfs.o $(INITRD) ../bin/root
+	@./mkfs.o $(INITRD) ../bin/initrd
 
-usr:
+usr: $(USRFILE)
+
+$(USRFILE): ../bin/usr
 	@echo "  mkfs		usr"
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
 	@./mkfs.o $(USRFILE) ../bin/usr
 
-var:
+var: $(VARFILE)
+
+$(VARFILE): ../bin/var
 	@echo "  mkfs		var"
 	@dd if=/dev/zero of=$(VARFILE) bs=1024 count=$(VARSIZE) >/dev/null 2>/dev/null
 
-home:
+home: $(HOMEFILE)
+
+$(HOMEFILE): ../bin/home
 	@echo "  mkfs		home"
 	@dd if=/dev/zero of=$(HOMEFILE) bs=1024 count=$(HOMESIZE) >/dev/null 2>/dev/null
 
-images: initrd esp usr var home
+images: initrd esp $(USRFILE) $(VARFILE) $(HOMEFILE)
 	@echo "  mkfs		bin/disk.dd"
 	@./mkfs.o disk
 
@@ -85,38 +91,41 @@ endif
 ifeq ("$(wildcard ../bin/ESP/BOOTBOOT)","")
 	@mkdir ../bin/ESP/BOOTBOOT
 endif
-ifeq ("$(wildcard ../bin/root)","")
+ifeq ("$(wildcard ../bin/initrd)","")
 	@# to be kept in memory
-	@mkdir ../bin/root || true
-	@mkdir ../bin/root/bin || true
-	@mkdir ../bin/root/dev || true
-	@mkdir ../bin/root/etc || true
-	@mkdir ../bin/root/home || true
-	@mkdir ../bin/root/lib || true
-	@mkdir ../bin/root/lib/sys || true
-	@mkdir ../bin/root/root || true
-	@mkdir ../bin/root/sbin || true
-	@mkdir ../bin/root/run || true
+	@mkdir ../bin/initrd || true
+	@mkdir ../bin/initrd/bin || true
+	@mkdir ../bin/initrd/dev || true
+	@mkdir ../bin/initrd/etc || true
+	@mkdir ../bin/initrd/home || true
+	@mkdir ../bin/initrd/lib || true
+	@mkdir ../bin/initrd/lib/sys || true
+	@mkdir ../bin/initrd/root || true
+	@mkdir ../bin/initrd/sbin || true
+	@mkdir ../bin/initrd/run || true
 	@# mount points
-	@mkdir ../bin/root/sys || true
-	@mkdir ../bin/root/usr || true
-	@mkdir ../bin/root/var || true
-	@mkdir ../bin/root/tmp || true
-	@# populate with files
-	@cp -r ../etc/etc ../bin/root || true
-	@cp -r ../etc/root ../bin/root || true
+	@mkdir ../bin/initrd/sys || true
+	@mkdir ../bin/initrd/usr || true
+	@mkdir ../bin/initrd/var || true
+	@mkdir ../bin/initrd/tmp || true
+	@# populate with static files
+	@cp -r ../etc/etc ../bin/initrd || true
+	@cp -r ../etc/root ../bin/initrd || true
 endif
 ifeq ("$(wildcard ../bin/usr)","")
 	@mkdir ../bin/usr || true
-	@mkdir ../bin/usr/bin
-	@mkdir ../bin/usr/include
-	@cp -r ../etc/include ../bin/usr || true
-	@mkdir ../bin/usr/lib || true
-	@mkdir ../bin/usr/share || true
+	@mkdir ../bin/usr/core || true
+	@mkdir ../bin/usr/core/bin
+	@mkdir ../bin/usr/core/etc
+	@mkdir ../bin/usr/core/include
+	@cp -r ../etc/include ../bin/usr/core || true
+	@mkdir ../bin/usr/core/lib || true
+	@mkdir ../bin/usr/core/share || true
 endif
 ifeq ("$(wildcard ../bin/var)","")
 	@mkdir ../bin/var || true
 endif
 ifeq ("$(wildcard ../bin/home)","")
 	@mkdir ../bin/home || true
+	@mkdir ../bin/home/bzt || true
 endif
