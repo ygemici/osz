@@ -206,7 +206,7 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	    btsw	%cx, %ax
 	    outb	%al, \$PIC_MASTER_DATA
 	1:  ret
-	2:  subl	\$8, %ecx
+	2:  subb	\$8, %cl
 	    inb		\$PIC_SLAVE_DATA, %al
 	    btsw	%cx, %ax
 	    outb	%al, \$PIC_SLAVE_DATA
@@ -557,6 +557,7 @@ isr_irqtmr_rtc:
     /* we can't afford overhead of messaging and taskswitch,
        so we use inline code here */
     cli
+xchg %bx, %bx
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
     call	isr_timer
@@ -572,7 +573,6 @@ isr_irqtmr_rtc:
     movq	isr_next, %rax
     cmpq	\$__PAGESIZE, %rax
     jb		1f
-xchg %bx, %bx
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next

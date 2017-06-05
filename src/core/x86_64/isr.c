@@ -178,7 +178,7 @@ void isr_init()
     //   4 = LAPIC
     if(clocksource>3) clocksource=0;
     if(clocksource==0) {
-        clocksource=sysinfostruc.systables[systable_hpet_idx]==0?2:1;
+        clocksource=sysinfostruc.systables[systable_hpet_idx]==0?TMR_PIT:TMR_HPET;
     }
     //if HPET not found, fallback to PIT
     if(clocksource==TMR_HPET && sysinfostruc.systables[systable_hpet_idx]!=0)

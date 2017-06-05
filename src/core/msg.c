@@ -64,25 +64,20 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
             return false;
         }
     }
+
+    // map destination thread's message queue
+    kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
+    if(dsttcb->magic != OSZ_TCB_MAGICH) {
+        srctcb->errno = EINVAL;
+        return false;
+    }
+    isr_next = dsttcb->memroot;
+    kmap_mq(dsttcb->memroot);
+
     /* mappings:
      *  tmpmap: destination thread's tcb
-     *  tmp2map: destination thread's self (paging)
+     *  tmp2map: destination thread's message queue's PTE (paging)
      *  TMPQ_ADDRESS: destination thread's self (message queue) */
-
-    // if we're sending to the current task, we've a shortcut
-    if(srctcb->mypid==thread) {
-        msghdr = (msghdr_t*)(MQ_ADDRESS);
-        dsttcb = srctcb;
-    } else {
-        // map thread's message queue
-        kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
-        if(dsttcb->magic != OSZ_TCB_MAGICH) {
-            srctcb->errno = EINVAL;
-            return false;
-        }
-        isr_next = dsttcb->memroot;
-        kmap_mq(dsttcb->memroot);
-    }
 
     // check if the dest is receiving from ANY (0) or from our pid
     if(msghdr->mq_recvfrom != 0 && msghdr->mq_recvfrom != srctcb->mypid) {

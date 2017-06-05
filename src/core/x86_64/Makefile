@@ -16,11 +16,11 @@ isrs.S: isr.h isrs.sh isr.c
 	@./isrs.sh $(ARCH) 2>/dev/null || true
 
 %.o: %.S
-	@echo "  src		$(ARCH)/$<"
+	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) -D_AS=1 $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	@echo "  src		$(ARCH)/$<"
+	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 clean:

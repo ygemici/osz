@@ -18,7 +18,7 @@ CFLAGS += -DDEBUG=1
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@echo "  src		$<"
+	@#echo "  src		$<"
 	@$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET): $(SRCS)

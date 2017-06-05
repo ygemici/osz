@@ -20,7 +20,7 @@ endif
 all: $(OBJS) $(BINTARGET)
 
 %.o: %.c
-	@echo "  src		$<"
+	@#echo "  src		$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 platform:

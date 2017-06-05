@@ -323,11 +323,12 @@ kmap_mq:
     addq    $__PAGESIZE, %rax
     decw    %cx
     jnz     1b
-/*
+
     movq    $tmp2map, %rdi
+    movq    %rdx, %rsi
     movb    $PG_CORE_NOCACHE, %sil
     call    kmap
-*/
+
     ret
 
 /* IN rdi: virtual address

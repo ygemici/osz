@@ -14,11 +14,11 @@ ok:
 	@true
 
 %.o: %.S
-	@echo "  src		$<"
+	@#echo "  src		$<"
 	@$(CC) -I../../../../etc/include -I../../../core/$(ARCH) $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	@echo "  src		$<"
+	@#echo "  src		$<"
 	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o ../$@
 
 clean:
