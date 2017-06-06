@@ -70,6 +70,8 @@ irq1:
     btr     $7, %si
     addw    kbd_prefix(%rip), %si
     movw    $0, kbd_prefix(%rip)
+    orw     %si, %si
+    jz      4f
     /* extended scancode in si */
     movq    $SRV_UI, %rdi
     shlq    $16, %rdi

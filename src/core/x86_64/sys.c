@@ -44,7 +44,9 @@ extern void kprintf_center(int w, int h);
 extern void acpi_init();
 extern void acpi_poweroff();
 extern void pci_init();
+extern void idle();
 #if DEBUG
+extern char *syslog_buf;
 extern void dbg_putchar(int c);
 #endif
 
@@ -54,6 +56,7 @@ char __attribute__ ((section (".data"))) *drvs_end;
 phy_t __attribute__ ((section (".data"))) screen[2];
 char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
+uint8_t __attribute__ ((section (".data"))) idle_first;
 
 /* reboot computer */
 void sys_reset()
@@ -107,11 +110,11 @@ void sys_disable()
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
 
-/* switch to system task and start executing it */
+/* switch to a task and start executing it */
 __inline__ void sys_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *fstcb = (OSZ_tcb*)(&tmpmap);
+    OSZ_tcb *firsttcb = (OSZ_tcb*)(&tmpmap);
 
 #if DEBUG
     // initialize debugger, it can be used only with thread mappings
@@ -119,33 +122,27 @@ __inline__ void sys_enable()
 #endif
     sys_fault = false;
 
-    // map first device driver or FS task's TCB
+    // map first device driver or if none, FS task's TCB
     kmap((uint64_t)&tmpmap,
         (uint64_t)((ccb.hd_active[PRI_DRV]!=0?ccb.hd_active[PRI_DRV]:services[-SRV_FS])*__PAGESIZE),
         PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to force first task switch
     __asm__ __volatile__ (
-        // switch to filesystem task's address space
+        // switch to first task's address space
         "mov %0, %%rax; mov %%rax, %%cr3;"
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the thread
         "movq %1, %%rsp; movq %2, %%rbp;\n#if DEBUG\nxchg %%bx, %%bx;\n#endif\n iretq" :
         :
-        "r"(fstcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
+        "r"(firsttcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
 }
 
 /* Initialize the "idle" task and device drivers */
 void sys_init()
 {
-    /* this code should go in service.c, but has platform dependent parts */
-    uint64_t *paging = (uint64_t *)&tmpmap;
-    uint64_t i=0;
-
-    // get the physical page of .text.user section
-    uint64_t elf = *((uint64_t*)kmap_getpte((uint64_t)&_usercode));
     // load driver database
     char *c, *f;
     drvs = (char *)fs_locate("etc/sys/drivers");
@@ -155,23 +152,20 @@ void sys_init()
     /*** Platform specific initialization ***/
     syslog_early("Device drivers");
 
-    // interrupt service routines (idt, pic, ioapic etc.)
-    isr_init();
-
     /* create idle thread */
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     thread_new("idle");
-    paging[i++] = (elf & ~(__PAGESIZE-1)) | PG_USER_RO;
-#if DEBUG
-    if(sysinfostruc.debug&DBG_ELF)
-        kprintf("  maptext .text.user %x (1 page) @0\n",elf & ~(__PAGESIZE-1));
-#endif
-    // modify TCB for idle task
+    // modify TCB for idle task. Don't add to queue, normally it never scheduled
     tcb->priority = PRI_IDLE;
-    //start executing at the begining of the text segment
-    tcb->rip = TEXT_ADDRESS + (&_init - &_usercode);
-    // add to queue so that scheduler will know about this thread
-    sched_add((OSZ_tcb*)(pmm.bss_end));
+    //start executing at the begining of the text segment.
+    tcb->rip = (uint64_t)&idle;
+    tcb->cs = 0x8;  //ring 0 selectors
+    tcb->ss = 0x10;
+    idle_mapping = tcb->memroot;
+    idle_first = true;
+
+    /* interrupt service routines (idt, pic, ioapic etc.) */
+    isr_init();
 
     /* detect devices and load drivers for them */
     if(drvs==NULL) {
@@ -249,6 +243,28 @@ void sys_init()
             fbp += __SLOTSIZE;
         }
 */
-    // log irq routing table
+}
+
+/*** Called when the "idle" task first scheduled ***/
+void sys_ready()
+{
+    /* finish up ISR initialization */
     isr_fini();
+    /* log we're ready */
+    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
+    /* reset early kernel console */
+    kprintf_reset();
+
+    // TODO: move this printf to rescue shell
+    kprintf("OS/Z ready. Allocated %d pages out of %d",
+        pmm.totalpages - pmm.freepages, pmm.totalpages);
+    kprintf(", free %d.%d%%\n",
+        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
+
+#if DEBUG
+    if(sysinfostruc.debug&DBG_LOG)
+        kprintf(syslog_buf);
+#endif
+    /* disable scroll pause */
+    scry = -1;
 }

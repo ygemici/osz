@@ -64,7 +64,7 @@ extern uint8_t __bss_start;           // start of bss segment
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
-extern uint64_t idle_mapping;         // paging tables for "idle" task
+extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern OSZ_pmm pmm;                   // Physical Memory Manager data
 extern int scry;                      // scroll counter
 
@@ -88,9 +88,6 @@ extern uint64_t kwaitkey();
 
 /** Initialize console printf for debugging and panicing */
 extern void kprintf_init();
-
-/** ready prompt */
-extern void kprintf_ready();
 
 /** Set default colors and move cursor home */
 extern void kprintf_reset();
@@ -140,6 +137,9 @@ extern void sys_disable();
 
 /** Reboot the computer */
 extern void sys_reset();
+
+/** called when idle is first scheduled */
+extern void sys_ready();
 
 // ----- File System -----
 /** Initialize file system thread */

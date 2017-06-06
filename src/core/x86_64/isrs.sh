@@ -531,15 +531,17 @@ isr_irqtmr:
     cli
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
+    $EOI
     call	isr_timer
     /* switch to a new thread if any */
     movq	isr_next, %rax
     cmpq	\$__PAGESIZE, %rax
     jb		1f
+    cmpq	%rax, tcb_memroot
+    je		1f
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next
-    $EOI
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
@@ -561,6 +563,7 @@ isr_irqtmr_rtc:
 xchg %bx, %bx
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
+    $EOIRTC
     call	isr_timer
     /* acknowledge irq8 in RTC */
     movb	\$0x0C, %al
@@ -574,10 +577,11 @@ xchg %bx, %bx
     movq	isr_next, %rax
     cmpq	\$__PAGESIZE, %rax
     jb		1f
+    cmpq	%rax, tcb_memroot
+    je		1f
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next
-    $EOIRTC
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
@@ -598,6 +602,7 @@ do
 	    cli
 	    call	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist1
+	    $EOI
 	    /* tcb->memroot == irq_routing[isr]? */
 	    movq	irq_routing_table, %rax
 	    addq	\$$pos, %rax
@@ -606,11 +611,14 @@ do
 	    je		1f
 	    /* no, switch to the task */
 	    movq	%rax, %cr3
+	    xorq	%rax, %rax
+	    xorq	%rdi, %rdi
+	    /* if running? */
+	    cmpb	\$2, tcb_state
+	    je		1f
+	    callq	sched_awake
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi
-	#if DEBUG
-	    movq    %rdi, dbg_lastrip
-	#endif
 	    movb	\$$isr, %dil
 	    pushq   %rdi
 	    call	isr_disableirq
@@ -621,7 +629,6 @@ do
 	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend
 	    call	kentropy
-	    $EOI
 	    addq	\$$isrstack, ccb + ccb_ist1
 	    call	isr_loadcontext
 	    iretq

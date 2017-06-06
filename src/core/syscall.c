@@ -33,7 +33,7 @@
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
 
-extern uint64_t isr_getts(char *p);
+extern uint64_t isr_getts(char *p,int16_t timezone);
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
 extern sysinfo_t sysinfostruc;
@@ -78,7 +78,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 
         case SYS_stimebcd:
             /* set system time stamp in BCD date format (local time) */
-            arg0 = isr_getts((char*)&arg0);
+            arg0 = isr_getts((char*)&arg0, arg1);
             /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */

@@ -30,6 +30,7 @@
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
 extern sysinfo_t sysinfostruc;  //sysinfo structure
 extern uint64_t isr_next;       //next thread to map when isr finishes
+extern uint8_t idle_first;      //flag to indicate first idle schedule
 
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
@@ -46,6 +47,48 @@ OSZ_tcb *sched_get_tcb(pid_t thread)
     kmap((uint64_t)&tmpmap, (uint64_t)(thread * __PAGESIZE), PG_CORE_NOCACHE);
     return (OSZ_tcb*)(&tmpmap);
 }
+
+#if DEBUG
+void sched_dump()
+{
+    OSZ_tcb *tcb, *curr = (OSZ_tcb*)0;
+    int i;
+    pid_t p;
+    for(i=PRI_SYS; i<=PRI_IDLE; i++) {
+        kprintf("active %d hd %x:   ",i,ccb.hd_active[i]);
+        p=ccb.hd_active[i];
+        while(p!=0) {
+            tcb=sched_get_tcb(p);
+            kprintf("%s%x%s ",
+                tcb->mypid==ccb.cr_active[i]?">":"",
+                tcb->mypid,
+                tcb->mypid==curr->mypid?"*":"");
+            p=tcb->next;
+        }
+        kprintf("\n");
+    }
+    kprintf("blocked hd %x:   ",ccb.hd_blocked);
+    p=ccb.hd_blocked;
+    while(p!=0) {
+        tcb=sched_get_tcb(p);
+        kprintf("%x%s ",
+            tcb->mypid,
+            tcb->mypid==curr->mypid?"*":"");
+        p=tcb->next;
+    }
+    kprintf("\n");
+    kprintf("timerq hd %x:   ",ccb.hd_timerq);
+    p=ccb.hd_timerq;
+    while(p!=0) {
+        tcb=sched_get_tcb(p);
+        kprintf("%x%s ",
+            tcb->mypid,
+            tcb->mypid==curr->mypid?"*":"");
+        p=tcb->next;
+    }
+    kprintf("\n");
+}
+#endif
 
 // block until alarm, add thread to ccb.hd_timerq list
 // note that isr_alarm() consumes threads from timer queue
@@ -154,8 +197,12 @@ void sched_remove(OSZ_tcb *tcb)
     if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_remove(%x) pri %d\n", tcb->mypid, tcb->priority);
 #endif
+    tcb->prev = tcb->next = 0;
     if(ccb.hd_active[tcb->priority] == tcb->mypid) {
         ccb.hd_active[tcb->priority] = next;
+    }
+    if(ccb.cr_active[tcb->priority] == tcb->mypid) {
+        ccb.cr_active[tcb->priority] = next;
     }
     if(prev != 0) {
         tcb = sched_get_tcb(prev);
@@ -175,13 +222,18 @@ void sched_block(OSZ_tcb *tcb)
         return;
 #if DEBUG
     if(sysinfostruc.debug&DBG_SCHED)
-        kprintf("sched_block(%x)\n", tcb);
+        kprintf("sched_block(%x)\n", tcb->mypid);
 #endif
     tcb->blktime = sysinfostruc.ticks[TICKS_LO];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
     pid_t pid = tcb->mypid;
     sched_remove(tcb);
+    // link into blocked queue
+    if(ccb.hd_blocked!=0) {
+        tcb = sched_get_tcb(ccb.hd_blocked);
+        tcb->prev = pid;
+    }
     // restore mapping
     tcb = sched_get_tcb(pid);
     // link as the first item in chain
@@ -193,11 +245,14 @@ void sched_block(OSZ_tcb *tcb)
 /* pick a thread and return it's memroot */
 phy_t sched_pick()
 {
-    OSZ_tcb *tcb;
+    OSZ_tcb *tcb, *curr = (OSZ_tcb*)0;
     int i, nonempty = false;
+again:
+//kprintf("pick\n");
     /* iterate on priority queues. Note that this does not depend
      * on number of tasks, so this is a O(1) scheduler algorithm */
-    for(i=PRI_RT; i<PRI_IDLE; i++) {
+    for(i=PRI_SYS; i<PRI_IDLE; i++) {
+//kprintf("  %d %x %x\n",i,ccb.hd_active[i],ccb.cr_active[i]);
         // skip empty queues
         if(ccb.hd_active[i] == 0)
             continue;
@@ -215,39 +270,36 @@ phy_t sched_pick()
      * 2. there are no threads to run
      * in the first case we choose the highest priority task, in the second
      * case we step to IDLE queue */
-    if(!nonempty) {
-        i = PRI_IDLE;
-        /* if there's nothing to schedule, use idle task */
-        if(ccb.hd_active[i]==0) {
+    if(nonempty)
+        goto again;
+    i = PRI_IDLE;
+//kprintf("  %d %x %x\n",i,ccb.hd_active[i],ccb.cr_active[i]);
+    /* if there's nothing to schedule, use idle task */
+    if(ccb.hd_active[i]==0) {
 #if DEBUG
-        if(sysinfostruc.debug&DBG_SCHED)
+        if(sysinfostruc.debug&DBG_SCHED && curr->memroot != idle_mapping)
             kprintf("sched_pick()=idle  \n");
 #endif
-            isr_next = idle_mapping;
-            return idle_mapping;
+        if(idle_first) {
+            idle_first = false;
+            sys_ready();
         }
-        //if we're on the end of the list, go to head
-        if(ccb.cr_active[i] == 0)
-            ccb.cr_active[i] = ccb.hd_active[i];
-        else
-            goto found;
+        isr_next = idle_mapping;
+        return idle_mapping;
     }
-    /* nothing else left, give a chance to SYS, although it's
-     * not necessary as it's switched every time an IRQ occurs.
-     * But there can be other threads on PRI_SYS in case of emergency.
-     * Note that when a task is choosen from PRI_SYS, it won't be
-     * preempted, it has to block or yield. Also when we're at the
-     * end of the PRI_SYS queue, we don't skip as there's nowhere to. */
-    if(ccb.cr_active[PRI_SYS] == 0)
-        ccb.cr_active[PRI_SYS] = ccb.hd_active[PRI_SYS];
-    i = PRI_SYS;
+    //if we're on the end of the list, go to head
+    if(ccb.cr_active[i] == 0)
+        ccb.cr_active[i] = ccb.hd_active[i];
 found:
+//kprintf("found %d %x\n",i,ccb.cr_active[i]);
     tcb = sched_get_tcb(ccb.cr_active[i]);
-#if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
-        kprintf("sched_pick()=%x  \n", tcb->mypid);
-#endif
     ccb.cr_active[i] = tcb->next;
-    isr_next = tcb->memroot;
+    if(curr->mypid != tcb->mypid) {
+#if DEBUG
+        if(sysinfostruc.debug&DBG_SCHED)
+            kprintf("sched_pick()=%x  \n", tcb->mypid);
+#endif
+        isr_next = tcb->memroot;
+    }
     return tcb->memroot;
 }

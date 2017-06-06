@@ -72,7 +72,7 @@ uint64_t __attribute__ ((section (".data"))) *idt;
 pid_t __attribute__ ((section (".data"))) *irq_routing_table;
 
 /* get system timestamp from a BCD date */
-uint64_t isr_getts(char *p)
+uint64_t isr_getts(char *p, int16_t timezone)
 {
     uint64_t j,r=0,y,m,d,h,i,s;
     /* detect BCD and binary formats */
@@ -113,7 +113,7 @@ uint64_t isr_getts(char *p)
     // convert to sec
     r *= 24*60*60;
     // add time with timezone correction to get UTC timestamp
-    r += h*60*60 + (bootboot.timezone + i)*60 + s;
+    r += h*60*60 + (timezone + i)*60 + s;
     // we don't honor leap sec here, but this timestamp should
     // be overwritten anyway by SYS_stime with a more accurate value
     return r;
@@ -213,7 +213,7 @@ void isr_init()
         tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
-    sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime);
+    sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
     sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
     sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
     // set up system counters

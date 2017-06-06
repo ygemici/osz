@@ -81,7 +81,6 @@ extern char _binary_logo_tga_start;
 extern uint64_t isr_currfps;
 extern sysinfo_t sysinfostruc;
 #if DEBUG
-extern char *syslog_buf;
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
 extern void dbg_setpos();
@@ -122,7 +121,7 @@ void kprintf_init()
     // default fg and bg, cursor at home
     kprintf_reset();
 
-    // display boot logo
+    // display logo
     char *data = &_binary_logo_tga_start + 0x255;
     char *palette = &_binary_logo_tga_start + 0x12;
     offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
@@ -143,23 +142,6 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
-//ee:goto ee;
-}
-
-void kprintf_ready()
-{
-    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
-    kprintf_reset();
-    kprintf("OS/Z ready. Allocated %d pages out of %d",
-        pmm.totalpages - pmm.freepages, pmm.totalpages);
-    kprintf(", free %d.%d%%\n",
-        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
-#if DEBUG
-    if(sysinfostruc.debug&DBG_LOG)
-        kprintf(syslog_buf);
-#endif
-    //disable scroll pause
-    scry = -1;
 }
 
 /* put red coloured logo on panic screen */

@@ -30,8 +30,8 @@
 
 /*** low level codes in rdi for syscall instruction ***/
 // rdi: 00000000000xxxx Memory and threading
-#define SYS_IRQ 0           // CORE sends it to SYS, disables IRQ
-#define SYS_ack 1           // SYS to CORE, re-enable IRQ
+#define SYS_IRQ 0           // CORE sends it to device drivers, disables IRQ
+#define SYS_ack 1           // device drivers to CORE, re-enable IRQ
 #define SYS_nack 2          // negative acknowledge
 #define SYS_dl 3
 #define SYS_sched_yield 4

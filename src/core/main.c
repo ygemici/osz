@@ -96,7 +96,7 @@ void main()
 
     /* step 3: who am I */
 #if DEBUG
-    service_init(SRV_USRFIRST, "bin/test");
+//    service_init(SRV_USRFIRST, "bin/test");
 #else
 /*
     fs_locate("etc/hostname");
@@ -114,9 +114,6 @@ void main()
         service_init(SRV_init, "sbin/init");
 */
 #endif
-
-    // The "ready" message. Cover out "starting" message
-    kprintf_ready();
 
     // enable system multitasking. That will start by iterating
     // through device driver's initialization routines. Each in different

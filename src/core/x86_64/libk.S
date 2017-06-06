@@ -26,6 +26,7 @@
  */
 
 .section .text
+.global idle
 .global kpanic
 .global kmemcpy
 .global kmemmove
@@ -52,6 +53,12 @@
 .extern kpanicsuffix
 .extern kpanicsuffix2
 .extern sys_fault
+
+/* idle task's code */
+idle:
+    sti
+    hlt
+    jmp     idle
 
 /* shuffle bits of random seed */
 kentropy:

@@ -54,7 +54,7 @@
 .section .data
     .align	16
 idt64:
-    .word	(32+64)*16-1
+    .word	(32+32)*16-1
     .quad	0
     .align	8
 ctrl:
@@ -160,7 +160,7 @@ isr_inithw:
     xorq	%rdi, %rdi
 1:  call	isr_disableirq
     incl	%edi
-    cmpl	$64, %edi
+    cmpl	$32, %edi
     jne		1b
     /* enable NMI */
     inb		$0x70, %al
@@ -169,7 +169,7 @@ isr_inithw:
     ret
 
 /* exception handler ISRs */
-.align 128, 0x90
+.align 256, 0x90
 isr_exc00divzero:
     cli
     /* tcb->excerr = 0; */
@@ -977,21 +977,23 @@ isr_irqtmr:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     call	isr_timer
     /* switch to a new thread if any */
     movq	isr_next, %rax
     cmpq	$__PAGESIZE, %rax
     jb		1f
+    cmpq	%rax, tcb_memroot
+    je		1f
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irqtmr_rtc:
     /* we can't afford overhead of messaging and taskswitch,
@@ -1000,6 +1002,10 @@ isr_irqtmr_rtc:
 xchg %bx, %bx
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     call	isr_timer
     /* acknowledge irq8 in RTC */
     movb	$0x0C, %al
@@ -1013,22 +1019,23 @@ xchg %bx, %bx
     movq	isr_next, %rax
     cmpq	$__PAGESIZE, %rax
     jb		1f
+    cmpq	%rax, tcb_memroot
+    je		1f
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq0:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$0, %rax
@@ -1037,11 +1044,14 @@ isr_irq0:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$0, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1052,18 +1062,18 @@ isr_irq0:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq1:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$8, %rax
@@ -1072,11 +1082,14 @@ isr_irq1:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$1, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1087,18 +1100,18 @@ isr_irq1:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq2:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$16, %rax
@@ -1107,11 +1120,14 @@ isr_irq2:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$2, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1122,18 +1138,18 @@ isr_irq2:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq3:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$24, %rax
@@ -1142,11 +1158,14 @@ isr_irq3:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$3, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1157,18 +1176,18 @@ isr_irq3:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq4:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$32, %rax
@@ -1177,11 +1196,14 @@ isr_irq4:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$4, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1192,18 +1214,18 @@ isr_irq4:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq5:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$40, %rax
@@ -1212,11 +1234,14 @@ isr_irq5:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$5, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1227,18 +1252,18 @@ isr_irq5:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq6:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$48, %rax
@@ -1247,11 +1272,14 @@ isr_irq6:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$6, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1262,18 +1290,18 @@ isr_irq6:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq7:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$56, %rax
@@ -1282,11 +1310,14 @@ isr_irq7:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$7, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1297,18 +1328,19 @@ isr_irq7:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq8:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$64, %rax
@@ -1317,11 +1349,14 @@ isr_irq8:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$8, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1332,19 +1367,19 @@ isr_irq8:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq9:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$72, %rax
@@ -1353,11 +1388,14 @@ isr_irq9:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$9, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1368,19 +1406,19 @@ isr_irq9:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq10:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$80, %rax
@@ -1389,11 +1427,14 @@ isr_irq10:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$10, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1404,19 +1445,19 @@ isr_irq10:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq11:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$88, %rax
@@ -1425,11 +1466,14 @@ isr_irq11:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$11, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1440,19 +1484,19 @@ isr_irq11:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq12:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$96, %rax
@@ -1461,11 +1505,14 @@ isr_irq12:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$12, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1476,19 +1523,19 @@ isr_irq12:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq13:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$104, %rax
@@ -1497,11 +1544,14 @@ isr_irq13:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$13, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1512,19 +1562,19 @@ isr_irq13:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq14:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$112, %rax
@@ -1533,11 +1583,14 @@ isr_irq14:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$14, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1548,19 +1601,19 @@ isr_irq14:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq15:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$120, %rax
@@ -1569,11 +1622,14 @@ isr_irq15:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$15, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1584,19 +1640,19 @@ isr_irq15:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq16:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$128, %rax
@@ -1605,11 +1661,14 @@ isr_irq16:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$16, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1620,19 +1679,19 @@ isr_irq16:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq17:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$136, %rax
@@ -1641,11 +1700,14 @@ isr_irq17:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$17, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1656,19 +1718,19 @@ isr_irq17:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq18:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$144, %rax
@@ -1677,11 +1739,14 @@ isr_irq18:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$18, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1692,19 +1757,19 @@ isr_irq18:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq19:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$152, %rax
@@ -1713,11 +1778,14 @@ isr_irq19:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$19, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1728,19 +1796,19 @@ isr_irq19:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq20:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$160, %rax
@@ -1749,11 +1817,14 @@ isr_irq20:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$20, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1764,19 +1835,19 @@ isr_irq20:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq21:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$168, %rax
@@ -1785,11 +1856,14 @@ isr_irq21:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$21, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1800,19 +1874,19 @@ isr_irq21:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq22:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$176, %rax
@@ -1821,11 +1895,14 @@ isr_irq22:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$22, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1836,19 +1913,19 @@ isr_irq22:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq23:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$184, %rax
@@ -1857,11 +1934,14 @@ isr_irq23:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$23, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1872,19 +1952,19 @@ isr_irq23:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq24:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$192, %rax
@@ -1893,11 +1973,14 @@ isr_irq24:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$24, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1908,19 +1991,19 @@ isr_irq24:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq25:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$200, %rax
@@ -1929,11 +2012,14 @@ isr_irq25:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$25, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1944,19 +2030,19 @@ isr_irq25:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq26:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$208, %rax
@@ -1965,11 +2051,14 @@ isr_irq26:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$26, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -1980,19 +2069,19 @@ isr_irq26:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq27:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$216, %rax
@@ -2001,11 +2090,14 @@ isr_irq27:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$27, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -2016,19 +2108,19 @@ isr_irq27:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq28:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$224, %rax
@@ -2037,11 +2129,14 @@ isr_irq28:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$28, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -2052,19 +2147,19 @@ isr_irq28:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq29:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$232, %rax
@@ -2073,11 +2168,14 @@ isr_irq29:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$29, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -2088,19 +2186,19 @@ isr_irq29:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq30:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$240, %rax
@@ -2109,11 +2207,14 @@ isr_irq30:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$30, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -2124,19 +2225,19 @@ isr_irq30:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq31:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$248, %rax
@@ -2145,11 +2246,14 @@ isr_irq31:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$31, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -2160,19 +2264,19 @@ isr_irq31:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq32:
     cli
     call	isr_savecontext
     subq	$128, ccb + ccb_ist1
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$256, %rax
@@ -2181,11 +2285,14 @@ isr_irq32:
     je		1f
     /* no, switch to the task */
     movq	%rax, %cr3
+    xorq	%rax, %rax
+    xorq	%rdi, %rdi
+    /* if running? */
+    cmpb	$2, tcb_state
+    je		1f
+    callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
     movb	$32, %dil
     pushq   %rdi
     call	isr_disableirq
@@ -2196,1164 +2303,8 @@ isr_irq32:
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
     addq	$128, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
-
-isr_irq33:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$264, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$33, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq34:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$272, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$34, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq35:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$280, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$35, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq36:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$288, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$36, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq37:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$296, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$37, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq38:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$304, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$38, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq39:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$312, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$39, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq40:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$320, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$40, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq41:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$328, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$41, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq42:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$336, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$42, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq43:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$344, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$43, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq44:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$352, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$44, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq45:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$360, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$45, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq46:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$368, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$46, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq47:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$376, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$47, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq48:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$384, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$48, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq49:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$392, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$49, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq50:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$400, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$50, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq51:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$408, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$51, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq52:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$416, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$52, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq53:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$424, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$53, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq54:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$432, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$54, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq55:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$440, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$55, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq56:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$448, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$56, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq57:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$456, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$57, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq58:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$464, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$58, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq59:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$472, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$59, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq60:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$480, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$60, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq61:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$488, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$61, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq62:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$496, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$62, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq63:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$504, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$63, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
-
-isr_irq64:
-    cli
-    call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
-    /* tcb->memroot == irq_routing[isr]? */
-    movq	irq_routing_table, %rax
-    addq	$512, %rax
-    movq	(%rax), %rax
-    cmpq	%rax, tcb_memroot
-    je		1f
-    /* no, switch to the task */
-    movq	%rax, %cr3
-1:  /* isr_disableirq(irq); */
-    xorq	%rdi, %rdi
-#if DEBUG
-    movq    %rdi, dbg_lastrip
-#endif
-    movb	$64, %dil
-    pushq   %rdi
-    call	isr_disableirq
-    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
-    xorq	%rcx, %rcx
-    xorq	%rsi, %rsi
-    movq	$MQ_ADDRESS, %rdi
-    call	ksend
-    call	kentropy
-    /* PIC EOI */
-    movb	$0x20, %al
-    outb	%al, $PIC_SLAVE
-    outb	%al, $PIC_MASTER
-    addq	$128, ccb + ccb_ist1
-    call	isr_loadcontext
-    iretq
-.align 128, 0x90
+.align 256, 0x90
 
