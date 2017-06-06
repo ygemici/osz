@@ -372,6 +372,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     EFI_MEMORY_DESCRIPTOR *memory_map = NULL, *mement;
     UINTN i, memory_map_size=0, map_key=0, desc_size=0;
     UINT32 desc_version=0;
+    UINT32 ecx=0;
     MMapEnt *mmapent, *last=NULL;
     CHAR16 **argv, *initrdfile, *configfile, *help=
         L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended\n  to the environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
@@ -416,6 +417,17 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
     ZeroMem((void*)bootboot,PAGESIZE);
     CopyMem(bootboot->magic,BOOTBOOT_MAGIC,4);
+    __asm__ __volatile__ (
+        "mov $1, %%eax;"
+        "cpuid;"
+        "shrl $24, %%ebx;"
+        "mov %%ebx,%0; mov %%ecx, %1"
+        : "=b"(bootboot->bspid), "=c"(ecx) : : );
+    // unlike BIOS bootboot, no need to check if we have
+    // PAE + MSR + LME, as we're already in long mode.
+Print(L"ecx %x\n",ecx);
+    if((ecx&1)!=1)
+        return report(EFI_UNSUPPORTED, L"Hardware not supported, no SSE3");
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     RootDir = LibOpenRoot(loaded_image->DeviceHandle);
@@ -455,7 +467,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
             d.destSize = 1;
             do { r = uzlib_uncompress(&d); } while (!r);
             if (r != TINF_DONE) {
-gzerr:          return report(EFI_LOAD_ERROR,L"Unable to uncompress");
+gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             }
             // swap initrd_ptr with the uncompressed buffer
             uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
@@ -483,15 +495,6 @@ gzerr:          return report(EFI_LOAD_ERROR,L"Unable to uncompress");
                 return report(status, L"GOP failed, no framebuffer");
 
         // collect information on system
-        __asm__ __volatile__ (
-            "mov $1, %%eax;"
-            "cpuid;"
-            "shrl $24, %%ebx;"
-            "mov %%ebx,%0"
-            : : "b"(bootboot->bspid) : "memory" );
-        // unlike BIOS bootboot, no need to check if we have
-        // PAE + MSR + LME, as we're already in long mode.
-
         bootboot->protocol=PROTOCOL_STATIC;
         bootboot->loader_type=LOADER_UEFI;
         bootboot->size=128;
