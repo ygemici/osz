@@ -34,20 +34,23 @@
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
 
+extern uint64_t ioapic_addr;
+extern uint64_t hpet_addr;
+extern sysinfo_t sysinfostruc;
+
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 extern void isr_enableirq(uint8_t irq);
-extern void hpet_init();
-extern void pit_init();
-extern void rtc_init();
 extern void isr_irqtmr();
 extern void isr_irqtmr_rtc();
 extern void acpi_early(void *hdr);
 
-extern uint64_t ioapic_addr;
-extern sysinfo_t sysinfostruc;
+/* timer drivers */
+extern void hpet_init();
+extern void pit_init();
+extern void rtc_init();
 
 /* safe stack for interrupt routines */
 uint64_t __attribute__ ((section (".data"))) *safestack;
@@ -70,6 +73,8 @@ uint64_t __attribute__ ((section (".data"))) isr_next;
 uint64_t __attribute__ ((section (".data"))) *idt;
 /* irq routing */
 pid_t __attribute__ ((section (".data"))) *irq_routing_table;
+
+uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
 /* get system timestamp from a BCD date */
 uint64_t isr_getts(char *p, int16_t timezone)
@@ -178,10 +183,10 @@ void isr_init()
     //   4 = LAPIC
     if(clocksource>3) clocksource=0;
     if(clocksource==0) {
-        clocksource=sysinfostruc.systables[systable_hpet_idx]==0?TMR_PIT:TMR_HPET;
+        clocksource=hpet_addr==0?TMR_PIT:TMR_HPET;
     }
     //if HPET not found, fallback to PIT
-    if(clocksource==TMR_HPET && sysinfostruc.systables[systable_hpet_idx]!=0)
+    if(clocksource==TMR_HPET && hpet_addr!=0)
         hpet_init();
     else if(clocksource==TMR_RTC)
         rtc_init();
@@ -216,6 +221,7 @@ void isr_init()
     sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
     sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
     sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
+    sysinfostruc.freq = tmrfreq;
     // set up system counters
     seccnt = 1;
     qcnt = sysinfostruc.quantum;

@@ -139,7 +139,7 @@ sysinfo:
     movl    $0x646E6573, %eax # 'send'
     syscall
 2:  call    mymq_recv
-    mov     16(%rax), %rax
+    mov     8(%rax), %rax
     ret
 
 /* void yield() */

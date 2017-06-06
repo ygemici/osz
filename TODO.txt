@@ -1,10 +1,11 @@
  --- Error fixes ---
 ./src/core/pmm.c:212:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
+./src/core/service.c:798:    FIXME: this messes up UI's tcb
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
 ./src/drivers/drv.c:31:    /* TODO: use mq_dispatch on common function scheme */
-./src/core/syscall.c:69:            /* TODO: swap and map screen[0] and screen[1] */
+./src/core/syscall.c:71:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/x86_64/pci.c:59:// TODO: load drivers and save autodetected irq number in ehdr->e_machine
 ./src/core/x86_64/sys.c:258:    // TODO: move this printf to rescue shell
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc

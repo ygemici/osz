@@ -57,6 +57,8 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         case SYS_sysinfo:
+            // update dynamic fields
+            sysinfostruc.mem_free = pmm.freepages;
             // reply with ptr message to map sysinfostruc in userspace
             msg_send(EVT_DEST(tcb->mypid) | MSG_PTRDATA | EVT_FUNC(SYS_ack),
                 (virt_t)&sysinfostruc,

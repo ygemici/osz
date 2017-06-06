@@ -794,6 +794,8 @@ void ui_init()
     // dynamic linker
     if(service_rtlink()) {
         // allocate and map screen buffer B
+/*
+    FIXME: this messes up UI's tcb
         int i;
         phy_t bss = sysinfostruc.screen_ptr;
         i = ((bootboot.fb_width * bootboot.fb_height * 4 +
@@ -805,6 +807,7 @@ void ui_init()
             }
             bss += __SLOTSIZE;
         }
+*/
         //set IOPL=3 in rFlags to permit IO address space
 #ifdef DEBUG
         ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);

@@ -29,9 +29,6 @@
 #include "acpi.h"
 #include "isr.h"
 
-/* main properties, configurable */
-uint64_t __attribute__ ((section (".data"))) ioapic_addr;
-
 /* poweroff stuff, autodetected */
 uint32_t __attribute__ ((section (".data"))) SLP_EN;
 uint32_t __attribute__ ((section (".data"))) SLP_TYPa;
@@ -45,6 +42,8 @@ uint32_t __attribute__ ((section (".data"))) SCI_INT;
 uint32_t __attribute__ ((section (".data"))) SMI_CMD;
 
 extern sysinfo_t sysinfostruc;
+extern uint64_t ioapic_addr;
+extern uint64_t hpet_addr;
 extern uint32_t fg;
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
@@ -97,11 +96,11 @@ void acpi_early(ACPI_Header *hdr)
         }
     } else
     /* High Precision Event Timer */
-    if(!sysinfostruc.systables[systable_hpet_idx] && !kmemcmp("HPET", hdr->magic, 4)) {
-        sysinfostruc.systables[systable_hpet_idx] = (uint64_t)hdr;
+    if(!hpet_addr && !kmemcmp("HPET", hdr->magic, 4)) {
+        hpet_addr = (uint64_t)hdr;
 #if DEBUG
         if(sysinfostruc.debug&DBG_DEVICES)
-            kprintf("HPET  %x\n", sysinfostruc.systables[systable_hpet_idx]);
+            kprintf("HPET  %x\n", hpet_addr);
 #endif
     }
 }

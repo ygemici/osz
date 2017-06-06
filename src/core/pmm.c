@@ -222,6 +222,7 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
+    sysinfostruc.mem_total = (uint32_t)pmm.totalpages;
     // memory check, -1 for rounding errors
     if(m/1024/1024 < PHYMEM_MIN-1)
         kpanic("Not enough memory. At least %d Mb of RAM required.", PHYMEM_MIN);

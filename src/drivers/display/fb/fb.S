@@ -34,12 +34,11 @@
 .global mem2vid
 
 _init:
-    xorq    %rsi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_sysinfo, %dil
-    movl    $0x646E6573, %eax # 'send'
-//    syscall
+    call    sysinfo@PLT
+
+.getwork:
     call    mq_recv@PLT
+    jmp     .getwork
     ret
 
 mem2vid:

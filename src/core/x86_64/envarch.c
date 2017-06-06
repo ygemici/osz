@@ -31,6 +31,7 @@
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
 extern uint64_t ioapic_addr;
+extern uint64_t hpet_addr;
 
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
@@ -62,9 +63,8 @@ unsigned char *envarch_cs(unsigned char *s)
 void envarch_init()
 {
     // set up defaults
-    sysinfostruc.systables[systable_hpet_idx] =
-        sysinfostruc.systables[systable_apic_idx] =
-            ioapic_addr = 0;
+    sysinfostruc.systables[systable_apic_idx] =
+            ioapic_addr = hpet_addr = 0;
     sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)fs_locate("etc/sys/dsdt");
     if(fs_size == 0)
         sysinfostruc.systables[systable_dsdt_idx] = 0;
@@ -77,7 +77,7 @@ unsigned char *envarch_parse(unsigned char *env)
 	if(!kmemcmp(env, "hpet=", 5)) {
 		env += 5;
 		// we only accept hex value for this parameter
-		env = env_hex(env, (uint64_t*)&sysinfostruc.systables[systable_hpet_idx], 1024*1024, 0);
+		env = env_hex(env, (uint64_t*)&hpet_addr, 1024*1024, 0);
 	} else
 	// manually override APIC address
 	if(!kmemcmp(env, "apic=", 5)) {

@@ -29,5 +29,6 @@
 #define _OSZ_PLATFORM_H
 
 #define breakpoint __asm__ __volatile__("int $1":::)
+#define breakbochs __asm__ __volatile__("xchg %%bx,%%bx":::)
 
 #endif

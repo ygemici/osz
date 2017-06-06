@@ -34,7 +34,9 @@ extern uint64_t mq_dispatchcall(
     uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5,
     virt_t func);
 
-// returns errno or does not return at all
+/** Message queue dispatcher. Receives messages and calls functions
+ *  accordingly.
+ *  Returns errno or does not return at all */
 public uint64_t mq_dispatch()
 {
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)TEXT_ADDRESS;

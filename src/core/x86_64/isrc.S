@@ -132,11 +132,9 @@ isr_syscall0:
     addq    irq_routing_table, %rsi
     movq    (%rsi), %rsi
     cmpq    tcb_memroot, %rsi
-    jne     2f
+    jne     9f
     /* enable the given irq */
     call    isr_enableirq
-2:  cmpq    $0, isr_next
-    jnz     7f
     jmp     9f
 
 3:  call    isr_syscall
@@ -189,9 +187,11 @@ isr_syscall0:
 1:  movw    $EINVAL, tcb_errno
 
 8:  call    isr_loadcontext
-    /* raise priority level on return (idle task) */
-    cmpw    $8, __PAGESIZE-32
-    jne     9f
+    /* raise priority level on return (idle task only) */
+    cmpq    $idle, __PAGESIZE-40
+    jb      9f
+    cmpq    $idle+4, __PAGESIZE-40
+    ja      9f
     movq    $__PAGESIZE-40, %rsp
     iretq
 9:  movq    __PAGESIZE-24, %r11

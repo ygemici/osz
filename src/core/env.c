@@ -196,6 +196,7 @@ void env_init()
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
     fps = 10;
+    sysinfostruc.magic = SYSINFO_MAGICH;
     sysinfostruc.nropenmax = 16;
     sysinfostruc.quantum = 100;
     sysinfostruc.display = DSP_MONO_COLOR;
@@ -270,7 +271,8 @@ void env_init()
         // to allocate CPU continously (1/quantum sec)
         if(!kmemcmp(env, "quantum=", 8)) {
             env += 8;
-            env = env_dec(env, &sysinfostruc.quantum, 10, 10000);
+            env = env_dec(env, &tmp, 10, 10000);
+            sysinfostruc.quantum=(uint32_t)tmp;
         } else
         // maximum frame rate per second
         // suggested values 60-1000

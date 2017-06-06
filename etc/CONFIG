@@ -29,7 +29,7 @@ fps=20
 //  ri = run-time linker imports, re = run-time exports
 //  ir = IRQ Routing Table, de = devices, sc = scheduler
 //  ms = messaging, lo = print out system log
-debug=
+debug=sc
 
 // display transformation type, decimal number 0-3 or one of:
 //  0 mc = mono channel, rgb color

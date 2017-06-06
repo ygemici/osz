@@ -36,26 +36,35 @@
 _init:
     /* initialize */
     call    mouse_init@PLT
+
     /* wait for an IRQ message */
 1:  call    mq_recv@PLT
+
     /* failsafe */
     cmpw    $SYS_IRQ, (%rax)
     jne     1b
+    xorq    %rsi, %rsi
+    movb    8(%rax), %sil
+
     /* irq==1? */
-    cmpw    $1, 8(%rax)
-    je      2f
+    cmpb    $1, %sil
+    jne     2f
+    call    3f
+    call    irq1@PLT
+    jmp     1b
+
     /* irq==12? */
-    cmpw    $12, 8(%rax)
+2:  cmpb    $12, %sil
     jne     1b
+    call    3f
     call    irq12@PLT
-    /* IRQ ack to re-enable */
-    movq    $12, %rsi
-    jmp     3f
-2:  call    irq1@PLT
-    /* IRQ ack to re-enable */
-    movq    $1, %rsi
-3:  xorq    %rdi, %rdi
+    jmp     1b
+
+3:  /* IRQ ack to re-enable */
+    pushq   %rax
+    xorq    %rdi, %rdi
     movb    $SYS_ack, %dil
     movl     $0x646E6573, %eax # 'send'
     syscall
-    jmp     1b
+    popq    %rax
+    ret

@@ -244,7 +244,7 @@ void dbg_tcb()
         fg=dbg_theme[4];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("\n[Hybernation info]\n");
+        kprintf("\n\n[Hybernation info]\n");
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
@@ -418,11 +418,10 @@ void dbg_code(uint64_t rip, uint64_t rs)
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    /* find a start position */
+    /* find a start position. This is tricky on x86 */
     if(dbg_lastrip && dbg_lastrip > rip)
         dbg_start = rip;
     if(dbg_start == rip || dbg_start == 0) {
-again:
         dbg_next = dbg_start = rip;
         do {
             dbg_start--;
@@ -433,6 +432,7 @@ again:
         rip-15);
     if(lastsym && j < lastsym)
         j = lastsym;
+again:
     i = 0;
     dbg_start = j;
     ptr = j;
@@ -447,6 +447,7 @@ again:
         }
     }
     if(!i) {
+        if(j>rip-63) j--; else j=rip;
         goto again;
     }
     dbg_next = disasm(dbg_start, NULL);
@@ -1240,7 +1241,8 @@ getcmd:
         }
         fg = 0x404040; bg=0;
         dbg_putchar(13);
-        kx = maxx-5 - (tcb->mypid>0xff?(tcb->mypid>0xffff?8:2):1) - kstrlen((char*)tcb->name);
+        kx = maxx-5 - (tcb->mypid>0xff?(tcb->mypid>0xffff?8:2):1) 
+            - ((char*)tcb->name==NULL?4:kstrlen((char*)tcb->name));
         ky = maxy-1;
         scry = -1;
         if(dbg_tui) {
