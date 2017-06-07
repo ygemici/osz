@@ -45,14 +45,10 @@
 #define ISR_EXCMAX 128      //maximum code size of exception ISRs
 #define ISR_IRQMAX 256      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
-#if OPTIMIZE != 1
-/* minimum, PIC (with PIT/RTC) */
+/* minimum, PIC (with PIT/RTC) or APIC, x2APIC (HPET only) */
 #define ISR_CTRL CTRL_PIC
-#else
-/* best performance, APIC or x2APIC (HPET only) */
-#define ISR_CTRL CTRL_APIC
+//#define ISR_CTRL CTRL_APIC
 //#define ISR_CTRL CTRL_x2APIC
-#endif
 
 #define TMR_HPET		1
 #define TMR_PIT			2
