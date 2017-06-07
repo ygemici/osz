@@ -417,17 +417,17 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
     ZeroMem((void*)bootboot,PAGESIZE);
     CopyMem(bootboot->magic,BOOTBOOT_MAGIC,4);
+    // unlike BIOS bootboot, no need to check if we have
+    // PAE + MSR + LME, as we're already in long mode.
     __asm__ __volatile__ (
         "mov $1, %%eax;"
         "cpuid;"
         "shrl $24, %%ebx;"
         "mov %%ebx,%0; mov %%ecx, %1"
         : "=b"(bootboot->bspid), "=c"(ecx) : : );
-    // unlike BIOS bootboot, no need to check if we have
-    // PAE + MSR + LME, as we're already in long mode.
-Print(L"ecx %x\n",ecx);
-    if((ecx&1)!=1)
-        return report(EFI_UNSUPPORTED, L"Hardware not supported, no SSE3");
+    //check SSSE3 (needed for alpha blending)
+    if(!(ecx&512))
+        return report(EFI_UNSUPPORTED, L"Hardware not supported, no SSSE3");
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     RootDir = LibOpenRoot(loaded_image->DeviceHandle);
