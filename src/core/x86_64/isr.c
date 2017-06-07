@@ -182,24 +182,29 @@ void isr_init()
     //   1 = HPET
     //   2 = PIT
     //   3 = RTC
-    //   4 = LAPIC
+#if ISR_CTRL == CTRL_PIC
     if(clocksource>3) clocksource=0;
     if(clocksource==0) {
         clocksource=hpet_addr==0?TMR_PIT:TMR_HPET;
     }
+#else
+    clocksource = TMR_HPET;
+#endif
     //if HPET not found, fallback to PIT
-    if(clocksource==TMR_HPET && hpet_addr!=0)
+    if(clocksource==TMR_HPET && hpet_addr!=0) {
         hpet_init();
-    else if(clocksource==TMR_RTC)
+#if ISR_CTRL == CTRL_PIC
+    } else if(clocksource==TMR_RTC) {
         rtc_init();
-    else {
+    } else {
         clocksource=TMR_PIT;
         pit_init();
+#endif
     }
 
     /* checks */
     if(tmrfreq<1000 || tmrfreq>TMRMAX)
-        kpanic("unable to load timer driver");
+        kpanic("unable to load timer driver %s", tmrname[clocksource-1]);
 
     if(sysinfostruc.quantum<10)
         sysinfostruc.quantum=10;         //min 10 task switch per sec
