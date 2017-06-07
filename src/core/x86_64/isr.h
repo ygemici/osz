@@ -46,11 +46,11 @@
 #define ISR_IRQMAX 256      //maximum code size of IRQ ISRs
 #define ISR_STACK 128       //minimum size of stack for ISRs
 #if OPTIMIZE != 1
-/* you can change this, either PIC or APIC */
+/* you can change this, either PIC (with PIT/RTC) or APIC (HPET only) */
 #define ISR_CTRL CTRL_PIC
 #else
-/* never change this */
-#define ISR_CTRL CTRL_PIC  //should be x2APIC, but kvm does not support it :-(
+/* never change this, HPET only */
+#define ISR_CTRL CTRL_x2APIC
 #endif
 
 #define TMR_HPET		1

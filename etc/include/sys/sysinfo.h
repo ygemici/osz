@@ -107,28 +107,28 @@ sysinfo_t *sysinfo();                   // query system information
 #define sysinfo_mem_free 72
 #define sysinfo_mem_total 80
 #define sysinfo_ticks 88
-#define sysinfo_ts 96
-#define sysinfo_nts 104
-#define sysinfo_jiffy_lo 112
-#define sysinfo_jiffy_hi 120
-#define sysinfo_srand0 128
-#define sysinfo_srand1 136
-#define sysinfo_srand2 144
-#define sysinfo_srand3 152
+#define sysinfo_ts 88
+#define sysinfo_nts 96
+#define sysinfo_jiffy_lo 104
+#define sysinfo_jiffy_hi 112
+#define sysinfo_srand0 120
+#define sysinfo_srand1 128
+#define sysinfo_srand2 136
+#define sysinfo_srand3 144
 
 /*** Platform specific ***/
-#define sysinfo_systables 160
+#define sysinfo_systables 152
 
 #ifdef OSZ_ARCH_Aarch64
 #endif
 
 #ifdef OSZ_ARCH_x86_64
-#define sysinfo_acpi_ptr 160
-#define sysinfo_smbi_ptr 168
-#define sysinfo_efi_ptr 176
-#define sysinfo_mp_ptr 184
-#define sysinfo_apic_ptr 192
-#define sysinfo_dsdt_ptr 200
+#define sysinfo_acpi_ptr 152
+#define sysinfo_smbi_ptr 160
+#define sysinfo_efi_ptr 168
+#define sysinfo_mp_ptr 176
+#define sysinfo_apic_ptr 184
+#define sysinfo_dsdt_ptr 192
 
 #define systable_acpi_idx 0
 #define systable_smbi_idx 1

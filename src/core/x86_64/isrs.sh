@@ -124,7 +124,7 @@ cat >isrs.S <<EOF
 .global isr_irqtmr_rtc
 .global isr_enableirq
 .global isr_disableirq
-
+.extern isr_maxirq
 .extern isr_savecontext
 .extern isr_loadcontext
 .extern isr_syscall0
@@ -288,13 +288,13 @@ isr_inithw:
     /* LSTAR */
     incl	%ecx
     movq	\$isr_syscall0, %rax
-    movq    %rax, %rdx
-    shrq    \$32, %rdx
+    movq	%rax, %rdx
+    shrq	\$32, %rdx
     wrmsr
     /* SFMASK */
     incl	%ecx
     incl	%ecx
-    xorl    %eax, %eax
+    xorl	%eax, %eax
     wrmsr
 /* initialize IRQs, masking all */
     /* remap PIC. We have to do this even when PIC is disabled. */
@@ -318,8 +318,9 @@ if [ "$ctrl" == "CTRL_PIC" ]; then
 	    /* PIC init */
 	    movb	\$0xFF, %al
 	    outb	%al, \$PIC_SLAVE_DATA
-	    btrw	\$2, %ax /* enable cascade irq 2 */
+	    btrw	\$2, %ax		/* enable cascade irq 2 */
 	    outb	%al, \$PIC_MASTER_DATA
+	    movw	\$16, isr_maxirq
 	EOF
 	read -r -d '' EOI <<-EOF
 	    /* PIC EOI */
@@ -341,7 +342,7 @@ else
 	    /* IOAPIC init */
 	    movq	ioapic_addr, %rax
 	    orq 	%rax, %rax
-	    jnz  	1f
+	    jnz 	1f
 	    movq	\$nopic, %rdi
 	    movq	\$ioctrl, %rsi
 	    call	kpanic
@@ -354,12 +355,26 @@ else
 	    call	kmap
 	    addq	\$__PAGESIZE, pmm + 40
 
+	    /* get number of IRQ lines */
+	    movq	ioapic, %rsi
+	    xorl	%eax, %eax
+	    incl	%eax
+	    movl	%eax, (%rsi)
+	    movl	16(%rsi), %eax
+	    shrl	\$16, %eax
+	    andw	\$0x7f, %ax
+	    decw	%ax
+	    cmpw	\$$numirq, %ax
+	    jb  	1f
+	    movw	\$$numirq, %ax
+	1:  movw	%ax, isr_maxirq
+
 	    /* setup IRQs, mask them all */
 	    xorq	%rdi, %rdi
 	1:  call	isr_disableirq
-	    incl	%edi
-	    cmpl	\$$numirq, %edi
-	    jne		1b
+	    incw	%di
+	    cmpw	isr_maxirq, %di
+	    jne 	1b
 
 	    /* enable IOAPIC in IMCR */
 	    movb	\$0x70, %al
@@ -404,12 +419,13 @@ else
 		    call	kpanic
 		    1:
 		    /* find apic physical address */
-		    movq	lapic_addr, %rax
+		    movq	sysinfostruc+sysinfo_apic_ptr, %rax
 		    orq		%rax, %rax
 		    jnz		1f
 		    movl	\$0x1B, %ecx
 		    rdmsr
 		    andw	\$0xF000, %ax
+		    movq	%rax, sysinfo_apic_ptr
 		    1:
 		    /* map apic at pmm.bss_end and increase bss pointer */
 		    movq	pmm + 40, %rdi
@@ -447,12 +463,6 @@ else
 fi
 
 cat >>isrs.S <<-EOF
-	    /* setup IRQs, mask them all */
-	    xorq	%rdi, %rdi
-	1:  call	isr_disableirq
-	    incl	%edi
-	    cmpl	\$$numirq, %edi
-	    jne		1b
 	    /* enable NMI */
 	    inb		\$0x70, %al
 	    btrw	\$8, %ax
@@ -616,17 +626,17 @@ call dbg_putchar
 	    movq	%rax, %cr3
 	    xorq	%rax, %rax
 	    xorq	%rdi, %rdi
-	    /* if running? */
+	    /* is task running? */
 	    cmpb	\$2, tcb_state
 	    je		1f
 	    callq	sched_awake
 	1:  /* isr_disableirq(irq); */
 	    xorq	%rdi, %rdi
 	    movb	\$$isr, %dil
-	    pushq   %rdi
+	    pushq	%rdi
 	    call	isr_disableirq
 	    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-	    popq    %rdx
+	    popq	%rdx
 	    xorq	%rcx, %rcx
 	    xorq	%rsi, %rsi
 	    movq	\$MQ_ADDRESS, %rdi

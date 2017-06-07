@@ -76,6 +76,8 @@ pid_t __attribute__ ((section (".data"))) *irq_routing_table;
 
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
+uint16_t __attribute__ ((section (".data"))) isr_maxirq;
+
 /* get system timestamp from a BCD date */
 uint64_t isr_getts(char *p, int16_t timezone)
 {
@@ -227,14 +229,17 @@ void isr_init()
     qcnt = sysinfostruc.quantum;
 
     // set up isr_syscall dispatcher and IDTR, also mask all IRQs
+    isr_maxirq = 0;
     isr_inithw(idt, &ccb);
+    if(!isr_maxirq)
+        isr_maxirq=16;
 }
 
 void isr_fini()
 {
     int i;
-    syslog_early("IRQ Routing Table (%d IRQs)", ISR_NUMIRQ);
-    for(i=0;i<ISR_NUMIRQ;i++) {
+    syslog_early("IRQ Routing Table (%d IRQs)", isr_maxirq);
+    for(i=0;i<isr_maxirq;i++) {
         if(i==tmrirq)
             syslog_early(" %3d: core (Timer)", i);
         else if(irq_routing_table[i])
@@ -251,7 +256,7 @@ void isr_fini()
 
 int isr_installirq(uint8_t irq, phy_t memroot)
 {
-    if(irq>=0 && irq<ISR_NUMIRQ) {
+    if(irq>=0 && irq<isr_maxirq) {
         if(irq_routing_table[irq]!=0) {
             syslog_early("too many IRQ handlers for %d\n", irq);
             return EIO;

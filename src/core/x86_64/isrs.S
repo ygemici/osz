@@ -38,7 +38,7 @@
 .global isr_irqtmr_rtc
 .global isr_enableirq
 .global isr_disableirq
-
+.extern isr_maxirq
 .extern isr_savecontext
 .extern isr_loadcontext
 .extern isr_syscall0
@@ -127,13 +127,13 @@ isr_inithw:
     /* LSTAR */
     incl	%ecx
     movq	$isr_syscall0, %rax
-    movq    %rax, %rdx
-    shrq    $32, %rdx
+    movq	%rax, %rdx
+    shrq	$32, %rdx
     wrmsr
     /* SFMASK */
     incl	%ecx
     incl	%ecx
-    xorl    %eax, %eax
+    xorl	%eax, %eax
     wrmsr
 /* initialize IRQs, masking all */
     /* remap PIC. We have to do this even when PIC is disabled. */
@@ -154,14 +154,9 @@ isr_inithw:
     /* PIC init */
     movb	$0xFF, %al
     outb	%al, $PIC_SLAVE_DATA
-    btrw	$2, %ax /* enable cascade irq 2 */
+    btrw	$2, %ax		/* enable cascade irq 2 */
     outb	%al, $PIC_MASTER_DATA
-    /* setup IRQs, mask them all */
-    xorq	%rdi, %rdi
-1:  call	isr_disableirq
-    incl	%edi
-    cmpl	$32, %edi
-    jne		1b
+    movw	$16, isr_maxirq
     /* enable NMI */
     inb		$0x70, %al
     btrw	$8, %ax
@@ -1048,17 +1043,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$0, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1088,17 +1083,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$1, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1128,17 +1123,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$2, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1168,17 +1163,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$3, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1208,17 +1203,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$4, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1248,17 +1243,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$5, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1288,17 +1283,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$6, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1328,17 +1323,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$7, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1369,17 +1364,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$8, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1410,17 +1405,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$9, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1451,17 +1446,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$10, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1492,17 +1487,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$11, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1533,17 +1528,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$12, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1574,17 +1569,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$13, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1615,17 +1610,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$14, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1656,17 +1651,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$15, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1697,17 +1692,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$16, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1738,17 +1733,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$17, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1779,17 +1774,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$18, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1820,17 +1815,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$19, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1861,17 +1856,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$20, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1902,17 +1897,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$21, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1943,17 +1938,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$22, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -1984,17 +1979,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$23, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2025,17 +2020,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$24, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2066,17 +2061,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$25, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2107,17 +2102,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$26, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2148,17 +2143,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$27, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2189,17 +2184,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$28, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2230,17 +2225,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$29, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2271,17 +2266,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$30, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2312,17 +2307,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$31, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
@@ -2353,17 +2348,17 @@ call dbg_putchar
     movq	%rax, %cr3
     xorq	%rax, %rax
     xorq	%rdi, %rdi
-    /* if running? */
+    /* is task running? */
     cmpb	$2, tcb_state
     je		1f
     callq	sched_awake
 1:  /* isr_disableirq(irq); */
     xorq	%rdi, %rdi
     movb	$32, %dil
-    pushq   %rdi
+    pushq	%rdi
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
-    popq    %rdx
+    popq	%rdx
     xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
