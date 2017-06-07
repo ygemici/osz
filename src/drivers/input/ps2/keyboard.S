@@ -88,18 +88,25 @@ irq1:
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
-    /* handle Ctrl + Alt + Del */
+    /* handle Ctrl + Alt */
     cmpb    $0x38, kbd_hist+0(%rip)
     jne     5f
     cmpb    $0x1D, kbd_hist+1(%rip)
     jne     5f
+    /* handle Ctrl + Alt + Del */
     cmpw    $0x53, %si
     je      6f
     cmpw    $0xd3, %si
-    jne     5f
+    jne     4f
 6:  movb    $0xFE, %al
     outb    %al, $0x64
     hlt
+4:  /* handle Ctrl + Alt + Esc */
+    cmpw    $0x1, %si
+    je      6f
+    cmpw    $0x81, %si
+    jne     5f
+6:  int     $1
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %sil, kbd_hist+0(%rip)

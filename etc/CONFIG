@@ -39,7 +39,7 @@ display=0
 
 // select clock source
 //  0 autodetect, 1 hpet, 2 pit, 3 rtc
-clock=pit
+clock=rtc
 
 // close with 3 empty lines. Keep space for dynamic arguments
 

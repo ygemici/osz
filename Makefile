@@ -50,6 +50,8 @@ usrs: usr
 	@echo "USERSPACE"
 	@make -e --no-print-directory -C usr all | grep -v 'Nothing to be done' || true
 
+bin/disk.dd: images
+
 images: tools
 	@echo "IMAGES"
 	@make -e --no-print-directory -C tools images | grep -v 'Nothing to be done' | grep -v 'lowercase' || true
@@ -82,24 +84,30 @@ gdb:
 
 test: testq
 
-testefi:
+testefi: bin/disk.dd
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -option-rom loader/bootboot.rom -d guest_errors -monitor stdio
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
 	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-testq:
+testq: bin/disk.dd
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -cpu host,+avx,+x2apic,enforce -serial mon:stdio
 	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -machine kernel-irqchip=on -cpu host,+avx,+x2apic,enforce -serial mon:stdio
 	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-testb:
+testb: bin/disk.dd
 	@echo "TEST"
 	@echo
 	@rm bin/disk.dd.lock 2>&1 >dev/null || true
+	@#stupid bochs panic when symbols not found...
+	@cat etc/bochs.rc | grep -v debug_symbols >etc/b
+	@mv etc/b etc/bochs.rc
+ifneq ($(wildcard bin/core.sym),)
+	echo "debug_symbols: file=bin/core.sym, offset=0" >>etc/bochs.rc
+endif
 ifneq ($(wildcard /usr/local/bin/bochs),)
 	/usr/local/bin/bochs -f etc/bochs.rc -q
 else

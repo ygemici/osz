@@ -273,6 +273,10 @@ isr_timer:
     jmp     3f
 1:
 
+    /* never preempt real-time and driver tasks */
+    cmpb    $PRI_SRV, tcb_priority
+    jb      1f
+
     /* qcnt--; */
     decq    qcnt
     /* qcnt==0? */
@@ -286,4 +290,16 @@ isr_timer:
 3:  /* qcnt = qdiv; */
     movq    qdiv, %rax
     movq    %rax, qcnt
-1:  ret
+1:
+
+#if DEBUG
+    /* polling serial line, check LSR */
+    movw    $0x3f8+5, %dx
+    inb     %dx, %al
+    /* brk requested? call internal debugger */
+    btw     $4, %ax
+    jnc     1f
+    int     $1
+1:
+#endif
+    ret

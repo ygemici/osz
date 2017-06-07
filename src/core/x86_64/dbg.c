@@ -1091,7 +1091,7 @@ void dbg_init()
         "movb $1, %%al;subb $3,%%dl;outb %%al, %%dx;"    //DLL divisor lo 115200
         "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //DLH divisor hi
         "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //FCR fifo off
-        "movb $3, %%al;incb %%dl;outb %%al, %%dx;"       //LCR 8N1
+        "movb $0x43, %%al;incb %%dl;outb %%al, %%dx;"    //LCR 8N1, break on
         "movb $0x8, %%al;incb %%dl;outb %%al, %%dx;"     //MCR Aux out 2
         "xorb %%al, %%al;subb $4,%%dl;outb %%al, %%dx;inb %%dx, %%al"   //clear receiver/transmitter
     :::"%rax","%rdx");

@@ -565,7 +565,7 @@ xchg %bx, %bx
     subq	\$$isrstack, ccb + ccb_ist1
     $EOIRTC
     call	isr_timer
-    /* acknowledge irq8 in RTC */
+    /* acknowledge IRQ8 in RTC */
     movb	\$0x0C, %al
     outb	%al, \$0x70
     jmp		1f
@@ -597,12 +597,15 @@ do
 		EOI="$EOI2";
 	fi
 	pos=$[$isr*8]
+	d=$[$isr+48]
 	cat >>isrs.S <<-EOF
 	isr_irq$isr:
 	    cli
 	    call	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist1
 	    $EOI
+movb \$$d, %dil
+call dbg_putchar
 	    /* tcb->memroot == irq_routing[isr]? */
 	    movq	irq_routing_table, %rax
 	    addq	\$$pos, %rax
