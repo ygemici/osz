@@ -11,12 +11,12 @@ Requirements
 Compilation
 -----------
 
-The make system is created in a way that you can say `make all` in
-almost every directory. If you do that in the top level directory,
-it will compile everything and will also build disk image for you.
+The make system is created in a way that you can say `make all` in almost every directory. If you do that in the top level
+directory, it will compile everything and will also build disk image for you, but surpressing messages. In subdirectories make
+will always display the full command executed during compilation.
 
-For example if you enter `src/fs` and issue the command there, then only
-the filesystem subsystem will be recompiled.
+For example if you enter `src/fs` and issue `make all` there, then only the filesystem subsystem will be recompiled, and
+you'll be able to see the exact commands used.
 
 So to compile all the things, simply type
 
@@ -30,39 +30,37 @@ You should see something similar to this:
 $ make all
 TOOLS
   src		mkfs.c
-  src		efirom.c
   src		elftool.c
-LOADER
-  src		efi/inffast.c
-  src		efi/inflate.c
-  src		efi/inftrees.c
-  src		efi/bootboot.c
-  src		efi-x86_64
 CORE
-  src		lib/sys/core (x86_64)
-  src		lib/libc.so (x86_64)
+  gen		x86_64/isrs.S (PIC, numirq 32, idtsz 4096)
+  lnk		lib/sys/core (x86_64)
+  lnk		lib/libc.so (x86_64)
 BASE
   src		sbin/ui
   src		bin/sh
+  src		bin/test
+  src		sbin/sys
   src		sbin/syslog
+  src		sbin/sound
   src		sbin/fs
   src		sbin/net
-  src		sbin/system
   src		sbin/init
 DRIVERS
-  src		mmedia/sblive.so
-  src		network/ne2k.so
-  src		input/ps2.so
   src		fs/gpt.so
   src		fs/vfat.so
   src		fs/fsz.so
+  src		mmedia/sblive.so
+  src		network/ne2k.so
+  src		input/ps2.so
   src		display/fb.so
+  src		lib/sys/drv
+USERSPACE
 IMAGES
   mkfs		initrd
-  mkfs		ESP partition
-  mkfs		usr partition
-  mkfs		var partition
-  mkfs		home partition
+  mkfs		boot (ESP)
+  mkfs		usr
+  mkfs		var
+  mkfs		home
   mkfs		bin/disk.dd
 ```
 
@@ -87,4 +85,4 @@ $ make testb
 $ make testv
 ```
 
-You can find a detailed [tutorial on testing](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md).
+There's a detailed [tutorial on testing](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md).

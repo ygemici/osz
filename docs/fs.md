@@ -7,7 +7,7 @@ but without their limitations.
 Block size can be 2048, 4096, 8192... etc. The suggested sector size is multiple of 4096 which matches the TLB page size.
 That would ease the loading of sectors to memory.
 
-For detailed specification, see [fsZ.h](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h).
+For detailed bit level specification and on disk format see [fsZ.h](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h).
 
 Fully Qualified File Path
 -------------------------
@@ -44,16 +44,17 @@ checksums to decide which sector is correct.
 File ID
 -------
 
-The file id (fid in short) is a scalar logical sector number up to 2^128. It's only valid if the pointed sector holds an inode structure.
-In other words, the data must start with the bytes "FSIN".
+The file id (fid in short) is a scalar logical sector number up to 2^128. It's only valid if the pointed sector holds an
+inode structure. In other words, the data must start with the bytes "FSIN".
 
 Inode
 -----
 
-The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's the first 1024 bytes of
-a sector. It can contain several versions thus allowing not only easy snapshot recovery, but per file recovery as well.
+The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's the first
+1024 bytes of a sector. It can contain several versions thus allowing not only easy snapshot recovery, but per file recovery
+as well.
 
-FS/Z also stores meta information (like mime type and checksum) on the contents, and supports meta labels.
+FS/Z also stores meta information (like mime type and checksum) on the contents, and supports meta labels in inodes.
 
 Contents have their own address space (other than fids). To support that, FS/Z has two different fid translation mechanisms.
 The first one is similar to memory mapping, and the other stores variable sized areas, so called extents.
@@ -61,24 +62,26 @@ The first one is similar to memory mapping, and the other stores variable sized 
 Sector List
 -----------
 
-Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting fid and the number of sectors in that area.
-In list fids can go up to 2^96 and the maximum area size is 2^32*(sectorsize).
+Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting fid and the number
+of sectors in that area. In list fids can go up to 2^96 and the maximum area size is 2^32*(sectorsize).
 
 Sector Directory
 ----------------
 
-A sector that has (sectorsize)/16 fid entries. The building block of memory paging like translations. Unlike sector lists, sector directories can
-handle fids up to 2^128, but describe fix sized, continous areas on disk. Not to confuse with common directories which are used to assign names to fids.
+A sector that has (sectorsize)/16 fid entries. The building block of memory paging like translations. Unlike sector lists,
+sector directories can handle fids up to 2^128, but describe fix sized, continous areas on disk. Not to confuse with common
+directories which are used to assign names to fids.
 
 Directory
 ---------
 
-Every directory have 128 bytes long entries which gives 2^121-1 as the maximum number of entries in one directory. The first entry is reserved for
-the directory header, the others are normal fid and name assignments. Entries are alphabetically ordered thus allowing fast O(log n) look ups.
+Every directory have 128 bytes long entries which gives 2^121-1 as the maximum number of entries in one directory. The first
+entry is reserved for the directory header, the others are normal fid and name assignments. Entries are alphabetically ordered
+thus allowing fast O(log n) look ups.
 
-16 bytes go for the fid, 1 byte reserved for the number of characters (not bytes) in the filename. That gives 111 bytes for filename
-(maybe less in characters as UTF-8 is a variable length encoding). That's the hardest limitation in FS/Z, but let's face it
-most likely you've never seen a filename longer than 42 characters in your whole life.
+16 bytes go for the fid, 1 byte reserved for the number of characters (not bytes) in the filename. That gives 111 bytes for
+filename (maybe less in characters as UTF-8 is a variable length encoding). That's the hardest limitation in FS/Z, but let's
+face it most likely you've never seen a filename longer than 42 characters in your whole life.
 
 Mounts
 ------
@@ -88,15 +91,16 @@ also the case if the directory is a mount point for a block device. There referi
 allow to fread() and fwrite() the storage at block level, whilst referencing with a terminating '/' would allow to use opendir()
 and readdir(), which would return the root directory of the filesystem stored on that device.
 
-Examples, all pointing to the same directory, as boot partition (the first bootable partition of the first bootable disk, FS0: in EFI)
-is mounted on the root volume at /boot:
+Examples, all pointing to the same directory, as boot partition (the first bootable partition of the first bootable disk,
+FS0: in EFI) is mounted on the root volume at /boot:
 
 ```
  /boot/EFI/
  root:/boot/EFI/
  boot:/EFI/
  /dev/boot/EFI/
-
+```
+```
  /dev/boot       // sees as a block device, you can use fread() and fwrite()
  /dev/boot/      // root directory of the filesystem on the device, use with opendir(), readdir()
 ```

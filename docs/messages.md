@@ -100,7 +100,7 @@ Examples
 ```
     xorq    %rdi, %rdi
     movb    $SYS_sysinfo, %dil
-    movl     $0x646E6573, %eax # 'send'
+    movl    $0x646E6573, %eax # 'send'
     syscall
 ```
 or
@@ -109,6 +109,6 @@ or
     movb    $EINVAL, %sil
     xorq    %rdi, %rdi
     movb    $SYS_seterr, %dil
-    movl     $0x646E6573, %eax # 'send'
+    movl    $0x646E6573, %eax # 'send'
     syscall
 ```

@@ -10,7 +10,7 @@ Memory is allocated at several levels:
 Memory Mapping
 --------------
 
-All processes have their own memory mappings. Some pages are different,
+All tasks have their own memory mappings. Some pages are different,
 some are shared. Device [drivers](https://github.com/bztsrc/osz/tree/master/docs/drivers.md) are a special tasks,
 with a slightly different mapping, as MMIO areas are writable in their bss segment. They are also allowed to 
 execute in/out instructions, and therefore access IO address space.
@@ -29,7 +29,7 @@ User Tasks
 |     x .. 4G-1   | process | shared libraries (read only / read/write) |
 |    4G .. 2^56   | process | dynamically allocated bss memory (growing upwards, read/write) |
 
-Normal userspace processes do not have any MMIO, only physical RAM can be mapped in their bss segment.
+Normal userspace tasks do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.
 
 The maximum number of pending events in a queue is a boot time parameter and can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrmqmax". It's given
@@ -38,7 +38,8 @@ in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 pa
 Core Memory
 -----------
 
-The pages for the core are marked as supervisor only, meaning userspace programs cannot access it.
+The pages for the core are marked as supervisor only, meaning userspace programs cannot access it. They are also globally
+mapped to every task's address space.
 
 | Virtual Address | Description |
 | --------------- | ----------- |

@@ -248,6 +248,9 @@ void sys_init()
 /*** Called when the "idle" task first scheduled ***/
 void sys_ready()
 {
+#if DEBUG
+    __asm__ __volatile__("int $3;xchg %bx,%bx");
+#endif
     /* finish up ISR initialization */
     isr_fini();
     /* log we're ready */

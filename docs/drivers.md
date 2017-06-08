@@ -1,9 +1,11 @@
 OS/Z Device Drivers
 ===================
 
-/* FIME: rewrite, drivers are now separated into threads */
-They are shared libs which are loaded to device driver task's address space and allowed to map MMIO and use in/out instructions.
-They have a common, platform independent event dispatcher, [src/drivers/drv.c](https://github.com/bztsrc/osz/blob/master/src/drivers/drv.c).
+Drivers are shared libraries which are loaded into separate address spaces after a
+a common, platform independent event dispatcher, [src/drivers/drv.c](https://github.com/bztsrc/osz/blob/master/src/drivers/drv.c).
+They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
+are normal userspace applications, although they are never pre-empted (when their `_init()` function is called, all the IRQs are
+disabled (so as timer), and when the IRQ handler gets called it could cause trouble).
 
 Supported devices
 -----------------
@@ -66,7 +68,7 @@ Among the source files of the driver, there are two special ones:
 | platforms | List of platforms for which this driver should be compiled |
 
 Both files are newline (0x0A) separated list of words. The devices file
-has special entries:
+has the following entries:
 
 | Entry | Description |
 | ----- | ----------- |
@@ -82,8 +84,6 @@ device.
 
 Platform files just list platforms, like "x86_64". At compilation time it will be checked,
 and if the platform it's compiling for not listed there, the driver won't be compiled. This
-is an easy to avoid having PS2 driver and such when creating for example an AArch64 image, yet
+is an easy way to avoid having PS2 driver and such when creating for example an AArch64 image, yet
 you won't have to rewrite drivers for every architecture that supports it (like a usb storage
 driver).
-
-

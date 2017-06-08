@@ -26,23 +26,22 @@ OS/Z has 8 priority levels:
 | 6 | PRI_APPL | Application Low |
 | 7 | PRI_IDLE | Idle |
 
-The top priority level is PRI_SYS (zero). This level is uninterruptible meaning there's no time slice for a lower priority tasks.
-This queue normally is empty, and it's reserved for emergenceny tasks.
+The top priority level is PRI_SYS (zero). This queue normally is empty, and it's reserved for emergenceny tasks.
 
 After that comes PRI_RT (1) for real time tasks. These have the highest priority a user task can own.
 
-That's followed by PRI_DRV (2) for user space device and filesystem drivers.
+That's followed by PRI_DRV (2) for user space device and filesystem drivers. These top 3 levels are uninterruptible,
+meaning the scheduler will never pre-empt a running task in them.
 
-The next one is PRI_SRV (3) for services aka unix daemons.
+The next one is PRI_SRV (3) for services aka unix daemons. This is the first time shared, pre-emptible level.
 
 Normal applications have three levels, which allows balancing different programs. These are PRI_APPH (4, high priority)
 for example video players and games, PRI_APP (5, normal priority) for example editors and browsers, and PRI_APPL
-(6, low priority) for example some background tasks.
+(6, low priority) for example weather widget.
 
-Finally PRI_IDLE (7). The last level just like the first one is special. Normally this level is never reached, only
-when there're no other runnable (non-blocked) threads at higher priority levels. The screensaver and memory defragmenter
-runs at this level for example. If even this level is empty or blocked, then a special function is scheduled in the
-"idle" task that halts the CPU.
+Finally PRI_IDLE (7). This level is only scheduled when there're no other runnable (non-blocked) threads at higher
+priority levels. The screensaver and memory defragmenter runs at this level for example. If even this level is empty or
+blocked, then a special function is scheduled in the ["idle" task](https://github.com/bztsrc/osz/tree/master/src/core/x86_64/libk.S) that halts the CPU.
 
 Example
 -------

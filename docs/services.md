@@ -2,10 +2,10 @@ OS/Z Services
 =============
 
 There are two different kind of services: system services and user services. System services
-must reside on the initial ramdisk, and they are the server counterparts of libc, and they
+must reside on the initial ramdisk, as they are the server counterparts of libc, and they
 cannot be controlled from userspace. User services on the other hand are controlled by the
 init system service, and they can be loaded from external disks as well. The system services
-group is divided into another two fractions: critical and non-critical
+group is divided into another two fractions: critical and non-critical ones.
 
 ### Service hierarchy
 
@@ -66,7 +66,8 @@ Syslog
 
 The system logger daemon. Syslog's bss segment is a circular buffer that periodically flushed to disk. On boot,
 CORE is gathering it's logs in a temporary buffer (using syslong_early() function). The size of the buffer can be
-configured with `nrlogmax=4`. That buffer is shared with the "syslog" task.
+configured with `nrlogmax=4`. That buffer is shared with the "syslog" task. You can turn logging off with the
+boot paramter `syslog=false`. When disabled, the same service can be provided by an alternative non-system service.
 
 Typical functions: syslog(), setlogmask().
 

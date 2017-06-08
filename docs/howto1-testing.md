@@ -62,10 +62,11 @@ Second Break Point - OS/Z boot ends
 -----------------------------------
 
 The first intersting point is where the operating system was loaded (arranged
-it's memory, finished with interrupts) and is about to leave privileged mode by executing the very first `iretq`.
+it's memory, finished with task setup) and is about to leave privileged mode by executing the very first `iretq`.
 
 <img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png" alt="OS/Z Ready">
-You must see white on black "OS/Z ready." text on the top left corner of your screen,
+
+You must see white on black "OS/Z starting..." text on the top left corner of your screen,
 and something similar to this on debug console:
 
 ```
@@ -94,32 +95,16 @@ Stack address size 8
 ```
 We can see that the user mode code starts at 0x200000, and it's stack is right beneath it (which differs from IRQ handler's safe stack).
 
-By stepping through the iret instruction with <kbd>s</kbd>, you'll find yourself on the [.text.user](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) segment of core. This code
-will iterate through detected devices by calling their _init() method.
+Third Break Point - OS/Z ready
+------------------------------
 
-Check Point - Enabling Multitask
---------------------------------
-
-Before the third break point, [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md) is called with a
-checkpoint exception. This break point therefore is accessible in qemu and on real hardware too.
+When all drivers and system tasks initialized, [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md) is called with a
+checkpoint exception in `sys_ready()`. This break point therefore is accessible in qemu and on real hardware too.
 
 <img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg1.png?raw=true" alt="OS/Z Internal Debugger Line Console">
 <img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Internal Debugger Text User Interface">
-At the third break point we can see that driver initialization finished, and "SYS" task is
-about to send a message to core to enable interrupts. By doing so, it will unleash hell, as nobody
-will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's
-no need for locking.
-
-
-```
-(0) Magic breakpoint
-Next at t=22686813
-(0) [0x00000018104c] 0023:000000000020004c (_init+4c): mov eax, 0x646e6573       ; b873656e64 'send'
-<bochs:8>
-```
-
-The execution stopped right before the kernel call. After that comes [getwork](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/user.S) function that calls mq_recv()
-to get some work. When there's no more messages left, it blocks and scheduler picks the next
-task to run. The OS will switch to the next task every time an interrupt fires or the current task blocks.
+At the third break point we can see that driver initialization finished, and `sys_ready()` is about to call `isr_fini()` which will finish ISR
+initialization by enabling IRQs with registered tasks. By doing so, it will unleash hell, as nobody
+will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's no need for locking.
 
 If you are interested in debugging, read the [next tutorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).

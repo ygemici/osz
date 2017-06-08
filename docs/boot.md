@@ -34,24 +34,30 @@ That platform independent code does the following:
 
 After that it initializes subsystems (or system [services](https://github.com/bztsrc/osz/blob/master/docs/services.md)), begining with the three critical ones:
 
- 1. first is the user space counterpart of core, the idle task. Loaded by `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It's a very special user process and has a lot of platform dependent code. It loads [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md) instead of normal shared libraries, and MMIO areas are mapped in it's bss segment.
+ 1. first is `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), that loads idle task and [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md).
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal service, save it has the initrd entirely mapped in it's bss segment.
- 3. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike networking and sound services which are optional.
- 4. initializes syslog service by `syslog_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c).
- 5. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `init` service daemon.
- 6. says I'm "ready" covering out the "starting" message.
- 7. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
+ 3. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike syslog, networking and sound services which are optional.
+ 4. initializes syslog service by `syslog_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). It shares a buffer with core used by [syslog_early](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c).
+ 5. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `net`, `sound` and `init` service daemon.
+ 6. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 That `sys_enable()` function switches to the first device driver task, and starts executing it. The scheduler, 
 `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) will
-choose one by one in the PRI_DRV queue until all drivers blocks.
+choose one by one until all tasks blocks. Note that preemption is not enabled at this point. When the `idle` task
+is first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 Driver Initialization
 ---------------------
 
-The sys_init() enumerates system buses to locate devices and loads drivers for them. It will also fill up entries
-in IRQ Routing Table so that ISR will know to whom to send the message for a specific IRQ. It will also enable IRQs
-which has entries in IRT.
+The `sys_init()` function enumerates system buses to locate devices and loads drivers for them. It will also fill up entries
+in IRQ Routing Table so that ISR will know to whom to send the message for a specific IRQ. IRQs can be assigned three ways to tasks:
+
+ 1. use `irqXX()` function. That will assign IRQ XX.
+ 2. autodetected from system tables.
+ 3. using SYS_setirq syscall at driver's initialization code.
+
+When `sys_ready()` gets called, it will enable IRQs which has entries in IRT. It will also enable timer IRQ and with that
+enables pre-emption.
 
 User land
 ---------
