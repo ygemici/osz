@@ -614,8 +614,6 @@ do
 	    call	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist1
 	    $EOI
-movb \$$d, %dil
-call dbg_putchar
 	    /* tcb->memroot == irq_routing[isr]? */
 	    movq	irq_routing_table, %rax
 	    addq	\$$pos, %rax

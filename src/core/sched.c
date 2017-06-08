@@ -59,10 +59,11 @@ void sched_dump()
         p=ccb.hd_active[i];
         while(p!=0) {
             tcb=sched_get_tcb(p);
-            kprintf("%s%x%s ",
+            kprintf("%s%x%s(%x,%x) ",
                 tcb->mypid==ccb.cr_active[i]?">":"",
                 tcb->mypid,
-                tcb->mypid==curr->mypid?"*":"");
+                tcb->mypid==curr->mypid?"*":"",
+                tcb->prev,tcb->next);
             p=tcb->next;
         }
         kprintf("\n");
@@ -71,9 +72,10 @@ void sched_dump()
     p=ccb.hd_blocked;
     while(p!=0) {
         tcb=sched_get_tcb(p);
-        kprintf("%x%s ",
+        kprintf("%x%s(%x,%x) ",
             tcb->mypid,
-            tcb->mypid==curr->mypid?"*":"");
+            tcb->mypid==curr->mypid?"*":"",
+            tcb->prev,tcb->next);
         p=tcb->next;
     }
     kprintf("\n");
@@ -81,9 +83,10 @@ void sched_dump()
     p=ccb.hd_timerq;
     while(p!=0) {
         tcb=sched_get_tcb(p);
-        kprintf("%x%s ",
+        kprintf("%x%s(%x,%x) ",
             tcb->mypid,
-            tcb->mypid==curr->mypid?"*":"");
+            tcb->mypid==curr->mypid?"*":"",
+            tcb->prev,tcb->next);
         p=tcb->next;
     }
     kprintf("\n");
@@ -147,16 +150,15 @@ void sched_awake(OSZ_tcb *tcb)
     if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_awake(%x)\n", tcb->mypid);
 #endif
-    tcb->state = tcb_state_running;
-    isr_next = tcb->memroot;
     if(tcb->state == tcb_state_hybernated) {
         /* TODO: swap -> ccb.hd_active */
-    } else
+        tcb->state = tcb_state_blocked;
+    }
     if(tcb->state == tcb_state_blocked) {
         /* ccb.hd_blocked -> ccb.hd_active */
         tcb->blkcnt += tcb->blktime - sysinfostruc.ticks[TICKS_LO];
         sched_add(tcb);
-        if(ccb.hd_blocked == tcb->mypid) {
+        if(ccb.hd_blocked == pid) {
             ccb.hd_blocked = next;
         }
         if(prev != 0) {
@@ -169,6 +171,8 @@ void sched_awake(OSZ_tcb *tcb)
         }
         tcb = sched_get_tcb(pid);
     }
+    tcb->state = tcb_state_running;
+    isr_next = tcb->memroot;
 }
 
 // add a thread to priority queue
@@ -239,6 +243,7 @@ void sched_block(OSZ_tcb *tcb)
     // link as the first item in chain
     tcb->next = ccb.hd_blocked;
     tcb->prev = 0;
+    tcb->state = tcb_state_blocked;
     ccb.hd_blocked = pid;
 }
 

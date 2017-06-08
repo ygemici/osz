@@ -1031,8 +1031,6 @@ isr_irq0:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $48, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$0, %rax
@@ -1071,8 +1069,6 @@ isr_irq1:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $49, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$8, %rax
@@ -1111,8 +1107,6 @@ isr_irq2:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $50, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$16, %rax
@@ -1151,8 +1145,6 @@ isr_irq3:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $51, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$24, %rax
@@ -1191,8 +1183,6 @@ isr_irq4:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $52, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$32, %rax
@@ -1231,8 +1221,6 @@ isr_irq5:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $53, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$40, %rax
@@ -1271,8 +1259,6 @@ isr_irq6:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $54, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$48, %rax
@@ -1311,8 +1297,6 @@ isr_irq7:
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
-movb $55, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$56, %rax
@@ -1352,8 +1336,6 @@ isr_irq8:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $56, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$64, %rax
@@ -1393,8 +1375,6 @@ isr_irq9:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $57, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$72, %rax
@@ -1434,8 +1414,6 @@ isr_irq10:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $58, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$80, %rax
@@ -1475,8 +1453,6 @@ isr_irq11:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $59, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$88, %rax
@@ -1516,8 +1492,6 @@ isr_irq12:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $60, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$96, %rax
@@ -1557,8 +1531,6 @@ isr_irq13:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $61, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$104, %rax
@@ -1598,8 +1570,6 @@ isr_irq14:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $62, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$112, %rax
@@ -1639,8 +1609,6 @@ isr_irq15:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $63, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$120, %rax
@@ -1680,8 +1648,6 @@ isr_irq16:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $64, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$128, %rax
@@ -1721,8 +1687,6 @@ isr_irq17:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $65, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$136, %rax
@@ -1762,8 +1726,6 @@ isr_irq18:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $66, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$144, %rax
@@ -1803,8 +1765,6 @@ isr_irq19:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $67, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$152, %rax
@@ -1844,8 +1804,6 @@ isr_irq20:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $68, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$160, %rax
@@ -1885,8 +1843,6 @@ isr_irq21:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $69, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$168, %rax
@@ -1926,8 +1882,6 @@ isr_irq22:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $70, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$176, %rax
@@ -1967,8 +1921,6 @@ isr_irq23:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $71, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$184, %rax
@@ -2008,8 +1960,6 @@ isr_irq24:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $72, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$192, %rax
@@ -2049,8 +1999,6 @@ isr_irq25:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $73, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$200, %rax
@@ -2090,8 +2038,6 @@ isr_irq26:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $74, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$208, %rax
@@ -2131,8 +2077,6 @@ isr_irq27:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $75, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$216, %rax
@@ -2172,8 +2116,6 @@ isr_irq28:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $76, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$224, %rax
@@ -2213,8 +2155,6 @@ isr_irq29:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $77, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$232, %rax
@@ -2254,8 +2194,6 @@ isr_irq30:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $78, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$240, %rax
@@ -2295,8 +2233,6 @@ isr_irq31:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $79, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$248, %rax
@@ -2336,8 +2272,6 @@ isr_irq32:
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
     outb	%al, $PIC_MASTER
-movb $80, %dil
-call dbg_putchar
     /* tcb->memroot == irq_routing[isr]? */
     movq	irq_routing_table, %rax
     addq	$256, %rax
