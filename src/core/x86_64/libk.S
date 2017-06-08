@@ -235,9 +235,19 @@ kstrcmp:
     jnz     1b
 2:  ret
 
+/* rdi: virtual address
+   rsi: physical address
+   rdx: access rights
+*/
 kmap:
-    call    kmap_getpte
-    andw    $0xF000, %si
+    /* shortcut for tmpmap. It's often called from sched_get_tcb */
+    cmpq    $tmpmap, %rdi
+    jne     1f
+    movq    kmap_tmp, %rax
+    addq    $8, %rax
+    jmp     2f
+1:  call    kmap_getpte
+2:  andw    $0xF000, %si
     mov     %dl, %sil
     /* copy W bit to NX bit */
     andb    $2, %dl

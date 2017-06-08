@@ -40,7 +40,6 @@
 
 .extern alarmstep
 .extern alarmstepmax
-.extern sched_get_tcb
 .extern sched_awake
 .extern ccb
 .extern isr_next
