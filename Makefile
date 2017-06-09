@@ -101,7 +101,7 @@ testq: bin/disk.dd
 testb: bin/disk.dd
 	@echo "TEST"
 	@echo
-	@rm bin/disk.dd.lock 2>&1 >dev/null || true
+	@rm bin/disk.dd.lock 2>/dev/null || true
 	@#stupid bochs panic when symbols not found...
 	@cat etc/bochs.rc | grep -v debug_symbols >etc/b
 	@mv etc/b etc/bochs.rc

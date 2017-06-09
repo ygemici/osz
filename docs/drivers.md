@@ -2,7 +2,7 @@ OS/Z Device Drivers
 ===================
 
 Drivers are shared libraries which are loaded into separate address spaces after a
-a common, platform independent event dispatcher, [src/drivers/drv.c](https://github.com/bztsrc/osz/blob/master/src/drivers/drv.c).
+common, platform independent event dispatcher, [src/drivers/drv.c](https://github.com/bztsrc/osz/blob/master/src/drivers/drv.c).
 They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
 are normal userspace applications, although they are never pre-empted (when their `_init()` function is called, all the IRQs are
 disabled (so as timer), and when the IRQ handler gets called it could cause trouble).

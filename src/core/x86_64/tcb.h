@@ -59,7 +59,7 @@
 typedef struct {
     uint32_t magic;     // Thread Control Block magic, must be 'THRD'
     uint8_t priority;   // thread priority
-    uint8_t state;      // thread state and flags
+    uint8_t state;      // thread state
     uint16_t errno;     // thread safe libc errno            tcb+   6
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128

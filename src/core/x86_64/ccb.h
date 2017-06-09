@@ -34,7 +34,7 @@
 #define ccb_ist2 0x2C
 #define ccb_ist3 0x34
 #define ccb_mutex 0x5C
-#define ccb_hd_timerq 0x6A
+#define ccb_hd_timerq 0x68
 #define LOCK_TASKSWITCH 0
 
 /* for priority levels see src/core/tcb.h */
@@ -53,10 +53,9 @@ typedef struct {
     uint64_t ist5;      // +44 not used at the moment
     uint64_t ist6;      // +4C not used at the moment
     pid_t    lastxreg;  // +54 thread that last used media registers
-    uint32_t mutex[3];  // +5C
+    uint16_t mutex[5];  // +5C
     uint16_t iomapbase; // +66 IO permission map base, not used, must be zero
-    uint16_t dummy0;
-    pid_t hd_timerq;    // +6A timer queue head (alarm)
+    pid_t hd_timerq;    // +68 timer queue head (alarm)
     pid_t hd_blocked;   // blocked queue head
     pid_t hd_active[8]; // priority queues (heads of active threads)
     pid_t cr_active[8]; // priority queues (current threads)

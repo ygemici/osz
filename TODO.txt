@@ -10,6 +10,6 @@
 ./src/core/x86_64/sys.c:261:    // TODO: move this printf to rescue shell
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc
 ./src/core/msg.c:102:    /* TODO: use mq_buffstart properly as a circular buffer */
-./src/core/sched.c:141:    /* TODO: ccb.hd_blocked -> swap */
-./src/core/sched.c:154:        /* TODO: swap -> ccb.hd_active */
+./src/core/sched.c:156:    /* TODO: memory -> swap (except tcb) */
+./src/core/sched.c:169:        /* TODO: swap -> memory */
 ./src/lib/libc/exit.c:6:    /* TODO: call atexit handlers and dtors */

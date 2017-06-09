@@ -237,6 +237,10 @@ isr_timer:
 1:  incq    (%rcx)
 
 /* preemption */
+    /* never preempt real-time and driver tasks */
+    cmpb    $PRI_SRV, tcb_priority
+    jb      9f
+
     /* check timer queue's head and awake thread if time passed */
     /* ccb.hd_timerq != 0? */
     movq    ccb + ccb_hd_timerq, %rax
@@ -248,33 +252,32 @@ isr_timer:
     /* tcb->alarmsec < sysinfostruc.ticks[TICKS_TS]? */
     movq    728(%rdi), %rax
     cmpq    (%rbx), %rax
-    jb      1f
+    ja      1f
     /* tcb->alarmsec > sysinfostruc.ticks[TICKS_TS]? */
-    ja      2f
+    jb      2f
     /* tcb->alarmns <= sysinfostruc.ticks[TICKS_NTS]? */
     movq    736(%rdi), %rax
     cmpq    8(%rbx), %rax
-    jb      1f
-2:  movq    $tmpalarm, %rdi
-    /* isr_next = sched_awake(tcb); */
+    ja      1f
+2:  /* isr_next = sched_awake(tcb); */
     call    sched_awake
-    /* ccb.hd_timerq = tcb->alarm; */
     movq    $tmpalarm, %rdi
-    movq    720(%rdi), %rsi
-    movq    %rsi, ccb + ccb_hd_timerq
+    /* ccb.hd_timerq = tcb->alarm; */
+    movq    720(%rdi), %rax
+    movq    %rax, ccb + ccb_hd_timerq
     /* tcb->alarm != 0? */
-    orq     %rsi, %rsi
+    orq     %rax, %rax
     jz      3f
-    /* map next alarm thread, kmap(&tmpalarm, tcb->alarm, PG_CORE_NOCACHE); */
+    movq    %rax, %rsi
+    xorq    %rax, %rax
+    movq    %rax, 720(%rdi)
+    /* map next alarm thread, kmap(&tmpalarm, tcb->alarm*__PAGESIZE, PG_CORE_NOCACHE); */
+    shlq    $12, %rsi
     xorq    %rdx, %rdx
     movw    $PG_CORE_NOCACHE, %dx
     call    kmap
     jmp     3f
 1:
-
-    /* never preempt real-time and driver tasks */
-    cmpb    $PRI_SRV, tcb_priority
-    jb      1f
 
     /* qcnt--; */
     decq    qcnt
@@ -289,7 +292,7 @@ isr_timer:
 3:  /* qcnt = qdiv; */
     movq    qdiv, %rax
     movq    %rax, qcnt
-1:
+9:
 
 #if DEBUG
     /* polling serial line, check LSR */

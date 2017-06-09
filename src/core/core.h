@@ -221,11 +221,14 @@ extern void sched_remove(OSZ_tcb *tcb);
 /** Block a thread */
 extern void sched_block(OSZ_tcb *tcb);
 
-/** Hybernate a thread */
-extern void sched_sleep(OSZ_tcb *tcb);
-
 /** Unblock a thread */
 extern void sched_awake(OSZ_tcb *tcb);
+
+/** suspend a thread until given time */
+void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec);
+
+/** Hybernate a thread */
+extern void sched_sleep(OSZ_tcb *tcb);
 
 /** Return next thread's memroot phy address */
 extern phy_t sched_pick();

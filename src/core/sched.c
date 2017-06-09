@@ -83,52 +83,67 @@ void sched_dump()
     p=ccb.hd_timerq;
     while(p!=0) {
         tcb=sched_get_tcb(p);
-        kprintf("%x%s(%x,%x) ",
+        kprintf("%x%s(%x) ",
             tcb->mypid,
             tcb->mypid==curr->mypid?"*":"",
-            tcb->prev,tcb->next);
-        p=tcb->next;
+            tcb->alarm);
+        p=tcb->alarm;
     }
-    kprintf("\n");
+    kprintf("\n\n");
 }
 #endif
 
-// block until alarm, add thread to ccb.hd_timerq list
-// note that isr_alarm() consumes threads from timer queue
+// block until alarm, add thread to ccb.hd_timerq list too
+// note that isr_timer() consumes threads from timer queue
 void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 {
+    OSZ_tcb *tcba = (OSZ_tcb*)&tmpalarm;
+    /* if alarm time is in the past, make sure it's running and return */
+    if(sysinfostruc.ticks[TICKS_TS]>sec || 
+        (sysinfostruc.ticks[TICKS_TS]==sec && sysinfostruc.ticks[TICKS_NTS]>nsec)) {
+            sched_awake(tcb);
+            return;
+    }
 #if DEBUG
     if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_alarm(%x, %d.%d)\n", tcb->mypid, sec, nsec);
 #endif
     pid_t pid = tcb->mypid, next=ccb.hd_timerq, prev=0;
-    /* ccb.hd_active -> ccb.hd_timerq */
+    /* ccb.hd_active -> ccb.hd_blocked */
     sched_block(tcb);
     // restore mapping
     tcb = sched_get_tcb(pid);
     tcb->alarmsec = sec;
     tcb->alarmns = nsec;
-    tcb->state |= tcb_flag_alarm;
-    do {
-        OSZ_tcb *t = sched_get_tcb(next);
-        pid_t tmp = next ? t->alarm : 0;
-        if(next==0 || (t->alarmsec >= sec &&
-           t->alarmns  >= nsec)) {
-            if(prev!=0) {
-                OSZ_tcb *t = sched_get_tcb(prev);
-                t->alarm = pid;
+    /* add to begining of the queue */
+    if(ccb.hd_timerq==0 || sec<tcba->alarmsec || (sec==tcba->alarmsec && nsec<tcba->alarmns)) {
+        tcb->alarm = ccb.hd_timerq;
+        ccb.hd_timerq = pid;
+        // map the tcb at the head of the queue for easy access
+        kmap((uint64_t)&tmpalarm, (uint64_t)(ccb.hd_timerq * __PAGESIZE), PG_CORE_NOCACHE);
+    } else {
+        /* walk through ccb.hd_timerq queue */
+        do {
+            OSZ_tcb *t = sched_get_tcb(next);
+            /* first thread that has to be awaken later than us? */
+            if(t->alarmsec>sec || (t->alarmsec==sec && t->alarmns>nsec)){
+                if(prev) {
+                    t = sched_get_tcb(prev);
+                    t->alarm = pid;
+                }
                 tcb = sched_get_tcb(pid);
-            } else {
-                ccb.hd_timerq = pid;
+                tcb->alarm = next;
+                break;
             }
-            tcb->alarm = next;
-            break;
-        }
-        prev = next;
-        next = tmp;
-    } while(next!=0);
-    // map the tcb at the head of the queue for easy access
-    kmap((uint64_t)&tmpalarm, (uint64_t)(ccb.hd_timerq * __PAGESIZE), PG_CORE_NOCACHE);
+            /* end of the list? */
+            if(t->alarm==0) {
+                t->alarm = pid;
+                break;
+            }
+            prev = next;
+            next = t->alarm;
+        } while(next!=0);
+    }
 }
 
 // hybernate a thread
@@ -138,7 +153,7 @@ void sched_sleep(OSZ_tcb *tcb)
     if(sysinfostruc.debug&DBG_SCHED)
         kprintf("sched_sleep(%x)\n", tcb->mypid);
 #endif
-    /* TODO: ccb.hd_blocked -> swap */
+    /* TODO: memory -> swap (except tcb) */
     tcb->state = tcb_state_hybernated;
 }
 
@@ -151,7 +166,7 @@ void sched_awake(OSZ_tcb *tcb)
         kprintf("sched_awake(%x)\n", tcb->mypid);
 #endif
     if(tcb->state == tcb_state_hybernated) {
-        /* TODO: swap -> ccb.hd_active */
+        /* TODO: swap -> memory */
         tcb->state = tcb_state_blocked;
     }
     if(tcb->state == tcb_state_blocked) {
