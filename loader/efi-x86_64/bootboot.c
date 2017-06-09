@@ -372,7 +372,6 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     EFI_MEMORY_DESCRIPTOR *memory_map = NULL, *mement;
     UINTN i, memory_map_size=0, map_key=0, desc_size=0;
     UINT32 desc_version=0;
-    UINT32 ecx=0;
     MMapEnt *mmapent, *last=NULL;
     CHAR16 **argv, *initrdfile, *configfile, *help=
         L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended\n  to the environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
@@ -423,11 +422,8 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         "mov $1, %%eax;"
         "cpuid;"
         "shrl $24, %%ebx;"
-        "mov %%ebx,%0; mov %%ecx, %1"
-        : "=b"(bootboot->bspid), "=c"(ecx) : : );
-    //check SSSE3 (needed for alpha blending)
-    if(!(ecx&512))
-        return report(EFI_UNSUPPORTED, L"Hardware not supported, no SSSE3");
+        "mov %%ebx,%0"
+        : "=b"(bootboot->bspid) : : );
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     RootDir = LibOpenRoot(loaded_image->DeviceHandle);

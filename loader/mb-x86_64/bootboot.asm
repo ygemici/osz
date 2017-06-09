@@ -275,10 +275,7 @@ realmode_start:
             cmp         ax, 0600h
             jb          .cpuerror
             ;look for minimum feature flags
-            ;do we have SSSE3? (needed for alpha blending)
-            bt          ecx, 9
-            jnc         .cpuerror
-            ;and PAE?
+            ;so we have PAE?
             mov         eax, edx
             and         eax, 1000000b
             jz          .cpuok

@@ -109,6 +109,10 @@ _start:
     movq    $0x00544150, %rsi
     bt      $16, %edx
     jnc     1f
+    /* SSSE3 (needed for alpha blending) */
+    movq    $0x3345535353, %rsi
+    bt      $9, %ecx
+    jnc     1f
 #if ISR_CTRL == CTRL_x2APIC
     /* x2APIC */
     movq    $0x434950413278, %rsi
