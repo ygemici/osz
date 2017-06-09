@@ -29,7 +29,7 @@
 #include <fsZ.h>
 #include "isr.h"
 
-#define TMRMAX  1000000000 //max 1 GHz
+#define TMRMAX  1000000 //max 1 MHz, 1/TMRMAX = 1 usec (micro)
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
@@ -210,8 +210,8 @@ void isr_init()
         sysinfostruc.quantum=10;         //min 10 task switch per sec
     if(sysinfostruc.quantum>tmrfreq/10)
         sysinfostruc.quantum=tmrfreq/10; //max 1 switch per 10 interrupts
-    //calculate stepping in nanosec
-    alarmstep = 1000000000/tmrfreq;
+    //calculate stepping in microsec
+    alarmstep = 1000000/tmrfreq;
     //failsafes
     if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
     qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
@@ -221,7 +221,7 @@ void isr_init()
     idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
     idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
 
-    syslog_early(" timer/%s at %d Hz, step %d ns, ts %d ints",
+    syslog_early(" timer/%s at %d Hz, step %d usec, ts %d ints",
         tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
