@@ -171,7 +171,8 @@ void sched_awake(OSZ_tcb *tcb)
     }
     if(tcb->state == tcb_state_blocked) {
         /* ccb.hd_blocked -> ccb.hd_active */
-        tcb->blkcnt += tcb->blktime - sysinfostruc.ticks[TICKS_LO];
+        tcb->blkcnt += sysinfostruc.ticks[TICKS_LO] - tcb->blktime;
+        tcb->blktime = 0;
         sched_add(tcb);
         if(ccb.hd_blocked == pid) {
             ccb.hd_blocked = next;

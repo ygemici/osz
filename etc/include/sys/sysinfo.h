@@ -40,7 +40,7 @@ typedef struct {
     uint8_t fps;            // last sec frame per second
     uint8_t rescueshell;    // rescue shell requested flag
     uint8_t nropenmax;      // number of open file descriptors
-    uint8_t reserved0;
+    uint8_t fb_type;        // frame buffer type
     uint8_t reserved1;
     uint8_t reserved2;
     uint8_t reserved3;
@@ -77,17 +77,15 @@ sysinfo_t *sysinfo();                   // query system information
 #define DBG_LOG      (1<<9) // lo 512
 
 /* display options */
-#define DSP_MONO_COLOR   1  // mc flat 2D color
-#define DSP_STEREO_MONO  2  // sm grayscale red-cyan 3D (anaglyph)
-#define DSP_STEREO_COLOR 3  // sc real 3D (polarized glass, VR helmet etc. driver specific)
+#define DSP_MONO_COLOR   0  // mc flat 2D color
+#define DSP_STEREO_MONO  1  // sm grayscale red-cyan 3D (anaglyph)
+#define DSP_STEREO_COLOR 2  // sc real 3D (polarized glass, VR helmet etc. driver specific)
 
 /* ticks indeces for counters */
 #define TICKS_TS 0      //+00 timestamp sec counter
 #define TICKS_NTS 1     //+08 timestamp nanosec fraction
 #define TICKS_LO 2      //+16 overall ticks (jiffies, 128 bit)
 #define TICKS_HI 3      //+24
-#define TICKS_SEC 4     //+32 ticks / sec counter
-#define TICKS_QUANTUM 5 //+40 ticks / quantum counter
 
 /*** Platform independent ***/
 #define sysinfo_magic 0
@@ -127,15 +125,15 @@ sysinfo_t *sysinfo();                   // query system information
 #define sysinfo_smbi_ptr 160
 #define sysinfo_efi_ptr 168
 #define sysinfo_mp_ptr 176
-#define sysinfo_apic_ptr 184
-#define sysinfo_dsdt_ptr 192
+#define sysinfo_dsdt_ptr 184
+#define sysinfo_apic_ptr 192
 
 #define systable_acpi_idx 0
 #define systable_smbi_idx 1
 #define systable_efi_idx 2
 #define systable_mp_idx 3
-#define systable_apic_idx 4
-#define systable_dsdt_idx 5
+#define systable_dsdt_idx 4
+#define systable_apic_idx 5
 #endif
 
 #endif /* sys/sysinfo.h */

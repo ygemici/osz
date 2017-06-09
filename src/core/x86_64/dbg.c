@@ -29,6 +29,7 @@
 
 #include <lastbuild.h>
 #include <sys/init.h>
+#include <sys/sysinfo.h>
 #include "../font.h"
 
 // breakpoint types for setbrk
@@ -52,6 +53,7 @@ extern uint64_t *safestack;
 extern uint8_t sys_fault;
 extern uint64_t lastsym;
 extern char *addr_base;
+extern sysinfo_t sysinfostruc;
 
 extern uchar *service_sym(virt_t addr);
 extern void kprintf_putchar(int c);
@@ -97,6 +99,7 @@ enum {
     tab_tcb,
     tab_queues,
     tab_ram,
+    tab_sysinfo,
 
     tab_last
 };
@@ -221,6 +224,7 @@ void dbg_tcb()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     char *states[] = { "hybernated", "blocked", "running" };
+    uint64_t t;
 
     fg=dbg_theme[4];
     if(dbg_tui)
@@ -232,15 +236,32 @@ void dbg_tcb()
     kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
     kprintf("priority: %s (%d), state: %s (%1x) ",
         prio[tcb->priority], tcb->priority,
-        states[ TCB_STATE(tcb->state)], TCB_STATE(tcb->state)
+        states[tcb->state], tcb->state
     );
-    if(tcb->state & tcb_flag_alarm)
-        kprintf("alarm ");
-    if(tcb->state & tcb_flag_io)
-        kprintf("iowait ");
-    if(tcb->state & tcb_flag_strace)
-        kprintf("strace ");
-    if(TCB_STATE(tcb->state)==tcb_state_hybernated) {
+    kprintf("\nerrno: %d, exception error code: %d\n", tcb->errno, tcb->excerr);
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("\n[Memory]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("memory root: %x, allocated pages: %d, linked pages: %d\n", tcb->memroot, tcb->allocmem, tcb->linkmem);
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("\n[Scheduler]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    t=(tcb->state==tcb_state_running?0:sysinfostruc.ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
+    kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, t);
+    kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
+    if(tcb->state==tcb_state_blocked) {
+        kprintf("blocked since: %d, ", tcb->blktime);
+        kprintf("next in alarm queue: %4x, alarm at: %d.%d\n", tcb->alarm, tcb->alarmsec, tcb->alarmns);
+    }
+    if(tcb->state==tcb_state_hybernated) {
         fg=dbg_theme[4];
         if(dbg_tui)
             dbg_settheme();
@@ -249,30 +270,8 @@ void dbg_tcb()
         if(dbg_tui)
             dbg_settheme();
         kprintf("swapped to: %x\n", tcb->swapminor);
-    } else {
-        kprintf("\nerrno: %d, exception error code: %d\n", tcb->errno, tcb->excerr);
-        fg=dbg_theme[4];
-        if(dbg_tui)
-            dbg_settheme();
-        kprintf("\n[Memory]\n");
-        fg=dbg_theme[3];
-        if(dbg_tui)
-            dbg_settheme();
-        kprintf("memory root: %x, allocated pages: %d, linked pages: %d\n", tcb->memroot, tcb->allocmem, tcb->linkmem);
-        fg=dbg_theme[4];
-        if(dbg_tui)
-            dbg_settheme();
-        kprintf("\n[Scheduler]\n");
-        fg=dbg_theme[3];
-        if(dbg_tui)
-            dbg_settheme();
-        kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, tcb->blkcnt);
-        kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
-        if(TCB_STATE(tcb->state)==tcb_state_blocked) {
-            kprintf("next task in alarm queue: %4x, alarm at: %d.%d\nblocked since: %d", tcb->alarm, tcb->alarmsec, tcb->alarmns, tcb->blktime);
-        }
-        kprintf("\n");
     }
+    kprintf("\n");
 }
 
 // disassembly instructions and dump registers, stack
@@ -919,7 +918,82 @@ void dbg_ram()
     }
 }
 
-// switch to the next task
+// dump System Info
+void dbg_sysinfo()
+{
+    char *disp[] = { "mono color", "stereo anaglyph", "stereo color" };
+    char *fbt[] = { "ARGB", "RGBA", "ABGR", "BGRA" };
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[System Information Structure]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("Linear address: @%x\n\n",&sysinfostruc);
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[Screen]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("display: %d %s, fps: %d, screen: @%8x\n",
+        sysinfostruc.display, disp[sysinfostruc.display], sysinfostruc.fps, sysinfostruc.screen_ptr);
+    kprintf("framebuffer: @%8x, %dx%d, scanline %d,",
+        sysinfostruc.fb_ptr, sysinfostruc.fb_width, sysinfostruc.fb_height, sysinfostruc.fb_scanline);
+    kprintf(" type: %d %s\n\n",sysinfostruc.fb_type,fbt[sysinfostruc.fb_type]);
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[Misc]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("timer freq: %d int/sec, quantum: %d, max open files: %d\n",
+        sysinfostruc.freq, sysinfostruc.quantum, sysinfostruc.nropenmax);
+    kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
+        sysinfostruc.keymap, sysinfostruc.debug, sysinfostruc.rescueshell?"true":"false");
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[Timer Ticks]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("time: %d.%d, overall ticks: %d *2^64 + %d\n\n",
+        sysinfostruc.ticks[TICKS_TS], sysinfostruc.ticks[TICKS_NTS],
+        sysinfostruc.ticks[TICKS_HI], sysinfostruc.ticks[TICKS_LO]);
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[Random Generator]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("seed: %8x%8x%8x%8x\n\n",
+        sysinfostruc.srand[0], sysinfostruc.srand[1], sysinfostruc.srand[2], sysinfostruc.srand[3]);
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[System Tables]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf(" acpi: %8x, smbi: %8x, uefi: %8x\n mp:   %8x,",
+        sysinfostruc.systables[0], sysinfostruc.systables[1],
+        sysinfostruc.systables[2], sysinfostruc.systables[3]);
+    kprintf(" apic: %8x, dsdt: %8x\n\n",
+        sysinfostruc.systables[4], sysinfostruc.systables[5]);
+}
+
+// switch to the previous task
 void dbg_switchprev(virt_t *rip, virt_t *rsp)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -928,27 +1002,26 @@ void dbg_switchprev(virt_t *rip, virt_t *rsp)
     int i;
 
     if(p == 0) {
-        if(TCB_STATE(tcb->state) == tcb_state_blocked) {
-            for(i=PRI_IDLE;i>0 && !p;i--)
+        /* find previous higher priority queue */
+        if(tcb->state == tcb_state_running) {
+            for(i=tcb->priority-1;i>=PRI_SYS && !p;i--)
                 p = ccb.hd_active[i];
-        } else {
-            /* find the next non empty higher priority queue */
-            if(tcb->priority>0)
-                for(i=tcb->priority-1;i>=0 && !p;i--)
-                    p = ccb.hd_active[i];
+            /* go to blocked queue if none */
             if(!p)
                 p = ccb.hd_blocked;
-            /* find the last non empty queue */
-            if(!p)
-                for(i=PRI_IDLE;i>0 && !p;i--)
-                    p = ccb.hd_active[i];
         }
-        /* find the last entry in the list */
-        do {
+        /* if even blocked was empty, find the last from lowest priority queue */
+        if(!p)
+            for(i=PRI_IDLE;i>PRI_SYS && !p;i--)
+                p = ccb.hd_active[i];
+        if(p) {
+            //find end of queue
             kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
-            p = tcbq->next;
-        } while(p != 0);
-        p = tcbq->mypid;
+            while(tcbq->next!=0) {
+                p=tcbq->next;
+                kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
+            }
+        }
     }
     if(p) {
         kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
@@ -959,7 +1032,7 @@ void dbg_switchprev(virt_t *rip, virt_t *rsp)
     }
 }
 
-// switch to the previous task
+// switch to the next task
 void dbg_switchnext(virt_t *rip, virt_t *rsp)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -967,18 +1040,18 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
     pid_t n = tcb->next;
     int i;
     if(n == 0) {
-        if(TCB_STATE(tcb->state) == tcb_state_blocked) {
-            n = ccb.hd_active[PRI_SYS];
-        } else {
-            n = 0;
-            /* find the next non empty lower priority queue */
-            if(tcb->priority<7)
-                for(i=tcb->priority+1;i<=7 && !n;i++) {
-                    n = ccb.hd_active[i];
-            }
-            if(i>7 || !n)
-                n = ccb.hd_blocked ? ccb.hd_blocked : ccb.hd_active[PRI_SYS];
+        /* find the next non empty lower priority queue */
+        if(tcb->state == tcb_state_running) {
+            for(i=tcb->priority+1;i<=PRI_IDLE && !n;i++)
+                n = ccb.hd_active[i];
+            /* go to blocked queue if there was none */
+            if(!n)
+                n = ccb.hd_blocked;
         }
+        /* if blocked queue was empty too, find the first highest priority queue */
+        if(!n)
+            for(i=PRI_SYS;i<PRI_IDLE && !n;i++)
+                n = ccb.hd_active[i];
     }
     if(n) {
         kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
@@ -1104,7 +1177,7 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
     OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
     uint64_t scancode = 0, offs, line, x, y;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
-    char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM" };
+    char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM", "Sysinfo" };
     char cmd[64], c;
     int cmdidx=0,cmdlast=0;
     uint8_t m,l;
@@ -1226,7 +1299,8 @@ redraw:
         if(dbg_tab==tab_tcb) dbg_tcb(); else
         if(dbg_tab==tab_msg) dbg_msg(); else
         if(dbg_tab==tab_queues) dbg_queues(); else
-        if(dbg_tab==tab_ram) dbg_ram();
+        if(dbg_tab==tab_ram) dbg_ram(); else
+        if(dbg_tab==tab_sysinfo) dbg_sysinfo();
         __asm__ __volatile__ ("popq %%rdi":::"%rdi");
 getcmd:
         offs = (maxy-1)*font->height*bootboot.fb_scanline;
@@ -1529,7 +1603,7 @@ help:
             case 28: {
                 /* parse commands */
                 // step, continue
-                if(cmdlast==0 || cmd[0]=='s' || (cmd[0]=='c' && cmd[1]!='c')) {
+                if(cmdlast==0 || (cmd[0]=='s'&&cmd[1]!='y') || (cmd[0]=='c' && cmd[1]!='c')) {
                     /* enable or disable single stepping. */
                     if(((dr6>>14)&1) != ((tcb->rflags>>8)&1) || cmdlast!=0) {
                     /* we enable if command starts with 's' or we are
@@ -1633,6 +1707,13 @@ help:
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;
                     dbg_tab = tab_ram;
+                    goto redraw;
+                } else
+                // sysinfo
+                if(cmd[0]=='s' && cmd[1]=='y'){
+                    cmdidx = cmdlast = 0;
+                    cmd[cmdidx]=0;
+                    dbg_tab = tab_sysinfo;
                     goto redraw;
                 } else
                 // instruction

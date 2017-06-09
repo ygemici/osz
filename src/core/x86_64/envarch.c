@@ -63,6 +63,10 @@ unsigned char *envarch_cs(unsigned char *s)
 void envarch_init()
 {
     // set up defaults
+    sysinfostruc.systables[systable_acpi_idx] = bootboot.x86_64.acpi_ptr;
+    sysinfostruc.systables[systable_smbi_idx] = bootboot.x86_64.smbi_ptr;
+    sysinfostruc.systables[systable_efi_idx] = bootboot.x86_64.efi_ptr;
+    sysinfostruc.systables[systable_mp_idx] = bootboot.x86_64.mp_ptr;
     sysinfostruc.systables[systable_apic_idx] =
             ioapic_addr = hpet_addr = 0;
     sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)fs_locate("etc/sys/dsdt");

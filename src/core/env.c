@@ -201,6 +201,11 @@ void env_init()
     sysinfostruc.quantum = 100;
     sysinfostruc.display = DSP_MONO_COLOR;
     sysinfostruc.debug = DBG_NONE;
+    sysinfostruc.fb_type = bootboot.fb_type;
+    sysinfostruc.fb_ptr = (phy_t)bootboot.fb_ptr;
+    sysinfostruc.fb_width = bootboot.fb_width;
+    sysinfostruc.fb_height = bootboot.fb_height;
+    sysinfostruc.fb_scanline = bootboot.fb_scanline;
     kmemcpy(&sysinfostruc.keymap, "en_us", 6);
     envarch_init();
 

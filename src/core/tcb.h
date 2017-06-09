@@ -31,10 +31,6 @@
 #define tcb_state_hybernated 0
 #define tcb_state_blocked 1
 #define tcb_state_running 2
-#define TCB_STATE(s) ((s)&0x7)
-#define tcb_flag_alarm 8
-#define tcb_flag_io 16
-#define tcb_flag_strace 32
 
 // index to hd_active and cr_active queues, priority levels
 // priority 0, system, non-interruptible
