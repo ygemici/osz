@@ -43,8 +43,12 @@ extern void isr_exc00divzero();
 extern void isr_irq0();
 extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
 extern void isr_enableirq(uint8_t irq);
+extern void isr_disableirq(uint8_t irq);
 extern void isr_irqtmr();
 extern void isr_irqtmr_rtc();
+extern void isr_irqtmrcal();
+extern void isr_irqtmrcal_rtc();
+extern uint64_t isr_tmrcalibrate();
 extern void acpi_early(void *hdr);
 
 /* timer drivers */
@@ -216,19 +220,10 @@ void isr_init()
     if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
     qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
 
-    /* override the default IRQ handler ISR with timer ISR */
-    ptr = clocksource==TMR_RTC ? &isr_irqtmr_rtc : &isr_irqtmr;
-    idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
-    idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
-
-    syslog_early(" timer/%s at %d Hz, step %d usec, ts %d ints",
-        tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
-
     /* use bootboot.datetime and bootboot.timezone to calculate */
     sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
     sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
     sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
-    sysinfostruc.freq = tmrfreq;
     // set up system counters
     seccnt = 1;
     qcnt = sysinfostruc.quantum;
@@ -238,6 +233,24 @@ void isr_init()
     isr_inithw(idt, &ccb);
     if(!isr_maxirq)
         isr_maxirq=16;
+
+    //calibrate with timer to get clock freq
+    ptr = clocksource==TMR_RTC ? &isr_irqtmrcal_rtc : &isr_irqtmrcal;
+    idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
+    idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
+    isr_enableirq(tmrirq);
+    i=isr_tmrcalibrate();
+    isr_disableirq(tmrirq);
+
+    /* override the default IRQ handler ISR with timer ISR */
+    ptr = clocksource==TMR_RTC ? &isr_irqtmr_rtc : &isr_irqtmr;
+    idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
+    idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
+
+    sysinfostruc.freq = i*tmrfreq;
+    syslog_early(" cpu freq %d cps",sysinfostruc.freq);
+    syslog_early(" timer/%s at %d Hz, step %d usec, ts %d ints",
+        tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
 }
 
 void isr_fini()

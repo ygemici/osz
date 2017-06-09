@@ -36,6 +36,8 @@
 .global isr_irq0
 .global isr_irqtmr
 .global isr_irqtmr_rtc
+.global isr_irqtmrcal
+.global isr_irqtmrcal_rtc
 .global isr_enableirq
 .global isr_disableirq
 .extern isr_maxirq
@@ -164,7 +166,7 @@ isr_inithw:
     ret
 
 /* exception handler ISRs */
-.align 256, 0x90
+.align 128, 0x90
 isr_exc00divzero:
     cli
     /* tcb->excerr = 0; */
@@ -179,13 +181,13 @@ isr_exc00divzero:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$0, %dil
     callq	exc00divzero
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -204,13 +206,13 @@ isr_exc01debug:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist3
+    subq	$64, ccb + ccb_ist3
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$1, %dil
     callq	exc01debug
-    addq	$128, ccb + ccb_ist3
+    addq	$64, ccb + ccb_ist3
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -229,13 +231,13 @@ isr_exc02nmi:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist2
+    subq	$64, ccb + ccb_ist2
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$2, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist2
+    addq	$64, ccb + ccb_ist2
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -254,13 +256,13 @@ isr_exc03chkpoint:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist3
+    subq	$64, ccb + ccb_ist3
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$3, %dil
     callq	exc03chkpoint
-    addq	$128, ccb + ccb_ist3
+    addq	$64, ccb + ccb_ist3
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -279,13 +281,13 @@ isr_exc04overflow:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$4, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -304,13 +306,13 @@ isr_exc05bound:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$5, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -329,13 +331,13 @@ isr_exc06invopcode:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$6, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -354,13 +356,13 @@ isr_exc07devunavail:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$7, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -379,13 +381,13 @@ isr_exc08dblfault:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist2
+    subq	$64, ccb + ccb_ist2
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$8, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist2
+    addq	$64, ccb + ccb_ist2
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -404,13 +406,13 @@ isr_exc09coproc:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$9, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -429,13 +431,13 @@ isr_exc10invtss:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$10, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -454,13 +456,13 @@ isr_exc11segfault:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$11, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -479,13 +481,13 @@ isr_exc12stackfault:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$12, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -504,13 +506,13 @@ isr_exc13genprot:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$13, %dil
     callq	exc13genprot
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -529,13 +531,13 @@ isr_exc14pagefault:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$14, %dil
     callq	exc14pagefault
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -554,13 +556,13 @@ isr_exc15unknown:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$15, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -579,13 +581,13 @@ isr_exc16float:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$16, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -604,13 +606,13 @@ isr_exc17alignment:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$17, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -629,13 +631,13 @@ isr_exc18machinecheck:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$18, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -654,13 +656,13 @@ isr_exc19double:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$19, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -679,13 +681,13 @@ isr_exc20:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$20, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -704,13 +706,13 @@ isr_exc21:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$21, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -729,13 +731,13 @@ isr_exc22:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$22, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -754,13 +756,13 @@ isr_exc23:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$23, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -779,13 +781,13 @@ isr_exc24:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$24, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -804,13 +806,13 @@ isr_exc25:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$25, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -829,13 +831,13 @@ isr_exc26:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$26, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -854,13 +856,13 @@ isr_exc27:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$27, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -879,13 +881,13 @@ isr_exc28:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$28, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -904,13 +906,13 @@ isr_exc29:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$29, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -929,13 +931,13 @@ isr_exc30:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$30, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
@@ -954,24 +956,38 @@ isr_exc31:
     iretq
 1:
     callq	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     xorq	%rdi, %rdi
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$31, %dil
     callq	excabort
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq
 .align 128, 0x90
 
 /* IRQ handler ISRs */
 
+isr_irqtmrcal:
+    cli
+    movq	%rax, %rbx
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_MASTER
+    xorq	%rax, %rax
+    xorq	%rdx, %rdx
+    rdtsc
+    shlq	$32, %rdx
+    addq	%rdx, %rax
+    iretq
+.align 16, 0x90
+
 isr_irqtmr:
     /* no timer isr needed */
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -985,18 +1001,40 @@ isr_irqtmr:
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 16, 0x90
+
+isr_irqtmrcal_rtc:
+    cli
+    movq	%rax, %rbx
+    /* acknowledge IRQ8 in RTC */
+    movb	$0x0C, %al
+    outb	%al, $0x70
+    jmp		1f
+1:  inb		$0x71, %al
+    /* reenable NMI */
+    xorb	%al, %al
+    outb	%al, $0x70
+    /* PIC EOI */
+    movb	$0x20, %al
+    outb	%al, $PIC_SLAVE
+    outb	%al, $PIC_MASTER
+    xorq	%rax, %rax
+    xorq	%rdx, %rdx
+    rdtsc
+    shlq	$32, %rdx
+    addq	%rdx, %rax
+    iretq
+.align 16, 0x90
 
 isr_irqtmr_rtc:
     /* we can't afford overhead of messaging and taskswitch,
        so we use inline code here */
     cli
-xchg %bx, %bx
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1019,15 +1057,15 @@ xchg %bx, %bx
     movq	%rax, %cr3
 1:  xorq	%rax, %rax
     movq	%rax, isr_next
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 16, 0x90
 
 isr_irq0:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1052,20 +1090,19 @@ isr_irq0:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq1:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1090,20 +1127,19 @@ isr_irq1:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq2:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1128,20 +1164,19 @@ isr_irq2:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq3:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1166,20 +1201,19 @@ isr_irq3:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq4:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1204,20 +1238,19 @@ isr_irq4:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq5:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1242,20 +1275,19 @@ isr_irq5:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq6:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1280,20 +1312,19 @@ isr_irq6:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq7:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
@@ -1318,20 +1349,19 @@ isr_irq7:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq8:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1357,20 +1387,19 @@ isr_irq8:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq9:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1396,20 +1425,19 @@ isr_irq9:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq10:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1435,20 +1463,19 @@ isr_irq10:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq11:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1474,20 +1501,19 @@ isr_irq11:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq12:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1513,20 +1539,19 @@ isr_irq12:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq13:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1552,20 +1577,19 @@ isr_irq13:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq14:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1591,20 +1615,19 @@ isr_irq14:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq15:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1630,20 +1653,19 @@ isr_irq15:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq16:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1669,20 +1691,19 @@ isr_irq16:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq17:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1708,20 +1729,19 @@ isr_irq17:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq18:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1747,20 +1767,19 @@ isr_irq18:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq19:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1786,20 +1805,19 @@ isr_irq19:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq20:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1825,20 +1843,19 @@ isr_irq20:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq21:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1864,20 +1881,19 @@ isr_irq21:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq22:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1903,20 +1919,19 @@ isr_irq22:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq23:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1942,20 +1957,19 @@ isr_irq23:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq24:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -1981,20 +1995,19 @@ isr_irq24:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq25:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2020,20 +2033,19 @@ isr_irq25:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq26:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2059,20 +2071,19 @@ isr_irq26:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq27:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2098,20 +2109,19 @@ isr_irq27:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq28:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2137,20 +2147,19 @@ isr_irq28:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq29:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2176,20 +2185,19 @@ isr_irq29:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq30:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2215,20 +2223,19 @@ isr_irq30:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq31:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2254,20 +2261,19 @@ isr_irq31:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 
 isr_irq32:
     cli
     call	isr_savecontext
-    subq	$128, ccb + ccb_ist1
+    subq	$64, ccb + ccb_ist1
     /* PIC EOI */
     movb	$0x20, %al
     outb	%al, $PIC_SLAVE
@@ -2293,13 +2299,12 @@ isr_irq32:
     call	isr_disableirq
     /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
     popq	%rdx
-    xorq	%rcx, %rcx
     xorq	%rsi, %rsi
     movq	$MQ_ADDRESS, %rdi
     call	ksend
     call	kentropy
-    addq	$128, ccb + ccb_ist1
+    addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 256, 0x90
+.align 128, 0x90
 

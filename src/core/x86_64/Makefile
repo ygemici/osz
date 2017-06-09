@@ -15,11 +15,11 @@ all: $(OBJS)
 isrs.S: isr.h isrs.sh isr.c
 	@./isrs.sh $(ARCH) 2>/dev/null || true
 
-%.o: %.S
+%.o: %.S isrs.S
 	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) -D_AS=1 $(OPT) $(CFLAGS) -c $< -o $@
 
-%.o: %.c
+%.o: %.c isrs.S
 	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 

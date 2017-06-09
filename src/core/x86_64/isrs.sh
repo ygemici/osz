@@ -122,6 +122,8 @@ cat >isrs.S <<EOF
 .global isr_irq0
 .global isr_irqtmr
 .global isr_irqtmr_rtc
+.global isr_irqtmrcal
+.global isr_irqtmrcal_rtc
 .global isr_enableirq
 .global isr_disableirq
 .extern isr_maxirq
@@ -536,6 +538,18 @@ done
 cat >>isrs.S <<EOF
 /* IRQ handler ISRs */
 
+isr_irqtmrcal:
+    cli
+    movq	%rax, %rbx
+    $EOI
+    xorq	%rax, %rax
+    xorq	%rdx, %rdx
+    rdtsc
+    shlq	\$32, %rdx
+    addq	%rdx, %rax
+    iretq
+.align 16, 0x90
+
 isr_irqtmr:
     /* no timer isr needed */
     cli
@@ -555,7 +569,7 @@ isr_irqtmr:
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align $isrirqmax, 0x90
+.align 16, 0x90
 
 EOF
 
@@ -566,11 +580,30 @@ else
 	EOIRTC="$EOI";
 fi
 cat >>isrs.S <<-EOF
+isr_irqtmrcal_rtc:
+    cli
+    movq	%rax, %rbx
+    /* acknowledge IRQ8 in RTC */
+    movb	\$0x0C, %al
+    outb	%al, \$0x70
+    jmp		1f
+1:  inb		\$0x71, %al
+    /* reenable NMI */
+    xorb	%al, %al
+    outb	%al, \$0x70
+    $EOIRTC
+    xorq	%rax, %rax
+    xorq	%rdx, %rdx
+    rdtsc
+    shlq	\$32, %rdx
+    addq	%rdx, %rax
+    iretq
+.align 16, 0x90
+
 isr_irqtmr_rtc:
     /* we can't afford overhead of messaging and taskswitch,
        so we use inline code here */
     cli
-xchg %bx, %bx
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
     $EOIRTC
@@ -595,7 +628,7 @@ xchg %bx, %bx
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align $isrirqmax, 0x90
+.align 16, 0x90
 
 EOF
 
@@ -635,7 +668,6 @@ do
 	    call	isr_disableirq
 	    /* ksend(EVT_DEST(irq_routing_table[isr]) | SYS_IRQ, irq, 0,0,0,0,0); */
 	    popq	%rdx
-	    xorq	%rcx, %rcx
 	    xorq	%rsi, %rsi
 	    movq	\$MQ_ADDRESS, %rdi
 	    call	ksend

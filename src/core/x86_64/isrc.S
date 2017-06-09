@@ -37,6 +37,7 @@
 .global isr_syscall0
 .global isr_timer
 .global isr_gainentropy
+.global isr_tmrcalibrate
 
 .extern alarmstep
 .extern alarmstepmax
@@ -197,6 +198,16 @@ isr_syscall0:
     movq    __PAGESIZE-40, %rcx
     movq    __PAGESIZE-16, %rsp
     sysretq
+
+isr_tmrcalibrate:
+    xorq    %rax, %rax
+    xorq    %rbx, %rbx
+    sti
+1:  orq     %rbx, %rbx
+    jz      1b
+    cli
+    subq    %rbx, %rax
+    ret
 
 /* handle timers, called by PIT, RTC or HPET, modify global counters */
 isr_timer:

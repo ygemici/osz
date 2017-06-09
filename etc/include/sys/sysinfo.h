@@ -46,7 +46,7 @@ typedef struct {
     uint8_t reserved3;
     uint32_t debug;         // debug flags
     uint32_t quantum;       // max time a task can allocate CPU 1/quantum
-    uint32_t freq;          // timer freqency
+    uint32_t freq;          // CPU freqency in bus cycle per sec
     uint64_t screen_ptr;    // screen virtual address ("display" and "UI")
     uint64_t fb_ptr;        // framebuffer virtual address
     uint64_t fb_width;      // framebuffer width

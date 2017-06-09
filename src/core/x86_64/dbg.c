@@ -953,7 +953,7 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("timer freq: %d int/sec, quantum: %d, max open files: %d\n",
+    kprintf("cpu freq: %d cycle/sec, quantum: %d ticks, max open files: %d\n",
         sysinfostruc.freq, sysinfostruc.quantum, sysinfostruc.nropenmax);
     kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
         sysinfostruc.keymap, sysinfostruc.debug, sysinfostruc.rescueshell?"true":"false");
