@@ -52,6 +52,7 @@ make testb
 
 Our jurney begins before the firmware takes control of the hardware.
 ```
+Next at t=0
 (0) [0x0000fffffff0] f000:fff0 (no symbol): jmpf 0xf000:e05b          ; ea5be000f0
 <bochs:1> c
 ```
@@ -61,24 +62,23 @@ Just continue as we are not interested in the BIOS.
 Second Break Point - OS/Z boot ends
 -----------------------------------
 
-The first intersting point is where the operating system was loaded (arranged
-it's memory, finished with task setup) and is about to leave privileged mode by executing the very first `iretq`.
+<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png" alt="OS/Z Starting">
 
-<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png" alt="OS/Z Ready">
+The first intersting point is where the operating system was loaded (arranged it's memory, finished with task setup)
+and is about to leave privileged mode by executing the very first `iretq`.
 
 You must see white on black "OS/Z starting..." text on the top left corner of your screen,
 and something similar to this on debug console:
 
 ```
 (0) Magic breakpoint
-Next at t=22187507
-(0) [0x000000173c48] 0008:ffffffffffe0ac48 (sys_enable+83): iret                      ; 48cf
-<bochs:2>
+Next at t=45593694
+(0) [0x00000019b263] 0008:ffffffffffe15263 (sys_enable+be): iret                      ; 48cf
+<bochs:2> 
 ```
 
-This sys_enable() function is in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c) and it's
-job is to map the first task and start executing it.
-
+This `sys_enable()` function is in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c) and it's
+job is to map the first task and start executing it by faking a return from ISR.
 
 As the stack stores user mode segment selectors, the CPU will drop
 privileged mode, and normal user space (ring 3) execution will began.
@@ -98,13 +98,23 @@ We can see that the user mode code starts at 0x200000, and it's stack is right b
 Third Break Point - OS/Z ready
 ------------------------------
 
-When all drivers and system tasks initialized, [internal debugger](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md) is called with a
-checkpoint exception in `sys_ready()`. This break point therefore is accessible in qemu and on real hardware too.
+<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg1.png?raw=true" alt="OS/Z ready">
 
-<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg1.png?raw=true" alt="OS/Z Internal Debugger Line Console">
-<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Internal Debugger Text User Interface">
-At the third break point we can see that driver initialization finished, and `sys_ready()` is about to call `isr_fini()` which will finish ISR
-initialization by enabling IRQs with registered tasks. By doing so, it will unleash hell, as nobody
-will know for sure in which order the interrupts fire. Luckily the message queue is serialized, so there's no need for locking.
+When all drivers and system tasks initialized and blocked waiting for messages, a function named `sys_ready()` is called.
+That will in turn call `isr_fini()` which will finish ISR initialization by enabling IRQs with registered tasks.
+
+```
+(0) Magic breakpoint
+Next at t=45857039
+(0) [0x00000019b616] 0008:ffffffffffe15616 (sys_ready+131): mov eax, 0x00000000       ; b800000000
+<bochs:3>
+```
+
+By doing so, it will enable pre-emption and unleash hell, as nobody will know for sure in which order the interrupts fire.
+Luckily the message queue is serialized, so there's no need for locking.
+
+<img align="left" style="margin-right:10px;" width="100" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Debugger">
+
+Please note that OS/Z has it's own internal debugger, so don't have to use bochs debugger if you don't want to.
 
 If you are interested in debugging, read the [next tutorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).

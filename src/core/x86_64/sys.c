@@ -248,13 +248,6 @@ void sys_init()
 /*** Called when the "idle" task first scheduled ***/
 void sys_ready()
 {
-#if DEBUG
-    __asm__ __volatile__("int $3;xchg %bx,%bx");
-#endif
-    /* finish up ISR initialization */
-    isr_fini();
-    /* log we're ready */
-    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
     /* reset early kernel console */
     kprintf_reset();
 
@@ -270,4 +263,12 @@ void sys_ready()
 #endif
     /* disable scroll pause */
     scry = -1;
+
+#if DEBUG
+    __asm__ __volatile__("xchg %bx,%bx");
+#endif
+    /* finish up ISR initialization */
+    isr_fini();
+    /* log we're ready */
+    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
 }

@@ -7,7 +7,7 @@
 ./src/drivers/drv.c:31:    /* TODO: use mq_dispatch on common function scheme */
 ./src/core/syscall.c:71:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/x86_64/pci.c:59:// TODO: load drivers and save autodetected irq number in ehdr->e_machine
-./src/core/x86_64/sys.c:261:    // TODO: move this printf to rescue shell
+./src/core/x86_64/sys.c:254:    // TODO: move this printf to rescue shell
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc
 ./src/core/msg.c:102:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:156:    /* TODO: memory -> swap (except tcb) */
