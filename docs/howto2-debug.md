@@ -13,6 +13,7 @@ Debug messages
 --------------
 
 If you want to see debug messages during boot, you can use the `debug` boot option in [FS0:\BOOTBOOT\CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG). For available flags see [boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
+It is not really necessary as with `DEBUG = 1` the syslog is also sent to the serial line, and it has all the necessary information.
 
 Debugging with GDB
 ------------------
@@ -30,6 +31,10 @@ make gdb
 ```
 
 to start [GDB](https://www.sourceware.org/gdb/) and connect it to the running OS/Z instance. Type <kbd>c</kbd> and <kbd>Enter</kbd> to start simulation.
+
+### Get pid
+
+Not possible, at least there's no way I know of.
 
 Debugging with bochs
 --------------------
@@ -80,20 +85,17 @@ For current task, use `x /5bc 0`.
 Debugging with Internal Debugger
 --------------------------------
 
-If debugging enabled, boot will stop at the point where the system is about to release interrupts.
-Hit <kbd>Enter</kbd> to start simulation.
-
-Later you can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine to invoke
-the internal debugger again.
+You can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine or send a Break through
+serial line to invoke the internal debugger.
 
 ### Interfaces
 
 The debugger is shown on framebuffer and accepts keyboard strokes.
 
 
-<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internar Debugger">
-<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png?raw=true" alt="OS/Z Internar Debugger Line Console">
-<img height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png?raw=true" alt="OS/Z Internar Debugger Text User Interface">
+<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internal Debugger" title="OS/Z Internal Debugger">
+<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png?raw=true" alt="OS/Z Internal Debugger Line Console" title="OS/Z Internal Debugger Line Console">
+<img height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png?raw=true" alt="OS/Z Internal Debugger Text User Interface" title="OS/Z Internal Debugger Text User Interface">
 
 It also has a serial connection with 115200,8N1. By default assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
 ```
@@ -114,12 +116,14 @@ Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd>
 
 | Name | Description |
 | ---- | ----------- |
-| Code | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internar Debugger Follow Execution">Register dump and code disassembly |
-| Data | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png?raw=true" alt="OS/Z Internar Debugger Data Dump">Memory or stack dump |
-| [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png?raw=true" alt="OS/Z Internar Debugger Message Queue">Dump task's message queue |
-| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internar Debugger Thread Control Block">Dump the current task's control block |
-| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png?raw=true" alt="OS/Z Internar Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
-| [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png?raw=true" alt="OS/Z Internar Debugger Physical Memory">Dump physical memory manager |
+| Code | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internal Debugger Follow Execution">Register dump and code disassembly |
+| Data | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png?raw=true" alt="OS/Z Internal Debugger Data Dump">Memory or stack dump |
+| [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png?raw=true" alt="OS/Z Internal Debugger Message Queue">Dump task's message queue |
+| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internal Debugger Thread Control Block">Dump the current task's control block |
+| [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png?raw=true" alt="OS/Z Internal Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
+| [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png?raw=true" alt="OS/Z Internal Debugger Physical Memory">Dump physical memory manager |
+| [Sysinfo](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h) | Dump System Information structure |
+| [Syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) | Dump early syslog buffer |
 
 ### Keyboard Shortcuts
 
@@ -203,6 +207,8 @@ x /s rsp        print stack
 i               go back to disassemble instructions tab
 b /qw tcb+F0    set a write breakpoint for quadword length at 000F0h
 b /bp 60        monitor keyboard port
+s               single step one instruction
+sy              show sysinfo
 ```
 
 The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md) is more user than developer oriented as it's about how to use the rescue shell.
