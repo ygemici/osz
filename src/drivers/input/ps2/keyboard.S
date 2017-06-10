@@ -101,12 +101,15 @@ irq1:
 6:  movb    $0xFE, %al
     outb    %al, $0x64
     hlt
-4:  /* handle Ctrl + Alt + Esc */
+4:
+#if DEBUG
+    /* handle Ctrl + Alt + Esc */
     cmpw    $0x1, %si
     je      6f
     cmpw    $0x81, %si
     jne     5f
 6:  int     $1
+#endif
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %sil, kbd_hist+0(%rip)

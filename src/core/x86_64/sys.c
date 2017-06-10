@@ -26,6 +26,7 @@
  */
 
 #include "../../../loader/bootboot.h"
+#include "../env.h"
 #include "acpi.h"
 #include "pci.h"
 
@@ -50,13 +51,14 @@ extern char *syslog_buf;
 extern void dbg_putchar(int c);
 #endif
 
-/* device drivers loaded into "system" address space */
+/* device drivers map */
 char __attribute__ ((section (".data"))) *drvs;
 char __attribute__ ((section (".data"))) *drvs_end;
 phy_t __attribute__ ((section (".data"))) screen[2];
 char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
 uint8_t __attribute__ ((section (".data"))) idle_first;
+pid_t __attribute__ ((section (".data"))) identity_pid;
 
 /* reboot computer */
 void sys_reset()
@@ -163,6 +165,7 @@ void sys_init()
     tcb->ss = 0x10;
     idle_mapping = tcb->memroot;
     idle_first = true;
+    identity_pid = 0;
 
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
@@ -251,7 +254,7 @@ void sys_ready()
     /* reset early kernel console */
     kprintf_reset();
 
-    // TODO: move this printf to rescue shell
+    // TODO: move this printf to init
     kprintf("OS/Z ready. Allocated %d pages out of %d",
         pmm.totalpages - pmm.freepages, pmm.totalpages);
     kprintf(", free %d.%d%%\n",
@@ -271,4 +274,15 @@ void sys_ready()
     isr_fini();
     /* log we're ready */
     syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
+
+    /* set up user services */
+    if(identity_pid) {
+        /* start first time turn on's set up task */
+        syslog_early("Identity process started");
+        sched_awake((OSZ_tcb*)identity_pid);
+        /* we will notify init when identity exited */
+    } else {
+        /* notify init service to start */
+        msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
+    }
 }

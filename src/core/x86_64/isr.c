@@ -312,7 +312,7 @@ void exc01debug(uint64_t excno, uint64_t rip, uint64_t rsp)
 #if DEBUG
     dbg_enable(rip,rsp,NULL);
 #else
-    kpanic("debug exception %d", excno);
+    kpanic("Compiled without debugger");
 #endif
 }
 

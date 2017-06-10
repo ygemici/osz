@@ -41,3 +41,5 @@ display=0
 //  0 autodetect, 1 hpet, 2 pit, 3 rtc
 clock=pit
 
+// start rescue shell
+rescueshell=true

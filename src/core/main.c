@@ -44,10 +44,7 @@
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
-#include <sys/sysinfo.h>
 #include "env.h"
-
-extern sysinfo_t sysinfostruc;
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
@@ -94,26 +91,12 @@ void main()
     // load screen saver
 //    service_init(SRV_USRLAST, "sbin/scrsvr");
 
-    /* step 3: who am I */
-#if DEBUG
-//    service_init(SRV_USRFIRST, "bin/test");
-#else
-/*
-    fs_locate("etc/hostname");
-    if(identity || fs_size==0) {
-        // start first time turn on's set up task
+    /* step 3: stand up and prosper. */
+    service_init(SRV_init, "sbin/init");
+    if(identity) {
+        /* start first time turn on's set up task */
         service_init(SRV_USRFIRST, "sbin/identity");
     }
-*/
-    /* step 4: stand up and prosper. */
-    // load "init" or "sh" process
-/*
-    if(sysinfostruc.rescueshell)
-        service_init(SRV_USRFIRST, "bin/sh");
-    else
-        service_init(SRV_init, "sbin/init");
-*/
-#endif
 
     // enable system multitasking. That will start by iterating
     // through device driver's initialization routines. Each in different
@@ -123,6 +106,6 @@ void main()
     // call sys_disable() as the last step in the shutdown procedure.
     // But just in case of unwanted return, we call poweroff anyway.
 
-    /* step 5: go to dreamless sleep. */
+    /* step 4: go to dreamless sleep. */
     sys_disable();
 }

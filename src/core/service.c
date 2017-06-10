@@ -37,6 +37,7 @@ extern phy_t pdpe;
 extern uint64_t *syslog_buf;
 extern sysinfo_t sysinfostruc;
 extern uint8_t sys_fault;
+extern pid_t identity_pid;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -112,7 +113,6 @@ void *service_loadelf(char *fn)
 #if DEBUG
             kprintf("WARNING corrupt ELF binary: %s\n", fn);
 #endif
-            syslog_early("WARNING corrupt ELF binary: %s", fn);
             return (void*)(-1);
     }
     /* clear autodetected irq number field */
@@ -704,14 +704,21 @@ void service_init(int subsystem, char *fn)
     // dynamic linker
     if(service_rtlink()) {
         //set priority for the task
-        if(subsystem == SRV_USRFIRST)
-            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // rescue shell
-        else if(subsystem == SRV_USRLAST)
+        if(subsystem == SRV_USRFIRST) {
+            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // identity process
+            identity_pid = pid;
+        } else if(subsystem == SRV_USRLAST)
             ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_IDLE;   // screen saver
         else
             ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;    // everything else
+
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        // block identity process at once
+        if(identity_pid == pid) {
+            sched_block((OSZ_tcb*)(pmm.bss_end));
+        }
 
         if(subsystem > SRV_USRFIRST) {
             services[-subsystem] = pid;

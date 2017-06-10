@@ -41,7 +41,6 @@ uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) syslog;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
-uint8_t __attribute__ ((section (".data"))) identity;
 
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
@@ -310,4 +309,9 @@ void env_init()
 		// architecture specific keys
             env = envarch_parse(env);
     }
+
+    // force identity process without hostname
+    fs_locate("etc/hostname");
+    if(fs_size==0)
+        identity = true;
 }

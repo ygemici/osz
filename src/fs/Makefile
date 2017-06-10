@@ -1,6 +1,5 @@
 TARGET = sbin/fs
 LINKER = sharedlib
-EXTOBJ = ../../bin/service.o
 GENSYMS = fs.sym
 
 include ../Makefile.rules
