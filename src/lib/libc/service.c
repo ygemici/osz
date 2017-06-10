@@ -1,5 +1,5 @@
 /*
- * libc/x86_64/service.c
+ * libc/service.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
