@@ -113,8 +113,9 @@ Next at t=45857039
 By doing so, it will enable pre-emption and unleash hell, as nobody will know for sure in which order the interrupts fire.
 Luckily the message queue is serialized, so there's no need for locking.
 
-<img align="left" style="margin-right:10px;" width="100" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Debugger">
+<img align="left" style="margin-right:10px;" width="80" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Debugger">
 
 Please note that OS/Z has it's own internal debugger, so don't have to use bochs debugger if you don't want to.
+Here's a screenshot as a teaser. It has a nice interface and available on serial line too (VT100 mode supported).
 
 If you are interested in debugging, read the [next tutorial](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md).
