@@ -113,7 +113,7 @@ void add_superblock()
 //appends an inode
 int add_inode(char *filetype, char *mimetype)
 {
-    int i,j=!strcmp(filetype,"url:")?secsize-1024:52;
+    int i,j=!strcmp(filetype,"url:")||!strcmp(filetype,"uni:")?secsize-1024:48;
     FSZ_Inode *in;
     fs=realloc(fs,size+secsize);
     if(fs==NULL) exit(4);
@@ -131,8 +131,12 @@ int add_inode(char *filetype, char *mimetype)
         }
     }
     if(mimetype!=NULL){
-        i=strlen(mimetype);
-        memcpy(j==52?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
+        if(!strcmp(filetype,"uni:")){
+            for(i=1;i<j && !(mimetype[i-1]==0 && mimetype[i]==0);i++);
+        } else {
+            i=strlen(mimetype);
+        }
+        memcpy(j==48?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
     }
     in->checksum=crc32_calc((char*)in->filetype,secsize-8);
     size+=secsize;
@@ -263,7 +267,7 @@ void add_dirs(char *dirname,int parent,int level)
     struct dirent *ent;
     if(level>4) return;
     char *full=malloc(4096);
-    char *ptrto=malloc(512-128);
+    char *ptrto=malloc(secsize-1024);
     if(parent==0) parent=strlen(dirname)+1;
     if ((dir = opendir (dirname)) != NULL) {
       while ((ent = readdir (dir)) != NULL) {
@@ -282,7 +286,7 @@ void add_dirs(char *dirname,int parent,int level)
         }
         if(ent->d_type==DT_LNK) {
             // add a symbolic link
-            int s=readlink(dirname,ptrto,512-128-1); ptrto[s+1]=0;
+            int s=readlink(dirname,ptrto,FSZ_SECSIZE-1024-1); ptrto[s+1]=0;
             int i=add_inode("url:",ptrto);
             link_inode(i,full+parent,0);
         }
@@ -606,6 +610,40 @@ void cat(int argc, char **argv)
     }
 }
 
+void addunion(int argc, char **argv)
+{
+    int i;
+    char items[secsize-1024];
+    char *c=(char*)&items;
+    memset(&items,0,sizeof(items));
+    for(i=4;i<argc;i++) {
+        memcpy(c,argv[i],strlen(argv[i]));
+        c+=strlen(argv[i])+1;
+    }
+    fs=readfileall(argv[1]); size=read_size;
+    i=add_inode("uni:",(char*)&items);
+    memset(&items,0,sizeof(items));
+    memcpy(&items,argv[3],strlen(argv[3]));
+    if(items[strlen(argv[3])-1]!='/')
+        items[strlen(argv[3])]='/';
+    link_inode(i,(char*)&items,0);
+    //write out new image
+    f=fopen(argv[1],"wb");
+    fwrite(fs,size,1,f);
+    fclose(f);
+}
+
+void addsymlink(int argc, char **argv)
+{
+    fs=readfileall(argv[1]); size=read_size;
+    int i=add_inode("url:",argv[4]);
+    link_inode(i,argv[3],0);
+    //write out new image
+    f=fopen(argv[1],"wb");
+    fwrite(fs,size,1,f);
+    fclose(f);
+}
+
 int main(int argc, char **argv)
 {
     char *path=strdup(argv[0]);
@@ -626,6 +664,8 @@ int main(int argc, char **argv)
     //parse arguments
     if(argv[1]==NULL||!strcmp(argv[1],"help")) {
         printf("FS/Z mkfs utility\n"
+            "./mkfs (imagetoread) union (path) (members...)\n"
+            "./mkfs (imagetoread) symlink (path) (target)\n"
             "./mkfs (imagetoread) cat (path)\n"
             "./mkfs (imagetoread) ls (path)\n"
             "./mkfs (imagetocreate) (createfromdir)\n"
@@ -636,6 +676,12 @@ int main(int argc, char **argv)
         createdisk();
     } else
     if(argc>1){
+        if(!strcmp(argv[2],"union") && argc>3) {
+            addunion(argc,argv);
+        } else
+        if(!strcmp(argv[2],"symlink") && argc>3) {
+            addsymlink(argc,argv);
+        } else
         if(!strcmp(argv[2],"cat") && argc>2) {
             cat(argc,argv);
         } else

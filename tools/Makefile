@@ -54,6 +54,10 @@ $(USRFILE): ../bin/usr
 	@echo "  mkfs		usr"
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
 	@./mkfs.o $(USRFILE) ../bin/usr
+	@./mkfs.o $(USRFILE) union bin/ "/bin" "/usr/*/bin"
+	@./mkfs.o $(USRFILE) union include/ "/usr/*/include"
+	@./mkfs.o $(USRFILE) union lib/ "/usr/*/lib"
+	@./mkfs.o $(USRFILE) union share/ "/usr/*/share"
 
 var: $(VARFILE)
 

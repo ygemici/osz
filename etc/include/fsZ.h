@@ -41,7 +41,7 @@
  *            1st sector, the super block                *
  *********************************************************/
 typedef struct {
-    uint8_t     reserved[512];      //   0 reserved for loader code
+    uint8_t     loader[512];        //   0 reserved for loader code
     uint8_t     magic[4];           // 512
     uint8_t     version_major;      // 516
     uint8_t     version_minor;      // 517
@@ -59,18 +59,17 @@ typedef struct {
     uint64_t    badsecfid_hi;
     uint64_t    indexfid;           // 600 inode to index tables (index file)
     uint64_t    indexfid_hi;
-    uint64_t    metadatafid;        // 616 inode to label meta data (label database)
-    uint64_t    metadatafid_hi;
-    uint32_t    owneruuid[4];       // 632 owner UUID
-    uint16_t    maxmounts;          // 648 number of maximum mounts allowed
-    uint16_t    currmounts;         // 650 current mount counter
-    uint8_t     createdate[8];      // 652
-    uint8_t     lastmountdate[8];   // 660
-    uint8_t     lastcheckdate[8];   // 668
-    uint8_t     lastdefragdate[8];  // 676
-    uint8_t     raidtype;           // 684
-    uint8_t     flags[7];           // 685
-    uint8_t     reserved2[68+256];
+    uint8_t     encrypt[20];        // 616 inode to label meta data (label database)
+    uint16_t    maxmounts;          // 636 number of maximum mounts allowed
+    uint16_t    currmounts;         // 638 current mount counter
+    uint32_t    owneruuid[4];       // 640 owner UUID
+    uint64_t    createdate;         // 656 creation timestamp UTC
+    uint64_t    lastmountdate;      // 664
+    uint64_t    lastcheckdate;      // 672
+    uint64_t    lastdefragdate;     // 680
+    uint8_t     raidtype;           // 688
+    uint8_t     flags[7];           // 689
+    uint8_t     reserved[320];
     uint8_t     magic2[4];          //1016
     uint32_t    checksum;           //1020 Castagnoli CRC32 of bytes at 512-1020
     uint8_t     raidspecific[FSZ_SECSIZE-1024];
@@ -130,7 +129,7 @@ typedef struct {
 // if inode.fid == inode.sec => inline data
 //sizeof = 4096
 typedef struct {
-    uint8_t     magic[4];       //   0
+    uint8_t     magic[4];       //   0 magic 'FSIN'
     uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to end of the sector
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
     uint8_t     mimetype[48];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
@@ -138,7 +137,9 @@ typedef struct {
     uint64_t    numlinks;       //  80 number of references to this inode
     uint64_t    createdate;     //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
     uint64_t    lastaccess;     //  96
-    uint8_t     reserved[24];   // 104 padding
+    uint64_t    metalabelsec;   // 104 meta label sector
+    uint64_t    metalabelsec_hi;
+    uint8_t     reserved[8];    // 120 padding
     // FSZ_Version oldversions[5];
     uint8_t     version5[64];   // 128 previous versions if enabled
     uint8_t     version4[64];   // 192 all the same format as the current
@@ -168,12 +169,13 @@ typedef struct {
 #define FILETYPE_REG_APP    "appl"
 // special entities, 4th character always ':'
 #define FILETYPE_DIR        "dir:"  // see below
+#define FILETYPE_SYMLINK    "url:"  // symbolic link, inlined data is a path
+#define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths
 #define FILETYPE_SECLST     "lst:"  // for free and bad sector lists
 #define FILETYPE_INDEX      "idx:"  // search cache, not implemented yet
-#define FILETYPE_META       "mta:"  // meta labels, not implemented yet
 #define FILETYPE_CHARDEV    "chr:"  // character device
 #define FILETYPE_BLKDEV     "blk:"  // block device
-#define FILETYPE_FIFO       "fio:"  // First In First Out queue
+#define FILETYPE_FIFO       "fio:"  // First In First Out queue (named pipe)
 #define FILETYPE_SOCK       "sck:"  // socket
 #define FILETYPE_MOUNT      "mnt:"  // mount point
 
