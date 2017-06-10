@@ -77,10 +77,10 @@ uint64_t __attribute__ ((section (".data"))) isr_next;
 uint64_t __attribute__ ((section (".data"))) *idt;
 /* irq routing */
 pid_t __attribute__ ((section (".data"))) *irq_routing_table;
-
+uint16_t __attribute__ ((section (".data"))) isr_maxirq;
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
-uint16_t __attribute__ ((section (".data"))) isr_maxirq;
+uint64_t __attribute__ ((section (".data"))) bogomips;
 
 /* get system timestamp from a BCD date */
 uint64_t isr_getts(char *p, int16_t timezone)
@@ -248,8 +248,12 @@ void isr_init()
     idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
 
     sysinfostruc.freq = i*tmrfreq;
-    syslog_early(" cpu freq %d cps",sysinfostruc.freq);
-    syslog_early(" timer/%s at %d Hz, step %d usec, ts %d ints",
+    bogomips *= tmrfreq;
+    syslog_early(" cpu %d cps, %d bogomips",sysinfostruc.freq, bogomips);
+    /* Hz: number of interrupts per sec
+     * step: microsec to add to TICKS_NTS every interrupt
+     * ts: task switch after every n interrupts */
+    syslog_early(" timer/%s at %d Hz, step %d usec, ts %d",
         tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
 }
 

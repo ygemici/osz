@@ -540,7 +540,12 @@ cat >>isrs.S <<EOF
 
 isr_irqtmrcal:
     cli
-    movq	%rax, %rbx
+    /* first interrupt? Reset counter */
+    orq		%rax, %rax
+    jnz		1f
+    xorq	%rcx, %rcx
+    /* save previous TSC */
+1:  movq	%rax, %rbx
     $EOI
     xorq	%rax, %rax
     xorq	%rdx, %rdx
@@ -582,7 +587,12 @@ fi
 cat >>isrs.S <<-EOF
 isr_irqtmrcal_rtc:
     cli
-    movq	%rax, %rbx
+    /* first interrupt? Reset counter */
+    orq		%rax, %rax
+    jnz		1f
+    xorq	%rcx, %rcx
+    /* save previous TSC */
+1:  movq	%rax, %rbx
     /* acknowledge IRQ8 in RTC */
     movb	\$0x0C, %al
     outb	%al, \$0x70

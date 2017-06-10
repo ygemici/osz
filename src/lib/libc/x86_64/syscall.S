@@ -37,8 +37,11 @@
 .global sysinfo
 .global yield
 .global seterr
+.global setirq
 .global swapbuf
 .global mapfile
+.global sleep
+.global usleep
 
 /* don't use directly, use mq_dispatch() instead */
 .global mq_dispatchcall
@@ -184,6 +187,39 @@ mapfile:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
     movb    $SYS_mapfile, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* void setirq(uint8_t irq) */
+setirq:
+    xorq    %rsi, %rsi
+    movb    %dil, %sil
+    xorq    %rdi, %rdi
+    movb    $SYS_setirq, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* void sleep(uint64_t sec) */
+sleep:
+    xorq    %rdx, %rdx
+    movq    %rdi, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_alarm, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/* void usleep(uint64_t usec) */
+usleep:
+    xorq    %rdx, %rdx
+    movq    %rdi, %rax
+    movq    $1000000,%rcx
+    divq    %rcx
+    movq    %rax, %rsi
+    xorq    %rdi, %rdi
+    movb    $SYS_alarm, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
     ret

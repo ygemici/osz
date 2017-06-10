@@ -99,6 +99,21 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             tcb->errno = EACCES;
             break;
 
+        case SYS_setirq:
+            /* set irq handler */
+            if(tcb->priority == PRI_DRV) {
+                isr_installirq(arg0, tcb->memroot);
+            } else {
+                tcb->errno = EACCES;
+            }
+            break;
+    
+        case SYS_alarm:
+            /* suspend thread for arg0 sec and arg1 microsec.
+             * Values smaller than alarmstep already handled in isrc.S */
+            sched_alarm(tcb, sysinfostruc.ticks[TICKS_TS]+arg0, sysinfostruc.ticks[TICKS_NTS]+arg1);
+            break;
+
         case SYS_mapfile:
             /* map a file info bss */
             if(arg0<BSS_ADDRESS || arg0>=FBUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {

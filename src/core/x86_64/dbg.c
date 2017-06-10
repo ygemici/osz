@@ -53,6 +53,9 @@ extern uint64_t *safestack;
 extern uint8_t sys_fault;
 extern uint64_t lastsym;
 extern char *addr_base;
+extern uint64_t bogomips;
+extern char *syslog_buf;
+extern char *syslog_ptr;
 extern sysinfo_t sysinfostruc;
 
 extern uchar *service_sym(virt_t addr);
@@ -100,6 +103,7 @@ enum {
     tab_queues,
     tab_ram,
     tab_sysinfo,
+    tab_syslog,
 
     tab_last
 };
@@ -953,8 +957,8 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("cpu freq: %d cycle/sec, quantum: %d ticks, max open files: %d\n",
-        sysinfostruc.freq, sysinfostruc.quantum, sysinfostruc.nropenmax);
+    kprintf("cpu: %d cps (%d bogomips), quantum: %d ticks, max open files: %d\n",
+        sysinfostruc.freq, bogomips, sysinfostruc.quantum, sysinfostruc.nropenmax);
     kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
         sysinfostruc.keymap, sysinfostruc.debug, sysinfostruc.rescueshell?"true":"false");
 
@@ -991,6 +995,14 @@ void dbg_sysinfo()
         sysinfostruc.systables[2], sysinfostruc.systables[3]);
     kprintf(" apic: %8x, dsdt: %8x\n\n",
         sysinfostruc.systables[4], sysinfostruc.systables[5]);
+}
+
+// dump early syslog buffer
+void dbg_syslog()
+{
+    fx=kx=0; ky=2; maxy--;
+    kprintf("%s",syslog_buf);
+    maxy++;
 }
 
 // switch to the previous task
@@ -1177,7 +1189,7 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
     OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
     uint64_t scancode = 0, offs, line, x, y;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
-    char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM", "Sysinfo" };
+    char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM", "Sysinfo", "Syslog" };
     char cmd[64], c;
     int cmdidx=0,cmdlast=0;
     uint8_t m,l;
@@ -1300,7 +1312,8 @@ redraw:
         if(dbg_tab==tab_msg) dbg_msg(); else
         if(dbg_tab==tab_queues) dbg_queues(); else
         if(dbg_tab==tab_ram) dbg_ram(); else
-        if(dbg_tab==tab_sysinfo) dbg_sysinfo();
+        if(dbg_tab==tab_sysinfo) dbg_sysinfo(); else
+        if(dbg_tab==tab_syslog) dbg_syslog();
         __asm__ __volatile__ ("popq %%rdi":::"%rdi");
 getcmd:
         offs = (maxy-1)*font->height*bootboot.fb_scanline;

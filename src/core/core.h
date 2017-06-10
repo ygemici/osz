@@ -201,6 +201,9 @@ extern void kfree(void* ptr);
 /** Add entropy to random generator **/
 extern void kentropy();
 
+/** busy loop **/
+extern void kbusyloop(uint64_t cycle);
+
 // ----- Threads -----
 /** Allocate and initialize thread structures */
 extern pid_t thread_new(char *cmdline);

@@ -40,10 +40,10 @@
 .global isr_tmrcalibrate
 
 .extern alarmstep
-.extern alarmstepmax
 .extern sched_awake
 .extern ccb
 .extern isr_next
+.extern bogomips
 
 .section .text
 
@@ -119,6 +119,26 @@ isr_syscall0:
     /* shortcut for yield */
     cmpb    $SYS_sched_yield, %dil
     je      7f
+
+    /* small alarm(sec,usec) */
+    cmpb    $SYS_alarm, %dil
+    jne     2f
+    /* sec == 0? */
+    cmpq    $0, %rsi
+    jnz     3f
+    /* usec < alarmstep? */
+    cmpq    alarmstep, %rdx
+    ja      3f
+    movq    %rdx, %rax
+    xorq    %rdx, %rdx
+    movq    bogomips, %rcx
+    mulq    %rcx
+    movq    $1000000, %rcx
+    divq    %rcx
+5:  nop
+    dec     %rax
+    jnz     5b
+    jmp     9f
 
     /*** drivers tasks only ***/
 2:  cmpb    $PRI_DRV, tcb_priority
@@ -202,10 +222,15 @@ isr_syscall0:
 isr_tmrcalibrate:
     xorq    %rax, %rax
     xorq    %rbx, %rbx
+    xorq    %rcx, %rcx
     sti
-1:  orq     %rbx, %rbx
+    /* let's calculate how many times we increase a register
+     * beetwen two interrupts running at tmrfreq. See isr_irqtmrcal in isrs.S */
+1:  incq    %rcx
+    orq     %rbx, %rbx
     jz      1b
     cli
+    movq    %rcx, bogomips
     subq    %rbx, %rax
     ret
 

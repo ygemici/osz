@@ -36,12 +36,12 @@
 #define SYS_dl 3
 #define SYS_sched_yield 4
 #define SYS_seterr 5
-#define SYS_setirq 6 //FIXME
+#define SYS_setirq 6
 #define SYS_exit 7
 #define SYS_sysinfo 8
 #define SYS_swapbuf 9
 #define SYS_regservice 10
-#define SYS_stimebcd 11     // SYS to CORE, cmos local date
+#define SYS_stimebcd 11     // driver to CORE, cmos local date
 #define SYS_stime 12
 #define SYS_alarm 13
 #define SYS_mmap 14
@@ -78,7 +78,9 @@ void exit(int err);                     // exit task
 void swapbuf();                         // flush screen to framebuffer
 uint64_t regservice(pid_t thread);      // register service (init only)
 void stime(uint64_t utctimestamp);      // set system time
-void alarm(uint64_t nanosec);           // sleep the thread for nanosec
+void setirq(int8_t irq);                // set irq message for this thread
+void sleep(uint64_t sec);               // sleep the thread for sec
+void usleep(uint64_t usec);             // sleep the thread for micro sec
 virt_t mmap(virt_t bss, phy_t addr, size_t size); // map physical address
 void munmap(virt_t bss, size_t size);   // unmap bss (free physical pages)
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
