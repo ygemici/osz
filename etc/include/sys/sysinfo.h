@@ -58,6 +58,7 @@ typedef struct {
     uint64_t ticks[4];      // overall counters
     uint64_t srand[4];      // random seed bits
     uint64_t systables[16]; // platform specific addresses
+    char osver[128];        // OS version in human readable form
 } __attribute__((packed)) sysinfo_t;
 
 sysinfo_t *sysinfo();                   // query system information

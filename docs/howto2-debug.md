@@ -85,6 +85,7 @@ For current task, use `x /5bc 0`.
 Debugging with Internal Debugger
 --------------------------------
 
+<img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Internal Debugger">
 You can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine or send a Break through
 serial line to invoke the internal debugger.
 
@@ -122,8 +123,8 @@ Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd>
 | [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internal Debugger Thread Control Block">Dump the current task's control block |
 | [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png?raw=true" alt="OS/Z Internal Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
 | [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png?raw=true" alt="OS/Z Internal Debugger Physical Memory">Dump physical memory manager |
-| [Sysinfo](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h) | Dump System Information structure |
-| [Syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) | Dump early syslog buffer |
+| [Sysinfo](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgB.png?raw=true" alt="OS/Z Internal Debugger Sysinfo">Dump System Information structure |
+| [Syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgC.png?raw=true" alt="OS/Z Internal Debugger Syslog viewer">Dump early syslog buffer |
 
 ### Keyboard Shortcuts
 

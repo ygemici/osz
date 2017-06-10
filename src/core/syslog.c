@@ -47,9 +47,6 @@ extern void dbg_putchar(int c);
 
 char __attribute__ ((section (".data"))) *syslog_buf;
 char __attribute__ ((section (".data"))) *syslog_ptr;
-char __attribute__ ((section (".data"))) syslog_header[] =
-    OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"
-    "Copyright 2017 CC-by-nc-sa bztsrc@github\nUse is subject to license terms.\n\n";
 
 /* early RFC5424 compatible logger */
 void syslog_early(char* fmt, ...)

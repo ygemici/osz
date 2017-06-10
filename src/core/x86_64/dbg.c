@@ -931,11 +931,11 @@ void dbg_sysinfo()
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("[System Information Structure]\n");
+    kprintf("[System Information Structure @%x]\n",&sysinfostruc);
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("Linear address: @%x\n\n",&sysinfostruc);
+    kprintf("%s",&sysinfostruc.osver);
 
     fg=dbg_theme[4];
     if(dbg_tui)

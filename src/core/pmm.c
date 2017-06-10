@@ -36,7 +36,6 @@ extern OSZ_rela *relas;
 extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
-extern char *syslog_header;
 extern pid_t *services;
 extern sysinfo_t sysinfostruc;
 
@@ -238,11 +237,6 @@ void pmm_init()
     services = kalloc(nrsrvmax);
     //allocate syslog buffer
     syslog_buf = syslog_ptr = kalloc(nrlogmax);
-
-    //output syslog header
-    i = kstrlen((char*)&syslog_header);
-    kmemcpy(syslog_buf, (char*)&syslog_header, i);
-    syslog_ptr += i;
 
     //first real message
     syslog_early("Started uuid %4x-%2x-%2x-%8x",

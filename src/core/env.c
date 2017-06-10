@@ -27,6 +27,9 @@
 
 #include <sys/sysinfo.h>
 
+char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"
+    "Copyright 2017 CC-by-nc-sa bztsrc@github\nUse is subject to license terms.\n\n";
+
 /*** parsed values ***/
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
@@ -207,6 +210,7 @@ void env_init()
     sysinfostruc.fb_width = bootboot.fb_width;
     sysinfostruc.fb_height = bootboot.fb_height;
     sysinfostruc.fb_scanline = bootboot.fb_scanline;
+    kmemcpy(sysinfostruc.osver, (char*)&osver, kstrlen((char*)&osver)+1);
     kmemcpy(&sysinfostruc.keymap, "en_us", 6);
     envarch_init();
 
