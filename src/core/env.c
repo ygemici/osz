@@ -46,6 +46,7 @@ extern sysinfo_t sysinfostruc;
 extern void envarch_init();
 extern unsigned char *envarch_parse(unsigned char *env);
 
+/*** value parsing helper functions ***/
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
     if(*s=='0' && *(s+1)=='x')

@@ -927,6 +927,8 @@ protmode_start:
             cmp         dword [esi+7], '    '
             jne         .notcfg
 
+            mov         eax, dword [esi + fatdir.size]
+            mov         dword [core_len], eax
             xor         eax, eax
             cmp         byte [fattype], 0
             jz          @f
@@ -944,6 +946,15 @@ protmode_start:
             push        ecx
             mov         edi, 9000h
             prot_readsector
+            xor         eax, eax
+            mov         ecx, 4096
+            sub         ecx, dword [core_len]
+            js          @f
+            mov         edi, 9000h
+            add         edi, dword [core_len]
+            repnz       stosb
+@@:         mov         dword [core_len], eax
+            mov         byte [9FFFh], al
             pop         ecx
             pop         edi
             pop         esi

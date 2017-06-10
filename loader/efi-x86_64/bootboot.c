@@ -133,6 +133,10 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
 {
     unsigned char *ptr=cfg-1;
     int i;
+    if(len>PAGESIZE-1) {
+        len=PAGESIZE-1;
+        cfg[len]=0;
+    }
     DBG(L" * Environment @%lx %d bytes\n",cfg,len);
     while(ptr<cfg+len && ptr[0]!=0) {
         ptr++;
@@ -163,15 +167,16 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
             *ptr=0;
             ptr++;
         }
-        if(argc>2 && !CompareMem(ptr,(const CHAR8 *)"\n\n\n",3)){
+    }
+    if(argc>2){
+        ptr=cfg+len;
+        for(i=3;i<argc && ptr+StrLen(argv[i])<cfg+PAGESIZE;i++) {
+            CopyMem(ptr,argv[i],StrLen(argv[i]));
+            ptr += StrLen(argv[i]);
+            *ptr = '\n';
             ptr++;
-            for(i=3;i<argc;i++) {
-                CopyMem(ptr,argv[i],StrLen(argv[i]));
-                ptr += StrLen(argv[i]);
-                *ptr = '\n';
-                ptr++;
-            }
         }
+        *ptr = 0;
     }
     return EFI_SUCCESS;
 }
