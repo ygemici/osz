@@ -25,9 +25,11 @@
  * @brief Virtual Memory Manager, on-demand paging
  */
 
-//phy_t __attribute__ ((section (".data"))) pt;
 phy_t __attribute__ ((section (".data"))) pdpe;
 
+/**
+ * Page fault handler, called by isrs.S
+ */
 void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
 //#if DEBUG
@@ -37,7 +39,9 @@ void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
 //#endif
 }
 
-/* map memory into thread's address space */
+/**
+ * map memory into thread's address space
+ */
 void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access)
 {
     if(size==0)

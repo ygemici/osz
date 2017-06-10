@@ -30,7 +30,10 @@
 
 uint64_t __attribute__ ((section (".data"))) fs_size;
 
-/* return starting offset of file in identity mapped initrd */
+/**
+ * return starting offset of file in identity mapped initrd
+ * also sets fs_size variable, as it returns pointer
+ */
 void *fs_locate(char *fn)
 {
     fs_size = 0;

@@ -30,6 +30,9 @@
 
 .global rtc_init
 
+/**
+ * Real Time Clock. Called by isr_init()
+ */
 rtc_init:
     /* initialize RTC */
 

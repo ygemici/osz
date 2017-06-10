@@ -186,7 +186,9 @@ unsigned char *env_debug(unsigned char *s)
 #endif
 
 /*** initialize environment ***/
-// architecture independent parameters
+/**
+ * parse architecture independent parameters
+ */
 void env_init()
 {
     unsigned char *env = environment;
@@ -209,6 +211,7 @@ void env_init()
     sysinfostruc.fb_width = bootboot.fb_width;
     sysinfostruc.fb_height = bootboot.fb_height;
     sysinfostruc.fb_scanline = bootboot.fb_scanline;
+    sysinfostruc.screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
     kmemcpy(sysinfostruc.osver, (char*)&osver, kstrlen((char*)&osver)+1);
     kmemcpy(&sysinfostruc.keymap, "en_us", 6);
     envarch_init();

@@ -81,7 +81,7 @@ There are three states. The following figure demostrates them and their transiti
 ```
         { tcb_state_hybernated }
              ^              |
-   sched_sleep()            |
+   sched_hybernate()        |
              |              |
     { tcb_state_blocked }   |
              ^      |       |

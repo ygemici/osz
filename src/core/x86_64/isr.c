@@ -25,11 +25,13 @@
  * @brief Interrupt Service Routines
  */
 
-
 #include <fsZ.h>
 #include "isr.h"
 
 #define TMRMAX  1000000 //max 1 MHz, 1/TMRMAX = 1 usec (micro)
+
+/* compile time check */
+c_assert(ISR_NUMIRQ < 224);
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
@@ -82,7 +84,9 @@ uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
 uint64_t __attribute__ ((section (".data"))) bogomips;
 
-/* get system timestamp from a BCD date */
+/**
+ *  get UTC system timestamp from a BCD local date
+ */
 uint64_t isr_getts(char *p, int16_t timezone)
 {
     uint64_t j,r=0,y,m,d,h,i,s;
@@ -130,14 +134,17 @@ uint64_t isr_getts(char *p, int16_t timezone)
     return r;
 }
 
-/* Initialize interrupts */
+/**
+ * Initialize interrupts
+ */
 void isr_init()
 {
     char *tmrname[] = { "hpet", "pit", "rtc" };
     void *ptr;
     uint64_t i=0, s;
+    isr_next = 0;
 
-    // CPU Control Block (TSS64 in kernel bss)
+    /*** CPU Control Block (TSS64 in kernel bss) ***/
     kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
     ccb.magic = OSZ_CCB_MAGICH;
     //usr stack (userspace, first page)
@@ -150,11 +157,8 @@ void isr_init()
     // parse MADT to get IOAPIC address and HPET address
     acpi_early(NULL);
 
-    isr_next = 0;
-
-    idt = kalloc(1);                                 //allocate Interrupt Descriptor Table
-
-    // generate Interrupt Descriptor Table
+    /*** generate Interrupt Descriptor Table ***/
+    idt = kalloc(1);
     ptr = &isr_exc00divzero;
     // 0-31 exception handlers
     for(i=0;i<32;i++) {
@@ -170,7 +174,7 @@ void isr_init()
         ptr+=ISR_IRQMAX;
     }
 
-    // allocate and map IRQ Routing Table
+    /*** IRQ Routing Table ***/
     s = (((ISR_NUMIRQ+1) * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
     // failsafe
     if(s<1)
@@ -178,10 +182,10 @@ void isr_init()
     // allocate IRT
     irq_routing_table = kalloc(s);
 
+    /*** Timer stuff ***/
     // default timer frequency and IRQ
     tmrfreq = 0; tmrirq = 0;
-
-    /* load timer driver */
+    // load timer driver
     //   0 = autodetect
     //   1 = HPET
     //   2 = PIT
@@ -194,7 +198,7 @@ void isr_init()
 #else
     clocksource = TMR_HPET;
 #endif
-    //if HPET not found, fallback to PIT
+    // if HPET not found, fallback to PIT
     if(clocksource==TMR_HPET && hpet_addr!=0) {
         hpet_init();
 #if ISR_CTRL == CTRL_PIC
@@ -214,9 +218,9 @@ void isr_init()
         sysinfostruc.quantum=10;         //min 10 task switch per sec
     if(sysinfostruc.quantum>tmrfreq/10)
         sysinfostruc.quantum=tmrfreq/10; //max 1 switch per 10 interrupts
-    //calculate stepping in microsec
+    // calculate stepping in microsec
     alarmstep = 1000000/tmrfreq;
-    //failsafes
+    // failsafes
     if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
     qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
 
@@ -234,7 +238,7 @@ void isr_init()
     if(!isr_maxirq)
         isr_maxirq=16;
 
-    //calibrate with timer to get clock freq
+    // calibrate with timer to get bus freq
     ptr = clocksource==TMR_RTC ? &isr_irqtmrcal_rtc : &isr_irqtmrcal;
     idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
     idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
@@ -242,7 +246,7 @@ void isr_init()
     i=isr_tmrcalibrate();
     isr_disableirq(tmrirq);
 
-    /* override the default IRQ handler ISR with timer ISR */
+    /* override the default IRQ handler ISR with selected Timer ISR */
     ptr = clocksource==TMR_RTC ? &isr_irqtmr_rtc : &isr_irqtmr;
     idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
     idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
@@ -257,6 +261,9 @@ void isr_init()
         tmrname[clocksource-1], tmrfreq, alarmstep, qdiv);
 }
 
+/**
+ * Finish up ISR intialization
+ */
 void isr_fini()
 {
     int i;
@@ -273,9 +280,11 @@ void isr_fini()
     // "soft" IRQ #1, mem2vid in display driver
     if(irq_routing_table[ISR_NUMIRQ]!=0)
         syslog_early(" m2v: %x", irq_routing_table[ISR_NUMIRQ] );
-
 }
 
+/**
+ * Add a task into IRQ Routing Table
+ */
 int isr_installirq(uint8_t irq, phy_t memroot)
 {
     if(irq>=0 && irq<isr_maxirq) {
@@ -294,13 +303,15 @@ int isr_installirq(uint8_t irq, phy_t memroot)
     }
 }
 
-/* fallback exception handler */
+/**
+ * fallback exception handler
+ */
 void excabort(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
     kpanic("---- exception %d errcode %d ----",excno,((OSZ_tcb*)0)->excerr);
 }
 
-/* exception specific code */
+/*** exception specific code ***/
 
 void exc00divzero(uint64_t excno, uint64_t rip, uint64_t rsp)
 {

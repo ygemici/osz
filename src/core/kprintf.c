@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Ring 0 printf implementation for core
+ * @brief Ring 0 printf implementation for core, early console
  */
 
 #include "font.h"
@@ -87,6 +87,9 @@ extern void dbg_setpos();
 extern void dbg_putchar(int c);
 #endif
 
+/**
+ * reset console, white on black and moce cursor home
+ */
 void kprintf_reset()
 {
     kx = ky = fx = 0;
@@ -96,12 +99,18 @@ void kprintf_reset()
     bg = 0;
 }
 
+/**
+ * move cursor to top left corner of a centered window
+ */
 void kprintf_center(int w, int h)
 {
     kx = fx = (maxx-w)/2;
     ky = (maxy-h)/2;
 }
 
+/**
+ * initialize early console
+ */
 void kprintf_init()
 {
     int x, y, line, offs = 0;
@@ -144,7 +153,9 @@ void kprintf_init()
     }
 }
 
-/* put red coloured logo on panic screen */
+/**
+ * put red coloured logo on panic screen
+ */
 void kprintf_putlogo()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
@@ -171,6 +182,9 @@ void kprintf_putlogo()
     }
 }
 
+/**
+ * display one literal unicode character
+ */
 void kprintf_putchar(int c)
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
@@ -201,6 +215,9 @@ void kprintf_putchar(int c)
 #endif
 }
 
+/**
+ * display ascii variable for %a
+ */
 void kprintf_putascii(int64_t c)
 {
     *((uint64_t*)&tmpstr) = c;
@@ -208,6 +225,9 @@ void kprintf_putascii(int64_t c)
     kprintf(&tmpstr[0]);
 }
 
+/**
+ * similar, for %A
+ */
 void kprintf_dumpascii(int64_t c)
 {
     int i;
@@ -229,6 +249,9 @@ void kprintf_dumpascii(int64_t c)
 #endif
 }
 
+/**
+ * handle %d
+ */
 void kprintf_putdec(int64_t c)
 {
     int i=12;
@@ -245,6 +268,9 @@ void kprintf_putdec(int64_t c)
     kprintf(&tmpstr[i]);
 }
 
+/**
+ * for %x arguments
+ */
 void kprintf_puthex(int64_t c)
 {
     int i=16;
@@ -262,6 +288,9 @@ void kprintf_puthex(int64_t c)
     kprintf(&tmpstr[i]);
 }
 
+/**
+ * called by isr_timer every sec, for debug
+ */
 void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
@@ -276,6 +305,9 @@ void kprintf_putfps()
     fg=of; bg=ob;
 }
 
+/**
+ * scroll the screen, and pause if srcy is set
+ */
 void kprintf_scrollscr()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
@@ -331,7 +363,9 @@ void kprintf_scrollscr()
 	}
 }
 
-// for testing purposes
+/**
+ * for testing purposes, print out all characters
+ */
 void kprintf_unicodetable()
 {
     int x,y;
@@ -351,6 +385,9 @@ void kprintf_unicodetable()
     }
 }
 
+/**
+ * display a string on early console
+ */
 void kprintf(char* fmt, ...)
 {
     valist args;

@@ -32,7 +32,9 @@ phy_t __attribute__ ((section (".data"))) core_mapping;
 phy_t __attribute__ ((section (".data"))) identity_mapping;
 phy_t __attribute__ ((section (".data"))) *stack_ptr;
 
-/* create a thread, allocate memory for it and init TCB */
+/**
+ * create a thread, allocate memory for it and init TCB
+ */
 pid_t thread_new(char *cmdline)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
@@ -117,11 +119,17 @@ pid_t thread_new(char *cmdline)
     return self/__PAGESIZE;
 }
 
+/**
+ * Check thread address space consistency
+ */
 bool_t thread_check(OSZ_tcb *tcb, phy_t *paging)
 {
     return true;
 }
 
+/**
+ * check if a thread has a specific Access Control Entry
+ */
 bool_t thread_allowed(char *grp, uint8_t access)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(0);

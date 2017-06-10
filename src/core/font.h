@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief PSF font format for kprintf
+ * @brief PSF font format for early console (kprintf)
  */
 
 #include <stdint.h>
@@ -34,7 +34,7 @@ typedef struct {
     uint32_t version;
     uint32_t headersize;/* offset of bitmaps in file */
     uint16_t flags;     /* original PSF2 has 32 bit flags */
-    uint8_t hotspot_x;  /* addition to osZ */
+    uint8_t hotspot_x;  /* addition to OS/Z */
     uint8_t hotspot_y;
     uint32_t numglyph;
     uint32_t bytesperglyph;

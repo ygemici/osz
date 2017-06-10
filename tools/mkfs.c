@@ -25,15 +25,17 @@
  * @brief Small utility to create FS/Z disk images
  *
  *  Compile: gcc mkfs.c -o mkfs
+ *
  *  Usage:
  *  ./mkfs (file) (dir) - creates a new FS/Z image file
+ *  ./mkfs (file) union (path) (members...) - add an union directory to image file
+ *  ./mkfs (file) symlink (path) (target) - add a symbolic link to image file
  *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
  *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
- *  ./mkfs disk - assembles partition images into one GPT disk
+ *  ./mkfs disk - assembles partition images into one GPT disk, saves bin/disk.dd
  *
- * It's a minimal implementation, has several limitations compared to
- * the FS/Z spec. For example it supports only 24 directory entries
- * per directories (entries are inlined in inode).
+ * It's a minimal implementation, has several limitations compared to the FS/Z spec.
+ * For example it supports only 24 entries per directory (entries are inlined in inode).
  */
 
 #include <stdio.h>
@@ -410,16 +412,6 @@ int createdisk()
     setint(((gs+es)/512)+2,loader+0x1D4);       //end CHS
     setint((gs/512)+1,loader+0x1D6);            //start lba
     setint(((es)/512),loader+0x1DA);            //end lba
-/*
-    // MBR, OS/Z System Partition record
-    loader[0x1E2]='Z';                          //type
-    setint(((gs+es)/512)+1,loader+0x1E6);       //start lba
-    setint(((gs+es+us)/512),loader+0x1EA);      //end lba
-    // MBR, OS/Z Public Data Partition record
-    loader[0x1F2]='Z';                          //type
-    setint(((gs+es+us)/512)+1,loader+0x1F6);    //start lba
-    setint(((gs+es+us+vs)/512),loader+0x1FA);   //end lba
-*/
     // magic
     loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
 

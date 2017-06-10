@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief PCI functions and enumeration
+ * @brief Internal Debugger
  */
 
 #if DEBUG
@@ -1155,7 +1155,9 @@ void dbg_singlestep(uint8_t enable)
     }
 }
 
-// initialize debugger. Called from sys_enable()
+/**
+ * initialize debugger. Called from sys_enable()
+ */
 void dbg_init()
 {
     dbg_enabled = 1;
@@ -1182,7 +1184,9 @@ void dbg_init()
     :::"%rax","%rdx");
 }
 
-// activate debugger. Called from ISRs
+/**
+ * activate debugger. Called from ISRs
+ */
 void dbg_enable(virt_t rip, virt_t rsp, char *reason)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;

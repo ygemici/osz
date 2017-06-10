@@ -1,4 +1,4 @@
 Base System
 ===========
 
-Essential libraries and applications that reside on initial ramdisk.
+Essential libraries, applications and system services that reside on initial ramdisk.

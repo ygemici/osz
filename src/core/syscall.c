@@ -27,7 +27,7 @@
 
 
 #include <fsZ.h>
-#include <sys/sysinfo.h>
+#include <sysexits.h>
 #include "env.h"
 
 /* external resources */
@@ -36,9 +36,13 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 extern uint64_t isr_getts(char *p,int16_t timezone);
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
+extern pid_t identity_pid;
 extern sysinfo_t sysinfostruc;
 
-/* System call dispatcher for messages sent to SRV_core */
+/**
+ * System call dispatcher for messages sent to SRV_CORE. Also has a low level
+ * part, isr_syscall0 in isrc.S. We only came here if message is not handled there
+ */
 uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -51,6 +55,18 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
         case SYS_exit:
+            if(identity_pid && tcb->mypid == identity_pid) {
+                /* notify init service to start */
+                msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
+            }
+            if(tcb->mypid == services[-SRV_init]) {
+                /* power off or reboot system when init task exits */
+                if(arg0 == EX_OK)
+                    sys_disable();
+                else
+                    sys_reset();
+            }
+            sched_pick();
             break;
 
         case SYS_dl:
@@ -100,7 +116,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         case SYS_setirq:
-            /* set irq handler */
+            /* set irq handler, only device drivers allowed to do so */
             if(tcb->priority == PRI_DRV) {
                 isr_installirq(arg0, tcb->memroot);
             } else {
@@ -110,7 +126,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
     
         case SYS_alarm:
             /* suspend thread for arg0 sec and arg1 microsec.
-             * Values smaller than alarmstep already handled in isrc.S */
+             * Values smaller than alarmstep already handled by isr_syscall0 in isrc.S */
             sched_alarm(tcb, sysinfostruc.ticks[TICKS_TS]+arg0, sysinfostruc.ticks[TICKS_NTS]+arg1);
             break;
 

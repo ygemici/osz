@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Interrupt Ccontroller independent, common assembly routines
+ * @brief Interrupt Controller independent, common assembly routines
  */
 #include <errno.h>
 #include <syscall.h>
@@ -47,7 +47,9 @@
 
 .section .text
 
-/* store thread's context into Thread Control Block */
+/**
+ * store thread's context into Thread Control Block
+ */
 isr_savecontext:
     movq    %rax, tcb_gpr +   0
     movq    %rbx, tcb_gpr +   8
@@ -66,7 +68,9 @@ isr_savecontext:
     movq    %rbp, tcb_gpr + 112
     ret
 
-/* restore thread's context from Thread Control Block */
+/**
+ * restore thread's context from Thread Control Block
+ */
 isr_loadcontext:
     movq    tcb_gpr +   0, %rax
     movq    tcb_gpr +   8, %rbx
@@ -85,7 +89,10 @@ isr_loadcontext:
     movq    tcb_gpr + 112, %rbp
     ret
 
-/* syscall dispatcher, platform dependent wrapper */
+/**
+ * syscall dispatcher, platform dependent wrapper around isr_syscall()
+ * performance hacks and special access checks mostly
+ */
 .align  16, 0x90
 isr_syscall0:
     cli
@@ -97,7 +104,6 @@ isr_syscall0:
     movq    %rsp, __PAGESIZE-16
     movq    safestack, %rsp
     addq    512, %rsp
-//movq $__PAGESIZE-40, %rsp
 
     /* 'send' */
     cmpl    $0x646E6573, %eax
@@ -129,14 +135,14 @@ isr_syscall0:
     /* usec < alarmstep? */
     cmpq    alarmstep, %rdx
     ja      3f
+    /* loops = usec*bogomips/1000000 */
     movq    %rdx, %rax
     xorq    %rdx, %rdx
     movq    bogomips, %rcx
     mulq    %rcx
     movq    $1000000, %rcx
     divq    %rcx
-5:  nop
-    dec     %rax
+5:  dec     %rax
     jnz     5b
     jmp     9f
 
@@ -219,13 +225,15 @@ isr_syscall0:
     movq    __PAGESIZE-16, %rsp
     sysretq
 
+/**
+ * calibrate busy loop used by isr_syscall0 by calculating how many times we increase a register
+ * between two interrupts running at tmrfreq. See isr_irqtmrcal in isrs.S
+ */
 isr_tmrcalibrate:
     xorq    %rax, %rax
     xorq    %rbx, %rbx
     xorq    %rcx, %rcx
     sti
-    /* let's calculate how many times we increase a register
-     * beetwen two interrupts running at tmrfreq. See isr_irqtmrcal in isrs.S */
 1:  incq    %rcx
     orq     %rbx, %rbx
     jz      1b
@@ -234,7 +242,9 @@ isr_tmrcalibrate:
     subq    %rbx, %rax
     ret
 
-/* handle timers, called by PIT, RTC or HPET, modify global counters */
+/**
+ * handle timers, driver independent code. Called by PIT, RTC or HPET code in isrs.S
+ */
 isr_timer:
 /* global clocksource */
     /* uint128_t sysinfostruc.ticks[TICKS_LO]++ */
@@ -274,8 +284,8 @@ isr_timer:
 
 /* preemption */
     /* never preempt real-time and driver tasks */
-    cmpb    $PRI_SRV, tcb_priority
-    jb      9f
+    cmpb    $PRI_DRV, tcb_priority
+    jae     9f
 
     /* check timer queue's head and awake thread if time passed */
     /* ccb.hd_timerq != 0? */

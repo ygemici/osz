@@ -53,6 +53,7 @@
 /* Default path prefix for `tempnam' and `tmpnam'.  */
 #define P_tmpdir	"/tmp"
 
+/* unimplemented */
 #if 0
 /* Remove file FILENAME.  */
 extern int remove (char *filename);

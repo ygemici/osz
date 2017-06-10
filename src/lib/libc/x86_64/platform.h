@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief platform dependent libc heaaders (for user space C library)
+ * @brief platform dependent libc headers (for user space C library)
  */
 
 #ifndef _OSZ_PLATFORM_H

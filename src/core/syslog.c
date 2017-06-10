@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Physical Memory Manager architecture specific part
+ * @brief Early syslog implementation. Shares buffer with "syslog" task
  */
 
 #include "env.h"
@@ -48,7 +48,9 @@ extern void dbg_putchar(int c);
 char __attribute__ ((section (".data"))) *syslog_buf;
 char __attribute__ ((section (".data"))) *syslog_ptr;
 
-/* early RFC5424 compatible logger */
+/**
+ * early RFC5424 compatible logger
+ */
 void syslog_early(char* fmt, ...)
 {
     valist args;
@@ -131,4 +133,3 @@ put:        *syslog_ptr++ = *fmt;
         dbg_putchar((int)(*p));
 #endif
 }
-

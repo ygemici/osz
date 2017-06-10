@@ -53,7 +53,6 @@ extern unsigned char environment[__PAGESIZE]; // configuration
 
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
-extern uint8_t tmp3map;               // temporarily mapped page #3 (pmm_alloc)
 extern uint8_t tmpalarm;              // temporarily mapped tcb for alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
@@ -66,7 +65,7 @@ extern uint8_t __bss_start;           // start of bss segment
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern OSZ_pmm pmm;                   // Physical Memory Manager data
-extern int scry;                      // scroll counter
+extern int scry;                      // scroll counter for console
 
 /* see etc/include/syscall.h */
 extern pid_t *services;
@@ -257,8 +256,9 @@ extern void drv_init(char *fn);
 
 // ----- Message Queue -----
 /** normal message senders */
-/* send a message with scalar values */
+/* send a message with pointer+size pair */
 #define msg_send(event,ptr,size,magic) msg_sends(MSG_PTRDATA | event, (uint64_t)ptr, (uint64_t)size, magic, 0, 0, 0)
+/* send a message with scalar values */
 extern uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /** low level message sender, called by senders above and IRQ ISRs */
 extern uint64_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);

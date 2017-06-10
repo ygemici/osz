@@ -42,6 +42,7 @@
 .section .text
 
 _start:
+    /* TODO: call ctors */
     /* restore argc, argv as they may be ruined by shlib's _init */
     movq    (%rsp), %rdi
     movq    8(%rsp), %rsi

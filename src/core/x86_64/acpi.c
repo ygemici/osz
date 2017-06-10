@@ -50,7 +50,9 @@ extern char poweroffsuffix[];
 extern void kprintf_center(int w, int h);
 extern void pci_init();
 
-/* pre-parse ACPI tables. Detect IOAPIC and HPET address */
+/**
+ * pre-parse ACPI tables. Detect IOAPIC and HPET address, called by isr_init()
+ */
 void acpi_early(ACPI_Header *hdr)
 {
     /* get root pointer */
@@ -105,7 +107,9 @@ void acpi_early(ACPI_Header *hdr)
     }
 }
 
-/* DSDT and SSDT parsing */
+/**
+ * DSDT and SSDT parsing
+ */
 void acpi_parseaml(ACPI_Header *hdr)
 {
 #if DEBUG
@@ -141,7 +145,9 @@ void acpi_parseaml(ACPI_Header *hdr)
     }
 }
 
-/* reentrant acpi table parser */
+/**
+ * reentrant acpi table parser
+ */
 void acpi_parse(ACPI_Header *hdr, uint64_t level)
 {
     char *ptr = (char*)hdr;
@@ -290,7 +296,9 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     }
 }
 
-/* Load device drivers into "system" task's address space */
+/**
+ * Load device drivers according to System Tables. Called by sys_init()
+ */
 bool_t acpi_init()
 {
     uint64_t i = 10000;
@@ -322,7 +330,7 @@ bool_t acpi_init()
     if(PM1a_CNT==0)
         return false;
     if(SCI_INT!=0) {
-//        Elf64_Ehdr *ehdr = (Elf64_Ehdr *)service_loadelf("lib/sys/proc/sci.so");
+//        Elf64_Ehdr *ehdr = (Elf64_Ehdr *)drv_init("lib/sys/proc/sci.so");
 //        ehdr->e_machine = SCI_INT;
     }
 #if DEBUG
@@ -372,10 +380,12 @@ bool_t acpi_init()
     return true;
 }
 
+/**
+ * Power off the computer. Called by sys_disable()
+ */
 void acpi_poweroff()
 {
     uint64_t en;
-    // APCI poweroff
     if(PM1a_CNT!=0) {
         en = SLP_TYPa | SLP_EN;
         __asm__ __volatile__ (

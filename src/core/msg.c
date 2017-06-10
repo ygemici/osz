@@ -38,7 +38,9 @@ extern pid_t isr_next;
 /* pointer to PDE for TMPQ_ADDRESS */
 phy_t __attribute__ ((section (".data"))) *mq_mapping;
 
-/* send a message */
+/**
+ * send a message with scalar values. Note msg_send() sends a buffer, it's a macro.
+ */
 uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
 {
     OSZ_tcb *srctcb = (OSZ_tcb*)(0);

@@ -35,7 +35,6 @@
 #define ccb_ist3 0x34
 #define ccb_mutex 0x5C
 #define ccb_hd_timerq 0x68
-#define LOCK_TASKSWITCH 0
 
 /* for priority levels see src/core/tcb.h */
 #ifndef _AS

@@ -32,6 +32,10 @@ extern sysinfo_t sysinfostruc;  //sysinfo structure
 extern uint64_t isr_next;       //next thread to map when isr finishes
 extern uint8_t idle_first;      //flag to indicate first idle schedule
 
+/**
+ * get and map a TCB. You can also pass a TCB as input for
+ * performance reasons. Also, kmap(tmpmap) is pre-cached.
+ */
 OSZ_tcb *sched_get_tcb(pid_t thread)
 {
     // active tcb
@@ -93,8 +97,11 @@ void sched_dump()
 }
 #endif
 
-// block until alarm, add thread to ccb.hd_timerq list too
-// note that isr_timer() consumes threads from timer queue
+/**
+ * block until alarm, add thread to ccb.hd_timerq list too
+ * note that isr_timer() consumes threads from timer queue this is only called if sleep time is
+ * bigger than alarmstep, shorter usleeps are implemented as busy loops in isr_syscall0 in isrc.S 
+ */
 void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 {
     OSZ_tcb *tcba = (OSZ_tcb*)&tmpalarm;
@@ -146,8 +153,11 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
     }
 }
 
-// hybernate a thread
-void sched_sleep(OSZ_tcb *tcb)
+/**
+ * write out thread's pages to swap, only keep it's TCB in blocked queue
+ *  tcb_state_blocked -> tcb_state_hybernated
+ */
+void sched_hybernate(OSZ_tcb *tcb)
 {
 #if DEBUG
     if(sysinfostruc.debug&DBG_SCHED)
@@ -157,7 +167,10 @@ void sched_sleep(OSZ_tcb *tcb)
     tcb->state = tcb_state_hybernated;
 }
 
-// awake a hybernated or blocked thread
+/**
+ * awake a hybernated or blocked thread
+ *  tcb_state_blocked -> tcb_state_running
+ */
 void sched_awake(OSZ_tcb *tcb)
 {
     pid_t pid = tcb->mypid, next = tcb->next, prev = tcb->prev;
@@ -191,7 +204,9 @@ void sched_awake(OSZ_tcb *tcb)
     isr_next = tcb->memroot;
 }
 
-// add a thread to priority queue
+/**
+ * add a thread to an active queue, according to it's priority.
+ */
 void sched_add(OSZ_tcb *tcb)
 {
     pid_t pid = tcb->mypid;
@@ -209,7 +224,9 @@ void sched_add(OSZ_tcb *tcb)
     }
 }
 
-// remove a thread from priority queue
+/**
+ * remove a thread from active queue.
+ */
 void sched_remove(OSZ_tcb *tcb)
 {
     pid_t next = tcb->next, prev = tcb->prev;
@@ -234,7 +251,10 @@ void sched_remove(OSZ_tcb *tcb)
     }
 }
 
-// move a TCB from priority queue to blocked queue
+/**
+ * move a TCB from active queue to blocked queue
+ *  tcb_state_running -> txb_state_blocked
+ */
 void sched_block(OSZ_tcb *tcb)
 {
     /* never block the idle task */
@@ -263,17 +283,17 @@ void sched_block(OSZ_tcb *tcb)
     ccb.hd_blocked = pid;
 }
 
-/* pick a thread and return it's memroot */
+/**
+ * pick a thread from one of the active queues and return it's memroot 
+ */
 phy_t sched_pick()
 {
     OSZ_tcb *tcb, *curr = (OSZ_tcb*)0;
     int i, nonempty = false;
 again:
-//kprintf("pick\n");
     /* iterate on priority queues. Note that this does not depend
      * on number of tasks, so this is a O(1) scheduler algorithm */
     for(i=PRI_SYS; i<PRI_IDLE; i++) {
-//kprintf("  %d %x %x\n",i,ccb.hd_active[i],ccb.cr_active[i]);
         // skip empty queues
         if(ccb.hd_active[i] == 0)
             continue;
@@ -289,18 +309,19 @@ again:
     /* we came here for two reasons:
      * 1. all queues turned around
      * 2. there are no threads to run
-     * in the first case we choose the highest priority task, in the second
-     * case we step to IDLE queue */
+     * in the first case we choose the highest priority task to run,
+     * in the second case we step to IDLE queue */
     if(nonempty)
         goto again;
+
     i = PRI_IDLE;
-//kprintf("  %d %x %x\n",i,ccb.hd_active[i],ccb.cr_active[i]);
     /* if there's nothing to schedule, use idle task */
     if(ccb.hd_active[i]==0) {
 #if DEBUG
         if(sysinfostruc.debug&DBG_SCHED && curr->memroot != idle_mapping)
             kprintf("sched_pick()=idle  \n");
 #endif
+        /* if this is the first time we schedule idle, call sys_ready() */
         if(idle_first) {
             idle_first = false;
             sys_ready();
@@ -308,11 +329,10 @@ again:
         isr_next = idle_mapping;
         return idle_mapping;
     }
-    //if we're on the end of the list, go to head
+    /* if we're on the end of the list, go to head */
     if(ccb.cr_active[i] == 0)
         ccb.cr_active[i] = ccb.hd_active[i];
 found:
-//kprintf("found %d %x\n",i,ccb.cr_active[i]);
     tcb = sched_get_tcb(ccb.cr_active[i]);
     ccb.cr_active[i] = tcb->next;
     if(curr->mypid != tcb->mypid) {

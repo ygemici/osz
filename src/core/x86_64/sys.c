@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief System Task, IRQ event dispatcher
+ * @brief System routines
  */
 
 #include "../../../loader/bootboot.h"
@@ -60,10 +60,12 @@ uint8_t __attribute__ ((section (".data"))) sys_fault;
 uint8_t __attribute__ ((section (".data"))) idle_first;
 pid_t __attribute__ ((section (".data"))) identity_pid;
 
-/* reboot computer */
+/**
+ *  reboot computer
+ */
 void sys_reset()
 {
-    //say we're finished (on serial too)
+    // say we're rebooting (on serial too)
     kprintf_init();
 #if DEBUG
     dbg_putchar(13);
@@ -72,7 +74,7 @@ void sys_reset()
     kprintf(rebootprefix);
     // reboot computer
     __asm__ __volatile__ ("movb $0xFE, %%al; outb %%al, $0x64" : : : );
-    // if it didn't work, show a message and freeze.
+    // if it didn't work, show a message and freeze. Should never happen.
     fg = 0x29283f;
     kprintf_center(20, -8);
     kprintf(poweroffsuffix);
@@ -83,10 +85,12 @@ void sys_reset()
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
 
-/* turn off computer */
+/**
+ * turn off computer
+ */
 void sys_disable()
 {
-    //say we're finished (on serial too)
+    // say we're finished (on serial too)
     kprintf_init();
 #if DEBUG
     dbg_putchar(13);
@@ -112,7 +116,9 @@ void sys_disable()
     __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
 }
 
-/* switch to a task and start executing it */
+/**
+ * switch to the first user task and start executing it
+ */
 __inline__ void sys_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -142,7 +148,9 @@ __inline__ void sys_enable()
         "%rsp" );
 }
 
-/* Initialize the "idle" task and device drivers */
+/**
+ * Initialize the "idle" task and device drivers
+ */
 void sys_init()
 {
     // load driver database
@@ -206,46 +214,6 @@ void sys_init()
         // ...enumarate other system buses
 */
     }
-        /*** Static fields in System Info Block (returned by a syscall) ***/
-        // calculate addresses for screen buffers
-/*
-        sysinfostruc.screen_ptr = (virt_t)BSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
-        sysinfostruc.fb_ptr = sysinfostruc.screen_ptr +
-            (((bootboot.fb_width * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE) *
-            __SLOTSIZE * (sysinfostruc.display>=DSP_STEREO_MONO?2:1));
-        sysinfostruc.fb_width = bootboot.fb_width;
-        sysinfostruc.fb_height = bootboot.fb_height;
-        sysinfostruc.fb_scanline = bootboot.fb_scanline;
-        //system tables, platform specific
-        sysinfostruc.systables[systable_acpi_idx] = bootboot.acpi_ptr;
-        sysinfostruc.systables[systable_smbi_idx] = bootboot.smbi_ptr;
-        sysinfostruc.systables[systable_efi_idx]  = bootboot.efi_ptr;
-        sysinfostruc.systables[systable_mp_idx]   = bootboot.mp_ptr;
-*/
-        /*** Double Screen stuff ***/
-        // allocate and map screen buffer A
-/*
-        virt_t bss = sysinfostruc.screen_ptr;
-        phy_t fbp=(phy_t)bootboot.fb_ptr;
-        i = ((bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE) * (sysinfostruc.display>=DSP_STEREO_MONO?2:1);
-        while(i-->0) {
-            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
-            // save it for SYS_swapbuf
-            if(!screen[0]) {
-                screen[0]=pdpe;
-            }
-            bss += __SLOTSIZE;
-        }
-        // map framebuffer
-        bss = sysinfostruc.fb_ptr;
-        i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
-        while(i-->0) {
-            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
-            bss += __SLOTSIZE;
-            fbp += __SLOTSIZE;
-        }
-*/
 }
 
 /*** Called when the "idle" task first scheduled ***/
@@ -280,7 +248,7 @@ void sys_ready()
         /* start first time turn on's set up task */
         syslog_early("Identity process started");
         sched_awake((OSZ_tcb*)identity_pid);
-        /* we will notify init when identity exited */
+        /* we will notify init when identity exited, see isr_syscall in syscall.c */
     } else {
         /* notify init service to start */
         msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);

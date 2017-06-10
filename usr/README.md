@@ -1,13 +1,15 @@
 Userspace
 =========
 
-Applications and libraries that are mounted under /usr.
+Libraries, applications and user services that are mounted under /usr.
 
 This directory differs in OS/Z to other UNIXes. The first
 subdirectory is the package name, and all usual directories
 are at second level. Note that this does not broke File
 Hieracrchy Standard, and makes easy to keep track of files for
 the package manager. It's pretty much like Applications under MacOSX.
+
+For POSIX compatibility, FS/Z uses directory unions, like /usr/share -> /usr/*/share.
 
 Examples:
 ---------

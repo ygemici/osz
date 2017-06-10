@@ -6,12 +6,12 @@ OS/Z How a keypress is processed
       IRQ message in a task's message queue that's selected by IRQ Routing Table (keyboard driver in our case).
    3. task switch to [keyboard driver](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2) task, if it was blocked, it's awaken
    4. ISR leaves, new IRQs can fire (save keyboard IRQ)
-   5. ps2 driver handles the message, and dispatches it to keyboard.S which in return reads scancode from keyboard
+   5. ps2 driver handles the message, and dispatches it to [keyboard.S](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/keyboard.S) which in return reads scancode from keyboard
    6. sends a SYS_ack message to core via [syscall](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/syscall.S), and core re-enables keyboard IRQ
    7. sends a scancode message to UI task
    8. task switch to UI task (it's also awaken if necessary)
    9. [UI task](https://github.com/bztsrc/osz/blob/master/src/ui) receives scancode message
-  10. translates scancode to a key press or release using active [keymap](https://github.com/bztsrc/osz/blob/master/etc/kbd)
+  10. translates scancode to a key press or release using active [keymap](https://github.com/bztsrc/osz/blob/master/etc/kbd/en_us)
   11. sends a key event message to the focused window's thread (or to FS task if it's a tty window)
   12. task switch to the focused window's thread
   13. receives key and draws a unicode character for it

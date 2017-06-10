@@ -44,8 +44,10 @@ OSZ_pmm __attribute__ ((section (".data"))) pmm;
 /* pointer to tmpmap in PT */
 void __attribute__ ((section (".data"))) *kmap_tmp;
 
-// allocate a physical page
-// returns physical address
+/**
+ * allocate a physical page
+ * returns physical address
+ */
 void* pmm_alloc()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
@@ -80,8 +82,10 @@ void* pmm_alloc()
     return i ? (void*)fmem->base - __PAGESIZE : NULL;
 }
 
-// allocate a physical page slot (2M)
-// returns physical address
+/**
+ * allocate a physical page slot (2M)
+ * returns physical address
+ */
 void* pmm_allocslot()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
@@ -132,6 +136,9 @@ panic:
     return i<pmm.size ? (void*)fmem->base - __SLOTSIZE : NULL;
 }
 
+/**
+ * initialize Physical Memory Manager
+ */
 void pmm_init()
 {
     char *types[] = { "????", "free", "resv", "ACPI", "ANVS", "used", "MMIO" };
@@ -259,8 +266,10 @@ void pmm_init()
     }
 }
 
-// allocate kernel bss
-// returns linear address
+/**
+ * allocate kernel bss
+ * returns linear address
+ */
 void* kalloc(int pages)
 {
     void *bss = pmm.bss_end;
@@ -275,6 +284,9 @@ void* kalloc(int pages)
     return bss;
 }
 
+/**
+ * we never need to free kernel bss, just for completeness
+ */
 void kfree(void* ptr)
 {
 }

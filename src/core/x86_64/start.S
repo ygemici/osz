@@ -39,7 +39,7 @@
 
     Registers
         rax     magic 'BOOTBOOT' (0x544f4f42544f4f42)
-        rbx     virtual address of bootparams
+        rbx     virtual address of bootboot stucture
         rcx     virtual address of environment
         rdx     virtual address of framebuffer
 */

@@ -36,6 +36,9 @@ extern uint64_t hpet_addr;
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 
+/**
+ * parse clocksource configuration
+ */
 unsigned char *envarch_cs(unsigned char *s)
 {
     uint64_t tmp;
@@ -60,6 +63,9 @@ unsigned char *envarch_cs(unsigned char *s)
 }
 
 /*** initialize environment ***/
+/**
+ * Initialize architecture dependent part. Called by env_init()
+ */
 void envarch_init()
 {
     // set up defaults
@@ -74,7 +80,9 @@ void envarch_init()
         sysinfostruc.systables[systable_dsdt_idx] = 0;
 }
 
-// architecture specific parameters
+/**
+ * parse architecture specific parameters, called by env_init()
+ */
 unsigned char *envarch_parse(unsigned char *env)
 {
 	// manually override HPET address

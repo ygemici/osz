@@ -61,14 +61,18 @@ extern OSZ_ccb ccb;
 virt_t __attribute__ ((section (".data"))) lastsym;
 #endif
 
-/* register a user mode service for pid translation */
+/**
+ * register a user mode service for pid translation
+ */
 uint64_t service_register(pid_t thread)
 {
     services[nrservices++] = thread;
     return -(nrservices-1);
 }
 
-/* load an ELF64 binary into text segment starting at 2M */
+/**
+ * load an ELF64 binary into text segment starting at 2M
+ */
 void *service_loadelf(char *fn)
 {
     // failsafe
@@ -144,7 +148,9 @@ void *service_loadelf(char *fn)
     return (void*)((uint64_t)ret * __PAGESIZE);
 }
 
-/* load an ELF64 shared library */
+/**
+ * load an ELF64 shared library
+ */
 __inline__ void service_loadso(char *fn)
 {
 #if DEBUG
@@ -155,6 +161,9 @@ __inline__ void service_loadso(char *fn)
 }
 
 #if DEBUG
+/**
+ * look up symbol, string -> address
+ */
 virt_t service_lookupsym(uchar *name, size_t size)
 {
     Elf64_Ehdr *ehdr;
@@ -283,7 +292,9 @@ virt_t service_lookupsym(uchar *name, size_t size)
 }
 #endif
 
-/* look up a symbol for address */
+/**
+ * look up a symbol for address, address -> string
+ */
 uchar *service_sym(virt_t addr)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -403,13 +414,13 @@ uchar *service_sym(virt_t addr)
     return last!=NULL && last[0]!=0 ? (uchar*)last : (uchar*)nosym;
 }
 
-c_assert(ISR_NUMIRQ < 224);
-
-/* Fill in GOT entries. Relies on identity mapping
+/**
+ * Fill in GOT entries. Relies on identity mapping
  *  - tmpmap: the text segment's PT mapped,
  *  - pmm.bss_end: current thread's TCB mapped,
  *  - relas: array of OSZ_rela items alloceted with kalloc()
- *  - stack_ptr: physical address of thread's stack */
+ *  - stack_ptr: physical address of thread's stack
+ */
 bool_t service_rtlink()
 {
     int i, j, k, n = 0;
@@ -686,7 +697,9 @@ bool_t service_rtlink()
     return thread_check(tcb, (phy_t*)paging);
 }
 
-/* Initialize a non-critical system service */
+/**
+ * Initialize a non-special system service
+ */
 void service_init(int subsystem, char *fn)
 {
     char *cmd = fn;
@@ -729,7 +742,9 @@ void service_init(int subsystem, char *fn)
     }
 }
 
-/* Initialize the file system service, the "fs" task */
+/**
+ * Initialize the file system service, the "fs" task
+ */
 void fs_init()
 {
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
@@ -774,6 +789,10 @@ void fs_init()
         // map initrd in "fs" task's memory
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
+#ifdef DEBUG
+        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
+        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
+#endif
         // add to queue so that scheduler will know about this thread
         ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));
@@ -785,7 +804,9 @@ void fs_init()
     }
 }
 
-/* Initialize the user interface service, the "ui" task */
+/**
+ * Initialize the user interface service, the "ui" task
+ */
 void ui_init()
 {
     pid_t pid = thread_new("UI");
@@ -796,11 +817,36 @@ void ui_init()
     }
     // map libc
     service_loadso("lib/libc.so");
-    // map window decorator
+    // map window decoratorator
 //    service_loadso("lib/ui/decor.so");
     // dynamic linker
     if(service_rtlink()) {
         // allocate and map screen buffer B
+        /*** Double Screen stuff ***/
+        // allocate and map screen buffer A
+/*
+        virt_t bss = sysinfostruc.screen_ptr;
+        phy_t fbp=(phy_t)bootboot.fb_ptr;
+        i = ((bootboot.fb_width * bootboot.fb_height * 4 +
+            __SLOTSIZE - 1) / __SLOTSIZE) * (sysinfostruc.display>=DSP_STEREO_MONO?2:1);
+        while(i-->0) {
+            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            // save it for SYS_swapbuf
+            if(!screen[0]) {
+                screen[0]=pdpe;
+            }
+            bss += __SLOTSIZE;
+        }
+        // map framebuffer
+        bss = sysinfostruc.fb_ptr;
+        i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
+        while(i-->0) {
+            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
+            bss += __SLOTSIZE;
+            fbp += __SLOTSIZE;
+        }
+*/
+
 /*
     FIXME: this messes up UI's tcb
         int i;
@@ -815,8 +861,8 @@ void ui_init()
             bss += __SLOTSIZE;
         }
 */
-        //set IOPL=3 in rFlags to permit IO address space
 #ifdef DEBUG
+        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
         ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
 #endif
         // add to queue so that scheduler will know about this thread
@@ -830,7 +876,9 @@ void ui_init()
     }
 }
 
-/* Initialize the system logger service, the "syslog" task */
+/**
+ * Initialize the system logger service, the "syslog" task
+ */
 void syslog_init()
 {
     int i=0,j=0;
@@ -863,12 +911,13 @@ void syslog_init()
     }
 }
 
-/* Initialize the system logger service, the "syslog" task */
+/**
+ * Initialize a device driver task
+ */
 void drv_init(char *driver)
 {
     int i = kstrlen(driver);
-//    int i=0,j=0;
-//    uint64_t *paging = (uint64_t *)&tmpmap;
+    // get driver class and name from path
     char *drvname=driver + i;
     while(drvname>driver && *(drvname-1)!='/') drvname--;
     if(drvname>driver) {
@@ -877,16 +926,18 @@ void drv_init(char *driver)
     }
     while(i>0 && driver[i]!='.') i--;
     driver[i]=0;
+
+    // create a new thread...
     pid_t pid = thread_new(drvname);
     ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_DRV;
     driver[i]='.';
-    // map file system dispatcher
+    // ...start with driver event dispatcher
     if(service_loadelf("lib/sys/drv") == (void*)(-1)) {
         kpanic("unable to load ELF from /lib/sys/drv");
     }
     // map libc
     service_loadso("lib/libc.so");
-    //map driver
+    // map the real driver as a shared object
     service_loadso(driver);
 
     // dynamic linker

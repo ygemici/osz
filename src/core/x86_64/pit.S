@@ -32,6 +32,9 @@
 .extern tmrfreq
 .extern tmrirq
 
+/**
+ * Programmable Interrupt Timer. Called by isr_init()
+ */
 pit_init:
     /* initialize PIT */
     // 1193180/freq

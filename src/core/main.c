@@ -56,7 +56,7 @@ void main()
     // is not allocated yet.
     kprintf("OS/Z starting...\n");
 
-    /* step 1: motoric reflexes */
+    /*** step 1: motoric reflexes ***/
     // parse environment
     env_init();
     // initialize physical memory manager, required by new thread creation
@@ -67,7 +67,7 @@ void main()
     // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
     fs_init();
 
-    /* step 2: communication */
+    /*** step 2: communication ***/
     // initialize "UI" task to handle user input / output
     // special service_init(SRV_UI, "sbin/ui")
     ui_init();
@@ -91,7 +91,7 @@ void main()
     // load screen saver
 //    service_init(SRV_USRLAST, "sbin/scrsvr");
 
-    /* step 3: stand up and prosper. */
+    /*** step 3: stand up and prosper. ***/
     service_init(SRV_init, "sbin/init");
     if(identity) {
         /* start first time turn on's set up task */
@@ -102,10 +102,10 @@ void main()
     // through device driver's initialization routines. Each in different
     // task, scheduler will choose them one by one and...
     sys_enable();
-    // ...we should never return here. Instead a syscall by "init" will
-    // call sys_disable() as the last step in the shutdown procedure.
-    // But just in case of unwanted return, we call poweroff anyway.
 
-    /* step 4: go to dreamless sleep. */
+    /*** step 4: go to dreamless sleep. ***/
+    // ...we should never return here. Instead syscall will call sys_disable()
+    // as the last step in the shutdown procedure when "init" task exits.
+    // But just in case of any unwanted return, we call poweroff anyway.
     sys_disable();
 }

@@ -29,6 +29,9 @@ extern char *drvs;
 extern char *drvs_end;
 extern char fn[];
 
+/**
+ * find a shared object for a pci address
+ */
 char *pci_getdriver(char *device)
 {
     char *c, *f;
@@ -53,8 +56,10 @@ char *pci_getdriver(char *device)
     return NULL;
 }
 
-
+/**
+ * enumerate PCI bus. Called by sys_init()
+ */
 void pci_init()
 {
-// TODO: load drivers and save autodetected irq number in ehdr->e_machine
+// TODO: enumerate bus and load drivers
 }

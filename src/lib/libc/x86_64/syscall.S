@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Low base library to interact with the kernel at object level
+ * @brief Low level library implementation to interact with the kernel, see etc/include/syscall.h
  */
 
 #define _AS 1
@@ -50,7 +50,9 @@
 
 /* dest: pid_t<<16 + msg type */
 
-/* void mq_send(thread,event,arg0,arg1,arg2,arg3,arg4,arg5) */
+/**
+ * void mq_send(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
+ */
 mq_send:
     # non-blocking send message
     /* this will call msg_sends() in core */
@@ -59,7 +61,9 @@ mq_send:
     syscall
     ret
 
-/* msg_t *mq_call(thread,event,arg0,arg1,arg2,arg3,arg4,arg5) */
+/**
+ * msg_t *mq_call(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
+ */
 mq_call:
 mymq_call:
     # blocking, send a request and receive result
@@ -83,7 +87,9 @@ mymq_call:
     movq    8(%rax), %rax
     ret
 
-/* msg_t *mq_recv(from) */
+/**
+ * msg_t *mq_recv(from)
+ */
 mq_recv:
 mymq_recv:
     # blocking receive message
@@ -108,21 +114,26 @@ mymq_recv:
     movq    $1, 8(%rbx)
 3:  ret
 
-/* bool_t mq_ismsg() */
+/**
+ * bool_t mq_ismsg()
+ */
 mq_ismsg:
     # non-blocking is there a message?
     movq     MQ_ADDRESS, %rax
     subq     MQ_ADDRESS+8, %rax
     ret
 
-/* uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,stack func); */
+/* Don't use directly
+   uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,stack func); */
 mq_dispatchcall:
     /* rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
     movq    8(%rsp), %rax
     callq   *%rax
     ret
 
-/* void *dl(so, sym) */
+/**
+ * void *dl(so, sym)
+ */
 dl:
     # dynamically link a shared object
     # rdi: pointer to .so file path
@@ -135,7 +146,9 @@ dl:
     syscall
     jmp     2f
 
-/* sysinfo_t *sysinfo() */
+/**
+ * sysinfo_t *sysinfo()
+ */
 sysinfo:
     xorq    %rdi, %rdi
     movb    $SYS_sysinfo, %dil
@@ -145,7 +158,9 @@ sysinfo:
     mov     8(%rax), %rax
     ret
 
-/* void yield() */
+/**
+ * void yield()
+ */
 yield:
     xorq    %rdi, %rdi
     movb    $SYS_sched_yield, %dil
@@ -153,7 +168,9 @@ yield:
     syscall
     ret
 
-/* void seterr(uint64_t err) */
+/**
+ * void seterr(uint64_t err)
+ */
 seterr:
 myseterr:
     movq    %rdi, %rsi
@@ -163,7 +180,9 @@ myseterr:
     syscall
     ret
 
-/* void swapbuf() */
+/**
+ * void swapbuf()
+ */
 swapbuf:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
@@ -172,7 +191,9 @@ swapbuf:
     syscall
     ret
 
-/* uint64_t regservice(pid_t thread) */
+/**
+ * uint64_t regservice(pid_t thread) - ONLY for init
+ */
 regservice:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
@@ -181,7 +202,9 @@ regservice:
     syscall
     ret
 
-/* size_t mapfile(void *bss, char *fn) */
+/**
+ * size_t mapfile(void *bss, char *fn)
+ */
 mapfile:
     movq    %rsi, %rdx
     movq    %rdi, %rsi
@@ -191,7 +214,9 @@ mapfile:
     syscall
     ret
 
-/* void setirq(uint8_t irq) */
+/**
+ * void setirq(uint8_t irq) - ONLY for drivers
+ */
 setirq:
     xorq    %rsi, %rsi
     movb    %dil, %sil
@@ -201,7 +226,9 @@ setirq:
     syscall
     ret
 
-/* void sleep(uint64_t sec) */
+/**
+ * void sleep(uint64_t sec)
+ */
 sleep:
     xorq    %rdx, %rdx
     movq    %rdi, %rsi
@@ -211,7 +238,9 @@ sleep:
     syscall
     ret
 
-/* void usleep(uint64_t usec) */
+/**
+ * void usleep(uint64_t usec)
+ */
 usleep:
     xorq    %rdx, %rdx
     movq    %rdi, %rax
