@@ -166,6 +166,7 @@ public void keyrelease(uint64_t scancode, keymap_t keycode)
 #if DEBUG
     dbg_printf("------------keyrelease %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
 #endif
+swapbuf();
     // handle key modifiers
     if(k[0]=='L' || k[0]=='R') {
         if(k[1]=='S' && k[2]=='f' && k[3]=='t')

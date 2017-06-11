@@ -246,6 +246,12 @@ kmap:
     movq    kmap_tmp, %rax
     addq    $8, %rax
     jmp     2f
+    /* shortcut for tmp2map */
+1:  cmpq    $tmp2map, %rdi
+    jne     1f
+    movq    kmap_tmp, %rax
+    addq    $32, %rax
+    jmp     2f
 1:  call    kmap_getpte
 2:  andw    $0xF000, %si
     mov     %dl, %sil

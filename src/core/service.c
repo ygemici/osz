@@ -34,6 +34,7 @@ extern char osver[];
 extern uint8_t _code;
 extern uint64_t *stack_ptr;
 extern phy_t screen[2];
+extern pid_t screen_pid;
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
 extern sysinfo_t sysinfostruc;
@@ -123,7 +124,7 @@ void *service_loadelf(char *fn)
             return (void*)(-1);
     }
     /* clear autodetected irq number field */
-    elf->e_machine = 0;
+    elf->e_machine = 255;
     /* map text segment */
     size=(phdr_c->p_filesz+__PAGESIZE-1)/__PAGESIZE;
     while(size--) {
@@ -193,6 +194,10 @@ virt_t service_lookupsym(uchar *name, size_t size)
     if(size==3 && !kmemcmp(name,"bss",4)) {
         name[size] = c;
         return BSS_ADDRESS;
+    }
+    if(size==4 && !kmemcmp(name,"sbss",4)) {
+        name[size] = c;
+        return SBSS_ADDRESS;
     }
     if(size==4 && !kmemcmp(name,"core",5)) {
         name[size] = c;
@@ -623,7 +628,8 @@ bool_t service_rtlink()
                             // irq number from function name
                             env_dec((unsigned char*)strtable + s->st_name + 3, (uint*)&k, 0, 255-32);
                         } else {
-                            if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && *(strtable + s->st_name + 3)==0) {
+                            if(ELF64_ST_TYPE(s->st_info)==STT_FUNC &&
+                                *(strtable + s->st_name + 3)==0 && ehdr->e_machine!=255) {
                                 // get autodetected irq number
                                 k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
                             } else if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT &&
@@ -635,14 +641,6 @@ bool_t service_rtlink()
                             }
                         }
                         isr_installirq(k, ((OSZ_tcb*)(pmm.bss_end))->memroot);
-                    }
-                    if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && 
-                        !kmemcmp(strtable + s->st_name,"mem2vid",8)) {
-#if DEBUG
-                        if(debug&DBG_IRQ)
-                            kprintf("IRQ m2v: %6x\n", ISR_NUMIRQ, ((OSZ_tcb*)(pmm.bss_end))->memroot);
-#endif
-                        irq_routing_table[ISR_NUMIRQ] = ((OSZ_tcb*)(pmm.bss_end))->memroot;
                     }
                 }
                 if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT &&
@@ -920,7 +918,6 @@ void ui_init()
         virt_t bss=SBSS_ADDRESS;
         for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
             __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
-kprintf(" bss %x\n",bss);
             vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             // save it for SYS_swapbuf
             if(!screen[0]) {
@@ -976,6 +973,7 @@ void drv_init(char *driver)
 
         //do we need to map screen and framebuffer?
         if(scrptr) {
+            screen_pid = pid;
             // allocate and map screen buffer B
             virt_t bss=SBSS_ADDRESS;
             for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
@@ -987,7 +985,7 @@ void drv_init(char *driver)
                 }
                 bss += __SLOTSIZE;
             }
-            // map framebuffer in next PDPE
+            // map framebuffer in next PDE
             bss=(virt_t)SBSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
             phy_t fbp=(phy_t)bootboot.fb_ptr;
             for(i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;i>0;i--) {

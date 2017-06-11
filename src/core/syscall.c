@@ -38,6 +38,8 @@ extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
 extern pid_t identity_pid;
 extern sysinfo_t sysinfostruc;
+extern phy_t screen[2];
+extern pid_t screen_pid;
 
 /**
  * System call dispatcher for messages sent to SRV_CORE. Also has a low level
@@ -46,9 +48,12 @@ extern sysinfo_t sysinfostruc;
 uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
+    phy_t *paging = (phy_t*)&tmpmap;
+    phy_t *paging2 = (phy_t*)&tmp2map;
     void *data;
     char fn[128];
     phy_t tmp;
+    int i,j;
 
     tcb->errno = SUCCESS;
     switch(EVT_FUNC(event)) {
@@ -83,15 +88,23 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         case SYS_swapbuf:
-            isr_currfps++;
-            /* TODO: swap and map screen[0] and screen[1] */
-
-            /* flush screen buffer to video memory. Note this is a different
-             * call than we're serving. We came here because
-             *  SRV_UI sent SYS_swapbuf to SRV_CORE
-             * And now
-             *  SRV_CORE sends SYS_swapbuf to SRV_SYS */
-            //msg_sends(EVT_DEST(SRV_SYS) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
+            /* only UI allowed to send swapbuf */
+            if(tcb->mypid == services[-SRV_UI]) {
+                isr_currfps++;
+                /* swap screen[0] and screen[1] mapping */
+                kmap((uint64_t)&tmpmap,  (uint64_t)(screen[0] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+                i = (screen[0] & (__PAGESIZE-1))/sizeof(phy_t);
+                kmap((uint64_t)&tmp2map, (uint64_t)(screen[1] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+                j = (screen[1] & (__PAGESIZE-1))/sizeof(phy_t);
+                tmp = paging[i]; paging[i] = paging2[j]; paging2[j] = tmp;
+                /* flush screen buffer to video memory. Note this is a different
+                 * call than we're serving. We came here because
+                 *  SRV_UI sent SYS_swapbuf to SRV_CORE
+                 * and now
+                 *  SRV_CORE sends SYS_swapbuf to video driver */
+                msg_sends(EVT_DEST(screen_pid) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
+            } else
+                tcb->errno = EACCES;
             break;
 
         case SYS_stimebcd:

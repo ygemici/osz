@@ -27,7 +27,8 @@ User Tasks
 |     x .. 2M-1   | thread  | local stack (read/write, growing downwards) |
 |    2M .. x      | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment (read only) |
 |     x .. 4G-1   | process | shared libraries (read only / read/write) |
-|    4G .. 2^56   | process | dynamically allocated bss memory (growing upwards, read/write) |
+|    4G .. 64G-1  | thread  | dynamically per page allocated bss memory (growing upwards, read/write) |
+|   64G .. 2^56   | thread  | dynamically per slot allocated bss memory (growing upwards, read/write) |
 
 Normal userspace tasks do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.

@@ -28,10 +28,9 @@
 #define _AS 1
 #include <osZ.h>
 
+/* linker stuff */
 .type _init, STT_FUNC
 .global _init
-.type mem2vid, STT_FUNC
-.global mem2vid
 .type _screen_ptr, STT_OBJECT
 .size _screen_ptr, 8
 .global _screen_ptr
@@ -54,29 +53,55 @@
 .size _display_type, 1
 .global _display_type
 
+.section .text
+
+/* main loop */
 _init:
-    call    sysinfo@PLT
 
 .getwork:
     call    mq_recv@PLT
+    cmpw    $SYS_swapbuf, (%rax)
+    jne     .getwork
+    /* copy screen to framebuffer */
+    movq    screen_ptr(%rip), %rsi
+    movq    fb_ptr(%rip), %rbx
+    xorq    %rcx, %rcx
+    movl    fb_width(%rip), %edx
+    shrl    $1, %edx
+    xorq    %r8, %r8
+    movl    fb_height(%rip), %r8d
+    xorq    %r9, %r9
+    movl    fb_scanline(%rip), %r9d
+1:  movq    %rbx, %rdi
+    movl    %edx, %ecx
+    repnz   movsq
+    addq    %r9, %rbx
+    dec     %r8d
+    jnz     1b
     jmp     .getwork
     ret
 
-mem2vid:
-    ret
-
 .section .data
+/* that stupid GNU as and ld can't refer to a label rip relatively
+   when it's scope is global... so we have to double all labels. */
 _screen_ptr:
-    .quad 0x123456
+screen_ptr:
+    .quad 0
 _fb_ptr:
+fb_ptr:
     .quad 0
 _fb_width:
+fb_width:
     .long 0
 _fb_height:
+fb_height:
     .long 0
 _fb_scanline:
+fb_scanline:
     .long 0
 _fb_type:
+fb_type:
     .byte 0
 _display_type:
+display_type:
     .byte 0

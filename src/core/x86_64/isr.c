@@ -175,7 +175,7 @@ void isr_init()
     }
 
     /*** IRQ Routing Table ***/
-    s = (((ISR_NUMIRQ+1) * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
+    s = ((ISR_NUMIRQ * sizeof(void*))+__PAGESIZE-1)/__PAGESIZE;
     // failsafe
     if(s<1)
         s=1;
@@ -277,9 +277,6 @@ void isr_fini()
         if(i==tmrirq || irq_routing_table[i])
             isr_enableirq(i);
     }
-    // "soft" IRQ #1, mem2vid in display driver
-    if(irq_routing_table[ISR_NUMIRQ]!=0)
-        syslog_early(" m2v: %x", irq_routing_table[ISR_NUMIRQ] );
 }
 
 /**

@@ -3,9 +3,8 @@
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
-./src/core/syscall.c:87:            /* TODO: swap and map screen[0] and screen[1] */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
-./src/core/x86_64/sys.c:224:    // TODO: move this printf to init
+./src/core/x86_64/sys.c:225:    // TODO: move this printf to init
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc
 ./src/core/msg.c:103:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:166:    /* TODO: memory -> swap (except tcb) */

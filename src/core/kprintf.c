@@ -118,9 +118,9 @@ void kprintf_init()
     // clear screen
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
-        for(x=0;x<bootboot.fb_width;x++){
-            *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)0;
-            line+=4;
+        for(x=0;x<bootboot.fb_width/2;x++){
+            *((uint64_t*)(FBUF_ADDRESS + line))=(uint64_t)0;
+            line+=8;
         }
         offs+=bootboot.fb_scanline;
     }
@@ -154,7 +154,7 @@ void kprintf_init()
 }
 
 /**
- * put red coloured logo on panic screen
+ * put logo on panic screen, colours shifted to red
  */
 void kprintf_putlogo()
 {
