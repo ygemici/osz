@@ -686,7 +686,7 @@ bool_t service_rtlink()
                                 strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
                         kmemcpy(objptr,&osver,vs+1);
                     }
-kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
+//kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address
@@ -852,6 +852,41 @@ void fs_init()
 }
 
 /**
+ * Initialize the system logger service, the "syslog" task
+ */
+void syslog_init()
+{
+    int i=0,j=0;
+    uint64_t *paging = (uint64_t *)&tmpmap;
+    pid_t pid = thread_new("syslog");
+    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
+    // map file system dispatcher
+    if(service_loadelf("sbin/syslog") == (void*)(-1)) {
+        syslog_early("unable to load ELF from /sbin/syslog");
+    }
+    // map early syslog buffer after ELF
+    for(i=0;paging[i]!=0;i++);
+    for(j=0;j<nrlogmax;j++)
+        paging[i+j] = ((*((uint64_t*)kmap_getpte(
+            (uint64_t)syslog_buf + j*__PAGESIZE)))
+            & ~(__PAGESIZE-1)) + PG_USER_RO;
+
+    // map libc
+    service_loadso("lib/libc.so");
+
+    // dynamic linker
+    if(service_rtlink()) {
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        services[-SRV_syslog] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
+    } else {
+        kprintf("WARNING thread check failed for /sbin/syslog\n");
+    }
+}
+
+/**
  * Initialize the user interface service, the "ui" task
  */
 void ui_init()
@@ -886,7 +921,7 @@ void ui_init()
         for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
             __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
 kprintf(" bss %x\n",bss);
-//            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             // save it for SYS_swapbuf
             if(!screen[0]) {
                 screen[0]=pdpe;
@@ -895,41 +930,6 @@ kprintf(" bss %x\n",bss);
         }
     } else {
         kpanic("thread check failed for /sbin/ui");
-    }
-}
-
-/**
- * Initialize the system logger service, the "syslog" task
- */
-void syslog_init()
-{
-    int i=0,j=0;
-    uint64_t *paging = (uint64_t *)&tmpmap;
-    pid_t pid = thread_new("syslog");
-    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
-    // map file system dispatcher
-    if(service_loadelf("sbin/syslog") == (void*)(-1)) {
-        syslog_early("unable to load ELF from /sbin/syslog");
-    }
-    // map early syslog buffer
-    for(i=0;paging[i]!=0;i++);
-    for(j=0;j<nrlogmax;j++)
-        paging[i+j] = ((*((uint64_t*)kmap_getpte(
-            (uint64_t)syslog_buf + j*__PAGESIZE)))
-            & ~(__PAGESIZE-1)) + PG_USER_RO;
-
-    // map libc
-    service_loadso("lib/libc.so");
-
-    // dynamic linker
-    if(service_rtlink()) {
-        // add to queue so that scheduler will know about this thread
-        sched_add((OSZ_tcb*)(pmm.bss_end));
-
-        services[-SRV_syslog] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
-    } else {
-        kprintf("WARNING thread check failed for /sbin/syslog\n");
     }
 }
 
@@ -980,20 +980,18 @@ void drv_init(char *driver)
             virt_t bss=SBSS_ADDRESS;
             for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
                 __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
-kprintf(" bss %x\n",bss);
-//                vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+                vmm_mapbss((OSZ_tcb*)(pmm.bss_end), bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
                 // save it for SYS_swapbuf
                 if(!screen[1]) {
                     screen[1]=pdpe;
                 }
                 bss += __SLOTSIZE;
             }
+            // map framebuffer in next PDPE
             bss=(virt_t)SBSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
             phy_t fbp=(phy_t)bootboot.fb_ptr;
-            // map framebuffer
             for(i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;i>0;i--) {
-kprintf(" bss %x fb %x\n",bss,fbp);
-//                                vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
+                vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
                 bss += __SLOTSIZE;
                 fbp += __SLOTSIZE;
             }

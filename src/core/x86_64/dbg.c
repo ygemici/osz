@@ -941,31 +941,6 @@ void dbg_sysinfo()
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("[Screen]\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("display: %d %s, fps: %d\n",
-        display, disp[display], sysinfostruc.fps);
-    kprintf("framebuffer: @%8x, %dx%d, scanline %d,",
-        bootboot.fb_ptr, bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline);
-    kprintf(" type: %d %s\n\n",bootboot.fb_type,fbt[bootboot.fb_type]);
-
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("[Misc]\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("cpu: %d bogomips, quantum: %d ticks, max open files: %d\n",
-        bogomips, quantum, nropenmax);
-    kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
-        keymap, debug, rescueshell?"true":"false");
-
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
     kprintf("[Timer Ticks]\n");
     fg=dbg_theme[3];
     if(dbg_tui)
@@ -996,6 +971,32 @@ void dbg_sysinfo()
         sysinfostruc.systables[2], sysinfostruc.systables[3]);
     kprintf(" apic: %8x, dsdt: %8x\n\n",
         sysinfostruc.systables[4], sysinfostruc.systables[5]);
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[Screen]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("display: %d %s, fps: %d\n",
+        display, disp[display], sysinfostruc.fps);
+    kprintf("framebuffer: @%8x, %dx%d, scanline %d,",
+        bootboot.fb_ptr, bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline);
+    kprintf(" type: %d %s\n\n",bootboot.fb_type,fbt[bootboot.fb_type]);
+
+    fg=dbg_theme[4];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("[Misc]\n");
+    fg=dbg_theme[3];
+    if(dbg_tui)
+        dbg_settheme();
+    kprintf("cpu: %d bogomips, quantum: %d ticks, max open files: %d\n",
+        bogomips, quantum, nropenmax);
+    kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
+        keymap, debug, rescueshell?"true":"false");
+
 }
 
 // dump early syslog buffer
