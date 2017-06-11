@@ -27,7 +27,6 @@
 
 #include <errno.h>
 #include <syscall.h>
-#include <sys/sysinfo.h>
 #include "env.h"
 
 extern sysinfo_t sysinfostruc;
@@ -91,7 +90,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     int bs = 0;
     void *p = (void *)(arg0 & ~(__PAGESIZE-1));
 #if DEBUG
-    if(sysinfostruc.debug&DBG_MSG) {
+    if(debug&DBG_MSG) {
         kprintf(" msg pid %x sending to pid %x (%d), event #%x",
             srctcb->mypid, thread, msghdr->mq_start, EVT_FUNC(event));
         if(event & MSG_PTRDATA)

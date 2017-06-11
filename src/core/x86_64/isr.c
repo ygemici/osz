@@ -214,15 +214,15 @@ void isr_init()
     if(tmrfreq<1000 || tmrfreq>TMRMAX)
         kpanic("unable to load timer driver %s", tmrname[clocksource-1]);
 
-    if(sysinfostruc.quantum<10)
-        sysinfostruc.quantum=10;         //min 10 task switch per sec
-    if(sysinfostruc.quantum>tmrfreq/10)
-        sysinfostruc.quantum=tmrfreq/10; //max 1 switch per 10 interrupts
+    if(quantum<10)
+        quantum=10;         //min 10 task switch per sec
+    if(quantum>tmrfreq/10)
+        quantum=tmrfreq/10; //max 1 switch per 10 interrupts
     // calculate stepping in microsec
     alarmstep = 1000000/tmrfreq;
     // failsafes
     if(alarmstep<1)     alarmstep=1;     //unit to add to nanosec per interrupt
-    qdiv = tmrfreq/sysinfostruc.quantum; //number of ints to a task switch
+    qdiv = tmrfreq/quantum; //number of ints to a task switch
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
     sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
@@ -230,7 +230,7 @@ void isr_init()
     sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
     // set up system counters
     seccnt = 1;
-    qcnt = sysinfostruc.quantum;
+    qcnt = quantum;
 
     // set up isr_syscall dispatcher and IDTR, also mask all IRQs
     isr_maxirq = 0;
@@ -251,9 +251,9 @@ void isr_init()
     idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
     idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
 
-    sysinfostruc.freq = i*tmrfreq;
+    i *= tmrfreq;
     bogomips *= tmrfreq;
-    syslog_early(" cpu %d cps, %d bogomips",sysinfostruc.freq, bogomips);
+    syslog_early(" cpu %d cps, %d bogomips",i, bogomips);
     /* Hz: number of interrupts per sec
      * step: microsec to add to TICKS_NTS every interrupt
      * ts: task switch after every n interrupts */
@@ -293,7 +293,7 @@ int isr_installirq(uint8_t irq, phy_t memroot)
             return EIO;
         }
 #if DEBUG
-    if(sysinfostruc.debug&DBG_IRQ)
+    if(debug&DBG_IRQ)
         kprintf("IRQ %d: %x\n", irq, memroot);
 #endif
         irq_routing_table[irq] = memroot;

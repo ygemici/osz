@@ -268,6 +268,11 @@ isr_timer:
     /* seccnt = tmrfreq; */
     movq    tmrfreq, %rax
     movq    %rax, seccnt
+    /* sysinfoctruc.fps = isr_currfps; isr_currfps=0; */
+    movw    isr_currfps, %ax
+    movw    %ax, sysinfostruc + sysinfo_fps
+    xorw    %ax, %ax
+    movw    %ax, isr_currfps
 #if DEBUG
     call    kprintf_putfps
 #endif

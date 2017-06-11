@@ -88,7 +88,7 @@ void acpi_early(ACPI_Header *hdr)
                 ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
                 ioapic_addr = rec->address;
 #if DEBUG
-                if(sysinfostruc.debug&DBG_DEVICES)
+                if(debug&DBG_DEVICES)
                     kprintf("IOAPIC  %x\n", ioapic_addr);
 #endif
                 break;
@@ -101,7 +101,7 @@ void acpi_early(ACPI_Header *hdr)
     if(!hpet_addr && !kmemcmp("HPET", hdr->magic, 4)) {
         hpet_addr = (uint64_t)hdr;
 #if DEBUG
-        if(sysinfostruc.debug&DBG_DEVICES)
+        if(debug&DBG_DEVICES)
             kprintf("HPET  %x\n", hpet_addr);
 #endif
     }
@@ -113,7 +113,7 @@ void acpi_early(ACPI_Header *hdr)
 void acpi_parseaml(ACPI_Header *hdr)
 {
 #if DEBUG
-        if(sysinfostruc.debug&DBG_DEVICES) {
+        if(debug&DBG_DEVICES) {
             kprintf("AML %c%c%c%c  %x\n",
                 hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3],
                 hdr);
@@ -165,7 +165,7 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
         return;
 #if DEBUG
     uint64_t i;
-    if(sysinfostruc.debug&DBG_DEVICES) {
+    if(debug&DBG_DEVICES) {
         for(i=0;i<level;i++) kprintf("  ");
         kprintf("%c%c%c%c ", hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3]);
         kprintf("%8x %d ", hdr, hdr->length);
@@ -230,61 +230,61 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
 #if DEBUG
             if(ptr[0]==ACPI_APIC_LAPIC_MAGIC) {
                 ACPI_APIC_LAPIC *rec = (ACPI_APIC_LAPIC*)ptr;
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("LAPIC   %x %d %d\n", ptr, ptr[1], rec->procId);
                 }
             } else
             if(ptr[0]==ACPI_APIC_INTSRCOV_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("INTSRC  %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_NMI_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("NMI     %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_LNMI_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("LNMI    %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_LADDROV_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("LADDR   %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_IOSAPIC_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("IOSAPIC %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_LSAPIC_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("LSAPIC  %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_PIS_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("PIS     %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_X2APIC_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("X2APIC  %x %d\n", ptr, ptr[1]);
                 }
             } else
             if(ptr[0]==ACPI_APIC_X2NMI_MAGIC) {
-                if(sysinfostruc.debug&DBG_DEVICES) {
+                if(debug&DBG_DEVICES) {
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("X2NMI   %x %d\n", ptr, ptr[1]);
                 }
@@ -316,7 +316,7 @@ bool_t acpi_init()
     } else {
         // recursively parse ACPI tables to detect devices
 #if DEBUG
-        if(sysinfostruc.debug&DBG_DEVICES)
+        if(debug&DBG_DEVICES)
             kprintf("\nACPI System Tables\n");
 #endif
         acpi_parse((ACPI_Header*)bootboot.x86_64.acpi_ptr, 1);
@@ -334,7 +334,7 @@ bool_t acpi_init()
 //        ehdr->e_machine = SCI_INT;
     }
 #if DEBUG
-    if(sysinfostruc.debug&DBG_DEVICES)
+    if(debug&DBG_DEVICES)
         kprintf("ACPI PM1a_CNT %x SMI_CMD %x ACPI_ENABLE %x SLP_TYPa %x SLP_EN %x\n", 
             PM1a_CNT, SMI_CMD, ACPI_ENABLE, SLP_TYPa,SLP_EN);
 #endif
@@ -363,7 +363,7 @@ bool_t acpi_init()
                         "r"(PM1b_CNT) );
                 } while(i-- > 0 && (tmp &SCI_EN)==0);
 #if DEBUG
-        if(sysinfostruc.debug&DBG_DEVICES) {
+        if(debug&DBG_DEVICES) {
             kprintf("ACPI enable %d\n",i>0);
         }
 #endif
@@ -372,7 +372,7 @@ bool_t acpi_init()
         return false;
     } else {
 #if DEBUG
-        if(sysinfostruc.debug&DBG_DEVICES) {
+        if(debug&DBG_DEVICES) {
             kprintf("ACPI already enabled\n");
         }
 #endif

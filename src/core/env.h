@@ -26,6 +26,7 @@
  */
 
 #ifndef _AS
+#ifndef _ENV_C
 extern uint64_t nrphymax;   // number of hysical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
 extern uint64_t nrsrvmax;   // number of services pages
@@ -41,4 +42,24 @@ extern uint64_t debug;      // debug flags
 extern uint64_t quantum;    // max CPU allocation time: 1/quantum sec
 extern uint64_t fps;        // max frame per sec
 extern uint64_t display;    // display type
+extern uint64_t keymap;     // keymap
 #endif
+#endif
+
+/* debug levels */
+#define DBG_NONE     0      // none, false
+#define DBG_MEMMAP   (1<<0) // mm 1
+#define DBG_THREADS  (1<<1) // th 2
+#define DBG_ELF      (1<<2) // el 4
+#define DBG_RTIMPORT (1<<3) // ri 8
+#define DBG_RTEXPORT (1<<4) // re 16
+#define DBG_IRQ      (1<<5) // ir 32
+#define DBG_DEVICES  (1<<6) // de 64
+#define DBG_SCHED    (1<<7) // sc 128
+#define DBG_MSG      (1<<8) // ms 256
+#define DBG_LOG      (1<<9) // lo 512
+
+/* display options */
+#define DSP_MONO_COLOR   0  // mc flat 2D color
+#define DSP_STEREO_MONO  1  // sm grayscale red-cyan 3D (anaglyph)
+#define DSP_STEREO_COLOR 2  // sc real 3D (polarized glass, VR helmet etc. driver specific)

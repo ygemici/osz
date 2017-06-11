@@ -27,7 +27,8 @@ SECTIONS
         /* initialized and preallocated data */
         PROVIDE(_data = .);
         *(.rodata)
-        *(.data)
+        *(.data .data.*)
+        *(.bss .bss.* .sbss*)
         *(.got*)
         . = ALIGN(4096);
         sysinfostruc = .;

@@ -32,6 +32,27 @@
 .global _init
 .type mem2vid, STT_FUNC
 .global mem2vid
+.type _screen_ptr, STT_OBJECT
+.size _screen_ptr, 8
+.global _screen_ptr
+.type _fb_ptr, STT_OBJECT
+.size _fb_ptr, 8
+.global _fb_ptr
+.type _fb_width, STT_OBJECT
+.size _fb_width, 4
+.global _fb_width
+.type _fb_height, STT_OBJECT
+.size _fb_height, 4
+.global _fb_height
+.type _fb_scanline, STT_OBJECT
+.size _fb_scanline, 4
+.global _fb_scanline
+.type _fb_type, STT_OBJECT
+.size _fb_type, 1
+.global _fb_type
+.type _display_type, STT_OBJECT
+.size _display_type, 1
+.global _display_type
 
 _init:
     call    sysinfo@PLT
@@ -45,7 +66,17 @@ mem2vid:
     ret
 
 .section .data
-screen:
+_screen_ptr:
     .quad 0x123456
-fbuf:
+_fb_ptr:
     .quad 0
+_fb_width:
+    .long 0
+_fb_height:
+    .long 0
+_fb_scanline:
+    .long 0
+_fb_type:
+    .byte 0
+_display_type:
+    .byte 0

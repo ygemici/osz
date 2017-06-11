@@ -199,12 +199,12 @@ void pmm_init()
     entry = &bootboot.mmap;
     pmm.totalpages = 0;
 #if DEBUG
-    if(sysinfostruc.debug&DBG_MEMMAP)
+    if(debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
 #endif
     while(num>0) {
 #if DEBUG
-        if(sysinfostruc.debug&DBG_MEMMAP)
+        if(debug&DBG_MEMMAP)
             kprintf("  %s %8x %9d\n",
                 MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Size(entry)
@@ -228,6 +228,7 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
+    sysinfostruc.magic = SYSINFO_MAGICH;
     sysinfostruc.mem_total = (uint32_t)pmm.totalpages;
     // memory check, -1 for rounding errors
     if(m/1024/1024 < PHYMEM_MIN-1)

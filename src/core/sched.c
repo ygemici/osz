@@ -112,7 +112,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
             return;
     }
 #if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
+    if(debug&DBG_SCHED)
         kprintf("sched_alarm(%x, %d.%d)\n", tcb->mypid, sec, nsec);
 #endif
     pid_t pid = tcb->mypid, next=ccb.hd_timerq, prev=0;
@@ -160,7 +160,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 void sched_hybernate(OSZ_tcb *tcb)
 {
 #if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
+    if(debug&DBG_SCHED)
         kprintf("sched_sleep(%x)\n", tcb->mypid);
 #endif
     /* TODO: memory -> swap (except tcb) */
@@ -175,7 +175,7 @@ void sched_awake(OSZ_tcb *tcb)
 {
     pid_t pid = tcb->mypid, next = tcb->next, prev = tcb->prev;
 #if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
+    if(debug&DBG_SCHED)
         kprintf("sched_awake(%x)\n", tcb->mypid);
 #endif
     if(tcb->state == tcb_state_hybernated) {
@@ -211,7 +211,7 @@ void sched_add(OSZ_tcb *tcb)
 {
     pid_t pid = tcb->mypid;
 #if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
+    if(debug&DBG_SCHED)
         kprintf("sched_add(%x) pri %d\n", pid, tcb->priority);
 #endif
     tcb->prev = 0;
@@ -231,7 +231,7 @@ void sched_remove(OSZ_tcb *tcb)
 {
     pid_t next = tcb->next, prev = tcb->prev;
 #if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
+    if(debug&DBG_SCHED)
         kprintf("sched_remove(%x) pri %d\n", tcb->mypid, tcb->priority);
 #endif
     tcb->prev = tcb->next = 0;
@@ -261,7 +261,7 @@ void sched_block(OSZ_tcb *tcb)
     if(tcb->memroot == idle_mapping)
         return;
 #if DEBUG
-    if(sysinfostruc.debug&DBG_SCHED)
+    if(debug&DBG_SCHED)
         kprintf("sched_block(%x)\n", tcb->mypid);
 #endif
     tcb->blktime = sysinfostruc.ticks[TICKS_LO];
@@ -318,7 +318,7 @@ again:
     /* if there's nothing to schedule, use idle task */
     if(ccb.hd_active[i]==0) {
 #if DEBUG
-        if(sysinfostruc.debug&DBG_SCHED && curr->memroot != idle_mapping)
+        if(debug&DBG_SCHED && curr->memroot != idle_mapping)
             kprintf("sched_pick()=idle  \n");
 #endif
         /* if this is the first time we schedule idle, call sys_ready() */
@@ -337,7 +337,7 @@ found:
     ccb.cr_active[i] = tcb->next;
     if(curr->mypid != tcb->mypid) {
 #if DEBUG
-        if(sysinfostruc.debug&DBG_SCHED)
+        if(debug&DBG_SCHED)
             kprintf("sched_pick()=%x  \n", tcb->mypid);
 #endif
         isr_next = tcb->memroot;

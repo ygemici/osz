@@ -46,6 +46,9 @@
 
 #include "env.h"
 
+char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"
+    "Copyright 2017 CC-by-nc-sa bztsrc@github\nUse is subject to license terms.\n\n";
+
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************
@@ -89,7 +92,7 @@ void main()
     }
 */
     // load screen saver
-//    service_init(SRV_USRLAST, "sbin/scrsvr");
+//    service_init(SRV_USRFISRT-1, "sbin/scrsvr");
 
     /*** step 3: stand up and prosper. ***/
     service_init(SRV_init, "sbin/init");

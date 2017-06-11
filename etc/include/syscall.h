@@ -32,13 +32,11 @@
 #define SRV_CORE		 0
 #define SRV_FS			-1
 #define SRV_UI			-2
-#define SRV_CRITLAST		SRV_UI
 #define SRV_syslog		-3
 #define SRV_net			-4
 #define SRV_sound		-5
 #define SRV_init		-6
 #define SRV_USRFIRST		-7
-#define SRV_USRLAST		-NRSRV_MAX
 // get function indeces
 #include <sys/core.h>
 #include <sys/fs.h>

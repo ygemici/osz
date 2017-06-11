@@ -43,6 +43,7 @@
 #define CORE_ADDRESS  0xffffffffffe02000
 
 #include "msg.h"
+#include "env.h"
 
 #ifndef _AS
 #include "pmm.h"

@@ -39,7 +39,7 @@ Boot Parameters
 | ioapic    | -      | hexdec | core | x86_64 override autodetected IOAPIC address |
 | clock     | 0      | number | core | x86_64 override autodetected clock source |
 
-The available values for debug parameter and display can be found in [sysinfo.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h).
+The available values for debug parameter and display can be found in [env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
 
 Debugging
 ---------

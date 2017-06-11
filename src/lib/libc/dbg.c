@@ -27,11 +27,11 @@
 #include <osZ.h>
 
 /* re-entrant counter */
-char dbg_reent = 0;
+private char dbg_reent = 0;
 /* for temporary strings */
-char dbg_tmpstr[33];
+private char dbg_tmpstr[33];
 /* argument */
-uint8_t dbg_cnt;
+private uint8_t dbg_cnt;
 
 void dbg_printf(char* fmt, ...);
 

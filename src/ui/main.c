@@ -29,6 +29,12 @@
 extern char _binary_logo_start;
 extern void keymap_parse(bool_t alt, char *keymap, size_t len);
 
+public char _keymap[8];
+public void* _screen_ptr;
+public uint32_t _fb_width;
+public uint32_t _fb_height;
+public uint8_t _display_type;
+
 public void opentty(){}
 public void openwin(){}
 public void openwrd(){}
@@ -38,6 +44,8 @@ void _init()
     uint64_t bss = BSS_ADDRESS;
     uint64_t len;
 
+dbg_printf("--- screen %x %dx%d\n",_screen_ptr,_fb_width,_fb_height);
+dbg_printf("----keymap '%s'\n",_keymap);
     /* map keymap */
     len = mapfile((void*)bss, "/etc/kbd/en_us");
     keymap_parse(0, (char*)bss, (size_t)len);

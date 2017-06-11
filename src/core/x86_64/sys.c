@@ -32,7 +32,6 @@
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
-extern sysinfo_t sysinfostruc;
 extern uint32_t fg;
 extern char rebootprefix[];
 extern char poweroffprefix[];
@@ -229,7 +228,7 @@ void sys_ready()
         pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
 
 #if DEBUG
-    if(sysinfostruc.debug&DBG_LOG)
+    if(debug&DBG_LOG)
         kprintf(syslog_buf);
 #endif
     /* disable scroll pause */

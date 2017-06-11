@@ -56,6 +56,7 @@ extern char *addr_base;
 extern uint64_t bogomips;
 extern char *syslog_buf;
 extern char *syslog_ptr;
+extern char osver[];
 extern sysinfo_t sysinfostruc;
 
 extern uchar *service_sym(virt_t addr);
@@ -935,7 +936,7 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("%s",&sysinfostruc.osver);
+    kprintf("%s",&osver);
 
     fg=dbg_theme[4];
     if(dbg_tui)
@@ -944,11 +945,11 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("display: %d %s, fps: %d, screen: @%8x\n",
-        sysinfostruc.display, disp[sysinfostruc.display], sysinfostruc.fps, sysinfostruc.screen_ptr);
+    kprintf("display: %d %s, fps: %d\n",
+        display, disp[display], sysinfostruc.fps);
     kprintf("framebuffer: @%8x, %dx%d, scanline %d,",
-        sysinfostruc.fb_ptr, sysinfostruc.fb_width, sysinfostruc.fb_height, sysinfostruc.fb_scanline);
-    kprintf(" type: %d %s\n\n",sysinfostruc.fb_type,fbt[sysinfostruc.fb_type]);
+        bootboot.fb_ptr, bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline);
+    kprintf(" type: %d %s\n\n",bootboot.fb_type,fbt[bootboot.fb_type]);
 
     fg=dbg_theme[4];
     if(dbg_tui)
@@ -957,10 +958,10 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("cpu: %d cps (%d bogomips), quantum: %d ticks, max open files: %d\n",
-        sysinfostruc.freq, bogomips, sysinfostruc.quantum, sysinfostruc.nropenmax);
+    kprintf("cpu: %d bogomips, quantum: %d ticks, max open files: %d\n",
+        bogomips, quantum, nropenmax);
     kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
-        sysinfostruc.keymap, sysinfostruc.debug, sysinfostruc.rescueshell?"true":"false");
+        keymap, debug, rescueshell?"true":"false");
 
     fg=dbg_theme[4];
     if(dbg_tui)

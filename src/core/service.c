@@ -30,6 +30,7 @@
 #include "env.h"
 
 /* external resources */
+extern char osver[];
 extern uint8_t _code;
 extern uint64_t *stack_ptr;
 extern phy_t screen[2];
@@ -60,6 +61,8 @@ unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no 
 extern OSZ_ccb ccb;
 virt_t __attribute__ ((section (".data"))) lastsym;
 #endif
+
+uint8_t __attribute__ ((section (".data"))) scrptr = 0;
 
 /**
  * register a user mode service for pid translation
@@ -99,7 +102,7 @@ void *service_loadelf(char *fn)
     sysinfostruc.srand[(i+3)%4] ^= (uint64_t)elf;
 
 #if DEBUG
-    if(sysinfostruc.debug&DBG_ELF)
+    if(debug&DBG_ELF)
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
 #endif
     // valid elf for this platform?
@@ -154,7 +157,7 @@ void *service_loadelf(char *fn)
 __inline__ void service_loadso(char *fn)
 {
 #if DEBUG
-    if(sysinfostruc.debug&DBG_ELF)
+    if(debug&DBG_ELF)
         kprintf("  ");
 #endif
     service_loadelf(fn);
@@ -423,10 +426,10 @@ uchar *service_sym(virt_t addr)
  */
 bool_t service_rtlink()
 {
-    int i, j, k, n = 0;
+    int i, j, k, n = 0, vs=kstrlen((char*)&osver);
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     OSZ_rela *rel = relas;
-    uint64_t *paging = (uint64_t *)&tmpmap;
+    uint64_t *paging = (uint64_t *)&tmpmap, *objptr;
 
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
@@ -454,7 +457,7 @@ bool_t service_rtlink()
                 d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr->p_offset);
                 /* dynamic table */
 #if DEBUG
-                if(sysinfostruc.debug&DBG_RTIMPORT)
+                if(debug&DBG_RTIMPORT)
                     kprintf("  Import %x (%d bytes):\n",
                         phdr->p_offset + j*__PAGESIZE, (int)phdr->p_memsz
                     );
@@ -514,7 +517,7 @@ bool_t service_rtlink()
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(sysinfostruc.debug&DBG_RTIMPORT)
+                if(debug&DBG_RTIMPORT)
                     kprintf("    %x D %s +%x?\n", rel->offs,
                         strtable + s->st_name, relad->r_addend
                     );
@@ -536,7 +539,7 @@ bool_t service_rtlink()
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(sysinfostruc.debug&DBG_RTIMPORT)
+                if(debug&DBG_RTIMPORT)
                     kprintf("    %x T %s +%x?\n", rel->offs,
                         strtable + s->st_name, rela->r_addend
                     );
@@ -590,7 +593,7 @@ bool_t service_rtlink()
         }
         /* dynamic symbol table */
 #if DEBUG
-        if(sysinfostruc.debug&DBG_RTEXPORT)
+        if(debug&DBG_RTEXPORT)
             kprintf("  Export %x (%d bytes):\n",
                 sym, strtable-(char*)sym
             );
@@ -603,7 +606,7 @@ bool_t service_rtlink()
             if(s->st_value) {
                 uint64_t offs = (uint64_t)s->st_value + j*__PAGESIZE+TEXT_ADDRESS;
 #if DEBUG
-                if(sysinfostruc.debug&DBG_RTEXPORT)
+                if(debug&DBG_RTEXPORT)
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_routing_table
@@ -623,8 +626,10 @@ bool_t service_rtlink()
                             if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && *(strtable + s->st_name + 3)==0) {
                                 // get autodetected irq number
                                 k=0; *((uint8_t*)&k) = (uint8_t)ehdr->e_machine;
-                            } else if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT && 
-                                !kmemcmp(strtable + s->st_name,"irqnum",7)) {
+                            } else if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT &&
+                                      ELF64_ST_BIND(s->st_info)==STB_GLOBAL &&
+                                      ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT &&
+                                      !kmemcmp(strtable + s->st_name,"irqnum",7)) {
                                 // if it's a variable with IRQ number
                                 k = *((uint64_t*)((char*)ehdr + s->st_value));
                             }
@@ -634,11 +639,54 @@ bool_t service_rtlink()
                     if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && 
                         !kmemcmp(strtable + s->st_name,"mem2vid",8)) {
 #if DEBUG
-                        if(sysinfostruc.debug&DBG_IRQ)
+                        if(debug&DBG_IRQ)
                             kprintf("IRQ m2v: %6x\n", ISR_NUMIRQ, ((OSZ_tcb*)(pmm.bss_end))->memroot);
 #endif
                         irq_routing_table[ISR_NUMIRQ] = ((OSZ_tcb*)(pmm.bss_end))->memroot;
                     }
+                }
+                if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT &&
+                   ELF64_ST_BIND(s->st_info)==STB_GLOBAL &&
+                   ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT) {
+                    objptr = (uint64_t*)((paging[j+s->st_value/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + s->st_value%__PAGESIZE);
+                    // export data to drivers and services
+                    if( ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_DRV ||
+                        ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_SRV) {
+                        k=0;
+                        if(!kmemcmp(strtable + s->st_name,"_initrd_ptr",12) && s->st_size==8)
+                            {k=8; *objptr=SBSS_ADDRESS;}
+                        if(!kmemcmp(strtable + s->st_name,"_initrd_size",13) && s->st_size==8)
+                            {k=8; *objptr=bootboot.initrd_size;}
+                        if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
+                            {k=4; kmemcpy(objptr,&bootboot.fb_width,4);}
+                        if(!kmemcmp(strtable + s->st_name,"_fb_height",11) && s->st_size>=4)
+                            {k=4; kmemcpy(objptr,&bootboot.fb_height,4);}
+                        if(!kmemcmp(strtable + s->st_name,"_fb_scanline",13) && s->st_size>=4)
+                            {k=4; kmemcpy(objptr,&bootboot.fb_scanline,4);}
+                        if(!kmemcmp(strtable + s->st_name,"_fb_type",9) && s->st_size>0)
+                            {k=1; kmemcpy(objptr,&bootboot.fb_type,1);}
+                        if(!kmemcmp(strtable + s->st_name,"_display_type",14) && s->st_size>0)
+                            {k=1; kmemcpy(objptr,&display,1);}
+                        if(!kmemcmp(strtable + s->st_name,"_rescueshell",13) && s->st_size>0)
+                            {k=1; kmemcpy(objptr,&rescueshell,1);}
+                        if(!kmemcmp(strtable + s->st_name,"_keymap",8) && s->st_size==8)
+                            {k=8; kmemcpy(objptr,&keymap,8);}
+                        if(!kmemcmp(strtable + s->st_name,"_screen_ptr",12) && s->st_size==8)
+                            {k=8; *objptr=SBSS_ADDRESS;scrptr=true;}
+                        if(!kmemcmp(strtable + s->st_name,"_fb_ptr",8) && s->st_size==8)
+                            {k=8; *objptr=(virt_t)SBSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
+                        if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
+                            syslog_early("Exporting %s to pid %x on page boundary",
+                                strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
+                    }
+                    // export data to user processes
+                    if(!kmemcmp(strtable + s->st_name,"_osver",7) && s->st_size > vs) {
+                        if((s->st_value%__PAGESIZE)+vs>__PAGESIZE)
+                            syslog_early("Exporting %s to pid %x on page boundary",
+                                strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
+                        kmemcpy(objptr,&osver,vs+1);
+                    }
+kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address
@@ -646,7 +694,7 @@ bool_t service_rtlink()
                     OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
                     if(r->offs != 0 && !kstrcmp(r->sym, strtable + s->st_name)) {
 #if DEBUG
-                        if(sysinfostruc.debug&DBG_RTEXPORT)
+                        if(debug&DBG_RTEXPORT)
                             kprintf(" %x", r->offs);
 #endif
                         // save virtual address
@@ -656,7 +704,7 @@ bool_t service_rtlink()
                     }
                 }
 #if DEBUG
-                if(sysinfostruc.debug&DBG_RTEXPORT)
+                if(debug&DBG_RTEXPORT)
                     kprintf("\n");
 #endif
             }
@@ -707,6 +755,14 @@ void service_init(int subsystem, char *fn)
         cmd++;
     cmd++;
     pid_t pid = thread_new(cmd);
+    //set priority for the task
+    if(subsystem == SRV_USRFIRST) {
+        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // identity process
+        identity_pid = pid;
+    } else if(subsystem == SRV_USRFIRST-1)
+        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_IDLE;   // screen saver
+    else
+        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;    // everything else
     // map executable
     if(service_loadelf(fn) == (void*)(-1)) {
         syslog_early("WARNING unable to load ELF from %s", fn);
@@ -716,15 +772,6 @@ void service_init(int subsystem, char *fn)
     service_loadso("lib/libc.so");
     // dynamic linker
     if(service_rtlink()) {
-        //set priority for the task
-        if(subsystem == SRV_USRFIRST) {
-            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // identity process
-            identity_pid = pid;
-        } else if(subsystem == SRV_USRLAST)
-            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_IDLE;   // screen saver
-        else
-            ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;    // everything else
-
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
@@ -751,6 +798,7 @@ void fs_init()
     char *drvs_end = drvs + fs_size;
     char fn[256];
     pid_t pid = thread_new("FS");
+    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     // map file system dispatcher
     if(service_loadelf("sbin/fs") == (void*)(-1)) {
         kpanic("unable to load ELF from /sbin/fs");
@@ -787,14 +835,13 @@ void fs_init()
     // dynamic linker
     if(service_rtlink()) {
         // map initrd in "fs" task's memory
-        vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BSS_ADDRESS + __SLOTSIZE,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
+        vmm_mapbss((OSZ_tcb*)(pmm.bss_end),SBSS_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
 #ifdef DEBUG
         //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
         ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
 #endif
         // add to queue so that scheduler will know about this thread
-        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_FS] = pid;
@@ -810,6 +857,8 @@ void fs_init()
 void ui_init()
 {
     pid_t pid = thread_new("UI");
+    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
+    int i;
 
     // map user interface code
     if(service_loadelf("sbin/ui") == (void*)(-1)) {
@@ -819,58 +868,31 @@ void ui_init()
     service_loadso("lib/libc.so");
     // map window decoratorator
 //    service_loadso("lib/ui/decor.so");
+
     // dynamic linker
     if(service_rtlink()) {
-        // allocate and map screen buffer B
-        /*** Double Screen stuff ***/
+#ifdef DEBUG
+        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
+        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
+#endif
+        // add to queue so that scheduler will know about this thread
+        sched_add((OSZ_tcb*)(pmm.bss_end));
+
+        services[-SRV_UI] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",pid);
+
         // allocate and map screen buffer A
-/*
-        virt_t bss = sysinfostruc.screen_ptr;
-        phy_t fbp=(phy_t)bootboot.fb_ptr;
-        i = ((bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE) * (sysinfostruc.display>=DSP_STEREO_MONO?2:1);
-        while(i-->0) {
-            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+        virt_t bss=SBSS_ADDRESS;
+        for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
+            __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
+kprintf(" bss %x\n",bss);
+//            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             // save it for SYS_swapbuf
             if(!screen[0]) {
                 screen[0]=pdpe;
             }
             bss += __SLOTSIZE;
         }
-        // map framebuffer
-        bss = sysinfostruc.fb_ptr;
-        i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;
-        while(i-->0) {
-            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
-            bss += __SLOTSIZE;
-            fbp += __SLOTSIZE;
-        }
-*/
-
-/*
-    FIXME: this messes up UI's tcb
-        int i;
-        phy_t bss = sysinfostruc.screen_ptr;
-        i = ((bootboot.fb_width * bootboot.fb_height * 4 +
-            __SLOTSIZE - 1) / __SLOTSIZE) * (sysinfostruc.display>=DSP_STEREO_MONO?2:1);
-        while(i-->0) {
-            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
-            if(!screen[1]) {
-                screen[1]=pdpe;
-            }
-            bss += __SLOTSIZE;
-        }
-*/
-#ifdef DEBUG
-        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
-        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
-#endif
-        // add to queue so that scheduler will know about this thread
-        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
-        sched_add((OSZ_tcb*)(pmm.bss_end));
-
-        services[-SRV_UI] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",pid);
     } else {
         kpanic("thread check failed for /sbin/ui");
     }
@@ -884,6 +906,7 @@ void syslog_init()
     int i=0,j=0;
     uint64_t *paging = (uint64_t *)&tmpmap;
     pid_t pid = thread_new("syslog");
+    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     // map file system dispatcher
     if(service_loadelf("sbin/syslog") == (void*)(-1)) {
         syslog_early("unable to load ELF from /sbin/syslog");
@@ -901,7 +924,6 @@ void syslog_init()
     // dynamic linker
     if(service_rtlink()) {
         // add to queue so that scheduler will know about this thread
-        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_syslog] = pid;
@@ -941,6 +963,7 @@ void drv_init(char *driver)
     service_loadso(driver);
 
     // dynamic linker
+    scrptr = false;
     if(service_rtlink()) {
         //set IOPL=3 in rFlags to permit IO address space
         ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
@@ -950,6 +973,31 @@ void drv_init(char *driver)
         driver[i]=0;
         syslog_early(" %s %x pid %x",drvname,((OSZ_tcb*)(pmm.bss_end))->memroot,pid);
         driver[i]='.';
+
+        //do we need to map screen and framebuffer?
+        if(scrptr) {
+            // allocate and map screen buffer B
+            virt_t bss=SBSS_ADDRESS;
+            for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
+                __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
+kprintf(" bss %x\n",bss);
+//                vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+                // save it for SYS_swapbuf
+                if(!screen[1]) {
+                    screen[1]=pdpe;
+                }
+                bss += __SLOTSIZE;
+            }
+            bss=(virt_t)SBSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
+            phy_t fbp=(phy_t)bootboot.fb_ptr;
+            // map framebuffer
+            for(i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;i>0;i--) {
+kprintf(" bss %x fb %x\n",bss,fbp);
+//                                vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
+                bss += __SLOTSIZE;
+                fbp += __SLOTSIZE;
+            }
+        }
     } else {
         kprintf("WARNING thread check failed for %s\n", driver);
     }

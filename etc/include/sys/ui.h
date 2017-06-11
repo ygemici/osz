@@ -25,8 +25,8 @@
  * @brief OS/Z system calls for ui service. Include with osZ.h
  */
 
-#define SYS_openwin	(  6)
-#define SYS_keypress	( 11)
-#define SYS_keyrelease	( 17)
-#define SYS_opentty	( 18)
-#define SYS_openwrd	( 19)
+#define SYS_opentty	(  7)
+#define SYS_openwrd	(  8)
+#define SYS_openwin	( 13)
+#define SYS_keypress	( 18)
+#define SYS_keyrelease	( 20)

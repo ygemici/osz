@@ -25,11 +25,11 @@
  * @brief OS/Z system calls for fs service. Include with osZ.h
  */
 
-#define SYS_read	(  2)
-#define SYS_dup2	(  5)
-#define SYS_pipe	(  6)
-#define SYS_write	(  7)
-#define SYS_seek	(  8)
-#define SYS_dup	(  9)
-#define SYS_stat	( 10)
-#define SYS_ioctl	( 12)
+#define SYS_read	(  3)
+#define SYS_dup2	(  6)
+#define SYS_pipe	(  8)
+#define SYS_write	(  9)
+#define SYS_seek	( 10)
+#define SYS_dup	( 11)
+#define SYS_stat	( 12)
+#define SYS_ioctl	( 14)

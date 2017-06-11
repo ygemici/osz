@@ -25,7 +25,8 @@
  * @brief Init System Service
  */
 #include <osZ.h>
-#include <sys/sysinfo.h>
+
+public uint8_t _rescueshell = false;
 
 public void start(){}
 public void stop(){}
@@ -34,13 +35,12 @@ public void status(){}
 
 void _init()
 {
-    sysinfo_t *sysi;
     //wait for sys_ready() to send an SYS_ack
     mq_recv();
 
     mq_recv();
-    sysi = sysinfo();
-    if(sysi->rescueshell) {
+breakpoint;
+    if(_rescueshell) {
         breakpoint;
     } else {
 ee:goto ee;
