@@ -199,11 +199,16 @@ xchg %bx,%bx
     movq    %rax, %rbx
     movq    %rsi, %rdx
     movw    cursor_w(%rip), %r12w
-    xorq    %rcx, %rcx
 1:  movq    %rbx, %rdi
     movq    %rdx, %rsi
     movw    cursor_w(%rip), %cx
-    repnz   movsd
+2:  lodsl
+    cmpl    $0x1000000, %eax
+    jb      3f
+    movl    %eax, (%rdi)
+3:  addq    $4, %rdi
+    decw    %cx
+    jnz     2b
     addq    %r11, %rbx
     addq    %r10, %rdx
     decw    %r12w
