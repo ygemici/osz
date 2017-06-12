@@ -53,6 +53,13 @@
 .type _display_type, STT_OBJECT
 .size _display_type, 1
 .global _display_type
+.global _cursor_w
+.global _cursor_h
+.global _cursor_ptr
+
+.extern loadcursor
+.extern _binary_shapes_start
+.extern _binary_shapes_end
 
 .section .text
 
@@ -87,6 +94,8 @@ _init:
 
 1:  cmpw    $VID_loadcursor, (%rax)
     jne     1f
+    movq    8(%rax), %rdi
+    callq   loadcursor
     jmp     .getwork
 
 1:  cmpw    $VID_setcursor, (%rax)
@@ -117,3 +126,14 @@ fb_type:
 _display_type:
 display_type:
     .byte 0
+_cursor_w:
+cursor_w:
+    .word 32
+_cursor_h:
+cursor_h:
+    .word 992
+cursor_shape:
+    .long 0
+_cursor_ptr:
+cursor_ptr:
+    .quad _binary_shapes_start

@@ -6,7 +6,7 @@ GENSYMS = ui.sym
 all: avatar.o main.o
 
 avatar.o: avatar.tga
-	@objcopy -O elf64-x86-64 -B i386 -I binary avatar.tga avatar.o
+	@ld -r -b binary -o avatar.o avatar.tga
 
 include ../Makefile.rules
 

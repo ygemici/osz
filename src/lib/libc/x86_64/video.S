@@ -49,9 +49,10 @@ vid_swapbuf:
     ret
 
 /**
- * void vid_showcursor(int x,int y);
+ * void vid_showcursor(int hand,int x,int y);
  */
 vid_showcursor:
+    movq    %rdx, %rcx
     movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    $SRV_video, %rdi

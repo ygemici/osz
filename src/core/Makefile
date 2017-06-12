@@ -28,11 +28,11 @@ platform:
 
 font.o: ../../etc/system.8x16.psf
 	@cp ../../etc/system.8x16.psf ./font
-	$(O)objcopy -O elf64-x86-64 -B i386 -I binary font font.o
+	$(O)ld -r -b binary -o font.o font
 	@rm font
 
 logo.o: logo.tga
-	$(O)objcopy -O elf64-x86-64 -B i386 -I binary logo.tga logo.o
+	$(O)ld -r -b binary -o logo.o logo.tga
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  lnk		$(TARGET) ($(ARCH))"

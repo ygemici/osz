@@ -34,10 +34,46 @@
 #define VID_loadcursor 3
 #define VID_setcursor 4
 
+/* video cursor shapes */
+#define VC_none -1
+#define VC_default 0
+#define VC_pointer 1
+#define VC_clicked 2
+#define VC_help 3
+#define VC_kill 4
+#define VC_notallowed 5
+#define VC_cell 6
+#define VC_crosshair 7
+#define VC_text 8
+#define VC_vtext 9
+#define VC_alias 10
+#define VC_copy 11
+#define VC_move 12
+#define VC_scroll 13
+#define VC_colresize 14
+#define VC_rowresize 15
+#define VC_nresize 16
+#define VC_eresize 17
+#define VC_sresize 18
+#define VC_wresize 19
+#define VC_neresize 20
+#define VC_nwresize 21
+#define VC_seresize 22
+#define VC_swresize 23
+#define VC_ewresize 24
+#define VC_nsresize 25
+#define VC_neswresize 26
+#define VC_nwseresize 27
+#define VC_zoomin 28
+#define VC_zoomout 29
+#define VC_grab 30
+#define VC_grabbing 31
+#define VC_progress 32 //remaining shapes animated
+
 /*** libc implementation prototypes */
 #ifndef _AS
 void vid_swapbuf();
-void vid_showcursor(int x,int y);
+void vid_showcursor(int hand,int x,int y);
 void vid_loadcursor(char *file);
 void vid_setcursor(int shape);
 #endif
