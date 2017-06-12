@@ -36,7 +36,8 @@
 #define SRV_net			-4
 #define SRV_sound		-5
 #define SRV_init		-6
-#define SRV_USRFIRST		-7
+#define SRV_video		-7
+#define SRV_USRFIRST		-8
 // get function indeces
 #include <sys/core.h>
 #include <sys/fs.h>

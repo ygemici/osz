@@ -38,7 +38,6 @@
 .global yield
 .global seterr
 .global setirq
-.global swapbuf
 .global mapfile
 .global sleep
 .global usleep
@@ -176,17 +175,6 @@ myseterr:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
     movb    $SYS_seterr, %dil
-    movl    $0x646E6573, %eax # 'send'
-    syscall
-    ret
-
-/**
- * void swapbuf()
- */
-swapbuf:
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_swapbuf, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
     ret

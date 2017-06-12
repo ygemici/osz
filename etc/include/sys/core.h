@@ -74,8 +74,6 @@ void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
 void yield();                           // give up CPU time
 void seterr(int errno);                 // set libc errno
 void exit(int err);                     // exit task
-//see sys/sysinfo.h
-void swapbuf();                         // flush screen to framebuffer
 uint64_t regservice(pid_t thread);      // register service (init only)
 void stime(uint64_t utctimestamp);      // set system time
 void setirq(int8_t irq);                // set irq message for this thread

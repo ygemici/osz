@@ -28,6 +28,7 @@
 
 #include <fsZ.h>
 #include <sysexits.h>
+#include <sys/video.h>
 #include "env.h"
 
 /* external resources */
@@ -97,12 +98,8 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
                 kmap((uint64_t)&tmp2map, (uint64_t)(screen[1] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
                 j = (screen[1] & (__PAGESIZE-1))/sizeof(phy_t);
                 tmp = paging[i]; paging[i] = paging2[j]; paging2[j] = tmp;
-                /* flush screen buffer to video memory. Note this is a different
-                 * call than we're serving. We came here because
-                 *  SRV_UI sent SYS_swapbuf to SRV_CORE
-                 * and now
-                 *  SRV_CORE sends SYS_swapbuf to video driver */
-                msg_sends(EVT_DEST(screen_pid) | EVT_FUNC(SYS_swapbuf), 0,0,0,0,0,0);
+                /* flush screen buffer to video memory. */
+                msg_sends(EVT_DEST(SRV_video) | EVT_FUNC(VID_flush), 0,0,0,0,0,0);
             } else
                 tcb->errno = EACCES;
             break;

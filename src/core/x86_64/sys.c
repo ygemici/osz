@@ -58,7 +58,6 @@ char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
 uint8_t __attribute__ ((section (".data"))) idle_first;
 pid_t __attribute__ ((section (".data"))) identity_pid;
-pid_t __attribute__ ((section (".data"))) screen_pid;
 
 /**
  *  reboot computer

@@ -27,6 +27,7 @@
 
 #define _AS 1
 #include <osZ.h>
+#include <sys/video.h>
 
 /* linker stuff */
 .type _init, STT_FUNC
@@ -60,8 +61,8 @@ _init:
 
 .getwork:
     call    mq_recv@PLT
-    cmpw    $SYS_swapbuf, (%rax)
-    jne     .getwork
+    cmpw    $VID_flush, (%rax)
+    jne     1f
     /* copy screen to framebuffer */
     movq    screen_ptr(%rip), %rsi
     movq    fb_ptr(%rip), %rbx
@@ -72,14 +73,25 @@ _init:
     movl    fb_height(%rip), %r8d
     xorq    %r9, %r9
     movl    fb_scanline(%rip), %r9d
-1:  movq    %rbx, %rdi
+2:  movq    %rbx, %rdi
     movl    %edx, %ecx
     repnz   movsq
     addq    %r9, %rbx
     dec     %r8d
-    jnz     1b
+    jnz     2b
     jmp     .getwork
-    ret
+
+1:  cmpw    $VID_showcursor, (%rax)
+    jne     1f
+    jmp     .getwork
+
+1:  cmpw    $VID_loadcursor, (%rax)
+    jne     1f
+    jmp     .getwork
+
+1:  cmpw    $VID_setcursor, (%rax)
+    jne     .getwork
+    jmp     .getwork
 
 .section .data
 /* that stupid GNU as and ld can't refer to a label rip relatively

@@ -34,7 +34,6 @@ extern char osver[];
 extern uint8_t _code;
 extern uint64_t *stack_ptr;
 extern phy_t screen[2];
-extern pid_t screen_pid;
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
 extern sysinfo_t sysinfostruc;
@@ -973,7 +972,6 @@ void drv_init(char *driver)
 
         //do we need to map screen and framebuffer?
         if(scrptr) {
-            screen_pid = pid;
             // allocate and map screen buffer B
             virt_t bss=SBSS_ADDRESS;
             for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
@@ -993,6 +991,7 @@ void drv_init(char *driver)
                 bss += __SLOTSIZE;
                 fbp += __SLOTSIZE;
             }
+            services[-SRV_video] = pid;
         }
     } else {
         kprintf("WARNING thread check failed for %s\n", driver);
