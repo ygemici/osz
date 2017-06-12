@@ -40,7 +40,6 @@ extern phy_t identity_mapping;
 extern pid_t identity_pid;
 extern sysinfo_t sysinfostruc;
 extern phy_t screen[2];
-extern pid_t screen_pid;
 
 /**
  * System call dispatcher for messages sent to SRV_CORE. Also has a low level
