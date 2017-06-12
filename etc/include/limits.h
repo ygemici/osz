@@ -43,13 +43,14 @@
 // memory limits, OS/Z specific addresses
 #define TCB_ADDRESS   0
 #define MQ_ADDRESS    (__PAGESIZE)
-#define TEXT_ADDRESS  0x0000000000200000 // 2M code segment
-#define BSS_ADDRESS   0x0000000100000000 // 4G data, page alloc
-#define SBSS_ADDRESS  0x0000001000000000 //64G data, slot alloc
+#define TEXT_ADDRESS  (__SLOTSIZE)                  // 2M code segment
+#define BSS_ADDRESS   0x0000000100000000            // 4G data, page alloc
+#define FILE_ADDRESS  (BSS_ADDRESS-2*__SLOTSIZE)    // 4G-4M list of open files
+#define ALLOC_ADDRESS (BSS_ADDRESS-__SLOTSIZE)      // 4G-2M alloc internal data
+#define SBSS_ADDRESS  0x0000001000000000            //64G data, slot alloc
 
 // (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
 #define NRMQ_MAX	63 //pages
-#define NRSRV_MAX	16 //pages
 // minimum required memory in megabytes
 #define PHYMEM_MIN	32 //Mb
 

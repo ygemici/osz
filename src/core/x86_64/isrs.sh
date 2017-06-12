@@ -558,6 +558,7 @@ isr_irqtmrcal:
 isr_irqtmr:
     /* no timer isr needed */
     cli
+    cld
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
     $EOI
@@ -614,6 +615,7 @@ isr_irqtmr_rtc:
     /* we can't afford overhead of messaging and taskswitch,
        so we use inline code here */
     cli
+    cld
     call	isr_savecontext
     subq	\$$isrstack, ccb + ccb_ist1
     $EOIRTC
@@ -654,6 +656,7 @@ do
 	cat >>isrs.S <<-EOF
 	isr_irq$isr:
 	    cli
+	    cld
 	    call	isr_savecontext
 	    subq	\$$isrstack, ccb + ccb_ist1
 	    $EOI

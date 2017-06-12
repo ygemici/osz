@@ -27,11 +27,10 @@
 
 #ifndef _AS
 #ifndef _ENV_C
-extern uint64_t nrphymax;   // number of hysical fragment pages
+extern uint64_t nrphymax;   // number of physical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
 extern uint64_t nrsrvmax;   // number of services pages
 extern uint64_t nrlogmax;   // number of syslog_buf pages
-extern uint64_t nropenmax;  // number of open file descriptors per thread
 extern uint8_t syslog;      // should start syslog service on boot?
 extern uint8_t networking;  // should start net service on boot?
 extern uint8_t sound;       // should start sound service?

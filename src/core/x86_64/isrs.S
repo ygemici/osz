@@ -991,6 +991,7 @@ isr_irqtmrcal:
 isr_irqtmr:
     /* no timer isr needed */
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1043,6 +1044,7 @@ isr_irqtmr_rtc:
     /* we can't afford overhead of messaging and taskswitch,
        so we use inline code here */
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1074,6 +1076,7 @@ isr_irqtmr_rtc:
 
 isr_irq0:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1111,6 +1114,7 @@ isr_irq0:
 
 isr_irq1:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1148,6 +1152,7 @@ isr_irq1:
 
 isr_irq2:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1185,6 +1190,7 @@ isr_irq2:
 
 isr_irq3:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1222,6 +1228,7 @@ isr_irq3:
 
 isr_irq4:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1259,6 +1266,7 @@ isr_irq4:
 
 isr_irq5:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1296,6 +1304,7 @@ isr_irq5:
 
 isr_irq6:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1333,6 +1342,7 @@ isr_irq6:
 
 isr_irq7:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1370,6 +1380,7 @@ isr_irq7:
 
 isr_irq8:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1408,6 +1419,7 @@ isr_irq8:
 
 isr_irq9:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1446,6 +1458,7 @@ isr_irq9:
 
 isr_irq10:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1484,6 +1497,7 @@ isr_irq10:
 
 isr_irq11:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1522,6 +1536,7 @@ isr_irq11:
 
 isr_irq12:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1560,6 +1575,7 @@ isr_irq12:
 
 isr_irq13:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1598,6 +1614,7 @@ isr_irq13:
 
 isr_irq14:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1636,6 +1653,7 @@ isr_irq14:
 
 isr_irq15:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1674,6 +1692,7 @@ isr_irq15:
 
 isr_irq16:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1712,6 +1731,7 @@ isr_irq16:
 
 isr_irq17:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1750,6 +1770,7 @@ isr_irq17:
 
 isr_irq18:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1788,6 +1809,7 @@ isr_irq18:
 
 isr_irq19:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1826,6 +1848,7 @@ isr_irq19:
 
 isr_irq20:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1864,6 +1887,7 @@ isr_irq20:
 
 isr_irq21:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1902,6 +1926,7 @@ isr_irq21:
 
 isr_irq22:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1940,6 +1965,7 @@ isr_irq22:
 
 isr_irq23:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -1978,6 +2004,7 @@ isr_irq23:
 
 isr_irq24:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2016,6 +2043,7 @@ isr_irq24:
 
 isr_irq25:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2054,6 +2082,7 @@ isr_irq25:
 
 isr_irq26:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2092,6 +2121,7 @@ isr_irq26:
 
 isr_irq27:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2130,6 +2160,7 @@ isr_irq27:
 
 isr_irq28:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2168,6 +2199,7 @@ isr_irq28:
 
 isr_irq29:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2206,6 +2238,7 @@ isr_irq29:
 
 isr_irq30:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2244,6 +2277,7 @@ isr_irq30:
 
 isr_irq31:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */
@@ -2282,6 +2316,7 @@ isr_irq31:
 
 isr_irq32:
     cli
+    cld
     call	isr_savecontext
     subq	$64, ccb + ccb_ist1
     /* PIC EOI */

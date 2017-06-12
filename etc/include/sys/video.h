@@ -30,8 +30,8 @@
 
 /*** low level codes in rdi for syscall instruction ***/
 #define VID_flush 1
-#define VID_showcursor 2
-#define VID_loadcursor 3
+#define VID_loadcursor 2
+#define VID_movecursor 3
 #define VID_setcursor 4
 
 /* video cursor shapes */
@@ -73,9 +73,9 @@
 /*** libc implementation prototypes */
 #ifndef _AS
 void vid_swapbuf();
-void vid_showcursor(int hand,int x,int y);
 void vid_loadcursor(char *file);
-void vid_setcursor(int shape);
+void vid_movecursor(int hand,int x,int y);
+void vid_setcursor(int hand,int shape);
 #endif
 
 #endif /* sys/video.h */

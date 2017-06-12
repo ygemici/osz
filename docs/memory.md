@@ -18,17 +18,19 @@ execute in/out instructions, and therefore access IO address space.
 User Tasks
 ----------
 
-| Virtual Address | Scope | Description |
-| --------------- | ----- | ----------- |
+| Virtual Address  | Scope   | Description |
+| ---------------- | ------- | ----------- |
 | -2^56 .. -512M-1 | global  | global shared memory space (user accessible, read/write) |
-| -512M .. 0      | global  | core memory (supervisor only) |
-|     0 .. 4096   | thread  | Thread Control Block (read-only) |
-|  4096 .. x      | thread  | Message Queue (read/write, growing upwards) |
-|     x .. 2M-1   | thread  | local stack (read/write, growing downwards) |
-|    2M .. x      | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md)  | user program text segment (read only) |
-|     x .. 4G-1   | process | shared libraries (read only / read/write) |
-|    4G .. 64G-1  | thread  | dynamically per page allocated bss memory (growing upwards, read/write) |
-|   64G .. 2^56   | thread  | dynamically per slot allocated bss memory (growing upwards, read/write) |
+| -512M .. 0       | global  | core memory (supervisor only) |
+|     0 .. 4096    | thread  | Thread Control Block (read-only) |
+|  4096 .. x       | thread  | Message Queue (read/write, growing upwards) |
+|     x .. 2M-1    | thread  | local stack (read/write, growing downwards) |
+|    2M .. x       | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md) | user program text segment (read only) |
+|     x .. 4G-4M-1 | process | shared libraries (text read only / data read/write) |
+| 4G-4M .. 4G-2M-1 | thread  | list of open files (each 8 bytes, first is a counter) |
+| 4G-2M .. 4G-1    | thread  | libc memory allocator internal data |
+|    4G .. 2^56    | thread  | dynamically allocated bss memory (growing upwards, read/write) |
+|   64G .. 2^56    | thread  | pre-allocated mapped system buffers (screen, initrd) |
 
 Normal userspace tasks do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.

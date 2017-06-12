@@ -96,6 +96,7 @@ isr_loadcontext:
 .align  16, 0x90
 isr_syscall0:
     cli
+    cld
     /* make the environment look like in an irq handler */
     /* tcb->rip */
     movq    %rcx, __PAGESIZE-40
@@ -192,9 +193,6 @@ isr_syscall0:
     movq    %rax, %cr3
     xorq    %rax, %rax
     movq    %rax, isr_next
-#if DEBUG
-    movq    %rax, dbg_lastrip
-#endif
     jmp     8f
 
     /* 'recv' */

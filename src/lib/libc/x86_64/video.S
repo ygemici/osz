@@ -31,8 +31,8 @@
 #include <sys/video.h>
 
 .global vid_swapbuf
-.global vid_showcursor
 .global vid_loadcursor
+.global vid_movecursor
 .global vid_setcursor
 
 .section .text
@@ -44,20 +44,6 @@ vid_swapbuf:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
     movb    $SYS_swapbuf, %dil
-    movl    $0x646E6573, %eax # 'send'
-    syscall
-    ret
-
-/**
- * void vid_showcursor(int hand,int x,int y);
- */
-vid_showcursor:
-    movq    %rdx, %rcx
-    movq    %rsi, %rdx
-    movq    %rdi, %rsi
-    movq    $SRV_video, %rdi
-    shlq    $16, %rdi
-    movb    $VID_showcursor, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
     ret
@@ -75,9 +61,24 @@ vid_loadcursor:
     ret
 
 /**
- * void vid_setcursor(int shape);
+ * void vid_showcursor(int hand,int x,int y);
+ */
+vid_movecursor:
+    movq    %rdx, %rcx
+    movq    %rsi, %rdx
+    movq    %rdi, %rsi
+    movq    $SRV_video, %rdi
+    shlq    $16, %rdi
+    movb    $VID_movecursor, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/**
+ * void vid_setcursor(int hand,int shape);
  */
 vid_setcursor:
+    movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    $SRV_video, %rdi
     shlq    $16, %rdi

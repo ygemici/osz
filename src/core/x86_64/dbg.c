@@ -286,7 +286,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
     uchar *symstr;
     virt_t ptr, dmp, lastsymsave;
     int i=0;
-    uint64_t j, *rsp=(uint64_t*)(rs!=0?rs:tcb->rsp);
+    uint64_t j, *rsp=(uint64_t*)(rs!=0?rs:tcb->rsp), *o;
 
     /* registers and stack dump */
     if(!dbg_full) {
@@ -335,6 +335,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
         if(dbg_tui)
             dbg_settheme();
         sys_fault = false;
+        o=rsp;
         while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
             kprintf("rsp+%1x rbp-%1x: ",
                 !dbg_inst?((uint64_t)rsp)&0xFF:(uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
@@ -361,14 +362,6 @@ void dbg_code(uint64_t rip, uint64_t rs)
             dbg_setpos();
         rsp = (uint64_t*)(ccb.ist3+ISR_STACK-40);
         kprintf("\n[Back trace %8x]\n", rsp);
-        if(dbg_lastrip) {
-            fg=dbg_theme[3];
-            if(dbg_tui)
-                dbg_settheme();
-            kprintf("%8x: %s \n",
-                dbg_lastrip, service_sym(dbg_lastrip)
-            );
-        }
         fg=0xFFDD33;
         if(dbg_tui)
             dbg_settheme();
@@ -380,6 +373,29 @@ void dbg_code(uint64_t rip, uint64_t rs)
             dbg_settheme();
         sys_fault = false;
         i=0;
+        while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+            if((((rsp[1]==0x23||rsp[1]==0x08) &&
+                (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
+                kprintf("%8x: %s   * interrupt %x * \n",*rsp, service_sym(*rsp), rsp[3]);
+                rsp=(uint64_t*)rsp[3];
+                continue;
+            }
+            if(sys_fault)
+                break;
+            if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
+               (*rsp>((uint64_t)&__bss_start))) {
+                if(sys_fault)
+                    break;
+                symstr = service_sym(*rsp);
+                if(sys_fault)
+                    break;
+                if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
+                    (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata"))
+                    kprintf("%8x: %s \n", *rsp, symstr);
+            }
+            rsp++;
+        }
+        rsp=o; i=0;
         while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
             if((((rsp[1]==0x23||rsp[1]==0x08) &&
                 (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
@@ -423,17 +439,18 @@ void dbg_code(uint64_t rip, uint64_t rs)
     if(dbg_tui)
         dbg_settheme();
     /* find a start position. This is tricky on x86 */
-    if(dbg_lastrip && dbg_lastrip > rip)
-        dbg_start = rip;
-    if(dbg_start == rip || dbg_start == 0) {
+    if(/*dbg_start == rip ||*/ dbg_start == 0) {
         dbg_next = dbg_start = rip;
         do {
             dbg_start--;
         } while(dbg_start>dbg_next-15 && disasm(dbg_start,NULL) != dbg_next);
     }
+/*
     j = dbg_start && dbg_start > rip-63 && dbg_start <= rip ? dbg_start :
         (dbg_lastrip && dbg_lastrip > rip-63 && dbg_lastrip <= rip ? dbg_lastrip :
         rip-15);
+*/
+    j = dbg_start;
     if(lastsym && j < lastsym)
         j = lastsym;
 again:
@@ -450,10 +467,7 @@ again:
             ptr = disasm((virt_t)ptr, NULL);
         }
     }
-    if(!i) {
-        if(j>rip-63) j--; else j=rip;
-        goto again;
-    }
+    if(!i && j>rip-63) { j--; goto again; }
     dbg_next = disasm(dbg_start, NULL);
     ptr = dbg_start;
     while(ky < maxy-2) {
@@ -992,8 +1006,8 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("cpu: %d bogomips, quantum: %d ticks, max open files: %d\n",
-        bogomips, quantum, nropenmax);
+    kprintf("cpu: %d bogomips, quantum: %d ticks, nrphymax: %d, nrmqmax: %d, nrsrvmax: %d, nrlogmax: %d\n",
+        bogomips, quantum, nrphymax, nrmqmax, nrsrvmax, nrlogmax);
     kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
         keymap, debug, rescueshell?"true":"false");
 

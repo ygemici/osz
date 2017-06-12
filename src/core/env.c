@@ -32,7 +32,6 @@ uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
 uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
-uint64_t __attribute__ ((section (".data"))) nropenmax;
 uint64_t __attribute__ ((section (".data"))) clocksource;
 uint64_t __attribute__ ((section (".data"))) fps;
 uint64_t __attribute__ ((section (".data"))) debug;
@@ -204,7 +203,6 @@ void env_init()
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
     fps = 10;
-    nropenmax = 16;
     quantum = 100;
     display = DSP_MONO_COLOR;
     debug = DBG_NONE;
@@ -236,18 +234,12 @@ void env_init()
         // number of services pages
         if(!kmemcmp(env, "nrsrvmax=", 9)) {
             env += 9;
-            env = env_dec(env, &nrsrvmax, 1, NRSRV_MAX);
+            env = env_dec(env, &nrsrvmax, 1, 16);
         } else
         // number of syslog buffer pages
         if(!kmemcmp(env, "nrlogmax=", 9)) {
             env += 9;
             env = env_dec(env, &nrlogmax, 4, 128);
-        } else
-        // number of file descriptors per thread. With fopen, number is unlimited.
-        if(!kmemcmp(env, "nropenmax=", 10)) {
-            env += 10;
-            env = env_dec(env, &tmp, 4, 128);
-            nropenmax = (uint8_t)tmp;
         } else
         // disable syslog
         if(!kmemcmp(env, "syslog=", 7)) {
