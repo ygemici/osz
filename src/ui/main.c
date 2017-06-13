@@ -28,6 +28,7 @@
 
 extern char _binary_logo_start;
 extern void keymap_parse(bool_t alt, char *keymap, size_t len);
+extern void reset_pointers();
 
 // filled by real-time linker
 public char _keymap[8];
@@ -49,6 +50,8 @@ void _init()
     len = mapfile((void*)bss, "/etc/kbd/en_us");
     keymap_parse(0, (char*)bss, (size_t)len);
     bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);
+
+    reset_pointers();
 
     /* serve requests */
     mq_dispatch();

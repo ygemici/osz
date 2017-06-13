@@ -166,7 +166,7 @@ isr_inithw:
     ret
 
 /* exception handler ISRs */
-.align 128, 0x90
+.align 256, 0x90
 isr_exc00divzero:
     cli
     /* tcb->excerr = 0; */
@@ -1072,7 +1072,7 @@ isr_irqtmr_rtc:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 16, 0x90
+.align 256, 0x90
 
 isr_irq0:
     cli
@@ -1110,7 +1110,7 @@ isr_irq0:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq1:
     cli
@@ -1148,7 +1148,7 @@ isr_irq1:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq2:
     cli
@@ -1186,7 +1186,7 @@ isr_irq2:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq3:
     cli
@@ -1224,7 +1224,7 @@ isr_irq3:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq4:
     cli
@@ -1262,7 +1262,7 @@ isr_irq4:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq5:
     cli
@@ -1300,7 +1300,7 @@ isr_irq5:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq6:
     cli
@@ -1338,7 +1338,7 @@ isr_irq6:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq7:
     cli
@@ -1376,7 +1376,7 @@ isr_irq7:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq8:
     cli
@@ -1415,7 +1415,7 @@ isr_irq8:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq9:
     cli
@@ -1454,7 +1454,7 @@ isr_irq9:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq10:
     cli
@@ -1493,7 +1493,7 @@ isr_irq10:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq11:
     cli
@@ -1532,7 +1532,7 @@ isr_irq11:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq12:
     cli
@@ -1571,7 +1571,7 @@ isr_irq12:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq13:
     cli
@@ -1610,7 +1610,7 @@ isr_irq13:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq14:
     cli
@@ -1649,7 +1649,7 @@ isr_irq14:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq15:
     cli
@@ -1688,7 +1688,7 @@ isr_irq15:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq16:
     cli
@@ -1727,7 +1727,7 @@ isr_irq16:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq17:
     cli
@@ -1766,7 +1766,7 @@ isr_irq17:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq18:
     cli
@@ -1805,7 +1805,7 @@ isr_irq18:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq19:
     cli
@@ -1844,7 +1844,7 @@ isr_irq19:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq20:
     cli
@@ -1883,7 +1883,7 @@ isr_irq20:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq21:
     cli
@@ -1922,7 +1922,7 @@ isr_irq21:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq22:
     cli
@@ -1961,7 +1961,7 @@ isr_irq22:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq23:
     cli
@@ -2000,7 +2000,7 @@ isr_irq23:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq24:
     cli
@@ -2039,7 +2039,7 @@ isr_irq24:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq25:
     cli
@@ -2078,7 +2078,7 @@ isr_irq25:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq26:
     cli
@@ -2117,7 +2117,7 @@ isr_irq26:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq27:
     cli
@@ -2156,7 +2156,7 @@ isr_irq27:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq28:
     cli
@@ -2195,7 +2195,7 @@ isr_irq28:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq29:
     cli
@@ -2234,7 +2234,7 @@ isr_irq29:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq30:
     cli
@@ -2273,7 +2273,7 @@ isr_irq30:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq31:
     cli
@@ -2312,7 +2312,7 @@ isr_irq31:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 
 isr_irq32:
     cli
@@ -2351,5 +2351,5 @@ isr_irq32:
     addq	$64, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 128, 0x90
+.align 256, 0x90
 

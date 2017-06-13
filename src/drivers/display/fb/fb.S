@@ -80,6 +80,7 @@ _init:
 
     cmpw    $VID_flush, (%rax)
     jne     1f
+.flush:
     /* copy screen to framebuffer */
     movq    screen_ptr(%rip), %rsi
     movq    fb_ptr(%rip), %rbx
@@ -101,6 +102,7 @@ _init:
 
 1:  cmpw    $VID_movecursor, (%rax)
     jne     1f
+.movecursor:
     pushq   %rax
     callq   hidecursor
     popq    %rax
@@ -124,13 +126,18 @@ _init:
 
 1:  cmpw    $VID_setcursor, (%rax)
     jne     .getwork
+.setcursor:
+    pushq   %rax
+    callq   hidecursor
+    popq    %rax
     xorq    %rbx, %rbx
     movb    8(%rax), %bl
     movq    16(%rax), %rax
     xorq    %rdx, %rdx
-    movl    cursor_w(%rip), %ecx
+    xorq    %rcx, %rcx
+    movw    cursor_w(%rip), %cx
     mull    %ecx
-    cmpl    cursor_h(%rip), %eax
+    cmpw    cursor_h(%rip), %ax
     jb      2f
     xorq    %rax, %rax
 2:  mull    %ecx
@@ -138,8 +145,10 @@ _init:
     orb     %bl, %bl
     jnz     2f
     movl    %eax, cursor_shape(%rip)
+    callq   showcursor
     jmp     .getwork
 2:  movl    %eax, cursor_shape+8(%rip)
+    callq   showcursor
     jmp     .getwork
 
 hidecursor:
@@ -181,10 +190,7 @@ showcursor:
     ret
 
 copyarea:
-    xorq    %rax, %rax
-    movw    cursor_w(%rip), %ax
-    shrl    %eax
-xchg %bx,%bx
+    /* TODO: r8-=cursor_w/2; r9-=cursor_w/2; clip to fb */
     movl    %r9d, %eax
     xorq    %rcx, %rcx
     movl    fb_scanline(%rip), %ecx

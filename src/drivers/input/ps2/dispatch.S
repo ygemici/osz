@@ -45,7 +45,6 @@ _init:
     jne     1b
     xorq    %rsi, %rsi
     movb    8(%rax), %sil
-
     /* irq==1? */
     cmpb    $1, %sil
     jne     2f

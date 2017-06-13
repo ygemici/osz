@@ -689,7 +689,7 @@ bool_t service_rtlink()
                 // this symbol's virtual address
                 for(k=0;k<n;k++){
                     OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
-                    if(r->offs != 0 && !kstrcmp(r->sym, strtable + s->st_name)) {
+                    if(r->offs != 0 && !kmemcmp(r->sym, strtable + s->st_name, kstrlen(r->sym)+1)) {
 #if DEBUG
                         if(debug&DBG_RTEXPORT)
                             kprintf(" %x", r->offs);

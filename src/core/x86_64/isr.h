@@ -43,7 +43,7 @@
 /* if you change  one of this, you'll have to run isrs.sh */
 #define ISR_NUMIRQ 32       //maximum number of IRQ lines
 #define ISR_EXCMAX 128      //maximum code size of exception ISRs
-#define ISR_IRQMAX 128      //maximum code size of IRQ ISRs
+#define ISR_IRQMAX 256      //maximum code size of IRQ ISRs
 #define ISR_STACK 64        //minimum size of stack for ISRs
 /* minimum, PIC (with PIT/RTC) or APIC, x2APIC (HPET only) */
 #define ISR_CTRL CTRL_PIC

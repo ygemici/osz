@@ -640,7 +640,7 @@ isr_irqtmr_rtc:
     addq	\$$isrstack, ccb + ccb_ist1
     call	isr_loadcontext
     iretq
-.align 16, 0x90
+.align $isrirqmax, 0x90
 
 EOF
 
