@@ -70,8 +70,9 @@ mouse_init:
     call    ps2wr
     movb    $3, cntmax(%rip)
     cmpb    $0, nozaxis(%rip)
-    jnz     .nozaxis
+    jnz      .nozaxis
     /* enable Z axis */
+/*
     movb    $0xF3, %al
     call    ps2wr
     movb    $200, %al
@@ -90,8 +91,10 @@ mouse_init:
     or      %al, %al
     jz      .nozaxis
     movb    $4, cntmax(%rip)
+*/
 .nozaxis:
     /* enable 4th and 5th buttons */
+/*
     movb    $0xF3, %al
     call    ps2wr
     movb    $200, %al
@@ -107,6 +110,7 @@ mouse_init:
     movb    $0xF2, %al
     call    ps2wr
     call    ps2rd
+*/
     /* set sample rate */
     movb    $0xF3, %al
     call    ps2wr
@@ -149,6 +153,24 @@ irq12:
     movb    %dl, (%rbx)
     incb    cnt(%rip)
     movb    cnt(%rip), %al
+pushq %rax
+pushq %rdx
+movq %rax, %rdi
+call dbg_putdec@PLT
+movb $0x20, %dil
+call dbg_putchar@PLT
+xorq %rdi, %rdi
+movb cntmax(%rip), %dil
+call dbg_putdec@PLT
+movb $0x20, %dil
+call dbg_putchar@PLT
+popq %rax
+xor %rdi, %rdi
+movb %al, %dil
+call dbg_puthex@PLT
+movb $0xA, %dil
+call dbg_putchar@PLT
+popq %rax
    /* do we have all bytes? */
     cmpb    cntmax(%rip), %al
     jb      .end

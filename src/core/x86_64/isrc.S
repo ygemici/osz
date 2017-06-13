@@ -120,7 +120,7 @@ isr_syscall0:
     cmpb    $SYS_seterr, %dil
     jne     2f
     /* tcb->errno = rsi */
-    movw    %si, tcb_errno
+    movb    %sil, tcb_errno
     jmp     9f
 2:
     /* shortcut for yield */

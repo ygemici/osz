@@ -161,11 +161,13 @@ hidecursor:
     movl    cursor_x(%rip), %r8d
     movl    cursor_y(%rip), %r9d
     movl    fb_width(%rip), %r10d
+    xorq    %r11, %r11
     callq   copyarea
     movq    screen_ptr(%rip), %rsi
     movl    cursor_x+4(%rip), %r8d
     movl    cursor_y+4(%rip), %r9d
     movl    fb_width(%rip), %r10d
+    xorq    %r11, %r11
     callq   copyarea
     ret
 
@@ -180,23 +182,71 @@ showcursor:
     movl    cursor_x(%rip), %r8d
     movl    cursor_y(%rip), %r9d
     movw    cursor_w(%rip), %r10w
+    xorq    %r11, %r11
+    incb    %r11b
     callq   copyarea
     movq    cursor_ptr(%rip), %rsi
     addq    cursor_shape+8(%rip), %rsi
     movl    cursor_x+4(%rip), %r8d
     movl    cursor_y+4(%rip), %r9d
     movw    cursor_w(%rip), %r10w
+    xorq    %r11, %r11
+    incb    %r11b
+    incb    %r11b
     callq   copyarea
     ret
 
 copyarea:
-    /* TODO: r8-=cursor_w/2; r9-=cursor_w/2; clip to fb */
-    movl    %r9d, %eax
-    xorq    %rcx, %rcx
-    movl    fb_scanline(%rip), %ecx
-    movq    %rcx, %r11
+    /* r8-=cursor_w/2; r9-=cursor_w/2; clip to fb */
+    xorq    %r12, %r12
+    xorq    %r13, %r13
+    movw    cursor_w(%rip), %r12w
+    movw    %r12w, %r13w
+    xorq    %rbx, %rbx
+    movw    cursor_w(%rip), %bx
+    shrq    $1, %rbx
+    subq    %rbx, %r9
+    jns     1f
+    addq    %r9, %r12
+    neg     %r9
     xorq    %rdx, %rdx
-    mulq    %rcx
+    movq    %r10, %rax
+    shlq    $2, %r9
+    mulq    %r9
+    addq    %rax, %rsi
+    xorq    %r9, %r9
+1:  movq    %r10, %r15
+    shlq    $2, %r15
+    subq    %rbx, %r8
+    jns     1f
+    addq    %r8, %r13
+    cmpb    $2, %r11b
+    je      2f
+    neg     %r8
+    shlq    $2, %r8
+    addq    %r8, %rsi
+2:  xorq    %r8, %r8
+    movq    %r13, %r15
+    shlq    $2, %r15
+1:  movl    fb_width(%rip), %eax
+    decl    %eax
+    subl    %r8d, %eax
+    cmpl    %eax, %r13d
+    jb     1f
+    movl    %eax, %r13d
+1:  movl    fb_height(%rip), %eax
+    decl    %eax
+    subl    %r9d, %eax
+    cmpl    %eax, %r12d
+    jb     1f
+    movl    %eax, %r12d
+1:
+    movl    %r9d, %eax
+    xorq    %rbx, %rbx
+    movl    fb_scanline(%rip), %ebx
+    movq    %rbx, %r14
+    xorq    %rdx, %rdx
+    mulq    %rbx
     shlq    $2, %r8
     shlq    $2, %r10
     addq    %r8, %rax
@@ -204,10 +254,15 @@ copyarea:
     /* rax= ptr + y*scanline+x*4 */
     movq    %rax, %rbx
     movq    %rsi, %rdx
-    movw    cursor_w(%rip), %r12w
 1:  movq    %rbx, %rdi
     movq    %rdx, %rsi
-    movw    cursor_w(%rip), %cx
+    movw    %r13w, %cx
+    orb     %r11b, %r11b
+    jnz     8f
+    repnz   movsd
+    jmp     9f
+8:  cmpb    $1, %r11b
+    jne     8f
 2:  lodsl
     cmpl    $0x1000000, %eax
     jb      3f
@@ -215,7 +270,18 @@ copyarea:
 3:  addq    $4, %rdi
     decw    %cx
     jnz     2b
-    addq    %r11, %rbx
+    jmp     9f
+8:  addq    %r15, %rsi
+2:  subq    $4, %rsi
+    movl    (%rsi), %eax
+    cmpl    $0x1000000, %eax
+    jb      3f
+    movl    %eax, (%rdi)
+3:  addq    $4, %rdi
+    decw    %cx
+    jnz     2b
+    jmp     9f
+9:  addq    %r14, %rbx
     addq    %r10, %rdx
     decw    %r12w
     jnz     1b

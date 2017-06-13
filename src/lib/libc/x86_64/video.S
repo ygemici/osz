@@ -61,10 +61,10 @@ vid_loadcursor:
     ret
 
 /**
- * void vid_showcursor(int hand,int x,int y);
+ * void vid_movecursor(int hand,int x,int y);
  */
 vid_movecursor:
-    movq    %rdx, %rcx
+    movq    %rdx, %r10
     movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    $SRV_video, %rdi
@@ -75,10 +75,11 @@ vid_movecursor:
     ret
 
 /**
- * void vid_setcursor(int hand,int shape);
+ * void vid_setcursor(int hand,uint8_t shape);
  */
 vid_setcursor:
-    movq    %rsi, %rdx
+    xorq    %rdx, %rdx
+    movsxb  %sil, %rdx
     movq    %rdi, %rsi
     movq    $SRV_video, %rdi
     shlq    $16, %rdi

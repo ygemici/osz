@@ -3,7 +3,6 @@
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
-./src/drivers/display/fb/fb.S:193:    /* TODO: r8-=cursor_w/2; r9-=cursor_w/2; clip to fb */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/sys.c:224:    // TODO: move this printf to init
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc

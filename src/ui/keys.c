@@ -26,12 +26,7 @@
  */
 #include <osZ.h>
 #include <sys/video.h>
-
-// key modifiers
-#define KEYFLAG_SHIFT (1<<0)
-#define KEYFLAG_CTRL  (1<<1)
-#define KEYFLAG_ALT   (1<<2)
-#define KEYFLAG_SUPER (1<<3)
+#include "keys.h"
 
 // index to keymap
 uint64_t modmap[16] = {0,
