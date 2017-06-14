@@ -62,7 +62,7 @@ Just continue as we are not interested in the BIOS.
 Second Break Point - OS/Z boot ends
 -----------------------------------
 
-<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png" alt="OS/Z Starting">
+<img align="left" style="margin-right:10px;" width="300" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg0.png?raw=true" alt="OS/Z Starting">
 
 The first intersting point is where the operating system was loaded (arranged it's memory, finished with task setup)
 and is about to leave privileged mode by executing the very first `iretq`.

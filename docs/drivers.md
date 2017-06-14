@@ -2,7 +2,7 @@ OS/Z Device Drivers
 ===================
 
 Drivers are shared libraries which are loaded into separate address spaces after a
-common, platform independent event dispatcher, [src/drivers/drv.c](https://github.com/bztsrc/osz/blob/master/src/drivers/drv.c).
+common, platform independent event dispatcher, [service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
 They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
 are normal userspace applications, although they are never pre-empted (when their `_init()` function is called, all the IRQs are
 disabled (so as timer), and when the IRQ handler gets called it could cause trouble).
@@ -24,32 +24,13 @@ Planned drivers
 Directories
 -----------
 
-Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/master/src/drivers), categorized:
+Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/master/src/drivers), groupped in categories.
+Each [driver class](https://github.com/bztsrc/osz/blob/master/src/drivers/README.md) has one directory, and
+under these directories each driver has exactly one sub-directory. The compiled
+driver will be placed in `lib/sys/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
+to `lib/sys/input/ps2.so`.
 
-| Class    | Description |
-| -------- | ----------- |
-| comctl   | Communication controller |
-| display  | Display controller |
-| docking  | Docking station |
-| encrypt  | Encryption controller |
-| fs       | File System Driver |
-| generic  | Generic system peripheral |
-| input    | Input device controller |
-| intelligent | Intelligent controller |
-| memory   | Memory controller |
-| mmedia   | Multimedia controller |
-| network  | Network controller (wired) |
-| proc     | Processor (and related controllers) |
-| satellite | Satellite communications controller |
-| serial   | Serial bus controller |
-| signal   | Signal processing controller |
-| storage  | Mass storage controller (block devices) |
-| wireless | Wireless controller |
-
-Under these directories each driver has exactly one sub-directory. The compiled
-driver will be placed in `lib/sys/(class)/(driver).so`
-
-The resemblance with [PCI device classes](http://pci-ids.ucw.cz/read/PD) is not a coincidence.
+The resemblance of classes with [PCI device classes](http://pci-ids.ucw.cz/read/PD) is not a coincidence.
 
 Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have drivers, they
 are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
