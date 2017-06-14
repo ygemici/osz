@@ -33,13 +33,13 @@ public void stop(){}
 public void restart(){}
 public void status(){}
 
-void _init()
+void task_init()
 {
     //wait for sys_ready() to send an SYS_ack
     mq_recv();
 
+//block for now
     mq_recv();
-breakpoint;
     if(_rescueshell) {
         breakpoint;
     } else {

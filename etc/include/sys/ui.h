@@ -26,9 +26,9 @@
  */
 
 #define SYS_opentty	( 10)
-#define SYS_openwrd	( 11)
-#define SYS_openwin	( 16)
-#define SYS_setcursor	( 19)
-#define SYS_keypress	( 22)
-#define SYS_keyrelease	( 24)
-#define SYS_pointer	( 28)
+#define SYS_openwrd	( 12)
+#define SYS_openwin	( 17)
+#define SYS_setcursor	( 20)
+#define SYS_keypress	( 23)
+#define SYS_keyrelease	( 25)
+#define SYS_pointer	( 29)

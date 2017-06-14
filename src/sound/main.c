@@ -26,3 +26,6 @@
  */
 #include <osZ.h>
 
+void task_init()
+{
+}

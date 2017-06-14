@@ -1,5 +1,5 @@
 TARGET = sbin/ui
-EXTOBJ = ../core/logo.o avatar.o
+EXTOBJ = ../core/logo.o avatar.o ../../bin/service.o
 LINKER = sharedlib
 GENSYMS = ui.sym
 

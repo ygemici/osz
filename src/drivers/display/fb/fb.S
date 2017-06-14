@@ -31,6 +31,7 @@
 /* linker stuff */
 .type _init, STT_FUNC
 .global _init
+.global task_init
 .type _screen_ptr, STT_OBJECT
 .size _screen_ptr, 8
 .global _screen_ptr
@@ -61,6 +62,9 @@
 .extern _binary_shapes_end
 
 .section .text
+
+task_init:
+    ret
 
 /* main loop */
 _init:

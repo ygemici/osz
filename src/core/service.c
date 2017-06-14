@@ -677,8 +677,8 @@ bool_t service_rtlink()
                         if(!kmemcmp(strtable + s->st_name,"_fb_ptr",8) && s->st_size==8)
                             {k=8; *objptr=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
                         if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
-                            syslog_early("Exporting %s to pid %x on page boundary",
-                                strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
+                            syslog_early("pid %x: exporting %s on page boundary",
+                                ((OSZ_tcb*)(pmm.bss_end))->mypid,strtable + s->st_name);
                     }
                     // export data to user processes
                     if(!kmemcmp(strtable + s->st_name,"_osver",7) && s->st_size > vs) {
@@ -717,7 +717,7 @@ bool_t service_rtlink()
     for(i=0;i<n;i++){
         OSZ_rela *r = (OSZ_rela*)((char *)relas + i*sizeof(OSZ_rela));
         if(r->offs!=0) {
-            kpanic("shared library missing for %s()\n", r->sym);
+            kpanic("pid %x: shared library missing for %s()", ((OSZ_tcb*)(pmm.bss_end))->mypid, r->sym);
         }
     }
 

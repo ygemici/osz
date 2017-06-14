@@ -31,3 +31,6 @@ public void closelog() {}
 public void syslog(int pri, char *fmt, ...) {}
 public void vsyslog(int pri, char *fmt, va_list ap) {}
 
+void task_init()
+{
+}

@@ -1,4 +1,5 @@
 TARGET = sbin/init
+EXTOBJ = ../../bin/service.o
 LINKER = sharedlib
 GENSYMS = init.sym
 

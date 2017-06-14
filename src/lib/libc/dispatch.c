@@ -59,10 +59,10 @@ public uint64_t mq_dispatch()
             d = (Elf64_Dyn *)((uint32_t)phdr->p_offset+(uint64_t)ehdr);
             while(d->d_tag != DT_NULL && (sym==NULL || sym_end==NULL || syment==0)) {
                 if(d->d_tag == DT_STRTAB) {
-                    sym_end = (Elf64_Sym *)((uint8_t *)ehdr + (uint32_t)(d->d_un.d_ptr&0xFFFFFF));
+                    sym_end = (Elf64_Sym *)((uint8_t *)ehdr + (uint32_t)(d->d_un.d_ptr&0xFFFFFFFF));
                 }
                 if(d->d_tag == DT_SYMTAB) {
-                    sym = (Elf64_Sym *)((uint8_t *)ehdr + (uint32_t)(d->d_un.d_ptr&0xFFFFFF));
+                    sym = (Elf64_Sym *)((uint8_t *)ehdr + (uint32_t)(d->d_un.d_ptr&0xFFFFFFFF));
                 }
                 if(d->d_tag == DT_SYMENT) {
                     syment = (uint16_t)d->d_un.d_val;

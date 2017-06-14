@@ -41,7 +41,7 @@ public void opentty(){}
 public void openwin(){}
 public void openwrd(){}
 
-void _init()
+void task_init()
 {
     uint64_t bss = BSS_ADDRESS;
     uint64_t len;

@@ -104,13 +104,13 @@ int main(int argc,char** argv)
                     printf("     %3d %08lx %s\n",(int)d->d_tag,d->d_un.d_ptr,
                         (d->d_tag==DT_STRTAB?"strtab":(d->d_tag==DT_SYMTAB?"symtab":"")));
                 if(d->d_tag == DT_STRTAB) {
-                    strtable = elf + (d->d_un.d_ptr&0xFFFFFF);
+                    strtable = elf + (d->d_un.d_ptr&0xFFFFFFFF);
                 }
                 if(d->d_tag == DT_STRSZ) {
                     strsz = d->d_un.d_val;
                 }
                 if(d->d_tag == DT_SYMTAB) {
-                    sym = (Elf64_Sym *)(elf + (d->d_un.d_ptr&0xFFFFFF));
+                    sym = (Elf64_Sym *)(elf + (d->d_un.d_ptr&0xFFFFFFFF));
                 }
                 if(d->d_tag == DT_SYMENT) {
                     syment = d->d_un.d_val;

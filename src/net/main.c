@@ -42,3 +42,6 @@ public void socketpair(){}
 public void getsockopt(){}
 public void setsockopt(){}
 
+void task_init()
+{
+}

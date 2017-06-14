@@ -27,8 +27,12 @@
 
 #include <osZ.h>
 
-/* GNU ld can't set mq_dispatch() as entry point, we must use _init() */
+/* this will be implemented in the given task */
+extern void task_init();
+
+/* initialize service and dispatch messages */
 public void _init()
 {
+    task_init();
     mq_dispatch();
 }

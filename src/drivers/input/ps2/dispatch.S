@@ -29,9 +29,14 @@
 #include <osZ.h>
 
 .global _init
+.global task_init
 .extern mouse_init
 
 .section .text
+
+/* we don't use service.o's _init in drv, yet linker needs this */
+task_init:
+    ret
 
 _init:
     /* initialize */
