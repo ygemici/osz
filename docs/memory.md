@@ -2,10 +2,10 @@ OS/Z Memory Management
 ======================
 
 Memory is allocated at several levels:
- - pmm_alloc() allocates physical RAM pages
- - kalloc() allocates core (kernel) bss memory
- - malloc(), realloc(), calloc(), free() allocate user space bss memory
- - smalloc(), srealloc(), scalloc(), sfree() allocate shared memory
+ - [pmm_alloc()](https://github.com/bztsrc/osz/tree/master/src/core/pmm.c) allocates physical RAM pages
+ - [kalloc()](https://github.com/bztsrc/osz/tree/master/src/core/pmm.c) allocates core (kernel) bss memory
+ - [malloc()](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c), realloc(), calloc(), free() allocate user space bss memory
+ - [smalloc()](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c), srealloc(), scalloc(), sfree() allocate shared memory
 
 Memory Mapping
 --------------
@@ -20,17 +20,16 @@ User Tasks
 
 | Virtual Address  | Scope   | Description |
 | ---------------- | ------- | ----------- |
-| -2^56 .. -512M-1 | global  | global shared memory space (user accessible, read/write) |
+| -2^56 .. -512M-1 | global  | global [shared memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) space (user accessible, read/write) |
 | -512M .. 0       | global  | core memory (supervisor only) |
 |     0 .. 4096    | thread  | Thread Control Block (read-only) |
 |  4096 .. x       | thread  | Message Queue (read/write, growing upwards) |
 |     x .. 2M-1    | thread  | local stack (read/write, growing downwards) |
 |    2M .. x       | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md) | user program text segment (read only) |
-|     x .. 4G-4M-1 | process | shared libraries (text read only / data read/write) |
-| 4G-4M .. 4G-2M-1 | thread  | list of open files (each 8 bytes, first is a counter) |
-| 4G-2M .. 4G-1    | thread  | libc memory allocator internal data |
-|    4G .. 2^56    | thread  | dynamically allocated bss memory (growing upwards, read/write) |
-|   64G .. 2^56    | thread  | pre-allocated mapped system buffers (screen, initrd) |
+|     x .. 4G-2M-1 | process | shared libraries (text read only / data read/write) |
+| 4G-2M .. 4G-1    | thread  | list of open files (each 8 bytes, first is a counter) |
+|    4G .. 2^56-4G | thread  | dynamically [allocated tls memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) (growing upwards, read/write) |
+| 2^56-4G .. 2^56  | thread  | pre-allocated mapped system buffers (screen, initrd) |
 
 Normal userspace tasks do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their threads belong to the same process.
@@ -38,21 +37,23 @@ If two mappings are identical save the TCB and message queue, their threads belo
 The maximum number of pending events in a queue is a boot time parameter and can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrmqmax". It's given
 in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/64 = up to 64 pending events.
 
+Please note that 2^56 (128T) is an architectural limit of x86_64.
+
 ### UI
 
-User interface has one half of a double screen buffer mapped at 64G.
+User interface has one half of a double screen buffer mapped at 128T-4G.
 
 ### Display driver
 
-The display driver has the other half of the double screen buffer mapped at 64G, and on next page directory address, the framebuffer.
+The display driver has the other half of the double screen buffer mapped at 128T-4G, and on next page directory address, the framebuffer.
 The screen buffers among UI and the driver tasks swapped by the [vid_swapbuf()](https://github.com/bztsrc/osz/tree/master/src/lib/libc/x86_64/video.S) libc call
 (which sends a [SYS_swapbuf](https://github.com/bztsrc/osz/tree/master/src/core/syscall.c) message).
 That call is issued by UI task when it finishes the composition on it's screen buffer.
 
 ### FS
 
-Filesystem service has the initrd mapped at 64G. It does not use malloc(), instead has a list of open files at 4G, and
-per thread specific list at 56G (the table indexed by entries in user task's 4G-4M list).
+Filesystem service has the initrd mapped at 128T-4G. At boot-time, initrd maximum size is 16M, but it can grow
+dynamically in run-time up to 4G.
 
 Core Memory
 -----------
@@ -62,9 +63,12 @@ mapped to every task's address space.
 
 | Virtual Address | Description |
 | --------------- | ----------- |
-| -512M .. -2M-1  | Framebuffer mapped (for kprintf and kpanic) |
+| -512M .. -4M-1  | Framebuffer mapped (for kprintf and kpanic) |
+|   -4M .. -2M-1  | Temorarily mapped message queue |
 |   -2M .. x      | [Core text segment](https://github.com/bztsrc/osz/tree/master/src/core/main.c) and bss (growing upwards) |
 |     x .. 0      | Core stack (growing downwards) |
+
+The core bss starts where the text segment ends, and is allocated by [kalloc()](https://github.com/bztsrc/osz/tree/master/src/core/pmm.c).
 
 Process Memory
 --------------

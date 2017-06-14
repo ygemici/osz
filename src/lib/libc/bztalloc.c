@@ -22,15 +22,19 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Memory allocators
+ * @brief Memory allocator and deallocator.
  */
 #include <osZ.h>
 
-void *bztalloc(void* arena,size_t a,void *ptr,size_t s)
+/**
+ * This allocator is used for both thread local storage and shared memory.
+ * Arena points to an allocation map (either at BSS_ADDRESS or SBSS_ADDRESS).
+ */
+void *bzt_alloc(void* arena,size_t a,void *ptr,size_t s)
 {
     return ptr;
 }
 
-void bztfree(void* arena, void *ptr)
+void bzt_free(void* arena, void *ptr)
 {
 }

@@ -47,18 +47,18 @@ extern long long int atoll (char *__nptr);
 
 /* memory allocator. Use different macros if you want a different allocator */
 /* Thread Local Storage */
-#define malloc(s) bztrealloc(ALLOC_ADDRESS,8,NULL,s)
-#define calloc(n,s) bztrealloc(ALLOC_ADDRESS,8,NULL,n*s)
-#define realloc(p,s) bztrealloc(ALLOC_ADDRESS,8,p,s)
-#define memalign(s) bztrealloc(ALLOC_ADDRESS,a,NULL,s)
-#define free(p) bztfree(ALLOC_ADDRESS,p)
+#define malloc(s) bzt_alloc(BSS_ADDRESS,8,NULL,s)
+#define calloc(n,s) bzt_alloc(BSS_ADDRESS,8,NULL,n*s)
+#define realloc(p,s) bzt_alloc(BSS_ADDRESS,8,p,s)
+#define memalign(s) bzt_alloc(BSS_ADDRESS,a,NULL,s)
+#define free(p) bzt_free(BSS_ADDRESS,p)
 
 /* Shared Memory */
-#define smalloc(s) bztrealloc(SALLOC_ADDRESS,8,NULL,s)
-#define scalloc(n,s) bztrealloc(SALLOC_ADDRESS,8,NULL,n*s)
-#define srealloc(p,s) bztrealloc(SALLOC_ADDRESS,8,p,s)
-#define smemalign(s) bztrealloc(SALLOC_ADDRESS,a,NULL,s)
-#define sfree(p) bztfree(SALLOC_ADDRESS,p)
+#define smalloc(s) bzt_alloc(SBSS_ADDRESS,8,NULL,s)
+#define scalloc(n,s) bzt_alloc(SBSS_ADDRESS,8,NULL,n*s)
+#define srealloc(p,s) bzt_alloc(SBSS_ADDRESS,8,p,s)
+#define smemalign(s) bzt_alloc(SBSS_ADDRESS,a,NULL,s)
+#define sfree(p) bzt_free(SBSS_ADDRESS,p)
 
 /*** unimplemented ***/
 #if 0
