@@ -38,6 +38,22 @@ If two mappings are identical save the TCB and message queue, their threads belo
 The maximum number of pending events in a queue is a boot time parameter and can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrmqmax". It's given
 in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/64 = up to 64 pending events.
 
+### UI
+
+User interface has one half of a double screen buffer mapped at 64G.
+
+### Display driver
+
+The display driver has the other half of the double screen buffer mapped at 64G, and on next page directory address, the framebuffer.
+The screen buffers among UI and the driver tasks swapped by the [vid_swapbuf()](https://github.com/bztsrc/osz/tree/master/src/lib/libc/x86_64/video.S) libc call
+(which sends a [SYS_swapbuf](https://github.com/bztsrc/osz/tree/master/src/core/syscall.c) message).
+That call is issued by UI task when it finishes the composition on it's screen buffer.
+
+### FS
+
+Filesystem service has the initrd mapped at 64G. It does not use malloc(), instead has a list of open files at 4G, and
+per thread specific list at 56G (the table indexed by entries in user task's 4G-4M list).
+
 Core Memory
 -----------
 
