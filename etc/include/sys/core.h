@@ -87,12 +87,14 @@ pid_t exec(uchar *cmd);                 // start a new process in the background
 void sync();                            // flush cache buffers
 
 //File System
+/*
 size_t read(fid_t fid, void *buf, size_t size);
 fid_t dup2(fid_t oldfd, fid_t newfd);
 size_t write(void *buf, size_t size, fid_t fid);
 fpos_t seek(fid_t fid, fpos_t offset, int whence);
 fid_t dup(fid_t oldfd);
 int stat(fid_t fd, stat_t *buf);
+*/
 //see stdio.h
 
 //User interface
@@ -440,4 +442,4 @@ int stat(fid_t fd, stat_t *buf);
 #define SYS_pwritev2 328
 */
 
-#endif
+#endif /* sys/core.h */

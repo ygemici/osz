@@ -26,8 +26,8 @@
  */
 #include <osZ.h>
 
-public void openlog() {}
+public void openlog(char *ident, int option, int facility) {}
 public void closelog() {}
-public void syslog() {}
-public void vsyslog() {}
+public void syslog(int pri, char *fmt, ...) {}
+public void vsyslog(int pri, char *fmt, va_list ap) {}
 

@@ -1,5 +1,5 @@
 /*
- * libc/AArch64/crt0.S
+ * lib/libc/AArch64/crt0.S
  * 
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

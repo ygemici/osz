@@ -36,12 +36,18 @@
 # include <sys/types.h>
 # ifndef OSZ_CORE
 #  include <sys/platform.h>
-#  include <sysexits.h>
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <stdarg.h>
 #  include <string.h>
+#  include <syslog.h>
 # endif
+#endif
+#ifndef OSZ_CORE
+# include <sysexits.h>
+# include <sound.h>
+# include <net.h>
+# include <ui.h>
 #endif
 
 #include <lastbuild.h>

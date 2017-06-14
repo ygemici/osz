@@ -34,4 +34,4 @@
 //#include <sys/tcp.h>
 #endif
 
-#endif
+#endif /* net.h */

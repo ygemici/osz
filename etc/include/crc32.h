@@ -89,4 +89,4 @@ unsigned long int eficrc32_calc(char *start,int length)
 	return crc32_val;
 }
 
-#endif
+#endif /* crc32.h */

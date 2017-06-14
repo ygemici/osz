@@ -198,6 +198,10 @@ virt_t service_lookupsym(uchar *name, size_t size)
         name[size] = c;
         return SBSS_ADDRESS;
     }
+    if(size==6 && !kmemcmp(name,"shared",6)) {
+        name[size] = c;
+        return SBSS_ADDRESS;
+    }
     if(size==4 && !kmemcmp(name,"core",5)) {
         name[size] = c;
         return CORE_ADDRESS;
@@ -651,7 +655,7 @@ bool_t service_rtlink()
                         ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_SRV) {
                         k=0;
                         if(!kmemcmp(strtable + s->st_name,"_initrd_ptr",12) && s->st_size==8)
-                            {k=8; *objptr=SBSS_ADDRESS;}
+                            {k=8; *objptr=BUF_ADDRESS;}
                         if(!kmemcmp(strtable + s->st_name,"_initrd_size",13) && s->st_size==8)
                             {k=8; *objptr=bootboot.initrd_size;}
                         if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
@@ -669,9 +673,9 @@ bool_t service_rtlink()
                         if(!kmemcmp(strtable + s->st_name,"_keymap",8) && s->st_size==8)
                             {k=8; kmemcpy(objptr,&keymap,8);}
                         if(!kmemcmp(strtable + s->st_name,"_screen_ptr",12) && s->st_size==8)
-                            {k=8; *objptr=SBSS_ADDRESS;scrptr=true;}
+                            {k=8; *objptr=BUF_ADDRESS;scrptr=true;}
                         if(!kmemcmp(strtable + s->st_name,"_fb_ptr",8) && s->st_size==8)
-                            {k=8; *objptr=(virt_t)SBSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
+                            {k=8; *objptr=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
                         if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
                             syslog_early("Exporting %s to pid %x on page boundary",
                                 strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
@@ -832,7 +836,7 @@ void fs_init()
     // dynamic linker
     if(service_rtlink()) {
         // map initrd in "fs" task's memory
-        vmm_mapbss((OSZ_tcb*)(pmm.bss_end),SBSS_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
+        vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BUF_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
 #ifdef DEBUG
         //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
@@ -914,7 +918,7 @@ void ui_init()
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",pid);
 
         // allocate and map screen buffer A
-        virt_t bss=SBSS_ADDRESS;
+        virt_t bss=BUF_ADDRESS;
         for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
             __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
             vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
@@ -973,7 +977,7 @@ void drv_init(char *driver)
         //do we need to map screen and framebuffer?
         if(scrptr) {
             // allocate and map screen buffer B
-            virt_t bss=SBSS_ADDRESS;
+            virt_t bss=BUF_ADDRESS;
             for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
                 __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
                 vmm_mapbss((OSZ_tcb*)(pmm.bss_end), bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
@@ -984,7 +988,7 @@ void drv_init(char *driver)
                 bss += __SLOTSIZE;
             }
             // map framebuffer in next PDE
-            bss=(virt_t)SBSS_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
+            bss=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
             phy_t fbp=(phy_t)bootboot.fb_ptr;
             for(i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;i>0;i--) {
                 vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);

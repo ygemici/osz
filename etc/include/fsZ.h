@@ -284,4 +284,4 @@ typedef struct {
     uint8_t     name[111];          // zero terminated UTF-8 string
 } __attribute__((packed)) FSZ_DirEnt;
 
-#endif
+#endif /* fsZ.h */

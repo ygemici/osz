@@ -1,5 +1,5 @@
 /*
- * stdio.h
+ * stdlib.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -44,6 +44,21 @@ extern int atoi (char *c);
 /* Convert a string to a long integer.  */
 extern long int atol (char *c);
 extern long long int atoll (char *__nptr);
+
+/* memory allocator. Use different macros if you want a different allocator */
+/* Thread Local Storage */
+#define malloc(s) bztrealloc(ALLOC_ADDRESS,8,NULL,s)
+#define calloc(n,s) bztrealloc(ALLOC_ADDRESS,8,NULL,n*s)
+#define realloc(p,s) bztrealloc(ALLOC_ADDRESS,8,p,s)
+#define memalign(s) bztrealloc(ALLOC_ADDRESS,a,NULL,s)
+#define free(p) bztfree(ALLOC_ADDRESS,p)
+
+/* Shared Memory */
+#define smalloc(s) bztrealloc(SALLOC_ADDRESS,8,NULL,s)
+#define scalloc(n,s) bztrealloc(SALLOC_ADDRESS,8,NULL,n*s)
+#define srealloc(p,s) bztrealloc(SALLOC_ADDRESS,8,p,s)
+#define smemalign(s) bztrealloc(SALLOC_ADDRESS,a,NULL,s)
+#define sfree(p) bztfree(SALLOC_ADDRESS,p)
 
 /*** unimplemented ***/
 #if 0

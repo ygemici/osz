@@ -1,5 +1,5 @@
 /*
- * libc/x86_64/video.S
+ * lib/libc/x86_64/video.S
  *
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

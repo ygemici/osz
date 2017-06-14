@@ -27,7 +27,6 @@
 
 #define _AS 1
 #include <osZ.h>
-#include <sys/video.h>
 
 /* linker stuff */
 .type _init, STT_FUNC

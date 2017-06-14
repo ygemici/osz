@@ -1,5 +1,5 @@
 /*
- * libc/x86_64/platform.h
+ * lib/libc/x86_64/platform.h
  *
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

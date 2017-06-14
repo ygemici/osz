@@ -28,7 +28,9 @@
 #ifndef _UI_H
 #define _UI_H 1
 
+#include <sys/video.h>
+
 #ifndef _AS
 #endif
 
-#endif
+#endif /* ui.h */

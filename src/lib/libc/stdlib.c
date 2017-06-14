@@ -1,5 +1,5 @@
 /*
- * libc/stdlib.c
+ * lib/libc/stdlib.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -25,6 +25,8 @@
  * @brief Function implementations for stdlib.h
  */
 #include <osZ.h>
+
+/* NOTE: that memory allocation functions are macros, see stdlib.h */
 
 unsigned char *stdlib_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {

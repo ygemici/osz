@@ -59,4 +59,4 @@ msg_t *mq_recv();
 uint64_t mq_dispatch();
 #endif
 
-#endif
+#endif /* syscall.h */

@@ -25,7 +25,6 @@
  * @brief User Interface pointer routines
  */
 #include <osZ.h>
-#include <sys/video.h>
 #include "keys.h"
 
 extern uint64_t _fb_width;

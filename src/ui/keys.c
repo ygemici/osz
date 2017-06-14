@@ -25,7 +25,6 @@
  * @brief User Interface key routines
  */
 #include <osZ.h>
-#include <sys/video.h>
 #include "keys.h"
 
 // index to keymap

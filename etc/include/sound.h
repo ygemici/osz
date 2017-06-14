@@ -31,4 +31,4 @@
 #ifndef _AS
 #endif
 
-#endif
+#endif /* sound.h */
