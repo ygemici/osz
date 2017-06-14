@@ -465,7 +465,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
             d.dict_idx = 0;
             d.curlen = 0;
             d.dest = addr;
-            d.destSize = 1;
+            d.destSize = len;
             do { r = uzlib_uncompress(&d); } while (!r);
             if (r != TINF_DONE) {
 gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");

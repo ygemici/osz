@@ -153,6 +153,7 @@ irq12:
     movb    %dl, (%rbx)
     incb    cnt(%rip)
     movb    cnt(%rip), %al
+/*
 pushq %rax
 pushq %rdx
 movq %rax, %rdi
@@ -171,6 +172,7 @@ call dbg_puthex@PLT
 movb $0xA, %dil
 call dbg_putchar@PLT
 popq %rax
+*/
    /* do we have all bytes? */
     cmpb    cntmax(%rip), %al
     jb      .end

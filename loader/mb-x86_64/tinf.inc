@@ -318,7 +318,7 @@ tinf_inflate_block_data:
             ; literal byte
             cmp         ax, 256
             jae         @f
-            call        tinf_put
+            stosb
             xor         al, al
             ret
 @@:         cmp         ax, 256
@@ -344,32 +344,9 @@ tinf_inflate_block_data:
             mov         bx, word [dists_base+2*eax]
             call        tinf_read_bits
             cmp         dword [d_dict_ring], 0
-            jz          .noring1
-            cmp         eax, dword [d_dict_size]
-            ja          tinf_err
-            mov         ebx, dword [d_dict_idx]
-            sub         ebx, eax
-            jns         @f
-            add         ebx, dword [d_dict_size]
-@@:         mov         dword [d_lzOff], ebx
-            jmp         .notnull
-.noring1:   neg         eax
+            neg         eax
             mov         dword [d_lzOff], eax
-.notnull:
-
-            ; copy next byte from dict substring
-            cmp         dword [d_dict_ring], 0
-            jz          .noring2
-            mov         eax, dword [d_lzOff]
-            add         eax, dword [d_dict_ring]
-            call        tinf_put
-            inc         dword [d_lzOff]
-            mov         eax, dword [d_lzOff]
-            cmp         eax, dword [d_dict_size]
-            jne         @f
-            mov         dword [d_lzOff], 0
-            jmp         @f
-.noring2:   mov         eax, edi
+.notnull:   mov         eax, edi
             add         eax, dword [d_lzOff]
             mov         al, byte [eax]
             stosb
@@ -397,8 +374,7 @@ tinf_inflate_uncompressed_block:
             jnz         @f
             mov         al, 1
             ret
-@@:         lodsb
-            call        tinf_put
+@@:         movsb
             xor         al, al
             ret
 
@@ -462,24 +438,6 @@ tinf_decode_symbol:
             mov         ax, word [ebp+2*edx+16]
 mov ebp, edx
             pop         edx
-            ret
-
-;IN:
-; al: char
-tinf_put:
-            push        ebx
-            stosb
-            cmp         dword [d_dict_ring], 0
-            jz          @f
-            mov         ebx, dword [d_dict_idx]
-            add         ebx, dword [d_dict_ring]
-            mov         byte [ebx], al
-            inc         dword [d_dict_idx]
-            mov         ebx, dword [d_dict_size]
-            cmp         ebx, dword [d_dict_idx]
-            jne         @f
-            mov         dword [d_dict_idx], 0
-@@:         pop         ebx
             ret
 
 tinf_err:

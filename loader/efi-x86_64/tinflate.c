@@ -360,29 +360,12 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
         dist = tinf_decode_symbol(d, dt);
         /* possibly get more bits from distance code */
         offs = tinf_read_bits(d, dist_bits[dist], dist_base[dist]);
-        if (d->dict_ring) {
-            if (offs > d->dict_size) {
-                return TINF_DICT_ERROR;
-            }
-            d->lzOff = d->dict_idx - offs;
-            if (d->lzOff < 0) {
-                d->lzOff += d->dict_size;
-            }
-        } else {
-            d->lzOff = -offs;
-        }
+        d->lzOff = -offs;
     }
 
     /* copy next byte from dict substring */
-    if (d->dict_ring) {
-        TINF_PUT(d, d->dict_ring[d->lzOff]);
-        if ((unsigned)++d->lzOff == d->dict_size) {
-            d->lzOff = 0;
-        }
-    } else {
-        d->dest[0] = d->dest[d->lzOff];
-        d->dest++;
-    }
+    d->dest[0] = d->dest[d->lzOff];
+    d->dest++;
     d->curlen--;
     return TINF_OK;
 }
@@ -433,18 +416,6 @@ void uzlib_init(void)
    length_bits[28] = 0;
    length_base[28] = 258;
 #endif
-}
-
-/* initialize decompression structure */
-void uzlib_uncompress_init(TINF_DATA *d, void *dict, unsigned int dictLen)
-{
-   d->bitcount = 0;
-   d->bfinal = 0;
-   d->btype = -1;
-   d->dict_size = dictLen;
-   d->dict_ring = dict;
-   d->dict_idx = 0;
-   d->curlen = 0;
 }
 
 /* inflate next byte of compressed stream */
