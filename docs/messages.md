@@ -95,7 +95,7 @@ Unlike there, here're only three functions. The function is passed in %eax, and 
 
  - `'send'` for sending a message, see [isr_syscall()](https://github.com/bztsrc/osz/blob/master/src/core/syscall.c) and [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S). Non blocking.
  - `'call'` sends a message and blocks until a response arrives.
- - `'recv'` is called when the queue is empty and receiving is not possible. Blocks.
+ - `'recv'` returns a pointer to message queue to the oldest message. When the queue is empty and receiving is not possible, blocks.
 
 The arguments are stored and read in System V ABI way: %rdi=pid_t thread, %rsi=event, %rdx=arg0/ptr, %rcx=arg1/size, %r8=arg2/magic.
 
@@ -115,3 +115,6 @@ or
     movl    $0x646E6573, %eax # 'send'
     syscall
 ```
+Note that normally you never use these, you should use the mq_send() implementation in libc instead. These are only listed for
+completeness.
+
