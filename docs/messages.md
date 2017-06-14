@@ -57,6 +57,8 @@ msg_t *mq_recv();
 /* sync, dispatch events (blocking, noreturn) */
 void mq_dispatch();
 ```
+While mq_call() is a sequence of mq_send() and my_recv() calls, mq_dispatch() is quite the opposite: it first
+receives a message with mq_recv(), calls the handler for it, and then uses mq_send() to send the result back.
 
 Supervisor Mode (Ring 0)
 ------------------------
@@ -87,10 +89,11 @@ It's an effective assembly implementation of copying msg_t into the queue and ha
 User Mode (Ring 3)
 ------------------
 
-From userspace the queue routines can be accessed via syscall instruction. The low level user library builds on it.
+From userspace the queue routines can be accessed via syscall instruction. The low level user library builds on it (basically
+mq_send() and mq_recv() are just wrappers around these).
 Unlike there, here're only three functions. The function is passed in %eax, and can be the following:
 
- - `'send'` for sending a message, see [isr_syscall()](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c) and [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S). Non blocking.
+ - `'send'` for sending a message, see [isr_syscall()](https://github.com/bztsrc/osz/blob/master/src/core/syscall.c) and [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S). Non blocking.
  - `'call'` sends a message and blocks until a response arrives.
  - `'recv'` is called when the queue is empty and receiving is not possible. Blocks.
 
