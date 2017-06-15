@@ -33,7 +33,7 @@
 ;*  At first big enough free hole, initrd. Usually at 1Mbyte.
 ;*
 
-DEBUG equ 1
+DEBUG equ 0
 
 ;get Core boot parameter block
 include "bootboot.inc"
@@ -1137,7 +1137,6 @@ protmode_start:
             sub         ebx, 4
             mov         ecx, dword [ebx]
             mov         dword [bootboot.initrd_size], ecx
- xchg bx,bx
             cmp         esi, edi
             jb          @f
             add         edi, eax
@@ -1210,7 +1209,6 @@ protmode_start:
             jz          .errfs
             mov         esi, dword [bootboot.initrd_ptr]
             mov         ecx, dword [bootboot.initrd_size]
-xchg bx,bx
             add         ecx, esi
             mov         edi, kernel
             push        edx
