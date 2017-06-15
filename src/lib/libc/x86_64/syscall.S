@@ -33,6 +33,9 @@
 .global mq_send
 .global mq_recv
 .global mq_ismsg
+.global bitalloc
+.global lockacquire
+.global lockrelease
 .global dl
 .global sysinfo
 .global yield
@@ -131,6 +134,50 @@ mq_dispatchcall:
     ret
 
 /**
+ * int bitalloc(int numwords, uint64_t *mem)
+ */
+bitalloc:
+    xorq    %rbx, %rbx
+    xorq    %rcx, %rcx
+1:  lodsq
+    notq    %rax
+    bsfq    %rax, %rcx
+    jnz     1f
+    addq    $64, %rbx
+    decq    %rdi
+    jnz     1b
+    xorq    %rax, %rax
+    decq    %rax
+    ret
+1:  btsq    %rcx, -8(%rsi)
+    movq    %rcx, %rax
+    addq    %rbx, %rax
+    ret
+
+/**
+ * void lockacquire(int bit, uint64_t *mem)
+ */
+lockacquire:
+1:  lock
+    btsq    %rdi, (%rsi)
+    jnc     1f
+    pushq   %rdi
+    pushq   %rsi
+    callq   myyield
+    popq    %rsi
+    popq    %rdi
+    jmp     1b
+1:  ret
+
+/**
+ * void lockrelease(int bit, uint64_t *mem)
+ */
+lockrelease:
+    lock
+    btrq    %rdi, (%rsi)
+    ret
+
+/**
  * void *dl(so, sym)
  */
 dl:
@@ -161,6 +208,7 @@ sysinfo:
  * void yield()
  */
 yield:
+myyield:
     xorq    %rdi, %rdi
     movb    $SYS_sched_yield, %dil
     movl    $0x646E6573, %eax # 'send'

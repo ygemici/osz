@@ -24,11 +24,10 @@ clean:
 	@rm *.o 2>/dev/null || true
 
 imgclean:
-	@rm -rf ../bin/*.txt ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vmdk ../bin/initrd ../bin/usr ../bin/ESP 2>/dev/null || true
+	@rm -rf ../bin/*.txt ../bin/*.sym ../bin/*.part ../bin/*.vdi ../bin/*.vmdk ../bin/*.rom ../bin/initrd ../bin/usr ../bin/ESP 2>/dev/null || true
 
 esp: initrd
 	@echo "  mkfs		boot (ESP)"
-	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 	@cp -f ../etc/CONFIG ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.efi)","")
 	@cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true
@@ -47,6 +46,8 @@ endif
 initrd:
 	@echo "  mkfs		initrd"
 	@./mkfs.o $(INITRD) ../bin/initrd
+	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+	@./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
 
 usr: $(USRFILE)
 

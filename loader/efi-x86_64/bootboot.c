@@ -431,10 +431,53 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         : "=b"(bootboot->bspid) : : );
 
     // Initialize FS with the DeviceHandler from loaded image protocol
-    RootDir = LibOpenRoot(loaded_image->DeviceHandle);
+    // we don't have that when booting from ROM
+    if(loaded_image!=NULL) {
+        RootDir = LibOpenRoot(loaded_image->DeviceHandle);
 
-    // load ramdisk
-    status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
+        // load ramdisk
+        status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
+    } else {
+        DBG(L" * Locate initrd in Option ROMs\n");
+        status = uefi_call_wrapper(BS->GetMemoryMap, 5,
+            &memory_map_size, memory_map, NULL, &desc_size, NULL);
+        if (status!=EFI_BUFFER_TOO_SMALL || memory_map_size==0) {
+            return report(EFI_OUT_OF_RESOURCES,L"GetMemoryMap getSize");
+        }
+        memory_map_size+=2*desc_size;
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 
+            (memory_map_size+PAGESIZE-1)/PAGESIZE, 
+            (EFI_PHYSICAL_ADDRESS*)&memory_map);
+        if (memory_map == NULL) {
+            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+        }
+        status = uefi_call_wrapper(BS->GetMemoryMap, 5,
+            &memory_map_size, memory_map, &map_key, &desc_size, &desc_version);
+        // look for INITRD in Option ROM
+        for(mement=memory_map;
+            mement<memory_map+memory_map_size;
+            mement=NextMemoryDescriptor(mement,desc_size)) {
+                if(mement==NULL || (mement->PhysicalStart==0 && mement->NumberOfPages==0))
+                    break;
+                // Reserved, BootServicesData, RunTimeServicesData
+                if(mement->Type!=0 && mement->Type!=4 && mement->Type!=6)
+                    continue;
+            // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
+            for(ptr=(CHAR8 *)mement->PhysicalStart;
+                ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
+                ptr+=512) {
+                if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
+                    CopyMem(&initrd_len,ptr+16,4);
+                    initrd_ptr=ptr+32;
+                    status=EFI_SUCCESS;
+                    goto foundinrom;
+                }
+            }
+        }
+        return report(EFI_LOAD_ERROR,L"Initrd not found in Option ROMS");
+foundinrom:
+        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)memory_map, (memory_map_size+PAGESIZE-1)/PAGESIZE);
+    }
     if(status==EFI_SUCCESS){
         //check if initrd is gzipped
         if(initrd_ptr[0]==0x1f && initrd_ptr[1]==0x8b){
@@ -471,14 +514,16 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             }
             // swap initrd_ptr with the uncompressed buffer
-            uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
+            // if it's not page aligned, we came from ROM, no FreePages
+            if(((UINT64)initrd_ptr&(PAGESIZE-1))==0)
+                uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
             initrd_ptr=addr;
             initrd_len=len;
         }
         DBG(L" * Initrd loaded @%lx %d bytes\n",initrd_ptr,initrd_len);
         kne=NULL;
         // if there's an environment file, load it
-        if(LoadFile(configfile,&env_ptr,&env_len)==EFI_SUCCESS)
+        if(loaded_image!=NULL && LoadFile(configfile,&env_ptr,&env_len)==EFI_SUCCESS)
             ParseEnvironment(env_ptr,env_len, argc, argv);
         else {
             env_len=0;

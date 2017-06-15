@@ -69,6 +69,12 @@
 //thread-safe libc errno at an absolute address (in TCB)
 extern uint16_t errno;
 
+// bit manipulations
+void lockacquire(int bit, uint64_t *ptr); // return only when the bit is set, yield otherwise
+void lockrelease(int bit, uint64_t *ptr); // release a bit
+int bitalloc(int numints,uint64_t *ptr);  // find the first bit clear and set. Return -1 or error
+#define bitfree(b,p) lockrelease(b,p)     // clear a bit
+
 // Memory and threading
 void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
 void yield();                           // give up CPU time

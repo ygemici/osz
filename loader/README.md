@@ -35,6 +35,8 @@ hobby OSes and microkernels. The advantage it gaves is that your kernel
 can be splitted into several files and yet they will be loaded together
 as if it was a monolitic kernel, and you can use your own filesystem for that.
 
+Also note that the INITRD can be in another Option ROM, for diskless boot.
+
 License
 -------
 
@@ -55,6 +57,7 @@ Glossary
 
 * _initrd file_: initial ramdisk image on boot partition at
   BOOTBOOT\INITRD. It's format is not specified and can be gzip compressed.
+  This can be in an Option ROM too.
 
 * _loader_: a native executable on the boot partition. For multi-
   bootable disks more loader can co-exists.
@@ -73,7 +76,7 @@ Boot process
 
 1. the firmware locates the loader, loads it and passes control to it.
 2. the loader initializes hardware (long mode, screen resolution, memory map etc.)
-3. then loads environment file and initrd file from the boot partition.
+3. then loads environment file and initrd file from the boot partition (or from ROM).
 4. iterates on filesystem drivers, and loads kernel from initrd.
 5. if filesystem is not recognized, scans for the first ELF executable in initrd.
 6. parses ELF program header and symbols to get link addresses.

@@ -33,7 +33,7 @@
 ;*  At first big enough free hole, initrd. Usually at 1Mbyte.
 ;*
 
-DEBUG equ 0
+DEBUG equ 1
 
 ;get Core boot parameter block
 include "bootboot.inc"
@@ -793,6 +793,21 @@ protmode_start:
             mov         esp, 7C00h
             
             ; ------- Locate initrd --------
+            mov         esi, 0C8000h
+.nextrom:   cmp         word [esi], 0AA55h
+            jne         @f
+            cmp         dword [esi+8], 'INIT'
+            jne         @f
+            cmp         word [esi+12], 'RD'
+            jne         @f
+            mov         eax, dword [esi+16]
+            mov         dword [bootboot.initrd_size], eax
+            add         esi, 32
+            jmp         .initrdrom
+@@:         add         esi, 2048
+            cmp         esi, 0F4000h
+            jb          .nextrom
+
             ; read GPT
 .getgpt:    xor         eax, eax
             xor         edx, edx
@@ -1109,20 +1124,27 @@ protmode_start:
             jnz         @b
 
             mov         esi, dword [bootboot.initrd_ptr]
-            push        esi
+            mov         ebx, esi
+.initrdrom:
             cmp         word [esi], 08b1fh
             jne         .noinflate
             DBG32       dbg_gzinitrd
-            mov         edi, esi
+            mov         edi, dword [bootboot.initrd_ptr]
+            push        edi
+            mov         ebx, esi
             mov         eax, dword [bootboot.initrd_size]
+            add         ebx, eax
+            sub         ebx, 4
+            mov         ecx, dword [ebx]
+            mov         dword [bootboot.initrd_size], ecx
+ xchg bx,bx
+            cmp         esi, edi
+            jb          @f
             add         edi, eax
-            sub         edi, 4
-            mov         ecx, dword [edi]
             add         edi, 4095
             shr         edi, 12
             shl         edi, 12
-            mov         dword [bootboot.initrd_size], ecx
-            add         eax, ecx
+@@:         add         eax, ecx
             cmp         eax, (INITRD_MAXSIZE+2)*1024*1024
             jb          @f
             mov         esi, nogzmem
@@ -1155,7 +1177,8 @@ protmode_start:
             jz          @f
             add         esi, 2
 @@:         call        tinf_uncompress
-.noinflate: pop         ebx
+            pop         ebx
+.noinflate:
 
             ; exclude initrd area from free mmap
             mov         edx, dword [bootboot.initrd_ptr]
@@ -1187,6 +1210,7 @@ protmode_start:
             jz          .errfs
             mov         esi, dword [bootboot.initrd_ptr]
             mov         ecx, dword [bootboot.initrd_size]
+xchg bx,bx
             add         ecx, esi
             mov         edi, kernel
             push        edx
@@ -1596,7 +1620,7 @@ badcore:    db          "Kernel is not an executable ELF64 for x86_64",0
 novbe:      db          "VESA VBE error, no framebuffer",0
 nogzip:     db          "Unable to uncompress",0
 kernel:     db          "lib/sys/core"
-            db          (256-($-kernel)) dup 0
+            db          (128-($-kernel)) dup 0
 ;-----------padding to be multiple of 512----------
             db          (511-($-loader+511) mod 512) dup 0
 loader_end:

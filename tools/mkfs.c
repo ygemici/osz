@@ -32,6 +32,7 @@
  *  ./mkfs (file) symlink (path) (target) - add a symbolic link to image file
  *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
  *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
+ *  ./mkfs (file) initrdrom - create Option ROM from file
  *  ./mkfs disk - assembles partition images into one GPT disk, saves bin/disk.dd
  *
  * It's a minimal implementation, has several limitations compared to the FS/Z spec.
@@ -636,6 +637,29 @@ void addsymlink(int argc, char **argv)
     fclose(f);
 }
 
+void initrdrom(int argc, char **argv)
+{
+    int i;
+    unsigned char *buf, c=0;
+    fs=readfileall(argv[1]); size=((read_size+32+511)/512)*512;
+    buf=(unsigned char*)malloc(size+1);
+    //Option ROM Header
+    buf[0]=0x55; buf[1]=0xAA; buf[2]=(read_size+32+511)/512;
+    // asm "xor ax,ax; retf"
+    buf[3]=0x31; buf[4]=0xC0; buf[5]=0xCB;
+    //magic, size and data
+    memcpy(buf+8,"INITRD",6);
+    memcpy(buf+16,&read_size,4);
+    memcpy(buf+32,fs,read_size);
+    //checksum
+    for(i=0;i<size;i++) c+=buf[i];
+    buf[6]=(unsigned char)((int)(256-c));
+    //write out new image
+    f=fopen(argc>2&&argv[3]!=NULL?argv[3]:"initrd.rom","wb");
+    fwrite(buf,size,1,f);
+    fclose(f);
+}
+
 int main(int argc, char **argv)
 {
     char *path=strdup(argv[0]);
@@ -668,6 +692,9 @@ int main(int argc, char **argv)
         createdisk();
     } else
     if(argc>1){
+        if(!strcmp(argv[2],"initrdrom")) {
+            initrdrom(argc,argv);
+        } else
         if(!strcmp(argv[2],"union") && argc>3) {
             addunion(argc,argv);
         } else

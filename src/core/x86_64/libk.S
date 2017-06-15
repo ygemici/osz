@@ -119,7 +119,7 @@ kpanic:
 1:  movq    $kpanicrip, %rdi
     call    kprintf
     movq    __PAGESIZE-40, %rdi
-    call    service_sym
+    call    elf_sym
     mov     %rax, %rsi
     movq    $kpanicsym, %rdi
     call    kprintf

@@ -238,13 +238,16 @@ extern phy_t sched_pick();
 
 // ----- Sybsystem Management -----
 /** Load an ELF binary into address space, return physical address */
-extern void *service_loadelf(char *fn);
+extern void *elf_load(char *fn);
 
 /** Load a shared library into address space */
-extern void service_loadso(char *fn);
+extern void elf_loadso(char *fn);
+
+/** Parse dynamic header to find out which shared objects to load */
+extern void elf_neededso();
 
 /** Run-time link ELF binaries in address space */
-extern bool_t service_rtlink();
+extern bool_t elf_rtlink();
 
 /** Initialize a subsystem, a system service */
 extern void service_init(int subsystem, char *fn);

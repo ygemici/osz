@@ -59,7 +59,8 @@ extern char *syslog_ptr;
 extern char osver[];
 extern sysinfo_t sysinfostruc;
 
-extern uchar *service_sym(virt_t addr);
+extern uchar *elf_sym(virt_t addr);
+extern virt_t elf_lookupsym(uchar *sym, size_t size);
 extern void kprintf_putchar(int c);
 extern void kprintf_unicodetable();
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
@@ -366,7 +367,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
         if(dbg_tui)
             dbg_settheme();
         kprintf("%8x: %s \n",
-            rip, service_sym(rip)
+            rip, elf_sym(rip)
         );
         fg=dbg_theme[3];
         if(dbg_tui)
@@ -376,7 +377,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
         while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
             if((((rsp[1]==0x23||rsp[1]==0x08) &&
                 (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
-                kprintf("%8x: %s   * interrupt %x * \n",*rsp, service_sym(*rsp), rsp[3]);
+                kprintf("%8x: %s   * interrupt %x * \n",*rsp, elf_sym(*rsp), rsp[3]);
                 rsp=(uint64_t*)rsp[3];
                 continue;
             }
@@ -386,7 +387,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
                (*rsp>((uint64_t)&__bss_start))) {
                 if(sys_fault)
                     break;
-                symstr = service_sym(*rsp);
+                symstr = elf_sym(*rsp);
                 if(sys_fault)
                     break;
                 if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
@@ -399,7 +400,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
         while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
             if((((rsp[1]==0x23||rsp[1]==0x08) &&
                 (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
-                kprintf("%8x: %s   * interrupt %x * \n",*rsp, service_sym(*rsp), rsp[3]);
+                kprintf("%8x: %s   * interrupt %x * \n",*rsp, elf_sym(*rsp), rsp[3]);
                 rsp=(uint64_t*)rsp[3];
                 continue;
             }
@@ -409,7 +410,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
                (*rsp>((uint64_t)&__bss_start))) {
                 if(sys_fault)
                     break;
-                symstr = service_sym(*rsp);
+                symstr = elf_sym(*rsp);
                 if(sys_fault)
                     break;
                 if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
@@ -427,7 +428,7 @@ void dbg_code(uint64_t rip, uint64_t rs)
     if(dbg_tui)
         dbg_settheme();
     sys_fault = false;
-    symstr = service_sym(rip);
+    symstr = elf_sym(rip);
     if(sys_fault) {
         kprintf("[Code %x: unknown]\n", rip);
         sys_fault = false;
@@ -523,7 +524,7 @@ again:
                     symstr = (uchar*)"stack";
                     lastsym = __SLOTSIZE/2;
                 } else
-                    symstr = service_sym(dbg_comment);
+                    symstr = elf_sym(dbg_comment);
             }
             if(sys_fault && *((uchar*)&dbg_comment)>=32 && *((uchar*)&dbg_comment)<127 &&
                 (dbg_comment&0xFF00000000000000)==0) {
@@ -1090,8 +1091,6 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
     }
 }
 
-extern virt_t service_lookupsym(uchar *sym, size_t size);
-
 virt_t dbg_getaddr(char *cmd, size_t size)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -1121,7 +1120,7 @@ virt_t dbg_getaddr(char *cmd, size_t size)
         if(size==3 && s[0]=='r' && s[1]=='1' && s[2]=='5') base = *((uint64_t*)(tcb->gpr+104)); else
         if(size==3 && s[0]=='r' && s[1]=='b' && s[2]=='p') base = *((uint64_t*)(tcb->gpr+112)); else
         /* neither, lookup sym */
-            base = service_lookupsym((uchar*)s,(uint64_t)cmd-(uint64_t)s);
+            base = elf_lookupsym((uchar*)s,(uint64_t)cmd-(uint64_t)s);
     }
     /* parse displacement */
     while(*cmd==' '||*cmd=='-'||*cmd=='+') cmd++;

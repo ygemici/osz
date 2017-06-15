@@ -15,7 +15,8 @@ ata0-slave: type=none
 ata1: enabled=0
 ata2: enabled=0
 ata3: enabled=0
-optromimage1: file="loader/bootboot.bin", address=0xD0000
+optromimage1: file="loader/bootboot.bin", address=0xCB000
+#optromimage2: file="bin/initrd.rom", address=0xCF000
 pci: enabled=1, chipset=i440fx
 vga: extension=vbe, update_freq=10, realtime=1
 #I was unable to turn on x2APIC for sandy bridge

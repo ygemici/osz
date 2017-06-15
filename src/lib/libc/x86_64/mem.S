@@ -33,10 +33,8 @@
 .global memchr
 
 .section .text
+
 memcpy:
-    movq    24(%rsp), %rcx
-    movq    16(%rsp), %rsi
-    movq    8(%rsp), %rdi
     repnz   movsb
     ret
 
@@ -55,9 +53,7 @@ memmove:
     ret
 
 memset:
-    movq    24(%rsp), %rcx
-    movq    16(%rsp), %rax
-    movq    8(%rsp), %rdi
+    movq    %rsi, %rax
     repnz   stosb
     ret
 
