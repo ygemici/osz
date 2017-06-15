@@ -42,6 +42,11 @@
 #define TMPQ_ADDRESS  0xffffffffffc00000
 #define CORE_ADDRESS  0xffffffffffe02000
 
+#define TCB_ADDRESS    0
+#define FILE_ADDRESS   (BSS_ADDRESS-__SLOTSIZE)    // 4G-2M list of open files
+#define BUF_ADDRESS    (0x00007fff00000000)        //128T-4G data, slot alloced buffers
+#define SBSS_ADDRESS   (0xFFFF800000000000)        //shared memory, see bztalloc.c
+
 #include "msg.h"
 #include "env.h"
 
@@ -54,12 +59,9 @@ extern unsigned char environment[__PAGESIZE]; // configuration
 
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
-extern uint8_t tmpalarm;              // temporarily mapped tcb for alarm
+extern uint8_t tmpalarm;              // temporarily mapped tcb for next alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
-extern uint8_t _usercode;             // user mode text start
-extern uint8_t _init;                 // user mode initialization code
-extern uint8_t _main;                 // user mode "main", irq dispatcher
 extern uint8_t __bss_start;           // start of bss segment
 
 // kernel variables
@@ -129,7 +131,7 @@ extern int  isr_installirq(uint8_t irq, phy_t memroot);
 /** Initialize system (idle thread and device drivers) */
 extern void sys_init();
 
-/** Switch to idle task and start executing user space code */
+/** Switch to first task and start executing user space code */
 extern void sys_enable();
 
 /** Turn the computer off */
@@ -146,11 +148,11 @@ extern void sys_ready();
 extern void fs_init();
 
 /** Locate a file on initrd and return it's physical address
-    NOTE: returned file's size is in fs_size */
+    NOTE: returned file's size is in fs_size, relies on identity mapping */
 extern void *fs_locate(char *fn);
 
 // ----- Syslog interface -----
-/** Initialize user interface thread */
+/** Initialize syslog thread */
 extern void syslog_init();
 extern void syslog_early(char* fmt, ...);
 
@@ -200,9 +202,6 @@ extern void kfree(void* ptr);
 
 /** Add entropy to random generator **/
 extern void kentropy();
-
-/** busy loop **/
-extern void kbusyloop(uint64_t cycle);
 
 // ----- Threads -----
 /** Allocate and initialize thread structures */

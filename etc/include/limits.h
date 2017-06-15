@@ -41,13 +41,9 @@
 #define __SLOTSIZE	(4096*512)
 
 // memory limits, OS/Z specific addresses
-#define TCB_ADDRESS    0
 #define MQ_ADDRESS     (__PAGESIZE)
 #define TEXT_ADDRESS   (__SLOTSIZE)                // 2M code segment
 #define BSS_ADDRESS    (0x0000000100000000)        // 4G data, tls memory, see bztalloc.c
-#define FILE_ADDRESS   (BSS_ADDRESS-__SLOTSIZE)    // 4G-2M list of open files
-#define BUF_ADDRESS    (0x00007fff00000000)        //128T-4G data, slot alloced buffers
-#define SBSS_ADDRESS   (0xFFFF800000000000)        //shared memory, see bztalloc.c
 
 // (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
 #define NRMQ_MAX	63 //pages

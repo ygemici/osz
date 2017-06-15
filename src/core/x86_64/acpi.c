@@ -44,11 +44,6 @@ uint32_t __attribute__ ((section (".data"))) SMI_CMD;
 extern sysinfo_t sysinfostruc;
 extern uint64_t ioapic_addr;
 extern uint64_t hpet_addr;
-extern uint32_t fg;
-extern char poweroffprefix[];
-extern char poweroffsuffix[];
-extern void kprintf_center(int w, int h);
-extern void pci_init();
 
 /**
  * pre-parse ACPI tables. Detect IOAPIC and HPET address, called by isr_init()
