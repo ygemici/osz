@@ -432,12 +432,15 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 
     // Initialize FS with the DeviceHandler from loaded image protocol
     // we don't have that when booting from ROM
+    status=EFI_LOAD_ERROR;
     if(loaded_image!=NULL) {
         RootDir = LibOpenRoot(loaded_image->DeviceHandle);
 
         // load ramdisk
         status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
-    } else {
+    }
+    // without disk, locate initrd in ROM
+    if(status!=EFI_SUCCESS) {
         DBG(L" * Locate initrd in Option ROMs\n");
         status = uefi_call_wrapper(BS->GetMemoryMap, 5,
             &memory_map_size, memory_map, NULL, &desc_size, NULL);
@@ -454,26 +457,27 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         status = uefi_call_wrapper(BS->GetMemoryMap, 5,
             &memory_map_size, memory_map, &map_key, &desc_size, &desc_version);
         // look for INITRD in Option ROM
-        for(mement=memory_map;
-            mement<memory_map+memory_map_size;
-            mement=NextMemoryDescriptor(mement,desc_size)) {
-                if(mement==NULL || (mement->PhysicalStart==0 && mement->NumberOfPages==0))
-                    break;
-                // Reserved, BootServicesData, RunTimeServicesData
-                if(mement->Type!=0 && mement->Type!=4 && mement->Type!=6)
-                    continue;
-            // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
-            for(ptr=(CHAR8 *)mement->PhysicalStart;
-                ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
-                ptr+=512) {
-                if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
-                    CopyMem(&initrd_len,ptr+16,4);
-                    initrd_ptr=ptr+32;
-                    status=EFI_SUCCESS;
-                    goto foundinrom;
+        if (EFI_ERROR(status))
+            for(mement=memory_map;
+                mement<memory_map+memory_map_size;
+                mement=NextMemoryDescriptor(mement,desc_size)) {
+                    if(mement==NULL || (mement->PhysicalStart==0 && mement->NumberOfPages==0))
+                        break;
+                    // Reserved, BootServicesData, RunTimeServicesData
+                    if(mement->Type!=0 && mement->Type!=4 && mement->Type!=6)
+                        continue;
+                // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
+                for(ptr=(CHAR8 *)mement->PhysicalStart;
+                    ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
+                    ptr+=512) {
+                    if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
+                        CopyMem(&initrd_len,ptr+16,4);
+                        initrd_ptr=ptr+32;
+                        status=EFI_SUCCESS;
+                        goto foundinrom;
+                    }
                 }
             }
-        }
         return report(EFI_LOAD_ERROR,L"Initrd not found in Option ROMS");
 foundinrom:
         uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)memory_map, (memory_map_size+PAGESIZE-1)/PAGESIZE);
