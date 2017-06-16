@@ -417,6 +417,8 @@ kmap_getpte2:
     OUT: true on success
 */
 ksend:
+    pushf
+    cli
     /* check if message queue is full */
     movq    (%rdi), %rax
     /* mqhdr->mq_start+1 == mqhdr->mq_end? */
@@ -464,8 +466,10 @@ ksend:
     movq    $1, (%rdi)
 3:  xorq    %rax, %rax
     incb    %al
+    popf
     ret
 4:  xorq    %rax, %rax
+    popf
     ret
 
 /* an early implementation, called by kprintf */

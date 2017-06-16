@@ -30,12 +30,13 @@
 
 /***
  * Memory layout:
- * 0. slot: allocmap_t
- * 1. slot: extended allocmap_t area
+ * 0. slot: array of allocmap_t pointers
+ * 1. slot: first allocmap_t
  * 2. slot: chunk's data (more chunks, if quantum is small)
- * 3. slot: another chunk's data
- * 4. slot: first chunk of a large quantum
- * 5. slot: second chunk of a large quantum
+ * 3. slot: second allocmap_t area
+ * 4. slot: another chunk's data
+ * 5. slot: first chunk of a large quantum
+ * 6. slot: second chunk of a large quantum
  * ...
  * 
  * Small units (quantum>=8 && quantum<CHUNKSIZE):
@@ -55,14 +56,14 @@
  * - int munmap (void *addr, size_t len);                             //give back memory to system
  */
 #define CHUNKSIZE     __SLOTSIZE                                //one chunk is 2M
-#define ALLOCMAPMAX  (8*__SLOTSIZE)                             //maximum size for chunks array
-#define BITMAPSIZE   (CHUNKSIZE/__PAGESIZE/8/8)                 //number of allocation blocks in a chunk
-#define numchunks(a) (a->numchunks&0x7ffffffff)                 //number of chunks in an arena
-#define chunksize(q) ((q*BITMAPSIZE*64/__PAGESIZE)*__PAGESIZE)  //size of a chunk for a given quantum
+#define MAXARENA     ((CHUNKSIZE/sizeof(void*))-1)              //maximum number of arenas
+#define BITMAPSIZE   (CHUNKSIZE/__PAGESIZE/sizeof(void*)/8)     //number of allocation blocks in a chunk
+#define numallocmaps(a) (a[0]&0x7ffffffff)                         //number of chunks in an arena
+#define chunksize(q) ((q*BITMAPSIZE*sizeof(void*)*8/__PAGESIZE)*__PAGESIZE)  //size of a chunk for a given quantum
 
 typedef struct {
-    void *ptr;                      //memory pointer (page or slot aligned)
     uint64_t quantum;               //allocation unit in this chunk
+    void *ptr;                      //memory pointer (page or slot aligned)
     union {
         uint64_t map[BITMAPSIZE];   //free units in this chunk (512 bits)
         uint64_t size[BITMAPSIZE];  //size, only first used
@@ -76,113 +77,158 @@ typedef struct {
 } allocmap_t;
 
 /**
+ * arena is an array of *allocmap_t, first element records size and lock flag
+ */
+
+/**
  * This allocator is used for both thread local storage and shared memory.
  * Arena points to an allocation map (either at BSS_ADDRESS or SBSS_ADDRESS).
  */
-void *bzt_alloc(allocmap_t *arena,size_t a,void *ptr,size_t s,int flag)
+void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
 {
     uint64_t q;
-    int i,j,nc=-1,oc=-1;
-    void *fp=arena+ALLOCMAPMAX, *end;
+    int i,j,k,fc=0;
+    void *fp, *end;
+    allocmap_t *am;
+    chunkmap_t *ncm=NULL; //new chunk map
+    chunkmap_t *ocm=NULL; //old chunk map
+    uint64_t maxchunks = (CHUNKSIZE-8)/sizeof(chunkmap_t);
     int prot = PROT_READ | PROT_WRITE;
     flag |= MAP_FIXED | MAP_ANONYMOUS;
+
     // get quantum
     for(q=8;q<s;q<<=1);
 
-    lockacquire(63,&arena->numchunks);
+    lockacquire(63,arena);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         dbg_printf("bzt_alloc(%x, %x, %x, %d) quantum %d\n", arena, a, ptr, s, q);
 #endif
-    // get chunk for this quantum size
-    for(i=0;i<numchunks(arena);i++) {
-        end=arena->chunk[i].ptr + chunksize(arena->chunk[i].quantum);
-        if(arena->chunk[i].quantum==q)
-            for(j=0;j<BITMAPSIZE;j++)
-                if(arena->chunk[i].map[j]!=-1) { nc=i; break; }
-        if(ptr!=NULL && arena->chunk[i].ptr <= ptr && ptr < end)
-                oc=i;
-        if(end > fp)
-            fp=end;
+    // if we don't have any allocmaps
+    if(!numallocmaps(arena)) {
+        if(mmap((void*)((uint64_t)arena+CHUNKSIZE), CHUNKSIZE, prot, flag, -1, 0)==MAP_FAILED) {
+            seterr(ENOMEM);
+            lockrelease(63,arena);
+            return NULL;
+        }
+        arena[0]++;
+        arena[1]=(uint64_t)arena+CHUNKSIZE;
+        fp=(void*)((uint64_t)arena+2*CHUNKSIZE);
     }
-    // same as before
-    if(ptr!=NULL && nc!=-1 && nc==oc) {
-        lockrelease(63,&arena->numchunks);
+    // iterate through allocmaps
+    for(i=1;i<MAXARENA && arena[i]!=0;i++) {
+        // get chunk for this quantum size
+        am=(allocmap_t*)arena[i];
+dbg_printf("am %x %d\n",am, fc);
+        if(fc==0 && am->numchunks<maxchunks)
+            fc=i;
+        for(j=0;j<am->numchunks;j++) {
+            end=am->chunk[j].ptr + chunksize(am->chunk[j].quantum);
+            if(am->chunk[j].quantum==q)
+                for(k=0;k<BITMAPSIZE;k++)
+                    if(am->chunk[j].map[k]!=-1) { ncm=&am->chunk[j]; break; }
+            if(ptr!=NULL && am->chunk[j].ptr <= ptr && ptr < end)
+                    ocm=&am->chunk[j];
+            if(end > fp)
+                fp=end;
+        }
+dbg_printf("fp %x\n", fp);
+    }
+    // same as before, new size fits in quantum
+    if(ptr!=NULL && ncm!=NULL && ncm==ocm) {
+        lockrelease(63,arena);
         return ptr;
     }
-    if(nc==-1) {
-        // do we have place for a new chunk?
-        if((numchunks(arena)+1)*sizeof(chunkmap_t)+8 > ALLOCMAPMAX) {
-            seterr(ENOMEM);
-            lockrelease(63,&arena->numchunks);
-            return NULL;
+    if(ncm==NULL) {
+        // first allocmap with free chunks
+        if(fc==0) {
+            //do we have place for a new allocmap?
+            if(i>=numallocmaps(arena) ||
+                mmap(fp, CHUNKSIZE, prot, flag, -1, 0)==MAP_FAILED) {
+                    seterr(ENOMEM);
+                    lockrelease(63,arena);
+                    return NULL;
+            }
+            arena[0]++;
+            arena[i]=(uint64_t)fp;
+            fp+=CHUNKSIZE;
+            fc=i;
         }
         // add a new chunk
-        nc=numchunks(arena);
-        arena->numchunks++;
-        // passed page boundary?
-        i=(numchunks(arena)*sizeof(chunkmap_t)+8)/__PAGESIZE;
-        if( (nc*sizeof(chunkmap_t)+8)/__PAGESIZE < i) {
-/*
-            if(!mmap(arena+i*__PAGESIZE, __PAGESIZE, prot, flag, -1, 0)) {
-                seterr(ENOMEM);
-                lockrelease(63,&arena->numchunks);
-                return NULL;
-            }
-*/
-        }
-        arena->chunk[nc].quantum = q;
-        arena->chunk[nc].ptr = fp;
-        memset(&arena->chunk[nc].map,0,BITMAPSIZE*8);
+        am=(allocmap_t*)arena[fc];
+        i=am->numchunks++;
+        am->chunk[i].quantum = q;
+        am->chunk[i].ptr = fp;
+        memset(&am->chunk[i].map,0,BITMAPSIZE*8);
         // allocate memory for data
         if(!mmap(fp, chunksize(q), prot, flag, -1, 0)) {
-//            seterr(ENOMEM);
-            lockrelease(63,&arena->numchunks);
+            seterr(ENOMEM);
+            lockrelease(63,arena);
             return NULL;
         }
+        ncm=&am->chunk[i];
     }
-    i=bitalloc(BITMAPSIZE, arena->chunk[nc].map);
-dbg_printf(" arena nc %d oc %d i %d\n",nc,oc,i);
-    lockrelease(63,&arena->numchunks);
-    if(i>=0) {
-        return arena->chunk[nc].ptr + i*arena->chunk[nc].quantum;
+    i=bitalloc(BITMAPSIZE, (uint64_t*)&ncm->map);
+dbg_printf("   nc %x oc %x i %d\n",ncm,ocm,i);
+    lockrelease(63,arena);
+    if(i>=0 && i<BITMAPSIZE*64) {
+        fp=ncm->ptr + i*ncm->quantum;
+        //free old memory
+        if(ocm!=NULL) {
+dbg_printf(" release %x %d to %x\n",ptr,ocm->quantum,fp);
+            memcpy(fp,ptr,ocm->quantum);
+            bitfree((ptr-ocm->ptr)/ocm->quantum, (uint64_t*)&ncm->map);
+        }
+        return fp;
     }
     return ptr;
 }
 
-void bzt_free(allocmap_t *arena, void *ptr)
+void bzt_free(uint64_t *arena, void *ptr)
 {
-    lockacquire(63,&arena->numchunks);
+    lockacquire(63,arena);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         dbg_printf("bzt_free(%x, %x)\n", arena, ptr);
 #endif
-    lockrelease(63,&arena->numchunks);
+    lockrelease(63,arena);
 }
 
 /**
  * dump memory map, for debugging purposes
  */
-void bzt_dumpmem(allocmap_t *arena)
+#if DEBUG
+void bzt_dumpmem(uint64_t *arena)
 {
-    int i,j,k,l;
+    int i,j,k,l,n,o;
     int mask[]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
     char *bmap=".123456789ABCDEF";
     uint16_t *m;
     dbg_printf("-----Arena %x, %s%s, ",
         arena,(uint64_t)arena==(uint64_t)BSS_ADDRESS?"lts":"shared",
-        (arena->numchunks & (1UL<<63))!=0?" LOCKED":"");
-    dbg_printf("chunks: %d/%d (%d bytes, %d units)\n",
-        numchunks(arena), (ALLOCMAPMAX-8)/sizeof(chunkmap_t), CHUNKSIZE, BITMAPSIZE*64);
-    for(i=0;i<numchunks(arena);i++) {
-        dbg_printf("%3d. %6d %x - %x ",i+1,
-            arena->chunk[i].quantum,arena->chunk[i].ptr,arena->chunk[i].ptr+chunksize(arena->chunk[i].quantum));
-        m=(uint16_t*)arena->chunk[i].map;
-        for(j=0;j<BITMAPSIZE*4;j++) {
-            k=0; for(l=0;l<16;l++) { if(*m & mask[l]) k++; }
-            dbg_printf("%c",bmap[k]);
-            m++;
+        (arena[0] & (1UL<<63))!=0?" LOCKED":"");
+    dbg_printf("allocmaps: %d/%d, chunks: %d, %d units\n",
+        numallocmaps(arena), MAXARENA, (CHUNKSIZE-8)/sizeof(chunkmap_t), BITMAPSIZE*64);
+    o=1;
+    for(i=1;i<MAXARENA && arena[i]!=0;i++) {
+        dbg_printf("  --allocmap %d %x, chunks: %d--\n",i,arena[i],((allocmap_t*)arena[i])->numchunks);
+        for(j=0;j<((allocmap_t*)arena[i])->numchunks;j++) {
+            dbg_printf("%3d. %6d %x - %x ",o++,
+                ((allocmap_t*)arena[i])->chunk[j].quantum,
+                ((allocmap_t*)arena[i])->chunk[j].ptr,
+                ((allocmap_t*)arena[i])->chunk[j].ptr+chunksize(((allocmap_t*)arena[i])->chunk[j].quantum));
+            if(((allocmap_t*)arena[i])->chunk[j].quantum<CHUNKSIZE) {
+                m=(uint16_t*)&((allocmap_t*)arena[i])->chunk[j].map;
+                for(k=0;k<BITMAPSIZE*4;k++) {
+                    l=0; for(n=0;n<16;n++) { if(*m & mask[n]) l++; }
+                    dbg_printf("%c",bmap[l]);
+                    m++;
+                }
+                dbg_printf("%8dk\n",chunksize(((allocmap_t*)arena[i])->chunk[j].quantum)/1024);
+            } else {
+                dbg_printf("%8dM\n",((allocmap_t*)arena[i])->chunk[j].size[0]/1024/1024);
+            }
         }
-        dbg_printf("%8dk\n",chunksize(arena->chunk[i].quantum)/1024);
     }
 }
+#endif

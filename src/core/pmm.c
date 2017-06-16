@@ -43,6 +43,20 @@ OSZ_pmm __attribute__ ((section (".data"))) pmm;
 /* pointer to tmpmap in PT */
 void __attribute__ ((section (".data"))) *kmap_tmp;
 
+#if DEBUG
+void pmm_dump()
+{
+    int i;
+    OSZ_pmm_entry *fmem = pmm.entries;
+    kprintf("pmm size: %d, free: %d, total: %d ", pmm.size, pmm.freepages, pmm.totalpages);
+    kprintf("bss: %x - %x\n",pmm.bss,pmm.bss_end);
+    for(i=0;i<pmm.size;i++) {
+        kprintf("  %x %9d\n", fmem->base, fmem->size);
+        fmem++;
+    }
+}
+#endif
+
 /**
  * allocate a physical page
  * returns physical address
@@ -88,7 +102,8 @@ void* pmm_alloc()
 void* pmm_allocslot()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
-    int i;
+    int i,j;
+    uint64_t b;
 again:
     i = 0;
     while(i++<pmm.size && fmem->size<__SLOTSIZE/__PAGESIZE)
@@ -110,7 +125,6 @@ again:
             }
 
             /* split the memory fragment in two */
-            int j;
             for(j=pmm.size;j>i;j--) {
                 pmm.entries[j].base = pmm.entries[j-1].base;
                 pmm.entries[j].size = pmm.entries[j-1].size;
@@ -123,7 +137,16 @@ again:
             fmem->size -= j;
         }
         /* allocate page slot */
-        kmemset((char *)fmem->base, 0, __SLOTSIZE);
+        if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
+            b=fmem->base;
+            for(j=0;j<__SLOTSIZE/__PAGESIZE;j++) {
+                kmap((virt_t)&tmp2map, b, PG_CORE_NOCACHE);
+                kmemset((char *)&tmp2map, 0, __PAGESIZE);
+                b+=__PAGESIZE;
+            }
+        } else {
+            kmemset((char *)fmem->base, 0, __SLOTSIZE);
+        }
         fmem->base += __SLOTSIZE;
         fmem->size -= __SLOTSIZE/__PAGESIZE;
         pmm.freepages-=__SLOTSIZE/__PAGESIZE;

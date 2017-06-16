@@ -170,11 +170,20 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 #endif
             /* FIXME: naive implementation, no checks */
             data=(void *)arg0;
-            arg1=(arg1+__PAGESIZE-1)/__PAGESIZE;
             j=arg2&PROT_WRITE? PG_USER_RW : PG_USER_RO;
-            for(i=0;i<arg1;i++) {
-                vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(), __PAGESIZE, j);
-                arg0+=__PAGESIZE;
+            if(arg1>=__SLOTSIZE) {
+                arg1=(arg1+__SLOTSIZE-1)/__SLOTSIZE;
+                for(i=0;i<arg1;i++) {
+kprintf("i %d a %d\n",i,arg1);
+                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_allocslot(), __PAGESIZE, j);
+                    arg0+=__SLOTSIZE;
+                }
+            } else {
+                arg1=(arg1+__PAGESIZE-1)/__PAGESIZE;
+                for(i=0;i<arg1;i++) {
+                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(), __PAGESIZE, j);
+                    arg0+=__PAGESIZE;
+                }
             }
             return (uint64_t)data;
         

@@ -103,6 +103,7 @@ isr_syscall0:
     /* use %r12 in ABI as %rcx and %r11 are clobbered */
     movq    %r12, %rcx
 #if DEBUG
+    /* dbg_printf */
     orl     %eax, %eax
     jnz     1f
     callq   kprintf
@@ -286,12 +287,12 @@ isr_timer:
 
 /* housekeeping */
     /* if(tcb->rip > 0) tcb->billcnt++; else tcb->syscnt++; */
-    movq    $tcb_billcnt, %rcx
     movb    __PAGESIZE-33, %al
     cmpb    $0xFF, %al
     jne     1f
-    addq    $8, %rcx
-1:  incq    (%rcx)
+    incq    tcb_billcnt+8
+    jmp     9f
+1:  incq    tcb_billcnt
 
 /* preemption */
     /* never preempt real-time and driver tasks */

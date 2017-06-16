@@ -137,6 +137,12 @@ void dbg_putchar(int c)
     ::"r"(c):"%rax","%rbx","%rdx");
 }
 
+void dbg_pagingflags(uint64_t p)
+{
+    kprintf("%x%c%c%c%c",(p>>9)&0x7,(p>>8)&1?'G':'.',(p>>7)&1?'T':'.',(p>>6)&1?'D':'.',(p>>5)&1?'A':'.');
+    kprintf("%c%c%c%c%c",(p>>4)&1?'.':'C',(p>>3)&1?'W':'.',(p>>2)&1?'U':'S',(p>>1)&1?'W':'R',p&(1UL<<63)?'.':'X');
+}
+
 void dbg_settheme()
 {
     dbg_putchar(27);
@@ -257,7 +263,9 @@ void dbg_tcb()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("memory root: %x, allocated pages: %d, linked pages: %d\n", tcb->memroot, tcb->allocmem, tcb->linkmem);
+    kprintf("memory root: %x ", tcb->memroot); dbg_pagingflags(tcb->memroot);
+    kprintf(", allocated pages: %d, linked pages: %d\n", tcb->allocmem, tcb->linkmem);
+
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
@@ -561,11 +569,15 @@ again:
 // dump memory in bytes, words, double words or quad words
 void dbg_data(uint64_t ptr)
 {
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
     int i,j;
+    uint64_t o=ptr,d;
+
     ky = 3;
+    uint64_t *paging = (uint64_t *)&tmp2map;
     if(dbg_tui)
         dbg_setpos();
-    while(ky<maxy-2) {
+    while(ky<maxy-5) {
         kx=1;
         kprintf("%8x: ",ptr);
         sys_fault = false;
@@ -685,6 +697,34 @@ void dbg_data(uint64_t ptr)
         }
         dbg_indump = false;
         kprintf("\n");
+    }
+    kmap((uint64_t)&tmp2map, tcb->memroot, PG_CORE_NOCACHE);
+    d=(o>>(12+9+9+9))&0x1FF;
+    if((paging[d]&1)==0) fg = dbg_theme[2];
+    kprintf("\n  PML4 %8x ",paging[d]);
+    dbg_pagingflags(paging[d]);
+    if(paging[d]&1) {
+        kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
+        d=(o>>(12+9+9))&0x1FF;
+        if((paging[d]&1)==0) fg = dbg_theme[2];
+        kprintf(" %4d      PDPE %8x ",d,paging[d]);
+        dbg_pagingflags(paging[d]);
+        if(paging[d]&1){
+            kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
+            d=(o>>(12+9))&0x1FF;
+            if((paging[d]&1)==0) fg = dbg_theme[2];
+            kprintf(" %4d\n  PDE  %8x ",d,paging[d]);
+            dbg_pagingflags(paging[d]);
+            if(paging[d]&1){
+                kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
+                d=(o>>(12))&0x1FF;
+                if((paging[d]&1)==0) fg = dbg_theme[2];
+                kprintf(" %4d      PTE  %8x ",d,paging[d]);
+                dbg_pagingflags(paging[d]);
+                d=o&(__PAGESIZE-1);
+                kprintf(" %4d\n",d);
+            }
+        }
     }
 }
 
