@@ -62,7 +62,7 @@ idle:
 kentropy:
     pushq   %rdi
     pushq   %rsi
-    movq    $sysinfostruc + sysinfo_srand0, %rdi
+    movq    $srand, %rdi
     movq    %rdi, %rax
     movq    %rax, %rdx
     incq    %rdx
@@ -454,9 +454,7 @@ ksend:
     movq    %r9, 40(%rax)
     movq    32(%rbp), %r9
     movq    %r9, 48(%rax)
-    movq    $sysinfostruc, %r9
-    addq    $sysinfo_ticks, %r9
-    movq    (%r9), %r9
+    movq    ticks, %r9
     movq    %r9, 56(%rax)
     /* mqhdr->mq_start++ */
     incq    (%rdi)

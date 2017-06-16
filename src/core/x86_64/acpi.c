@@ -41,7 +41,6 @@ uint32_t __attribute__ ((section (".data"))) SCI_EN;
 uint32_t __attribute__ ((section (".data"))) SCI_INT;
 uint32_t __attribute__ ((section (".data"))) SMI_CMD;
 
-extern sysinfo_t sysinfostruc;
 extern uint64_t ioapic_addr;
 extern uint64_t hpet_addr;
 
@@ -75,7 +74,7 @@ void acpi_early(ACPI_Header *hdr)
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
         ACPI_APIC *madt = (ACPI_APIC *)hdr;
-        sysinfostruc.systables[systable_apic_idx] = madt->localApic;
+        systables[systable_apic_idx] = madt->localApic;
         // This header is 8 bytes longer than normal header
         len -= 8; ptr = (char*)(data+8);
         while(len>0) {
@@ -149,10 +148,10 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     uint32_t len = hdr->length - sizeof(ACPI_Header);
     uint64_t data = (uint64_t)((char*)hdr + sizeof(ACPI_Header));
     /* add entropy */
-    sysinfostruc.srand[(len+0)%4] += (uint64_t)hdr;
-    sysinfostruc.srand[(len+1)%4] -= (uint64_t)hdr;
-    sysinfostruc.srand[(len+2)%4] += ((uint64_t)hdr<<1);
-    sysinfostruc.srand[(len+4)%4] -= (uint64_t)((uint64_t)hdr>>1);
+    srand[(len+0)%4] += (uint64_t)hdr;
+    srand[(len+1)%4] -= (uint64_t)hdr;
+    srand[(len+2)%4] += ((uint64_t)hdr<<1);
+    srand[(len+4)%4] -= (uint64_t)((uint64_t)hdr>>1);
     kentropy();
 
     /* maximum tree depth */
@@ -209,13 +208,13 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
             SCI_EN = 1;
         }
         hdr = (ACPI_Header*)(fadt->x_dsdt && (fadt->x_dsdt>>48)==0 ? fadt->x_dsdt : fadt->dsdt);
-        if(!kmemcmp("SDT", hdr->magic+1, 3) && sysinfostruc.systables[systable_dsdt_idx] == 0)
-            sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)hdr;
+        if(!kmemcmp("SDT", hdr->magic+1, 3) && systables[systable_dsdt_idx] == 0)
+            systables[systable_dsdt_idx] = (uint64_t)hdr;
     } else
     /* Specific Description Tables */
     if(!kmemcmp("DSDT", hdr->magic, 4) || !kmemcmp("SSDT", hdr->magic, 4)) {
-        if(sysinfostruc.systables[systable_dsdt_idx] == 0)
-            sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)hdr;
+        if(systables[systable_dsdt_idx] == 0)
+            systables[systable_dsdt_idx] = (uint64_t)hdr;
     } else
     /* Multiple APIC Description Table */
     if(!kmemcmp("APIC", hdr->magic, 4)) {
@@ -316,8 +315,8 @@ bool_t acpi_init()
 #endif
         acpi_parse((ACPI_Header*)bootboot.x86_64.acpi_ptr, 1);
     }
-    if(sysinfostruc.systables[systable_dsdt_idx] != 0)
-        acpi_parseaml((ACPI_Header *)sysinfostruc.systables[systable_dsdt_idx]);
+    if(systables[systable_dsdt_idx] != 0)
+        acpi_parseaml((ACPI_Header *)systables[systable_dsdt_idx]);
     // fallback to default if not found and not given either
     if(ioapic_addr==0)
         ioapic_addr=0xFEC00000;

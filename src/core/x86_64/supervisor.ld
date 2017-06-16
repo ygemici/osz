@@ -30,9 +30,8 @@ SECTIONS
         *(.data .data.*)
         *(.bss .bss.* .sbss*)
         *(.got*)
+        srandinitend = .;
         . = ALIGN(4096);
-        sysinfostruc = .;
-        . += 4096;
     } :text
     .dynamic : { *(.dynamic) } :text :dynamic
     /* GNU ld bug workaround. It refuses to place symtab and strtab in text */

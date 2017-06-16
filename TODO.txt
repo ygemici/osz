@@ -1,14 +1,14 @@
  --- Error fixes ---
-./src/core/pmm.c:218:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
-./src/core/syscall.c:182:            /* FIXME: naive implementation, no checks */
+./src/core/pmm.c:217:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
+./src/core/syscall.c:171:            /* FIXME: naive implementation, no checks */
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
-./src/core/x86_64/sys.c:224:    // TODO: move this printf to init
+./src/core/x86_64/sys.c:227:    // TODO: move this printf to init
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc
-./src/core/msg.c:103:    /* TODO: use mq_buffstart properly as a circular buffer */
-./src/core/sched.c:166:    /* TODO: memory -> swap (except tcb) */
-./src/core/sched.c:182:        /* TODO: swap -> memory */
+./src/core/msg.c:102:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
+./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/exit.c:32:    /* TODO: call atexit handlers and dtors */
 ./src/lib/libc/x86_64/crt0.S:45:    /* TODO: call ctors */

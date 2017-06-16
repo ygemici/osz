@@ -28,7 +28,6 @@
 #include "env.h"
 
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
-extern sysinfo_t sysinfostruc;  //sysinfo structure
 extern uint64_t isr_next;       //next thread to map when isr finishes
 extern uint8_t idle_first;      //flag to indicate first idle schedule
 
@@ -106,10 +105,9 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 {
     OSZ_tcb *tcba = (OSZ_tcb*)&tmpalarm;
     /* if alarm time is in the past, make sure it's running and return */
-    if(sysinfostruc.ticks[TICKS_TS]>sec || 
-        (sysinfostruc.ticks[TICKS_TS]==sec && sysinfostruc.ticks[TICKS_NTS]>nsec)) {
-            sched_awake(tcb);
-            return;
+    if(ticks[TICKS_TS]>sec || (ticks[TICKS_TS]==sec && ticks[TICKS_NTS]>nsec)) {
+        sched_awake(tcb);
+        return;
     }
 #if DEBUG
     if(debug&DBG_SCHED)
@@ -184,7 +182,7 @@ void sched_awake(OSZ_tcb *tcb)
     }
     if(tcb->state == tcb_state_blocked) {
         /* ccb.hd_blocked -> ccb.hd_active */
-        tcb->blkcnt += sysinfostruc.ticks[TICKS_LO] - tcb->blktime;
+        tcb->blkcnt += ticks[TICKS_LO] - tcb->blktime;
         tcb->blktime = 0;
         sched_add(tcb);
         if(ccb.hd_blocked == pid) {
@@ -264,7 +262,7 @@ void sched_block(OSZ_tcb *tcb)
     if(debug&DBG_SCHED)
         kprintf("sched_block(%x)\n", tcb->mypid);
 #endif
-    tcb->blktime = sysinfostruc.ticks[TICKS_LO];
+    tcb->blktime = ticks[TICKS_LO];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
     pid_t pid = tcb->mypid;

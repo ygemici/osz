@@ -37,7 +37,6 @@ extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 extern pid_t *services;
-extern sysinfo_t sysinfostruc;
 
 /* Main scructure */
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
@@ -62,8 +61,8 @@ void* pmm_alloc()
         fmem++;
     if(i) {
         /* add entropy */
-        sysinfostruc.srand[(i+0)%4] ^= (uint64_t)fmem->base;
-        sysinfostruc.srand[(i+2)%4] ^= (uint64_t)fmem->base;
+        srand[(i+0)%4] ^= (uint64_t)fmem->base;
+        srand[(i+2)%4] ^= (uint64_t)fmem->base;
         kentropy();
         /* allocate page */
         if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
@@ -97,8 +96,8 @@ again:
     i--;
     if(i<pmm.size) {
         /* add entropy */
-        sysinfostruc.srand[(i+0)%4] ^= fmem->base;
-        sysinfostruc.srand[(i+3)%4] ^= fmem->base;
+        srand[(i+0)%4] ^= fmem->base;
+        srand[(i+3)%4] ^= fmem->base;
         kentropy();
         /* alignment */
         if(fmem->base & (__SLOTSIZE-1)){
@@ -228,8 +227,6 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
-    sysinfostruc.magic = SYSINFO_MAGICH;
-    sysinfostruc.mem_total = (uint32_t)pmm.totalpages;
     // memory check, -1 for rounding errors
     if(m/1024/1024 < PHYMEM_MIN-1)
         kpanic("Not enough memory. At least %d Mb of RAM required.", PHYMEM_MIN);
@@ -248,9 +245,7 @@ void pmm_init()
 
     //first real message
     syslog_early("Started uuid %4x-%2x-%2x-%8x",
-        (uint32_t)sysinfostruc.srand[0],
-        (uint16_t)sysinfostruc.srand[1],(uint16_t)sysinfostruc.srand[2],
-        sysinfostruc.srand[3]);
+        (uint32_t)srand[0],(uint16_t)srand[1],(uint16_t)srand[2],srand[3]);
     syslog_early("Frame buffer %d x %d @%x",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr);
 
     //dump memory map to log

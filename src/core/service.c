@@ -26,14 +26,12 @@
  */
 
 #include <elf.h>
-#include <sys/sysinfo.h>
 #include "env.h"
 
 /* external resources */
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
-extern sysinfo_t sysinfostruc;
 extern pid_t identity_pid;
 
 /* pids of services. Negative pids are service ids and looked up in this */

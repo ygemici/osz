@@ -79,7 +79,7 @@ typedef unsigned char *valist;
 
 extern char _binary_logo_tga_start;
 extern uint64_t isr_currfps;
-extern sysinfo_t sysinfostruc;
+extern uint64_t isr_lastfps;
 #if DEBUG
 uint64_t __attribute__ ((section (".data"))) dbg_rip;
 extern uint8_t dbg_indump;
@@ -209,8 +209,8 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
-    sysinfostruc.srand[offs%4] += (uint64_t)c;
-    sysinfostruc.srand[(offs+1)%4] -= (uint64_t)glyph;
+    srand[offs%4] += (uint64_t)c;
+    srand[(offs+1)%4] -= (uint64_t)glyph;
 #if DEBUG
     dbg_putchar(c);
 #endif
@@ -301,8 +301,8 @@ void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
-    fg=sysinfostruc.fps>=fps+fps/2?0x108010:(sysinfostruc.fps>=fps?0x101080:0x801010);
-    kprintf(" %d fps, ts %d",sysinfostruc.fps,sysinfostruc.ticks[TICKS_TS]);
+    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
+    kprintf(" %d fps, ts %d",isr_lastfps,ticks[TICKS_TS]);
 #if DEBUG
     dbg_putchar(13);
     dbg_putchar(10);

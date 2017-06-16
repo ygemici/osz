@@ -25,11 +25,9 @@
  * @brief Architecture specific environment parser
  */
 
-#include <sys/sysinfo.h>
 #include "isr.h"
 
 /*** for overriding default or autodetected values ***/
-extern sysinfo_t sysinfostruc;
 extern uint64_t ioapic_addr;
 extern uint64_t hpet_addr;
 
@@ -69,15 +67,15 @@ unsigned char *envarch_cs(unsigned char *s)
 void envarch_init()
 {
     // set up defaults
-    sysinfostruc.systables[systable_acpi_idx] = bootboot.x86_64.acpi_ptr;
-    sysinfostruc.systables[systable_smbi_idx] = bootboot.x86_64.smbi_ptr;
-    sysinfostruc.systables[systable_efi_idx] = bootboot.x86_64.efi_ptr;
-    sysinfostruc.systables[systable_mp_idx] = bootboot.x86_64.mp_ptr;
-    sysinfostruc.systables[systable_apic_idx] =
+    systables[systable_acpi_idx] = bootboot.x86_64.acpi_ptr;
+    systables[systable_smbi_idx] = bootboot.x86_64.smbi_ptr;
+    systables[systable_efi_idx] = bootboot.x86_64.efi_ptr;
+    systables[systable_mp_idx] = bootboot.x86_64.mp_ptr;
+    systables[systable_apic_idx] =
             ioapic_addr = hpet_addr = 0;
-    sysinfostruc.systables[systable_dsdt_idx] = (uint64_t)fs_locate("etc/sys/dsdt");
+    systables[systable_dsdt_idx] = (uint64_t)fs_locate("etc/sys/dsdt");
     if(fs_size == 0)
-        sysinfostruc.systables[systable_dsdt_idx] = 0;
+        systables[systable_dsdt_idx] = 0;
 }
 
 /**
@@ -95,7 +93,7 @@ unsigned char *envarch_parse(unsigned char *env)
 	if(!kmemcmp(env, "apic=", 5)) {
 		env += 5;
 		// we only accept hex value for this parameter
-		env = env_hex(env, (uint64_t*)&sysinfostruc.systables[systable_apic_idx], 1024*1024, 0);
+		env = env_hex(env, (uint64_t*)&systables[systable_apic_idx], 1024*1024, 0);
 	} else
 	// manually override IOAPIC address
 	if(!kmemcmp(env, "ioapic=", 7)) {

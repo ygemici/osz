@@ -29,7 +29,6 @@
 
 #include <lastbuild.h>
 #include <sys/init.h>
-#include <sys/sysinfo.h>
 #include <sys/video.h>
 #include "../font.h"
 
@@ -55,10 +54,10 @@ extern uint8_t sys_fault;
 extern uint64_t lastsym;
 extern char *addr_base;
 extern uint64_t bogomips;
+extern uint64_t isr_lastfps;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 extern char osver[];
-extern sysinfo_t sysinfostruc;
 
 extern uchar *elf_sym(virt_t addr);
 extern virt_t elf_lookupsym(uchar *sym, size_t size);
@@ -266,7 +265,7 @@ void dbg_tcb()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    t=(tcb->state==tcb_state_running?0:sysinfostruc.ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
+    t=(tcb->state==tcb_state_running?0:ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
     kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, t);
     kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
     if(tcb->state==tcb_state_blocked) {
@@ -957,7 +956,7 @@ void dbg_sysinfo()
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("[System Information Structure @%x]\n",&sysinfostruc);
+    kprintf("[System Information]\n");
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
@@ -971,8 +970,7 @@ void dbg_sysinfo()
     if(dbg_tui)
         dbg_settheme();
     kprintf("time: %d.%d, overall ticks: %d *2^64 + %d\n\n",
-        sysinfostruc.ticks[TICKS_TS], sysinfostruc.ticks[TICKS_NTS],
-        sysinfostruc.ticks[TICKS_HI], sysinfostruc.ticks[TICKS_LO]);
+        ticks[TICKS_TS], ticks[TICKS_NTS], ticks[TICKS_HI], ticks[TICKS_LO]);
 
     fg=dbg_theme[4];
     if(dbg_tui)
@@ -981,8 +979,7 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("seed: %8x%8x%8x%8x\n\n",
-        sysinfostruc.srand[0], sysinfostruc.srand[1], sysinfostruc.srand[2], sysinfostruc.srand[3]);
+    kprintf("seed: %8x%8x%8x%8x\n\n", srand[0], srand[1], srand[2], srand[3]);
 
     fg=dbg_theme[4];
     if(dbg_tui)
@@ -992,10 +989,9 @@ void dbg_sysinfo()
     if(dbg_tui)
         dbg_settheme();
     kprintf(" acpi: %8x, smbi: %8x, uefi: %8x\n mp:   %8x,",
-        sysinfostruc.systables[0], sysinfostruc.systables[1],
-        sysinfostruc.systables[2], sysinfostruc.systables[3]);
+        systables[0], systables[1], systables[2], systables[3]);
     kprintf(" apic: %8x, dsdt: %8x\n\n",
-        sysinfostruc.systables[4], sysinfostruc.systables[5]);
+        systables[4], systables[5]);
 
     fg=dbg_theme[4];
     if(dbg_tui)
@@ -1005,7 +1001,7 @@ void dbg_sysinfo()
     if(dbg_tui)
         dbg_settheme();
     kprintf("display: %d %s, fps: %d\n",
-        display, disp[display], sysinfostruc.fps);
+        display, disp[display], isr_lastfps);
     kprintf("framebuffer: @%8x, %dx%d, scanline %d,",
         bootboot.fb_ptr, bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline);
     kprintf(" type: %d %s\n\n",bootboot.fb_type,fbt[bootboot.fb_type]);

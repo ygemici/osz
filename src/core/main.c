@@ -44,6 +44,7 @@
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
+#include <lastbuild.h>
 #include "env.h"
 
 char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"

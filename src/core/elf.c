@@ -26,14 +26,12 @@
  */
 
 #include <elf.h>
-#include <sys/sysinfo.h>
 #include "env.h"
 
 /* external resources */
 extern char osver[];
 extern uint8_t _code;
 extern uint64_t *stack_ptr;
-extern sysinfo_t sysinfostruc;
 extern uint8_t sys_fault;
 extern uint8_t scrptr;
 
@@ -78,8 +76,8 @@ void *elf_load(char *fn)
         kpanic("out of memory, text segment too big: %s", fn);
     }
     ret = i;
-    sysinfostruc.srand[(i+1)%4] ^= (uint64_t)elf;
-    sysinfostruc.srand[(i+3)%4] ^= (uint64_t)elf;
+    srand[(i+1)%4] ^= (uint64_t)elf;
+    srand[(i+3)%4] ^= (uint64_t)elf;
 
 #if DEBUG
     if(debug&DBG_ELF)

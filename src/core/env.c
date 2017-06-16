@@ -25,8 +25,6 @@
  * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG)
  */
 
-#include <sys/sysinfo.h>
-
 /*** parsed values ***/
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
@@ -46,7 +44,6 @@ uint8_t __attribute__ ((section (".data"))) rescueshell;
 uint8_t __attribute__ ((section (".data"))) lefthanded;
 
 /*** for overriding default or autodetected values ***/
-extern sysinfo_t sysinfostruc;
 // architecrue specific
 extern void envarch_init();
 extern unsigned char *envarch_parse(unsigned char *env);

@@ -59,6 +59,9 @@ uint8_t __attribute__ ((section (".data"))) sys_fault;
 uint8_t __attribute__ ((section (".data"))) idle_first;
 pid_t __attribute__ ((section (".data"))) identity_pid;
 
+/* system tables */
+uint64_t __attribute__ ((section (".data"))) systables[8];
+
 /**
  *  reboot computer
  */

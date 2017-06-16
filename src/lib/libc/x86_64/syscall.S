@@ -37,7 +37,6 @@
 .global lockacquire
 .global lockrelease
 .global dl
-.global sysinfo
 .global yield
 .global seterr
 .global setirq
@@ -203,17 +202,7 @@ dl:
     movb    $SYS_dl, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
-    jmp     2f
-
-/**
- * sysinfo_t *sysinfo()
- */
-sysinfo:
-    xorq    %rdi, %rdi
-    movb    $SYS_sysinfo, %dil
-    movl    $0x646E6573, %eax # 'send'
-    syscall
-2:  call    mymq_recv
+    call    mymq_recv
     mov     8(%rax), %rax
     ret
 

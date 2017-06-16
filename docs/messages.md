@@ -141,13 +141,6 @@ In OS/Z the classic syscall (in UNIX sense) equivalent is sending a message to p
 
 Examples
 ```
-    xorq    %rdi, %rdi
-    movb    $SYS_sysinfo, %dil
-    movl    $0x646E6573, %eax # 'send'
-    syscall
-```
-or
-```
     xorq    %rsi, %rsi
     movb    $EINVAL, %sil
     xorq    %rdi, %rdi

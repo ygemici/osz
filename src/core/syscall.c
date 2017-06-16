@@ -39,7 +39,6 @@ extern uint64_t isr_getts(char *p,int16_t timezone);
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
 extern pid_t identity_pid;
-extern sysinfo_t sysinfostruc;
 extern phy_t screen[2];
 
 /**
@@ -78,16 +77,6 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_dl:
             break;
 
-        case SYS_sysinfo:
-            // update dynamic fields
-            sysinfostruc.mem_free = pmm.freepages;
-            // reply with ptr message to map sysinfostruc in userspace
-            msg_send(EVT_DEST(tcb->mypid) | MSG_PTRDATA | EVT_FUNC(SYS_ack),
-                (virt_t)&sysinfostruc,
-                sizeof(sysinfo_t),
-                SYS_sysinfo);
-            break;
-
         case SYS_swapbuf:
             /* only UI allowed to send swapbuf */
             if(tcb->mypid == services[-SRV_UI]) {
@@ -111,8 +100,8 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
             if(tcb->priority == PRI_DRV || thread_allowed("stime", A_WRITE)) {
-                sysinfostruc.ticks[TICKS_TS] = arg0;
-                sysinfostruc.ticks[TICKS_NTS] = 0;
+                ticks[TICKS_TS] = arg0;
+                ticks[TICKS_NTS] = 0;
             } else {
                 tcb->errno = EACCES;
             }
@@ -137,7 +126,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_alarm:
             /* suspend thread for arg0 sec and arg1 microsec.
              * Values smaller than alarmstep already handled by isr_syscall0 in isrc.S */
-            sched_alarm(tcb, sysinfostruc.ticks[TICKS_TS]+arg0, sysinfostruc.ticks[TICKS_NTS]+arg1);
+            sched_alarm(tcb, ticks[TICKS_TS]+arg0, ticks[TICKS_NTS]+arg1);
             break;
 
         case SYS_mapfile:

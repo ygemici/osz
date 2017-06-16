@@ -38,7 +38,6 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 
 extern uint64_t ioapic_addr;
 extern uint64_t hpet_addr;
-extern sysinfo_t sysinfostruc;
 
 /* from isrs.S */
 extern void isr_exc00divzero();
@@ -63,6 +62,7 @@ uint64_t __attribute__ ((section (".data"))) *safestack;
 
 /* current fps counter */
 uint64_t __attribute__ ((section (".data"))) isr_currfps;
+uint64_t __attribute__ ((section (".data"))) isr_lastfps;
 /* alarm queue stuff */
 uint64_t __attribute__ ((section (".data"))) tmrfreq;
 uint8_t  __attribute__ ((section (".data"))) tmrirq;
@@ -83,6 +83,11 @@ uint16_t __attribute__ ((section (".data"))) isr_maxirq;
 uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
 uint64_t __attribute__ ((section (".data"))) bogomips;
+
+/* timer ticks */
+uint64_t __attribute__ ((section (".data"))) ticks[4];
+/* random seed */
+uint64_t __attribute__ ((section (".data"))) srand[4];
 
 /**
  *  get UTC system timestamp from a BCD local date
@@ -225,9 +230,9 @@ void isr_init()
     qdiv = tmrfreq/quantum; //number of ints to a task switch
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
-    sysinfostruc.ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
-    sysinfostruc.ticks[TICKS_NTS] = isr_currfps = sysinfostruc.fps =
-    sysinfostruc.ticks[TICKS_HI] = sysinfostruc.ticks[TICKS_LO] = 0;
+    ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
+    ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
+    ticks[TICKS_HI] = ticks[TICKS_LO] = 0;
     // set up system counters
     seccnt = 1;
     qcnt = quantum;

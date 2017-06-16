@@ -33,7 +33,6 @@
 #ifndef _AS
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/sysinfo.h>
 #include "../../loader/bootboot.h"
 #endif
 #include <syscall.h>
@@ -46,6 +45,20 @@
 #define FILE_ADDRESS   (BSS_ADDRESS-__SLOTSIZE)    // 4G-2M list of open files
 #define BUF_ADDRESS    (0x00007fff00000000)        //128T-4G data, slot alloced buffers
 #define SBSS_ADDRESS   (0xFFFF800000000000)        //shared memory, see bztalloc.c
+
+/* ticks indeces for counters */
+#define TICKS_TS 0      //+00 timestamp sec counter
+#define TICKS_NTS 1     //+08 timestamp nanosec fraction
+#define TICKS_LO 2      //+16 overall ticks (jiffies, 128 bit)
+#define TICKS_HI 3      //+24
+
+/* system tables */
+#define systable_acpi_idx 0
+#define systable_smbi_idx 1
+#define systable_efi_idx 2
+#define systable_mp_idx 3
+#define systable_dsdt_idx 4
+#define systable_apic_idx 5
 
 #include "msg.h"
 #include "env.h"
@@ -81,6 +94,10 @@ typedef struct {
     uint64_t offs;
     char *sym;
 } OSZ_rela;
+
+extern uint64_t srand[4];
+extern uint64_t ticks[4];
+extern uint64_t systables[8];
 
 // kernel function routines
 

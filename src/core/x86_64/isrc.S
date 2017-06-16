@@ -253,12 +253,12 @@ isr_tmrcalibrate:
  */
 isr_timer:
 /* global clocksource */
-    /* uint128_t sysinfostruc.ticks[TICKS_LO]++ */
-    movq    $sysinfostruc + sysinfo_ticks, %rbx
+    /* uint128_t ticks[TICKS_LO]++ */
+    movq    $ticks, %rbx
     addq    $1, 16(%rbx)
     adcq    $0, 24(%rbx)
 
-    /* sysinfostruc.ticks[TICKS_NTS] += alarmstep; */
+    /* ticks[TICKS_NTS] += alarmstep; */
     movq    alarmstep, %rax
     addq    %rax, 8(%rbx)
 
@@ -268,15 +268,15 @@ isr_timer:
     xorq    %rax, %rax
     cmpq    %rax, seccnt
     jnz     1f
-    /* sysinfostruc.ticks[TICKS_TS]++; sysinfostruc.ticks[TICKS_NTS]=0; */
+    /* ticks[TICKS_TS]++; ticks[TICKS_NTS]=0; */
     incq    (%rbx)
     movq    %rax, 8(%rbx)
     /* seccnt = tmrfreq; */
     movq    tmrfreq, %rax
     movq    %rax, seccnt
-    /* sysinfoctruc.fps = isr_currfps; isr_currfps=0; */
+    /* isr_lastfps = isr_currfps; isr_currfps=0; */
     movw    isr_currfps, %ax
-    movw    %ax, sysinfostruc + sysinfo_fps
+    movw    %ax, isr_lastfps
     xorw    %ax, %ax
     movw    %ax, isr_currfps
 #if DEBUG
@@ -304,15 +304,15 @@ isr_timer:
     orq     %rax, %rax
     jz      1f
     /* has a pid, it's tcb is mapped at tmpalarm then */
-    movq    $sysinfostruc + sysinfo_ticks, %rbx
+    movq    $ticks, %rbx
     movq    $tmpalarm, %rdi
-    /* tcb->alarmsec < sysinfostruc.ticks[TICKS_TS]? */
+    /* tcb->alarmsec < ticks[TICKS_TS]? */
     movq    728(%rdi), %rax
     cmpq    (%rbx), %rax
     ja      1f
-    /* tcb->alarmsec > sysinfostruc.ticks[TICKS_TS]? */
+    /* tcb->alarmsec > ticks[TICKS_TS]? */
     jb      2f
-    /* tcb->alarmns <= sysinfostruc.ticks[TICKS_NTS]? */
+    /* tcb->alarmns <= ticks[TICKS_NTS]? */
     movq    736(%rdi), %rax
     cmpq    8(%rbx), %rax
     ja      1f

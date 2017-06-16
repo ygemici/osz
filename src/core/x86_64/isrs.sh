@@ -421,13 +421,13 @@ else
 		    call	kpanic
 		    1:
 		    /* find apic physical address */
-		    movq	sysinfostruc+sysinfo_apic_ptr, %rax
+		    movq	systables+systable_apic_ptr*8, %rax
 		    orq		%rax, %rax
 		    jnz		1f
 		    movl	\$0x1B, %ecx
 		    rdmsr
 		    andw	\$0xF000, %ax
-		    movq	%rax, sysinfo_apic_ptr
+		    movq	%rax, systables + systable_apic_ptr*8
 		    1:
 		    /* map apic at pmm.bss_end and increase bss pointer */
 		    movq	pmm + 40, %rdi

@@ -31,7 +31,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 #endif
-#include <sys/sysinfo.h>
 #include <syscall.h>
 #include "tcb.h"
 #include "ccb.h"
