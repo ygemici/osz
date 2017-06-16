@@ -102,6 +102,13 @@ isr_syscall0:
     movq    %rcx, __PAGESIZE-40
     /* use %r12 in ABI as %rcx and %r11 are clobbered */
     movq    %r12, %rcx
+#if DEBUG
+    orl     %eax, %eax
+    jnz     1f
+    callq   kprintf
+    jmp     6f
+1:
+#endif
     /* tcp->rsp, save stack pointer and switch to core stack */
     movq    %rsp, __PAGESIZE-16
     movq    safestack, %rsp
@@ -219,9 +226,9 @@ isr_syscall0:
     ja      9f
     movq    $__PAGESIZE-40, %rsp
     iretq
-9:  movq    __PAGESIZE-24, %r11
+9:  movq    __PAGESIZE-16, %rsp
+6:  movq    __PAGESIZE-24, %r11
     movq    __PAGESIZE-40, %rcx
-    movq    __PAGESIZE-16, %rsp
     sysretq
 
 /**

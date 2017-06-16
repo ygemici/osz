@@ -85,10 +85,6 @@ void service_init(int subsystem, char *fn)
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
-#ifdef DEBUG
-        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
-        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
-#endif
 
         // block identity process at once
         if(identity_pid == pid) {
@@ -157,10 +153,6 @@ void fs_init()
         // map initrd in "fs" task's memory
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BUF_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
-#ifdef DEBUG
-        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
-        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
-#endif
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
@@ -226,10 +218,6 @@ void ui_init()
 
     // dynamic linker
     if(elf_rtlink()) {
-#ifdef DEBUG
-        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
-        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
-#endif
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
 

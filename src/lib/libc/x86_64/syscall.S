@@ -46,11 +46,22 @@
 .global mapfile
 .global sleep
 .global usleep
+#if DEBUG
+.global dbg_printf
+#endif
 
 /* don't use directly, use mq_dispatch() instead */
 .global mq_dispatchcall
 
 .section .text
+
+#if DEBUG
+dbg_printf:
+    xorq    %rax, %rax
+    movq    %rcx, %r12
+    syscall
+    ret
+#endif
 
 /* dest: pid_t<<16 + msg type */
 

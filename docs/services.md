@@ -29,17 +29,20 @@ CORE
 ----
 
 Special service which runs in privileged supervisor mode. It's always mapped in all memory map.
-The lowest level code of OS/Z like ISRs, physical memory allocation, task switch, timers and such
+The lowest level code of OS/Z like ISRs, physical memory allocation, task switching, timers and such
 are implemented here. All the other services (including the driver tasks) are running in non-privileged
 user mode (ring 3).
 
-Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve().
+Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve(), mmap(), munmap().
 
 Drivers
 -------
 
-Each device driver has it's own task. They are allowed to map MMIO into their bss, and to access i/o address space.
-Only "FS" task and CORE allowed to send message to them.
+Each device driver has it's own task. They are allowed to map MMIO into their BSS, and to access I/O address space.
+Only "FS" task and CORE allowed to send messages to them. There's one exception, the video driver, which receives
+messages from "UI" task and CORE.
+
+Typical functions: IRQ(), ioctl(), setcursor().
 
 FS
 --
@@ -66,7 +69,7 @@ Syslog
 
 The system logger daemon. Syslog's bss segment is a circular buffer that periodically flushed to disk. On boot,
 CORE is gathering it's logs in a temporary buffer (using syslong_early() function). The size of the buffer can be
-configured with `nrlogmax=4`. That buffer is shared with the "syslog" task. You can turn logging off with the
+[configured](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) with `nrlogmax=4`. That buffer is shared with the "syslog" task. You can turn logging off with the
 boot paramter `syslog=false`. When disabled, the same service can be provided by an alternative non-system service.
 
 Typical functions: syslog(), setlogmask().
@@ -75,7 +78,7 @@ Net
 ---
 
 Service that is responsible for handling interfaces and IP routes, and all other networking stuff. You
-can disable networking with the boot parameter `networking=false`. When disabled, the same service can be
+can disable networking with the [boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) `networking=false`. When disabled, the same service can be
 provided by an alternative non-system service.
 
 Typical functions: connect(), accept(), bind(), listen().
@@ -84,7 +87,7 @@ Sound
 -----
 
 Service that mixes several audio channels into a single stream. You
-can disable audio as a whole with the boot parameter `sound=false`. When disabled, the same service can be
+can disable audio as a whole with the [boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) `sound=false`. When disabled, the same service can be
 provided by an alternative non-system service.
 
 Typical functions: speak(), setvolume().
@@ -93,8 +96,11 @@ Init
 ----
 
 This service manages all the other, non-system services. Those include user session daemon, mailer daemon, 
-print daemon, web server etc. 
-You can skip init and start a rescue shell instead with the boot patamerer `rescueshell=true`.
+print daemon, web server etc.
+You can command init to avoid user services and start only a rescue shell instead with the boot patamerer `rescueshell=true`.
+Also, if compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config) and if you set `debug=test`
+[boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md), a special `test` process will be started instead
+of `init` that will do system tests.
 
 Typical functions: start(), stop(), restart(), status().
 

@@ -59,6 +59,7 @@ extern uint64_t keymap;     // keymap
 #define DBG_MSG      (1<<8) // ms 256
 #define DBG_LOG      (1<<9) // lo 512
 #define DBG_MALLOC   (1<<10)// ma 1024
+#define DBG_TESTS    (1<<11)// te 2048
 
 /* display options */
 #define DSP_MONO_COLOR   0  // mc flat 2D color

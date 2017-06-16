@@ -81,7 +81,7 @@ public void pointer(uint64_t btn, int32_t dx, int32_t dy, int32_t dz, uint8_t ha
     if(pointers[hand].y>(int32_t)_fb_height) pointers[hand].y=(int32_t)_fb_height;
     pointers[hand].z += dz;
 #if DEBUG
-    dbg_printf("---------pointer %4x  %d ", btn, hand);
+    dbg_printf("pointer %4x  %d ", btn, hand);
     dbg_printf("%x %d,%d,%d\n", pointers[hand].btn,pointers[hand].x,pointers[hand].y,pointers[hand].z);
 #endif
     vid_movecursor(_lefthanded?1-hand:hand,pointers[hand].x,pointers[hand].y);

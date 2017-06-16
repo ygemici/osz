@@ -96,14 +96,14 @@ void main()
 
     /*** step 3: stand up and prosper. ***/
 #if DEBUG
-    service_init(SRV_init, "bin/test");
+    service_init(SRV_init, debug&DBG_TESTS? "bin/test" : "sbin/init");
 #else
     service_init(SRV_init, "sbin/init");
+#endif
     if(identity) {
         /* start first time turn on's set up task */
         service_init(SRV_USRFIRST, "sbin/identity");
     }
-#endif
     // enable system multitasking. That will start by iterating
     // through device driver's initialization routines. Each in different
     // task, scheduler will choose them one by one and...

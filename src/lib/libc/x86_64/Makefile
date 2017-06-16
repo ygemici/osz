@@ -6,6 +6,9 @@ OBJS = $(TMP:.S=.o)
 LIBS =
 
 CFLAGS = -Wall -fpic -ffreestanding -fPIC -nostdinc
+ifeq ($(DEBUG),1)
+CFLAGS += -DDEBUG=1
+endif
 
 all: $(OBJS) ok
 

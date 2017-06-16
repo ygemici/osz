@@ -1017,10 +1017,10 @@ void dbg_sysinfo()
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("cpu: %d bogomips, quantum: %d ticks, nrphymax: %d, nrmqmax: %d, nrsrvmax: %d, nrlogmax: %d\n",
-        bogomips, quantum, nrphymax, nrmqmax, nrsrvmax, nrlogmax);
-    kprintf("keyboard map: %a, debug flags: %x, rescueshell: %s\n\n",
-        keymap, debug, rescueshell?"true":"false");
+    kprintf("cpu: %d bogomips, quantum: %d ticks\nnrphymax: %d, nrmqmax: %d, nrsrvmax: %d",
+        bogomips, quantum, nrphymax, nrmqmax, nrsrvmax);
+    kprintf(", nrlogmax: %d\nkeyboard map: %a, debug flags: %x, rescueshell: %s, lefthanded: %s\n\n",
+        nrlogmax, keymap, debug, rescueshell?"true":"false", lefthanded?"true":"false");
 
 }
 

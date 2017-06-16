@@ -59,6 +59,8 @@ This can be a numeric value, or a comma separated list of flags.
 | 128   | sc   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
 | 256   | ms   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
 | 512   | lo   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
+| 1024	| ma   | DBG_MALLOC | debug [memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
+| 2048  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test/main.c) instead of [init](https://github.com/bztsrc/osz/blob/master/docs/services.md) task |
 
 Clock Source
 ------------

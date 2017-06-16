@@ -177,7 +177,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_mmap:
 #if DEBUG
         if(debug&DBG_MALLOC)
-            kprintf("pid %2x mmap(%x, %d, %x)\n", tcb->mypid, arg0, arg1, arg2);
+            kprintf("mmap(%x, %d, %x) pid %2x\n", arg0, arg1, arg2, tcb->mypid);
 #endif
             /* FIXME: naive implementation, no checks */
             data=(void *)arg0;
@@ -192,7 +192,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_munmap:
 #if DEBUG
         if(debug&DBG_MALLOC)
-            kprintf("pid %2x munmap(%x, %d)\n", tcb->mypid, arg0, arg1);
+            kprintf("munmap(%x, %d) pid %2x\n", arg0, arg1, tcb->mypid);
 #endif
             break;
 

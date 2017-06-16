@@ -28,17 +28,20 @@
 #ifndef	_STDLIB_H
 #define	_STDLIB_H	1
 
+#include <sys/mman.h>
+
 /* We define these the same for all machines.
    Changes from this to the outside world should be done in `_exit'.  */
 #define	EXIT_FAILURE	1	/* Failing exit status.  */
 #define	EXIT_SUCCESS	0	/* Successful exit status.  */
 
 #ifdef DEBUG
+/* debug flags, and user mode kprintf */
 #define DBG_LOG    (1<<9)
 #define DBG_MALLOC (1<<10)
+#define DBG_TESTS  (1<<11)
 extern uint32_t _debug;
 extern void dbg_printf(char * fmt, ...);
-extern void dbg_putchar(int c);
 #endif
 
 extern unsigned char *stdlib_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
@@ -52,23 +55,23 @@ extern long long int atoll (char *__nptr);
 
 /* memory allocator. Use different macros if you want a different allocator */
 #ifndef _BZT_ALLOC
-extern void *bzt_alloc(void *arena,size_t a,void *ptr,size_t s);
+extern void *bzt_alloc(void *arena,size_t a,void *ptr,size_t s,int flag);
 extern void bzt_free(void *arena, void *ptr);
 extern void bzt_dumpmem(void *arena);
 #endif
 
 /* Thread Local Storage */
-#define malloc(s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,s)
-#define calloc(n,s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,n*s)
-#define realloc(p,s) bzt_alloc((void*)BSS_ADDRESS,8,p,s)
-#define memalign(s) bzt_alloc((void*)BSS_ADDRESS,a,NULL,s)
+#define malloc(s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,s,MAP_PRIVATE)
+#define calloc(n,s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,n*s,MAP_PRIVATE)
+#define realloc(p,s) bzt_alloc((void*)BSS_ADDRESS,8,p,s,MAP_PRIVATE)
+#define memalign(s) bzt_alloc((void*)BSS_ADDRESS,a,NULL,s,MAP_PRIVATE)
 #define free(p) bzt_free((void*)BSS_ADDRESS,p)
 
 /* Shared Memory */
-#define smalloc(s) bzt_alloc((void*)SBSS_ADDRESS,8,NULL,s)
-#define scalloc(n,s) bzt_alloc((void*)SBSS_ADDRESS,8,NULL,n*s)
-#define srealloc(p,s) bzt_alloc((void*)SBSS_ADDRESS,8,p,s)
-#define smemalign(s) bzt_alloc((void*)SBSS_ADDRESS,a,NULL,s)
+#define smalloc(s) bzt_alloc((void*)SBSS_ADDRESS,8,NULL,s,MAP_SHARED)
+#define scalloc(n,s) bzt_alloc((void*)SBSS_ADDRESS,8,NULL,n*s,MAP_SHARED)
+#define srealloc(p,s) bzt_alloc((void*)SBSS_ADDRESS,8,p,s,MAP_SHARED)
+#define smemalign(s) bzt_alloc((void*)SBSS_ADDRESS,a,NULL,s,MAP_SHARED)
 #define sfree(p) bzt_free((void*)SBSS_ADDRESS,p)
 
 /*** unimplemented ***/

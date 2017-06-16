@@ -184,6 +184,8 @@ unsigned char *env_debug(unsigned char *s)
         if(s[0]=='L' && s[1]=='O')              debug |= DBG_LOG;
         if(s[0]=='m' && s[1]=='a')              debug |= DBG_MALLOC;
         if(s[0]=='M' && s[1]=='A')              debug |= DBG_MALLOC;
+        if(s[0]=='t' && s[1]=='e')              debug |= DBG_TESTS;
+        if(s[0]=='T' && s[1]=='E')              debug |= DBG_TESTS;
         s++;
     }
     return s;

@@ -126,7 +126,7 @@ public void keypress(uint64_t scancode, keymap_t keycode)
         *((keymap_t*)&k) = keycode;
     }
 #if DEBUG
-    dbg_printf("-------------keypress %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
+    dbg_printf("  keypress %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
 #endif
     // handle key modifiers
     if(k[0]=='L' || k[0]=='R') {
@@ -159,9 +159,9 @@ public void keyrelease(uint64_t scancode, keymap_t keycode)
         // serial sends no release messages
     }
 #if DEBUG
-    dbg_printf("------------keyrelease %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
+    dbg_printf("keyrelease %x %c%c%c%c\n", scancode, k[0], k[1], k[2], k[3]);
 #endif
-vid_swapbuf();
+if(k[0]=='R'&&k[1]=='S') vid_swapbuf();
     // handle key modifiers
     if(k[0]=='L' || k[0]=='R') {
         if(k[1]=='S' && k[2]=='f' && k[3]=='t')

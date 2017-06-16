@@ -26,6 +26,11 @@
  */
 #include <osZ.h>
 
+#if DEBUG
+/* debug flags */
+public uint32_t _debug;
+#endif
+
 /* NOTE: that memory allocation functions are macros, see stdlib.h */
 
 unsigned char *stdlib_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)

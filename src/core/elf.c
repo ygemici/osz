@@ -724,7 +724,7 @@ bool_t elf_rtlink()
                                 strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
                         kmemcpy(objptr,&osver,vs+1);
                     }
-kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
+//kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address

@@ -79,13 +79,13 @@ typedef struct {
  * This allocator is used for both thread local storage and shared memory.
  * Arena points to an allocation map (either at BSS_ADDRESS or SBSS_ADDRESS).
  */
-void *bzt_alloc(allocmap_t *arena,size_t a,void *ptr,size_t s)
+void *bzt_alloc(allocmap_t *arena,size_t a,void *ptr,size_t s,int flag)
 {
     uint64_t q;
     int i,j,nc=-1,oc=-1;
     void *fp=arena+ALLOCMAPMAX, *end;
     int prot = PROT_READ | PROT_WRITE;
-    int flag = MAP_FIXED | MAP_ANONYMOUS | ((uint64_t)arena==(uint64_t)BSS_ADDRESS?MAP_PRIVATE:MAP_SHARED);
+    flag |= MAP_FIXED | MAP_ANONYMOUS;
     // get quantum
     for(q=8;q<s;q<<=1);
 
@@ -166,22 +166,23 @@ void bzt_free(allocmap_t *arena, void *ptr)
 void bzt_dumpmem(allocmap_t *arena)
 {
     int i,j,k,l;
-    int mask[]={1,2,4,8,16,32,64,128};
-    uint8_t *m;
-    dbg_printf("-----Arena %x, %s, %d chunks%s, ",
+    int mask[]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
+    char *bmap=".123456789ABCDEF";
+    uint16_t *m;
+    dbg_printf("-----Arena %x, %s%s, ",
         arena,(uint64_t)arena==(uint64_t)BSS_ADDRESS?"lts":"shared",
-        numchunks(arena),(arena->numchunks & (1UL<<63))!=0?" LOCKED":"");
-    dbg_printf("chunksize: %d, max chunks: %d, allocunit per chunk: %d\n",
-        CHUNKSIZE, (ALLOCMAPMAX-8)/sizeof(chunkmap_t), BITMAPSIZE*64);
+        (arena->numchunks & (1UL<<63))!=0?" LOCKED":"");
+    dbg_printf("chunks: %d/%d (%d bytes, %d units)\n",
+        numchunks(arena), (ALLOCMAPMAX-8)/sizeof(chunkmap_t), CHUNKSIZE, BITMAPSIZE*64);
     for(i=0;i<numchunks(arena);i++) {
-        dbg_printf("%3d. %6d %8x - %8x map ",i,
+        dbg_printf("%3d. %6d %x - %x ",i+1,
             arena->chunk[i].quantum,arena->chunk[i].ptr,arena->chunk[i].ptr+chunksize(arena->chunk[i].quantum));
-        m=(uint8_t*)arena->chunk[i].map;
-        for(j=0;j<BITMAPSIZE*8;j++) {
-            k=0; for(l=0;l<8;l++) { if(*m & mask[l]) k++; }
-            dbg_putchar(k+'0');
+        m=(uint16_t*)arena->chunk[i].map;
+        for(j=0;j<BITMAPSIZE*4;j++) {
+            k=0; for(l=0;l<16;l++) { if(*m & mask[l]) k++; }
+            dbg_printf("%c",bmap[k]);
             m++;
         }
-        dbg_printf("%10dk\n",chunksize(arena->chunk[i].quantum)/1024);
+        dbg_printf("%8dk\n",chunksize(arena->chunk[i].quantum)/1024);
     }
 }

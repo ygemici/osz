@@ -81,6 +81,7 @@ extern char _binary_logo_tga_start;
 extern uint64_t isr_currfps;
 extern sysinfo_t sysinfostruc;
 #if DEBUG
+uint64_t __attribute__ ((section (".data"))) dbg_rip;
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
 extern void dbg_setpos();
@@ -265,7 +266,7 @@ void kprintf_putdec(int64_t c)
     } while(c!=0&&i>0);
     if(s)
         tmpstr[--i]='-';
-    if(cnt>0&&cnt<10) {
+    if(cnt>0&&cnt<12) {
         while(i>12-cnt) {
             tmpstr[--i]=' ';
         }
@@ -331,8 +332,8 @@ void kprintf_scrollscr()
             char *msg = " --- Press any key to continue --- ";
             kx = 0; ky=maxy-1;
 #if DEBUG
-	    dbg_putchar(13);
-	    dbg_putchar(10);
+        dbg_putchar(13);
+        dbg_putchar(10);
 #endif
             for(;*msg!=0;msg++) {
                     kprintf_putchar((int)(*msg));
@@ -353,19 +354,19 @@ void kprintf_scrollscr()
                 tmp+=bootboot.fb_scanline;
             }
         }
-	    // scroll the screen, two pixels at once
-	    for(y=0;y<maxy*font->height;y++){
-	        line=offs;
-	        for(x=0;x<w;x++){
-	            *((uint64_t*)(FBUF_ADDRESS + line)) =
-	                *((uint64_t*)(FBUF_ADDRESS + line + shift));
-	            line+=8;
-	        }
-	        offs+=bootboot.fb_scanline;
-	    }
+        // scroll the screen, two pixels at once
+        for(y=0;y<maxy*font->height;y++){
+            line=offs;
+            for(x=0;x<w;x++){
+                *((uint64_t*)(FBUF_ADDRESS + line)) =
+                    *((uint64_t*)(FBUF_ADDRESS + line + shift));
+                line+=8;
+            }
+            offs+=bootboot.fb_scanline;
+        }
     } else {
-		ky = 0;
-	}
+        ky = 0;
+    }
 }
 
 /**
