@@ -701,6 +701,8 @@ bool_t elf_rtlink()
                             {k=1; kmemcpy(objptr,&bootboot.fb_type,1);}
                         if(!kmemcmp(strtable + s->st_name,"_display_type",14) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&display,1);}
+                        if(!kmemcmp(strtable + s->st_name,"_lefthanded",12) && s->st_size>0)
+                            {k=1; kmemcpy(objptr,&lefthanded,1);}
                         if(!kmemcmp(strtable + s->st_name,"_debug",7) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&debug,4);}
                         if(!kmemcmp(strtable + s->st_name,"_rescueshell",13) && s->st_size>0)
@@ -722,7 +724,7 @@ bool_t elf_rtlink()
                                 strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
                         kmemcpy(objptr,&osver,vs+1);
                     }
-//kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
+kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
                 }
                 // look up in relas array which addresses require
                 // this symbol's virtual address

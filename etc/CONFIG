@@ -36,6 +36,7 @@ debug=ma
 //  1 sm = stereo channels, grayscale red-cyan
 //  2 sc = stereo channels, rgb color
 display=0
+//lefthanded=true
 
 // select clock source
 //  0 autodetect, 1 hpet, 2 pit, 3 rtc

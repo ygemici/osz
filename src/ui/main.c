@@ -33,9 +33,10 @@ extern void reset_pointers();
 // filled by real-time linker
 public char _keymap[8];
 public void* _screen_ptr;
-public uint32_t _fb_width;
-public uint32_t _fb_height;
+public uint64_t _fb_width;
+public uint64_t _fb_height;
 public uint8_t _display_type;
+public uint8_t _lefthanded;
 
 public void opentty(){}
 public void openwin(){}

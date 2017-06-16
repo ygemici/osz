@@ -43,6 +43,7 @@ uint8_t __attribute__ ((section (".data"))) syslog;
 uint8_t __attribute__ ((section (".data"))) networking;
 uint8_t __attribute__ ((section (".data"))) sound;
 uint8_t __attribute__ ((section (".data"))) rescueshell;
+uint8_t __attribute__ ((section (".data"))) lefthanded;
 
 /*** for overriding default or autodetected values ***/
 extern sysinfo_t sysinfostruc;
@@ -262,6 +263,11 @@ void env_init()
         if(!kmemcmp(env, "rescueshell=", 12)) {
             env += 12;
             env = env_boolt(env, &rescueshell);
+        } else
+        // left handed
+        if(!kmemcmp(env, "lefthanded=", 11)) {
+            env += 11;
+            env = env_boolt(env, &lefthanded);
         } else
         // run first time turn on's ask for identity task
         if(!kmemcmp(env, "identity=", 9)) {

@@ -187,7 +187,7 @@ popq %rax
     movsxb  %al, %rdx
     shrq    $8, %rax
     /* get delta Y */
-    movsxb  %al, %r10
+    movsxb  %al, %r12
     shrq    $8, %rax
     /* get delta Z */
     movsxb  %al, %r8

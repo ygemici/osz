@@ -30,5 +30,5 @@
 #define SYS_openwin	( 17)
 #define SYS_setcursor	( 20)
 #define SYS_keypress	( 23)
-#define SYS_keyrelease	( 25)
-#define SYS_pointer	( 29)
+#define SYS_keyrelease	( 26)
+#define SYS_pointer	( 30)
