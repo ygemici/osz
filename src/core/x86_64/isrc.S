@@ -100,7 +100,8 @@ isr_syscall0:
     /* make the environment look like in an irq handler */
     /* tcb->rip */
     movq    %rcx, __PAGESIZE-40
-    movq    %r10, %rcx
+    /* use %r12 in ABI as %rcx and %r11 are clobbered */
+    movq    %r12, %rcx
     /* tcp->rsp, save stack pointer and switch to core stack */
     movq    %rsp, __PAGESIZE-16
     movq    safestack, %rsp
@@ -288,7 +289,7 @@ isr_timer:
 /* preemption */
     /* never preempt real-time and driver tasks */
     cmpb    $PRI_DRV, tcb_priority
-    jae     9f
+    jbe     9f
 
     /* check timer queue's head and awake thread if time passed */
     /* ccb.hd_timerq != 0? */

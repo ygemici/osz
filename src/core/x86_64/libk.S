@@ -29,10 +29,8 @@
 .global idle
 .global kpanic
 .global kmemcpy
-.global kmemmove
 .global kmemset
 .global kmemcmp
-.global kmemvid
 .global kmap
 .global kmap_init
 .global kmap_mq
@@ -165,15 +163,6 @@ kpanic:
 kmemcpy:
     movq    %rdx, %rcx
     repnz   movsb
-    ret
-
-kmemmove:
-    addq    %rcx, %rdi
-    addq    %rcx, %rsi
-    movq    %rdx, %rcx
-    std
-    repnz   movsb
-    cld
     ret
 
 kmemset:

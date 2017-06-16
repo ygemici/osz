@@ -31,7 +31,6 @@
 .global kmemcpy
 .global kmemset
 .global kmemcmp
-.global kmemvid
 .global kmap
 .global kmap_init
 .global kstrcpy

@@ -80,8 +80,15 @@ void service_init(int subsystem, char *fn)
 
     // dynamic linker
     if(elf_rtlink()) {
+        // map the first page in bss
+        vmm_mapbss((OSZ_tcb*)(pmm.bss_end), BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
+#ifdef DEBUG
+        //set IOPL=3 in rFlags to permit IO address space for dbg_printf()
+        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
+#endif
 
         // block identity process at once
         if(identity_pid == pid) {

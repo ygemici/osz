@@ -5,7 +5,7 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS =
 
-CFLAGS = -Wall -fpic -ffreestanding -fPIC
+CFLAGS = -Wall -fpic -ffreestanding -fPIC -nostdinc
 
 all: $(OBJS) ok
 

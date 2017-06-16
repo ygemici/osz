@@ -44,12 +44,18 @@
 #define SYS_stimebcd 11     // driver to CORE, cmos local date
 #define SYS_stime 12
 #define SYS_alarm 13
-#define SYS_mmap 14
+#define SYS_mmap 14         // mman functions
 #define SYS_munmap 15
-#define SYS_mapfile 16
-#define SYS_fork 17
-#define SYS_exec 18
-#define SYS_sync 19
+#define SYS_mprotect 16
+#define SYS_msync 17
+#define SYS_mlock 18
+#define SYS_munlock 19
+#define SYS_mlockall 20
+#define SYS_munlockall 21
+#define SYS_mapfile 22      // process functions
+#define SYS_fork 23
+#define SYS_exec 24
+#define SYS_sync 25
 
 // rdi: FFFFFFFFFFFFxxxx File system services
 // see sys/fs.h
@@ -66,7 +72,7 @@
 #ifndef _AS
 #include <sys/stat.h>
 
-//thread-safe libc errno at an absolute address (in TCB)
+//thread-safe libc errno at an absolute address (in TCB). Read-only, use seterr()
 extern uint16_t errno;
 
 // bit manipulations
@@ -85,8 +91,7 @@ void stime(uint64_t utctimestamp);      // set system time
 void setirq(int8_t irq);                // set irq message for this thread
 void sleep(uint64_t sec);               // sleep the thread for sec
 void usleep(uint64_t usec);             // sleep the thread for micro sec
-virt_t mmap(virt_t bss, phy_t addr, size_t size); // map physical address
-void munmap(virt_t bss, size_t size);   // unmap bss (free physical pages)
+// see <sys/mman.h> too
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
 pid_t fork();                           // fork thread
 pid_t exec(uchar *cmd);                 // start a new process in the background

@@ -41,5 +41,4 @@ public void ioctl(){}
 
 void task_init()
 {
-    //void *ptr=malloc(100);
 }

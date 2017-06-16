@@ -551,19 +551,21 @@ bool_t elf_rtlink()
                 if(n >= 2*__PAGESIZE/sizeof(OSZ_rela))
                     break;
                 s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(relad->r_info) * syment);
-                /* get the physical address and sym from stringtable */
-                uint64_t o = (uint64_t)((int64_t)relad->r_offset + j*__PAGESIZE + (int64_t)relad->r_addend);
-                /* because the thread is not mapped yet, we have to translate
-                 * address manually */
-                rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
-                rel->sym = strtable + s->st_name;
+                if(s!=NULL && *(strtable + s->st_name)!=0) {
+                    /* get the physical address and sym from stringtable */
+                    uint64_t o = (uint64_t)((int64_t)relad->r_offset + j*__PAGESIZE + (int64_t)relad->r_addend);
+                    /* because the thread is not mapped yet, we have to translate
+                     * address manually */
+                    rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
+                    rel->sym = strtable + s->st_name;
 #if DEBUG
-                if(debug&DBG_RTIMPORT)
-                    kprintf("    %x D %s +%x?\n", rel->offs,
-                        strtable + s->st_name, relad->r_addend
-                    );
+                    if(debug&DBG_RTIMPORT)
+                        kprintf("    %x D %s +%x?\n", rel->offs,
+                            strtable + s->st_name, relad->r_addend
+                        );
 #endif
-                n++; rel++;
+                    n++; rel++;
+                }
                 /* move pointer to next rela entry */
                 relad = (Elf64_Rela *)((uint8_t *)relad + relaent);
             }
@@ -635,9 +637,7 @@ bool_t elf_rtlink()
         /* dynamic symbol table */
 #if DEBUG
         if(debug&DBG_RTEXPORT)
-            kprintf("  Export %x (%d bytes):\n",
-                sym, strtable-(char*)sym
-            );
+            kprintf("  Export %x (%d bytes):\n", sym, strtable-(char*)sym);
 #endif
         //foreach(sym)
         s=sym;
@@ -701,6 +701,8 @@ bool_t elf_rtlink()
                             {k=1; kmemcpy(objptr,&bootboot.fb_type,1);}
                         if(!kmemcmp(strtable + s->st_name,"_display_type",14) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&display,1);}
+                        if(!kmemcmp(strtable + s->st_name,"_debug",7) && s->st_size>0)
+                            {k=1; kmemcpy(objptr,&debug,4);}
                         if(!kmemcmp(strtable + s->st_name,"_rescueshell",13) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&rescueshell,1);}
                         if(!kmemcmp(strtable + s->st_name,"_keymap",8) && s->st_size==8)

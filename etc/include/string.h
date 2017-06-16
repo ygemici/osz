@@ -35,7 +35,7 @@
 #include <osZ.h>
 
 /* Copy N bytes of SRC to DEST.  */
-#define memcpy(d,s,n) memmove(d,s,n)
+extern void *memcpy (void *dest, void *src, size_t n);
 /* Copy N bytes of SRC to DEST, guaranteeing
    correct behavior for overlapping strings.  */
 extern void *memmove (void *dest, void *src, size_t n);
@@ -44,7 +44,9 @@ extern void *memset (void *s, int c, size_t n);
 
 /* Compare N bytes of S1 and S2.  */
 extern int memcmp (void *s1, void *s2, size_t n);
+/* These are not UTF-8 safe */
 extern void *memchr (void *s, int c, size_t n);
+extern void *memrchr (void *s, int c, size_t n);
 /* Find the first occurrence of NEEDLE in HAYSTACK.
    NEEDLE is NEEDLELEN bytes long;
    HAYSTACK is HAYSTACKLEN bytes long.  */
@@ -68,18 +70,23 @@ extern int strncmp (char *s1, char *s2, size_t n);
 /* Duplicate S, returning an identical malloc'd string.  */
 extern char *strdup (char *s);
 extern char *strndup (char *s, size_t n);
+
+/* In OS/Z, these are UTF-8 safe */
 extern char *strchr (char *s, int c);
 extern char *strrchr (char *s, int c);
-extern char *strpbrk (char *s, char *accept);
+/* Find the first occurrence of NEEDLE in HAYSTACK.  */
 extern char *strstr (char *haystack, char *needle);
+
 /* Divide S into tokens separated by characters in DELIM.  */
 extern char *strtok (char *s, char *delim);
 extern char *strtok_r (char *s, char *delim, char **ptr);
 /* Similar to `strstr' but this function ignores the case of both strings.  */
 extern char *strcasestr (char *haystack, char *needle);
-
 extern size_t strlen (char *s);
 extern size_t strnlen (char *s, size_t maxlen);
+/* Return the number of multibytes (UTF-8 sequences) in S. */
+extern size_t mbstrlen (char *s);
+extern size_t mbstrnlen (char *s, size_t maxlen);
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 extern char *strerror (int errnum);
 /* Return the position of the first bit set in I, or 0 if none are set.

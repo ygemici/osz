@@ -188,7 +188,7 @@ void sys_init()
         drv_init("lib/sys/input/ps2.so");
         drv_init("lib/sys/display/fb.so");
     } else {
-        // load devices which don't have entry in any ACPI tables
+        // load devices which are not coverable by bus enumeration
         for(c=drvs;c<drvs_end;) {
             f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
             // skip filesystem drivers

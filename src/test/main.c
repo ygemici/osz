@@ -26,10 +26,42 @@
  */
 #include <osZ.h>
 
+void mmap_test()
+{
+    void *ptr=malloc(100);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    void *ptr2=malloc(200);
+    dbg_printf("ptr2=%x errno=%d\n",ptr2, errno);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    void *ptr3=malloc(100);
+    dbg_printf("ptr3=%x errno=%d\n",ptr3, errno);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    ptr=realloc(ptr,120);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    ptr=realloc(ptr,200);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+}
+
 int main(int argc, char**argv)
 {
-    while(1) {
-//        mq_recv();
-    }
+    //wait until sys_ready() sends us an SYS_ack message
+    mq_recv();
+    dbg_printf("\n------------------------- TESTS ----------------------------\n");
+    
+    //do tests
+    mmap_test();
+
+    dbg_printf("------------------------- TESTS END ----------------------------\n\n");
+    breakbochs;
+
+    //do nothing
+    while(1) mq_recv();
     return 0;
 }

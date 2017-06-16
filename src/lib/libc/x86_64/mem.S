@@ -25,40 +25,6 @@
  * @brief Low level memory operations
  */
 
-.global memcpy
-.global memzero
-.global memmove
-.global memset
-.global memcmp
-.global memchr
 
 .section .text
 
-memcpy:
-    repnz   movsb
-    ret
-
-memzero:
-    movq    16(%rsp), %rcx
-    movq    8(%rsp), %rdi
-    xor     %rax, %rax
-    repnz   stosb
-    ret
-
-memmove:
-    movq    24(%rsp), %rcx
-    movq    16(%rsp), %rsi
-    movq    8(%rsp), %rdi
-    repnz   movsb
-    ret
-
-memset:
-    movq    %rsi, %rax
-    repnz   stosb
-    ret
-
-memcmp:
-    ret
-
-memchr:
-    ret

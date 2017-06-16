@@ -33,6 +33,9 @@ private char dbg_tmpstr[33];
 /* argument */
 private uint8_t dbg_cnt;
 
+/* debug flags */
+public uint32_t _debug;
+
 void dbg_printf(char* fmt, ...);
 
 void dbg_putchar(int c)
@@ -55,13 +58,18 @@ void dbg_putascii(int64_t c)
 
 void dbg_putdec(int64_t c)
 {
-    int i=12;
+    int i=12,s=c<0;
+    if(s) c*=-1;
+    if(c>99999999999)
+        c=99999999999;
     dbg_tmpstr[i]=0;
     do {
         dbg_tmpstr[--i]='0'+(c%10);
         c/=10;
     } while(c!=0&&i>0);
-    if(dbg_cnt>0&&dbg_cnt<10) {
+    if(s)
+        dbg_tmpstr[--i]='-';
+    if(dbg_cnt>0&&dbg_cnt<12) {
         while(i>12-dbg_cnt) {
             dbg_tmpstr[--i]=' ';
         }

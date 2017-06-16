@@ -28,8 +28,8 @@ fps=20
 //  mm = memory map, th = threads, el = elf loading,
 //  ri = run-time linker imports, re = run-time exports
 //  ir = IRQ Routing Table, de = devices, sc = scheduler
-//  ms = messaging, lo = print out system log
-debug=
+//  ms = messaging, ma = memory allocation, lo = print out system log
+debug=ma
 
 // display transformation type, decimal number 0-3 or one of:
 //  0 mc = mono channel, rgb color

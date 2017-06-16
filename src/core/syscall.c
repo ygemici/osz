@@ -29,6 +29,7 @@
 #include <fsZ.h>
 #include <sysexits.h>
 #include <sys/video.h>
+#include <sys/mman.h>
 #include "env.h"
 
 /* external resources */
@@ -173,8 +174,30 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* return loaded file size */
             return fs_size;
 
+        case SYS_mmap:
+#if DEBUG
+        if(debug&DBG_MALLOC)
+            kprintf("pid %2x mmap(%x, %d, %x)\n", tcb->mypid, arg0, arg1, arg2);
+#endif
+            /* FIXME: naive implementation, no checks */
+            data=(void *)arg0;
+            arg1=(arg1+__PAGESIZE-1)/__PAGESIZE;
+            j=arg2&PROT_WRITE? PG_USER_RW : PG_USER_RO;
+            for(i=0;i<arg1;i++) {
+                vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(), __PAGESIZE, j);
+                arg0+=__PAGESIZE;
+            }
+            return (uint64_t)data;
+        
+        case SYS_munmap:
+#if DEBUG
+        if(debug&DBG_MALLOC)
+            kprintf("pid %2x munmap(%x, %d)\n", tcb->mypid, arg0, arg1);
+#endif
+            break;
+
         default:
-            tcb->errno = ENXIO;
+            tcb->errno = EPERM;
             return (uint64_t)false;
     }
     return (uint64_t)true;

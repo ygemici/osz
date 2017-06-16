@@ -34,8 +34,13 @@
 #define	EXIT_SUCCESS	0	/* Successful exit status.  */
 
 #ifdef DEBUG
+#define DBG_LOG    (1<<9)
+#define DBG_MALLOC (1<<10)
+extern uint32_t _debug;
 extern void dbg_printf(char * fmt, ...);
+extern void dbg_putchar(int c);
 #endif
+
 extern unsigned char *stdlib_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern unsigned char *stdlib_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 
@@ -49,6 +54,7 @@ extern long long int atoll (char *__nptr);
 #ifndef _BZT_ALLOC
 extern void *bzt_alloc(void *arena,size_t a,void *ptr,size_t s);
 extern void bzt_free(void *arena, void *ptr);
+extern void bzt_dumpmem(void *arena);
 #endif
 
 /* Thread Local Storage */

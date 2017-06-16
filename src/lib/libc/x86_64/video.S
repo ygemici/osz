@@ -64,7 +64,7 @@ vid_loadcursor:
  * void vid_movecursor(int hand,int x,int y);
  */
 vid_movecursor:
-    movq    %rdx, %r10
+    movq    %rdx, %r12
     movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    $SRV_video, %rdi

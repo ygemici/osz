@@ -41,6 +41,8 @@
 .global yield
 .global seterr
 .global setirq
+.global mmap
+.global munmap
 .global mapfile
 .global sleep
 .global usleep
@@ -58,7 +60,7 @@
 mq_send:
     # non-blocking send message
     /* this will call msg_sends() in core */
-    movq     %rcx, %r10
+    movq     %rcx, %r12
     movl     $0x646E6573, %eax # 'send'
     syscall
     ret
@@ -78,7 +80,7 @@ mymq_call:
     shrq     $32, %rax
     movswl   %ax, %eax
     movl     %eax, MQ_ADDRESS + 28
-    movq     %rcx, %r10
+    movq     %rcx, %r12
     movl     $0x6c6c6163, %eax # 'call'
     syscall
     /* unlock */
@@ -99,7 +101,7 @@ mymq_recv:
     movq     8(%rbx), %rax
     cmpq     (%rbx), %rax
     jne      2f
-    movq     %rcx, %r10
+    movq     %rcx, %r12
     movl     $0x76636572, %eax # 'recv'
     /* block until we receive something */
     syscall
@@ -234,6 +236,46 @@ regservice:
     movq    %rdi, %rsi
     xorq    %rdi, %rdi
     movb    $SYS_regservice, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/**
+ * void *mmap (void *addr, size_t len, int prot, int flags, int fd, off_t offset);
+ */
+mmap:
+    movq    %rcx, %r12 //flags
+    shlq    $8, %r12
+    addq    %rdx, %r12 //prot
+    movq    %rsi, %rdx //len
+    movq    %rdi, %rsi //addr
+    xorq    %rdi, %rdi
+    movb    $SYS_mmap, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/**
+ * int munmap (void *addr, size_t len);
+ */
+munmap:
+    movq    %rsi, %rdx //len
+    movq    %rdi, %rsi //addr
+    xorq    %rdi, %rdi
+    movb    $SYS_munmap, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    ret
+
+/**
+ * int mprotect (void *addr, size_t len, int prot);
+ */
+mprotect:
+    movq    %rdx, %r12  //prot
+    movq    %rsi, %rdx //len
+    movq    %rdi, %rsi //addr
+    xorq    %rdi, %rdi
+    movb    $SYS_munmap, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
     ret
