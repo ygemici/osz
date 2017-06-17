@@ -59,7 +59,6 @@ int main(int argc, char**argv)
     mmap_test();
 
     dbg_printf("------------------------- TESTS END ----------------------------\n\n");
-    breakbochs;
 
     //do nothing
     while(1) mq_recv();

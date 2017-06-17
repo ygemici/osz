@@ -173,9 +173,13 @@ isr_exc00divzero:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $0, sys_fault
+2:  movb    $0, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -198,9 +202,13 @@ isr_exc01debug:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $1, sys_fault
+2:  movb    $1, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -223,9 +231,13 @@ isr_exc02nmi:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $2, sys_fault
+2:  movb    $2, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -248,9 +260,13 @@ isr_exc03chkpoint:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $3, sys_fault
+2:  movb    $3, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -273,9 +289,13 @@ isr_exc04overflow:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $4, sys_fault
+2:  movb    $4, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -298,9 +318,13 @@ isr_exc05bound:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $5, sys_fault
+2:  movb    $5, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -323,9 +347,13 @@ isr_exc06invopcode:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $6, sys_fault
+2:  movb    $6, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -348,9 +376,13 @@ isr_exc07devunavail:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $7, sys_fault
+2:  movb    $7, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -373,9 +405,13 @@ isr_exc08dblfault:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $8, sys_fault
+2:  movb    $8, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -398,9 +434,13 @@ isr_exc09coproc:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $9, sys_fault
+2:  movb    $9, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -423,9 +463,13 @@ isr_exc10invtss:
     popq	tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $10, sys_fault
+2:  movb    $10, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -448,9 +492,13 @@ isr_exc11segfault:
     popq	tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $11, sys_fault
+2:  movb    $11, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -473,9 +521,13 @@ isr_exc12stackfault:
     popq	tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $12, sys_fault
+2:  movb    $12, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -498,9 +550,13 @@ isr_exc13genprot:
     popq	tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $13, sys_fault
+2:  movb    $13, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -523,9 +579,13 @@ isr_exc14pagefault:
     popq	tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $14, sys_fault
+2:  movb    $14, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -548,9 +608,13 @@ isr_exc15unknown:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $15, sys_fault
+2:  movb    $15, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -573,9 +637,13 @@ isr_exc16float:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $16, sys_fault
+2:  movb    $16, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -598,9 +666,13 @@ isr_exc17alignment:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $17, sys_fault
+2:  movb    $17, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -623,9 +695,13 @@ isr_exc18machinecheck:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $18, sys_fault
+2:  movb    $18, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -648,9 +724,13 @@ isr_exc19double:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $19, sys_fault
+2:  movb    $19, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -673,9 +753,13 @@ isr_exc20:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $20, sys_fault
+2:  movb    $20, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -698,9 +782,13 @@ isr_exc21:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $21, sys_fault
+2:  movb    $21, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -723,9 +811,13 @@ isr_exc22:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $22, sys_fault
+2:  movb    $22, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -748,9 +840,13 @@ isr_exc23:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $23, sys_fault
+2:  movb    $23, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -773,9 +869,13 @@ isr_exc24:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $24, sys_fault
+2:  movb    $24, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -798,9 +898,13 @@ isr_exc25:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $25, sys_fault
+2:  movb    $25, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -823,9 +927,13 @@ isr_exc26:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $26, sys_fault
+2:  movb    $26, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -848,9 +956,13 @@ isr_exc27:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $27, sys_fault
+2:  movb    $27, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -873,9 +985,13 @@ isr_exc28:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $28, sys_fault
+2:  movb    $28, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -898,9 +1014,13 @@ isr_exc29:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $29, sys_fault
+2:  movb    $29, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -923,9 +1043,13 @@ isr_exc30:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $30, sys_fault
+2:  movb    $30, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq
@@ -948,9 +1072,13 @@ isr_exc31:
     movq	$0, tcb_excerr
     
     /* fault in core */
+#if DEBUG
+    cmpb    $0, dbg_indump
+    jnz     2f
+#endif
     cmpq    $CORE_ADDRESS, (%rsp)
     jb      1f
-    movb    $31, sys_fault
+2:  movb    $31, sys_fault
     movq    $-8, %rax
     movq    %rax, %rdi
     iretq

@@ -319,13 +319,13 @@ again:
         if(debug&DBG_SCHED && curr->memroot != idle_mapping)
             kprintf("sched_pick()=idle  \n");
 #endif
+        isr_next = idle_mapping;
         /* if this is the first time we schedule idle, call sys_ready() */
         if(idle_first) {
             idle_first = false;
             sys_ready();
         }
-        isr_next = idle_mapping;
-        return idle_mapping;
+        return isr_next;
     }
     /* if we're on the end of the list, go to head */
     if(ccb.cr_active[i] == 0)
@@ -333,6 +333,7 @@ again:
 found:
     tcb = sched_get_tcb(ccb.cr_active[i]);
     ccb.cr_active[i] = tcb->next;
+
     if(curr->mypid != tcb->mypid) {
 #if DEBUG
         if(debug&DBG_SCHED)

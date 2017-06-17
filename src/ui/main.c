@@ -44,7 +44,7 @@ public void openwrd(){}
 
 void task_init()
 {
-    uint64_t bss = BSS_ADDRESS;
+    uint64_t bss = BSS_ADDRESS+__SLOTSIZE;
     uint64_t len;
 
     /* map keymap */
@@ -53,7 +53,4 @@ void task_init()
     bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);
 
     reset_pointers();
-
-    /* serve requests */
-    mq_dispatch();
 }

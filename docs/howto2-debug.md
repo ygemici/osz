@@ -123,8 +123,7 @@ Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd>
 | [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internal Debugger Thread Control Block">Dump the current task's control block |
 | [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png?raw=true" alt="OS/Z Internal Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
 | [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png?raw=true" alt="OS/Z Internal Debugger Physical Memory">Dump physical memory manager |
-| [Sysinfo](https://github.com/bztsrc/osz/blob/master/etc/include/sys/sysinfo.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgB.png?raw=true" alt="OS/Z Internal Debugger Sysinfo">Dump System Information structure |
-| [Syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgC.png?raw=true" alt="OS/Z Internal Debugger Syslog viewer">Dump early syslog buffer |
+| [Sysinfo](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgB.png?raw=true" alt="OS/Z Internal Debugger Sysinfo">System Information and early syslog buffer |
 
 ### Keyboard Shortcuts
 
@@ -140,7 +139,15 @@ Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd>
 | Left  | (with command) move cursor |
 | Right | (with empty command) switch to next task |
 | Right | (with command) move cursor |
-| Ctrl  | toggle instruction disassemble (bytes / mnemonics) |
+| Up    | previous command in history |
+| Up    | with <kbd>Shift</kbd>, scroll up |
+| Down  | next command in history |
+| Down  | with <kbd>Shift</kbd>, scroll down |
+| PgUp  | in data view, scroll one page up |
+| PgUp  | in data view with <kbd>Shift</kbd>, scroll one slot up |
+| PgDn  | in data view, scroll one page down |
+| PgDn  | in data view with <kbd>Shift</kbd>, scroll one slot down |
+| Space | toggle instruction disassemble (bytes / mnemonics) |
 
 ### Debugger commands
 
@@ -165,6 +172,8 @@ It's enough to enter commands until it's obvious, in most cases that's the first
 | `Goto X`   | go to address X |
 | `eXamine [/b1w2d4q8s] X`   | examine memory at X in byte, word, dword, qword or stack units |
 | `Break [/b12d4q8rwx] X`   | list or set brakpoints at X in byte, word, dword, qword lengths |
+| `SYsinfo` `Log` | show system information and early syslog |
+| `Full`     | toggle full window mode, give space for main information |
 
 Goto has an argument, entered in hexadecimal (prefix 0x is optional). Can be:
  * (empty) if not given, it will go to the next instruction
@@ -198,7 +207,7 @@ The flag can be one of:
 ```
 p               switch to previous thread
 p 29            switch to thread that's pid is 29
-g               go to next instruction (in view)
+g               go to next instruction (in view, do not confuse with single step)
 g isr_irq1+3    view instruction in function
 g +7F           move disassembler window forward by 127 bytes
 x 1234          dump memory at 0x1234
@@ -210,6 +219,7 @@ b /qw tcb+F0    set a write breakpoint for quadword length at 000F0h
 b /bp 60        monitor keyboard port
 s               single step one instruction
 sy              show sysinfo
+f               toggle full window mode, show only logs on sysinfo tab
 ```
 
 The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md) is more user than developer oriented as it's about how to use the rescue shell.

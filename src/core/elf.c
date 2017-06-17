@@ -45,6 +45,8 @@ OSZ_rela __attribute__ ((section (".data"))) *relas;
 
 /* dynsym */
 unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no symbol)";
+unsigned char __attribute__ ((section (".data"))) *mqsym = (unsigned char*)"(mq)";
+unsigned char __attribute__ ((section (".data"))) *lssym = (unsigned char*)"(local stack)";
 #if DEBUG
 extern OSZ_ccb ccb;
 virt_t __attribute__ ((section (".data"))) lastsym;
@@ -286,7 +288,6 @@ virt_t elf_lookupsym(uchar *name, size_t size)
  */
 uchar *elf_sym(virt_t addr)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
     Elf64_Ehdr *ehdr;
     uint64_t ptr;
 
@@ -294,6 +295,10 @@ uchar *elf_sym(virt_t addr)
     lastsym = TEXT_ADDRESS;
 #endif
     /* rule out non text address ranges */
+    if(addr >= __PAGESIZE && addr < __SLOTSIZE/2)
+        return mqsym;
+    if(addr >= __SLOTSIZE/2 && addr < __SLOTSIZE)
+        return lssym;
     if(addr < TEXT_ADDRESS || (addr >= BSS_ADDRESS && addr < (virt_t)CORE_ADDRESS))
         return nosym;
     /* find the elf header for the address */
@@ -302,19 +307,11 @@ uchar *elf_sym(virt_t addr)
     sys_fault = false;
     while(!sys_fault && ptr>TEXT_ADDRESS && kmemcmp(((Elf64_Ehdr*)ptr)->e_ident,ELFMAG,SELFMAG))
         ptr -= __PAGESIZE;
-    /* one special case, idle task, which does not have an elf header */
-    if(ptr == TEXT_ADDRESS && tcb->memroot == idle_mapping) {
-#if DEBUG
-        lastsym = TEXT_ADDRESS + __PAGESIZE;
-#endif
-        if(addr<TEXT_ADDRESS+__PAGESIZE)
-            return (uchar*)"idle";
-        return nosym;
-    }
     ehdr = (Elf64_Ehdr*)ptr;
     /* failsafe */
-    if(sys_fault || (uint64_t)ehdr < (uint64_t)TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
+    if(sys_fault || ptr < TEXT_ADDRESS || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG)) {
         return nosym;
+    }
     if(addr<FBUF_ADDRESS)
         addr -= (virt_t)ehdr;
     Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);

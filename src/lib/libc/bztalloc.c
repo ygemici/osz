@@ -27,6 +27,7 @@
 #define _BZT_ALLOC
 #include <osZ.h>
 #include <sys/mman.h>
+#include "bztalloc.h"
 
 /***
  * Memory layout:
@@ -55,26 +56,6 @@
  * - void *mmap (void *addr, size_t len, int prot, int flags, -1, 0); //query memory from pmm
  * - int munmap (void *addr, size_t len);                             //give back memory to system
  */
-#define CHUNKSIZE     __SLOTSIZE                                //one chunk is 2M
-#define MAXARENA     ((CHUNKSIZE/sizeof(void*))-1)              //maximum number of arenas
-#define BITMAPSIZE   (CHUNKSIZE/__PAGESIZE/sizeof(void*)/8)     //number of allocation blocks in a chunk
-#define numallocmaps(a) (a[0]&0x7ffffffff)                         //number of chunks in an arena
-#define chunksize(q) ((q*BITMAPSIZE*sizeof(void*)*8/__PAGESIZE)*__PAGESIZE)  //size of a chunk for a given quantum
-
-typedef struct {
-    uint64_t quantum;               //allocation unit in this chunk
-    void *ptr;                      //memory pointer (page or slot aligned)
-    union {
-        uint64_t map[BITMAPSIZE];   //free units in this chunk (512 bits)
-        uint64_t size[BITMAPSIZE];  //size, only first used
-    };
-} chunkmap_t;
-
-/* this must work with a zeroed page, hence no magic and zero bit represents free */
-typedef struct {
-    uint64_t numchunks;             //number of chunkmap_t
-    chunkmap_t chunk[0];            //chunks
-} allocmap_t;
 
 /**
  * arena is an array of *allocmap_t, first element records size and lock flag
@@ -176,7 +157,7 @@ dbg_printf("   nc %x oc %x i %d\n",ncm,ocm,i);
         //free old memory
         if(ocm!=NULL) {
 dbg_printf(" release %x %d to %x\n",ptr,ocm->quantum,fp);
-            memcpy(fp,ptr,ocm->quantum);
+//            memcpy(fp,ptr,ocm->quantum);
             bitfree((ptr-ocm->ptr)/ocm->quantum, (uint64_t*)&ncm->map);
         }
         return fp;

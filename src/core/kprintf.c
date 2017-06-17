@@ -498,6 +498,10 @@ newline:        kx=fx;
                 ky++;
                 if(ky>=maxy) {
                     ky--;
+#if DEBUG
+                    if(dbg_indump)
+                        return;
+#endif
 //                    if(scry!=-1)
                         kprintf_scrollscr();
                 }
