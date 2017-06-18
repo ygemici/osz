@@ -1585,8 +1585,8 @@ lbapacket:              ;lba packet for BIOS
 .sect0:     dd          0
 .sect1:     dd          0
 .flataddr:  dd          0,0
-reqwidth:   dd          0
-reqheight:  dd          0
+reqwidth:   dd          1024
+reqheight:  dd          768
 bootdev:    db          0
 fattype:    db          0
 vbememsize: dw          0

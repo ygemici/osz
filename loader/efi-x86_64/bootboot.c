@@ -52,6 +52,27 @@ typedef struct _EFI_FILE_PROTOCOL {
 } EFI_FILE_PROTOCOL;
 #endif
 
+#ifndef EFI_PCI_OPTION_ROM_TABLE_GUID
+#define EFI_PCI_OPTION_ROM_TABLE_GUID \
+  { 0x7462660f, 0x1cbd, 0x48da, {0xad, 0x11, 0x91, 0x71, 0x79, 0x13, 0x83, 0x1c} }
+typedef struct {
+  EFI_PHYSICAL_ADDRESS   RomAddress; 
+  EFI_MEMORY_TYPE        MemoryType;
+  UINT32                 RomLength; 
+  UINT32                 Seg; 
+  UINT8                  Bus; 
+  UINT8                  Dev; 
+  UINT8                  Func; 
+  BOOLEAN                ExecutedLegacyBiosImage; 
+  BOOLEAN                DontLoadEfiRom;
+} EFI_PCI_OPTION_ROM_DESCRIPTOR;
+
+typedef struct {
+  UINT64                         PciOptionRomCount;
+  EFI_PCI_OPTION_ROM_DESCRIPTOR   *PciOptionRomDescriptors;
+} EFI_PCI_OPTION_ROM_TABLE;
+#endif
+
 typedef struct {
     UINT8 magic[8];
     UINT8 chksum;
@@ -79,8 +100,8 @@ EFI_FILE_HANDLE                 RootDir;
 EFI_FILE_PROTOCOL               *Root;
 unsigned char *kne;
 
-// default environment variables
-int reqwidth = 800, reqheight = 600;
+// default environment variables. M$ states that 1024x768 must be supported
+int reqwidth = 1024, reqheight = 768;
 char *kernelname="lib/sys/core";
 
 int atoi(unsigned char*c)
@@ -373,6 +394,8 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 {
     EFI_LOADED_IMAGE *loaded_image = NULL;
     EFI_GUID lipGuid = LOADED_IMAGE_PROTOCOL;
+    EFI_GUID RomTableGuid = EFI_PCI_OPTION_ROM_TABLE_GUID;
+    EFI_PCI_OPTION_ROM_TABLE *RomTable;
     EFI_STATUS status=EFI_SUCCESS;
     EFI_MEMORY_DESCRIPTOR *memory_map = NULL, *mement;
     UINTN i, memory_map_size=0, map_key=0, desc_size=0;
@@ -404,14 +427,6 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     } else {
         configfile=L"\\BOOTBOOT\\CONFIG";
     }
-    status = uefi_call_wrapper(systab->BootServices->HandleProtocol,
-                3,
-                image,
-                &lipGuid,
-                (void **) &loaded_image);
-    if (EFI_ERROR(status)) {
-        return report(status, L"HandleProtocol LoadedImageProtocol");
-    }
 
     Print(L"Booting OS...\n");
 
@@ -430,18 +445,25 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         "mov %%ebx,%0"
         : "=b"(bootboot->bspid) : : );
 
-    // Initialize FS with the DeviceHandler from loaded image protocol
-    // we don't have that when booting from ROM
+    // locate InitRD in ROM
+    DBG(L" * Locate initrd in Option ROMs\n");
+    RomTable = NULL; initrd_ptr = NULL; initrd_len = 0;
     status=EFI_LOAD_ERROR;
-    if(loaded_image!=NULL) {
-        RootDir = LibOpenRoot(loaded_image->DeviceHandle);
-
-        // load ramdisk
-        status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
+    // first, try RomTable
+    LibGetSystemConfigurationTable(&RomTableGuid,(void *)&(RomTable));
+    if(RomTable!=NULL) {
+        for (i=0;i<RomTable->PciOptionRomCount;i++) {
+            ptr=(CHAR8*)RomTable->PciOptionRomDescriptors[i].RomAddress;
+            if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
+                CopyMem(&initrd_len,ptr+16,4);
+                initrd_ptr=ptr+32;
+                status=EFI_SUCCESS;
+                break;
+            }
+        }
     }
-    // without disk, locate initrd in ROM
-    if(status!=EFI_SUCCESS) {
-        DBG(L" * Locate initrd in Option ROMs\n");
+    //if not found, scan memory
+    if(EFI_ERROR(status) || initrd_ptr==NULL){
         status = uefi_call_wrapper(BS->GetMemoryMap, 5,
             &memory_map_size, memory_map, NULL, &desc_size, NULL);
         if (status!=EFI_BUFFER_TOO_SMALL || memory_map_size==0) {
@@ -456,31 +478,44 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         }
         status = uefi_call_wrapper(BS->GetMemoryMap, 5,
             &memory_map_size, memory_map, &map_key, &desc_size, &desc_version);
-        // look for INITRD in Option ROM
-        if (EFI_ERROR(status))
-            for(mement=memory_map;
-                mement<memory_map+memory_map_size;
-                mement=NextMemoryDescriptor(mement,desc_size)) {
-                    if(mement==NULL || (mement->PhysicalStart==0 && mement->NumberOfPages==0))
-                        break;
-                    // Reserved, BootServicesData, RunTimeServicesData
-                    if(mement->Type!=0 && mement->Type!=4 && mement->Type!=6)
-                        continue;
-                // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
-                for(ptr=(CHAR8 *)mement->PhysicalStart;
-                    ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
-                    ptr+=512) {
-                    if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
-                        CopyMem(&initrd_len,ptr+16,4);
-                        initrd_ptr=ptr+32;
-                        status=EFI_SUCCESS;
-                        goto foundinrom;
-                    }
+        status=EFI_LOAD_ERROR;
+        for(mement=memory_map;
+            mement<memory_map+memory_map_size;
+            mement=NextMemoryDescriptor(mement,desc_size)) {
+                if(mement==NULL || (mement->PhysicalStart==0 && mement->NumberOfPages==0))
+                    break;
+            // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
+            for(ptr=(CHAR8 *)mement->PhysicalStart;
+                ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
+                ptr+=512) {
+                if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
+                    CopyMem(&initrd_len,ptr+16,4);
+                    initrd_ptr=ptr+32;
+                    status=EFI_SUCCESS;
+                    goto foundinrom;
                 }
             }
-        return report(EFI_LOAD_ERROR,L"Initrd not found in Option ROMS");
+        }
 foundinrom:
         uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)memory_map, (memory_map_size+PAGESIZE-1)/PAGESIZE);
+    }
+
+    // fall back to INITRD on filesystem
+    if(EFI_ERROR(status) || initrd_ptr==NULL){
+        // Initialize FS with the DeviceHandler from loaded image protocol
+        status = uefi_call_wrapper(systab->BootServices->HandleProtocol,
+                    3,
+                    image,
+                    &lipGuid,
+                    (void **) &loaded_image);
+        if (EFI_ERROR(status) || loaded_image==NULL) {
+            return report(status, L"HandleProtocol LoadedImageProtocol");
+        }
+        status=EFI_LOAD_ERROR;
+        RootDir = LibOpenRoot(loaded_image->DeviceHandle);
+
+        // load ramdisk
+        status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
     }
     if(status==EFI_SUCCESS){
         //check if initrd is gzipped
