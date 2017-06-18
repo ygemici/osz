@@ -35,7 +35,8 @@ hobby OSes and microkernels. The advantage it gaves is that your kernel
 can be splitted into several files and yet they will be loaded together
 as if it was a monolitic kernel, and you can use your own filesystem for that.
 
-Also note that the INITRD can be in another Option ROM, for diskless boot.
+Also note that the INITRD can be in another Option ROM, which is ideal
+for diskless, embedded systems.
 
 License
 -------
