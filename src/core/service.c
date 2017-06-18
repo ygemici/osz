@@ -80,6 +80,7 @@ void service_init(int subsystem, char *fn)
     if(elf_rtlink()) {
         // map the first page in bss
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end), BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+        ((OSZ_tcb*)(pmm.bss_end))->allocmem++;
 
         // add to queue so that scheduler will know about this thread
         sched_add((OSZ_tcb*)(pmm.bss_end));
@@ -147,6 +148,7 @@ void fs_init()
     if(elf_rtlink()) {
         // map the first page in bss
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end), BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+        ((OSZ_tcb*)(pmm.bss_end))->allocmem++;
 
         // map initrd in "fs" task's memory
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BUF_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);

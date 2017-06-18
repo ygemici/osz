@@ -60,6 +60,7 @@ extern char *syslog_buf;
 extern char *syslog_ptr;
 extern char osver[];
 extern char *nosym;
+extern uint8_t tmp3map;               // temporarily mapped page #3
 
 extern uchar *elf_sym(virt_t addr);
 extern virt_t elf_lookupsym(uchar *sym, size_t size);
@@ -1242,8 +1243,7 @@ virt_t dbg_getaddr(char *cmd, size_t size)
     }
     /* parse displacement */
     while(*cmd==' '||*cmd=='-'||*cmd=='+') cmd++;
-    if(base!=0)
-        env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
+    env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
     return (*(cmd-1)=='-'?base-ret:base+ret);
 }
 
@@ -1841,8 +1841,10 @@ help:
             // Enter
             case 28: {
                 /* save history */
-                kmemcpy(&cmdhist[0],&cmdhist[sizeof(cmd)],sizeof(cmdhist)-sizeof(cmd));
-                kmemcpy(&cmdhist[sizeof(cmdhist)-sizeof(cmd)],&cmd[0],sizeof(cmd));
+                if(cmdlast && kmemcmp(&cmdhist[sizeof(cmdhist)-sizeof(cmd)],&cmd[0],kstrlen(cmd))) {
+                    kmemcpy(&cmdhist[0],&cmdhist[sizeof(cmd)],sizeof(cmdhist)-sizeof(cmd));
+                    kmemcpy(&cmdhist[sizeof(cmdhist)-sizeof(cmd)],&cmd[0],sizeof(cmd));
+                }
                 currhist=sizeof(cmdhist);
                 /* parse commands */
                 // step, continue
@@ -2048,16 +2050,16 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                             goto getcmd;
                         }
                         while(x<cmdlast && cmd[x]!=' ') x++;
-                        while(x<cmdlast && cmd[x]==' ') x++;
                     } else if(x==cmdlast) {
                         rsp = tcb->rsp;
                     }
+                    y = 0;
                     while(x<cmdlast && cmd[x]==' ') x++;
                     if(x<cmdlast) {
                         if(cmd[x]=='-'||cmd[x]=='+') x++;
                         y = dbg_getaddr(&cmd[x],cmdlast-x);
                         if(y==0 && cmd[x]!='0'){
-                            /* use rsp when no symbol given. Also tcb returns 0, so check it here */
+                            /* use rsp when no symbol given. Also, tcb returns 0, so check it here */
                             if((cmd[x]!='t'&&cmd[x+1]!='c'&&cmd[x+2]!='b')) {
                                 if((cmd[x]!='r'&&cmd[x+1]!='s'&&cmd[x+2]!='p'))
                                     dbg_err = "Symbol not found";
@@ -2073,6 +2075,11 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                             else
                                 rsp = y;
                         }
+                    }
+                    // dump physical page
+                    if(cmd[1]=='p') {
+                        kmap((uint64_t)&tmp3map, rsp, PG_CORE_NOCACHE);
+                        rsp=(uint64_t)&tmp3map;
                     }
                     cmdidx = cmdlast = 0;
                     cmd[cmdidx]=0;

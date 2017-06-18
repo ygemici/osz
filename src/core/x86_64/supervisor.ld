@@ -52,6 +52,8 @@ SECTIONS
     . += 4096;
     tmpalarm = .;
     . += 4096;
+    tmp3map = .;
+    . += 4096;
     /* CPU Control Block. We need static address for that */
     ccb = .;
     . += 4096;

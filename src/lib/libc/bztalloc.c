@@ -157,7 +157,7 @@ dbg_printf("   nc %x oc %x i %d\n",ncm,ocm,i);
         //free old memory
         if(ocm!=NULL) {
 dbg_printf(" release %x %d to %x\n",ptr,ocm->quantum,fp);
-//            memcpy(fp,ptr,ocm->quantum);
+            memcpy(fp,ptr,ocm->quantum);
             bitfree((ptr-ocm->ptr)/ocm->quantum, (uint64_t*)&ncm->map);
         }
         return fp;

@@ -1476,7 +1476,8 @@ prefixend:
 end:
     if (addr - disasmstart > 15 && str!=NULL)
         str = sprintf(str," <too long>");
-    *str=0;
+    if(str!=NULL)
+        *str=0;
     return addr;
 }
 
