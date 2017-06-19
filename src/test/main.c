@@ -28,38 +28,130 @@
 
 void mmap_test()
 {
+    uint64_t fm;
+    msg_t *msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+    fm=msg->arg0;
+
     void *ptr=malloc(100);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+    msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     void *ptr2=malloc(200);
     dbg_printf("ptr2=%x errno=%d\n",ptr2, errno);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     void *ptr3=malloc(100);
     dbg_printf("ptr3=%x errno=%d\n",ptr3, errno);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     ptr=realloc(ptr,120);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     ptr=realloc(ptr,200);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     free(ptr);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     free(ptr3);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     free(ptr2);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+    msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+    dbg_printf("pmm diff: %d\n",fm-msg->arg0);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
 
     ptr=malloc(20000);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    bzt_dumpmem((void*)BSS_ADDRESS);
+    msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    ptr2=malloc(__SLOTSIZE);
+    dbg_printf("ptr2=%x errno=%d\n",ptr2, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    ptr3=malloc(2*__SLOTSIZE);
+    dbg_printf("ptr3=%x errno=%d\n",ptr3, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    ptr=realloc(ptr,__SLOTSIZE);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+    msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    ptr=realloc(ptr,2*__SLOTSIZE);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+    msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+    free(ptr3);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    free(ptr2);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    free(ptr);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    msg=meminfo();
+    dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
+    dbg_printf("pmm diff: %d\n",fm-msg->arg0);
 }
 
 int main(int argc, char**argv)

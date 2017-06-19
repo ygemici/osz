@@ -288,7 +288,7 @@ void drv_init(char *driver)
             virt_t bss=BUF_ADDRESS;
             for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
                 __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
-                vmm_mapbss((OSZ_tcb*)(pmm.bss_end), bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+                vmm_mapbss((OSZ_tcb*)(pmm.bss_end), bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_DRVMEM);
                 // save it for SYS_swapbuf
                 if(!screen[1]) {
                     screen[1]=pdpe;

@@ -49,11 +49,15 @@ void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t acce
     uint64_t *paging = (uint64_t *)&tmpmap;
     int i;
     phys &= ~(__PAGESIZE-1);
-    if(access==0 || access>__PAGESIZE)
+    access &= (__PAGESIZE-1+(1UL<<63));
+    if(access==0)
         access=PG_USER_RW;
+    // mark writable pages no execute too
+    if(access & 2)
+        access |= (1UL<<63);
 #if DEBUG
     if(debug&DBG_MALLOC)
-        kprintf("vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
+        kprintf("    vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
 #endif
 again:
     kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE);
@@ -119,7 +123,7 @@ void vmm_unmapbss(OSZ_tcb *tcb, virt_t bss, size_t size)
     size=((size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
 #if DEBUG
     if(debug&DBG_MALLOC)
-        kprintf("vmm_unmapbss(%x,%x,%d)\n", tcb->memroot, bss, size);
+        kprintf("    vmm_unmapbss(%x,%x,%d)\n", tcb->memroot, bss, size);
 #endif
 again:
     kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE);

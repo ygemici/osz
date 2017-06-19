@@ -53,7 +53,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
     void *data;
     char fn[128];
     phy_t tmp;
-    int i,j;
+    uint64_t i,j;
 
     tcb->errno = SUCCESS;
     switch(EVT_FUNC(event)) {
@@ -163,10 +163,14 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* return loaded file size */
             return fs_size;
 
+        case SYS_meminfo:
+                msg_sends(EVT_DEST(tcb->mypid) | EVT_FUNC(SYS_ack), pmm.freepages,pmm.totalpages,0,0,0,0);
+            break;
+
         case SYS_mmap:
 #if DEBUG
         if(debug&DBG_MALLOC)
-            kprintf("mmap(%x, %d, %x) pid %2x\n", arg0, arg1, arg2, tcb->mypid);
+            kprintf("  mmap(%x, %d, %x) pid %2x\n", arg0, arg1, arg2, tcb->mypid);
 #endif
             /* FIXME: naive implementation, no checks */
             data=(void *)arg0;
@@ -191,7 +195,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_munmap:
 #if DEBUG
         if(debug&DBG_MALLOC)
-            kprintf("munmap(%x, %d) pid %2x\n", arg0, arg1, tcb->mypid);
+            kprintf("  munmap(%x, %d) pid %2x\n", arg0, arg1, tcb->mypid);
 #endif
             arg1=((arg1+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
             vmm_unmapbss(tcb, (virt_t)arg0, (size_t)arg1);

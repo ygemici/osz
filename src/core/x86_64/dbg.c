@@ -245,25 +245,58 @@ void dbg_tcb()
         "ENODEV", "ENOTDIR", "EISDIR", "EINVAL", "ENFILE", "EMFILE", "ENOTTY", "ETXTBSY", "EFBIG", "ENOSPC",
         "ESPIPE", "EROFS", "EMLNK", "EPIPE", "EDOM", "ERANGE" };
     uint64_t t;
+    int mask[]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
+    char *bmap=".123456789ABCDEF";
+    uint16_t *m;
+    uint64_t *arena=(uint64_t*)BSS_ADDRESS;
+    uint64_t i,j,k,l,n,o;
 
+    if(!dbg_full) {
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("[Thread Control Block]\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
+        kprintf("priority: %s (%d), state: %s (%1x) ",
+            prio[tcb->priority], tcb->priority,
+            tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
+        );
+        kprintf("\nerrno: %d %s, exception error code: %d\n",
+            tcb->errno, tcb->errno<sizeof(errn)? errn[tcb->errno] : "???", tcb->excerr);
+    
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("\n[Scheduler]\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+        t=(tcb->state==tcb_state_running?0:ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
+        kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, t);
+        kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
+        if(tcb->state==tcb_state_blocked) {
+            kprintf("blocked since: %d, ", tcb->blktime);
+            kprintf("next in alarm queue: %4x, alarm at: %d.%d\n", tcb->alarm, tcb->alarmsec, tcb->alarmns);
+        }
+        if(tcb->state==tcb_state_hybernated) {
+            fg=dbg_theme[4];
+            if(dbg_tui)
+                dbg_settheme();
+            kprintf("\n\n[Hybernation info]\n");
+            fg=dbg_theme[3];
+            if(dbg_tui)
+                dbg_settheme();
+            kprintf("swapped to: %x\n", tcb->swapminor);
+        }
+        kprintf("\n");
+    }
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("[Thread Control Block]\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
-    kprintf("priority: %s (%d), state: %s (%1x) ",
-        prio[tcb->priority], tcb->priority,
-        tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
-    );
-    kprintf("\nerrno: %d %s, exception error code: %d\n",
-        tcb->errno, tcb->errno<sizeof(errn)? errn[tcb->errno] : "???", tcb->excerr);
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("\n[Memory]\n");
+    kprintf("[Memory]\n");
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
@@ -273,28 +306,48 @@ void dbg_tcb()
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
-    kprintf("\n[Scheduler]\n");
+    kprintf("\n[Virtual Memory Manager%s, allocmaps: %d/%d, chunks: %d, %d units]\n",
+        (arena[0] & (1UL<<63))!=0?" (LOCKED)":"",numallocmaps(arena), MAXARENA,
+        (ALLOCSIZE-8)/sizeof(chunkmap_t), BITMAPSIZE*64);
+    kprintf("Idx Quantum Start       End       Allocation bitmap                    Size\n");
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
-    t=(tcb->state==tcb_state_running?0:ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
-    kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, t);
-    kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
-    if(tcb->state==tcb_state_blocked) {
-        kprintf("blocked since: %d, ", tcb->blktime);
-        kprintf("next in alarm queue: %4x, alarm at: %d.%d\n", tcb->alarm, tcb->alarmsec, tcb->alarmns);
-    }
-    if(tcb->state==tcb_state_hybernated) {
-        fg=dbg_theme[4];
+
+    o=1;
+    for(i=1;i<MAXARENA && arena[i]!=0;i++) {
+        if(i>128) break;
+        if(((allocmap_t*)arena[i])->numchunks==0)
+            continue;
+        fg=dbg_theme[2];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("\n\n[Hybernation info]\n");
+        kprintf("  --- allocmap %d @%x, numchunks: %d ---\n",i,arena[i],((allocmap_t*)arena[i])->numchunks);
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("swapped to: %x\n", tcb->swapminor);
+        for(j=0;j<((allocmap_t*)arena[i])->numchunks;j++) {
+            if(j>128 || (((allocmap_t*)arena[i])->chunk[j].quantum&7)!=0) break;
+            kprintf("%3d. %9d %x - %x ",o++,
+                ((allocmap_t*)arena[i])->chunk[j].quantum,
+                ((allocmap_t*)arena[i])->chunk[j].ptr,
+                ((allocmap_t*)arena[i])->chunk[j].ptr+
+                    (((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE?
+                        chunksize(((allocmap_t*)arena[i])->chunk[j].quantum):
+                        ((allocmap_t*)arena[i])->chunk[j].size[0]));
+            if(((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE) {
+                m=(uint16_t*)&((allocmap_t*)arena[i])->chunk[j].map;
+                for(k=0;k<BITMAPSIZE*4;k++) {
+                    l=0; for(n=0;n<16;n++) { if(*m & mask[n]) l++; }
+                    kprintf("%c",bmap[l]);
+                    m++;
+                }
+                kprintf("%8dk\n",chunksize(((allocmap_t*)arena[i])->chunk[j].quantum)/1024);
+            } else {
+                kprintf("(no bitmap) %8dM\n",((allocmap_t*)arena[i])->chunk[j].size[0]/1024/1024);
+            }
+        }
     }
-    kprintf("\n");
 }
 
 // disassembly instructions and dump registers, stack
@@ -575,6 +628,7 @@ void dbg_data(uint64_t ptr)
     int i,j;
     uint64_t o=ptr,d;
     uchar *symstr;
+    phy_t tmp3 = (*((uint64_t*)kmap_getpte((virt_t)&tmp3map)))&~(__PAGESIZE-1+(1UL<<63));
 
     ky = 3;
     uint64_t *paging = (uint64_t *)&tmp2map;
@@ -582,7 +636,10 @@ void dbg_data(uint64_t ptr)
         dbg_setpos();
     while(ky<maxy-(dbg_full?2:5)) {
         kx=1;
-        kprintf("%8x: ",ptr);
+        if(ptr>=(uint64_t)&tmp3map && ptr<(uint64_t)&tmp3map+__PAGESIZE)
+            kprintf("phy %6x: ", tmp3+ptr-(uint64_t)&tmp3map);
+        else
+            kprintf("%8x: ",ptr);
         sys_fault = false;
         __asm__ __volatile__ ("movq %0, %%rdi;movb (%%rdi), %%al"::"m"(ptr):"%rax","%rdi");
         if(sys_fault) {
@@ -609,16 +666,21 @@ void dbg_data(uint64_t ptr)
                     kprintf_putchar(*((uint8_t*)(ptr+5))); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+6))); kx++;
                     kprintf_putchar(*((uint8_t*)(ptr+7)));
-                    symstr = elf_sym(*((uint64_t*)ptr));
-                    if(!sys_fault && symstr!=NULL && symstr!=(uchar*)nosym) {
-                        fg = dbg_theme[2];
-                        if(dbg_tui)
-                            dbg_settheme();
-                        kx = 44;
-                        kprintf("  %s",symstr);
-                        fg = dbg_theme[3];
-                        if(dbg_tui)
-                            dbg_settheme();
+                    if((ptr>__PAGESIZE && ptr<=TEXT_ADDRESS) || ptr>CORE_ADDRESS) {
+                        if(ptr==TEXT_ADDRESS)
+                            symstr=(unsigned char*)"  ^^^ STACK ^^^";
+                        else
+                            symstr = elf_sym(*((uint64_t*)ptr));
+                        if(!sys_fault && symstr!=NULL && symstr!=(uchar*)nosym) {
+                            fg = dbg_theme[2];
+                            if(dbg_tui)
+                                dbg_settheme();
+                            kx = 44;
+                            kprintf("  %s",symstr);
+                            fg = dbg_theme[3];
+                            if(dbg_tui)
+                                dbg_settheme();
+                        }
                     }
                     sys_fault = false;
                 }
@@ -736,13 +798,18 @@ void dbg_data(uint64_t ptr)
                 kprintf(" %4d\n  PDE  %8x ",d,paging[d]);
                 dbg_pagingflags(paging[d]);
                 if(paging[d]&1){
-                    kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
-                    d=(o>>(12))&0x1FF;
-                    if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();}
-                    kprintf(" %4d      PTE  %8x ",d,paging[d]);
-                    dbg_pagingflags(paging[d]);
-                    d=o&(__PAGESIZE-1);
-                    kprintf(" %4d\n",d);
+                    if(paging[d]&PG_SLOT) {
+                        d=(o>>(12))&0x1FF;
+                        kprintf(" %4d      (slot allocated)\n",d);
+                    } else {
+                        kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
+                        d=(o>>(12))&0x1FF;
+                        if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();}
+                        kprintf(" %4d      PTE  %8x ",d,paging[d]);
+                        dbg_pagingflags(paging[d]);
+                        d=o&(__PAGESIZE-1);
+                        kprintf(" %4d\n",d);
+                    }
                 }
             }
         }
@@ -897,7 +964,7 @@ void dbg_msg()
 // dump CPU Control Block and priority queues
 void dbg_queues()
 {
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
     int i, j;
     pid_t n;
 
@@ -926,7 +993,7 @@ void dbg_queues()
         n = ccb.hd_blocked;
         do {
             j++;
-            kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+            kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
             // failsafe
             if( n == tcbq->next)
                 break;
@@ -948,7 +1015,7 @@ void dbg_queues()
             n = ccb.hd_active[i];
             do {
                 j++;
-                kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+                kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
                 n = tcbq->next;
             } while(n!=0);
         }
@@ -961,12 +1028,7 @@ void dbg_ram()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
     int i = pmm.size;
-    int j,k,l,n,o;
-    int mask[]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
-    char *bmap=".123456789ABCDEF";
-    uint16_t *m;
-    uint64_t *arena=(uint64_t*)BSS_ADDRESS;
-
+ 
     fg=dbg_theme[4];
     if(dbg_tui)
         dbg_settheme();
@@ -1016,48 +1078,6 @@ void dbg_ram()
     for(i=dbg_scr;i<pmm.size&&ky<maxx-2;i++) {
         kprintf("%8x, %9d\n",fmem->base, fmem->size);
         fmem++;
-    }
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("\n[Virtual Memory Manager%s, allocmaps: %d/%d, chunks: %d, %d units]\n",
-        (arena[0] & (1UL<<63))!=0?" (LOCKED)":"",numallocmaps(arena), MAXARENA,
-        (CHUNKSIZE-8)/sizeof(chunkmap_t), BITMAPSIZE*64);
-    kprintf("Idx Quantum Start       End       Allocation bitmap                    Size\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-
-    o=1;
-    for(i=1;i<MAXARENA && arena[i]!=0;i++) {
-        if(i>128) break;
-        if(((allocmap_t*)arena[i])->numchunks==0)
-            continue;
-        fg=dbg_theme[2];
-        if(dbg_tui)
-            dbg_settheme();
-        kprintf("  --- allocmap %d @%x, numchunks: %d ---\n",i,arena[i],((allocmap_t*)arena[i])->numchunks);
-        fg=dbg_theme[3];
-        if(dbg_tui)
-            dbg_settheme();
-        for(j=0;j<((allocmap_t*)arena[i])->numchunks;j++) {
-            if(j>128 || (((allocmap_t*)arena[i])->chunk[j].quantum&7)!=0) break;
-            kprintf("%3d. %6d %x - %x ",o++,
-                ((allocmap_t*)arena[i])->chunk[j].quantum,
-                ((allocmap_t*)arena[i])->chunk[j].ptr,
-                ((allocmap_t*)arena[i])->chunk[j].ptr+chunksize(((allocmap_t*)arena[i])->chunk[j].quantum));
-            if(((allocmap_t*)arena[i])->chunk[j].quantum<CHUNKSIZE) {
-                m=(uint16_t*)&((allocmap_t*)arena[i])->chunk[j].map;
-                for(k=0;k<BITMAPSIZE*4;k++) {
-                    l=0; for(n=0;n<16;n++) { if(*m & mask[n]) l++; }
-                    kprintf("%c",bmap[l]);
-                    m++;
-                }
-                kprintf("%8dk\n",chunksize(((allocmap_t*)arena[i])->chunk[j].quantum)/1024);
-            } else {
-                kprintf("%8dM\n",((allocmap_t*)arena[i])->chunk[j].size[0]/1024/1024);
-            }
-        }
     }
 }
 
@@ -1149,7 +1169,7 @@ void dbg_sysinfo()
 void dbg_switchprev(virt_t *rip, virt_t *rsp)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
     pid_t p = tcb->prev;
     int i;
 
@@ -1168,15 +1188,16 @@ void dbg_switchprev(virt_t *rip, virt_t *rsp)
                 p = ccb.hd_active[i];
         if(p) {
             //find end of queue
-            kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
-            while(tcbq->next!=0) {
+            kmap((virt_t)&tmp3map, p * __PAGESIZE, PG_CORE_NOCACHE);
+            sys_fault = false;
+            while(sys_fault==false && tcbq->next!=0) {
                 p=tcbq->next;
-                kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
+                kmap((virt_t)&tmp3map, p * __PAGESIZE, PG_CORE_NOCACHE);
             }
         }
     }
     if(p) {
-        kmap((virt_t)&tmpmap, p * __PAGESIZE, PG_CORE_NOCACHE);
+        kmap((virt_t)&tmp3map, p * __PAGESIZE, PG_CORE_NOCACHE);
         tcb->rip = *rip;
         thread_map(tcbq->memroot);
         *rip = tcb->rip;
@@ -1188,7 +1209,7 @@ void dbg_switchprev(virt_t *rip, virt_t *rsp)
 void dbg_switchnext(virt_t *rip, virt_t *rsp)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
     pid_t n = tcb->next;
     int i;
     if(n == 0) {
@@ -1206,7 +1227,7 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
                 n = ccb.hd_active[i];
     }
     if(n) {
-        kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+        kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
         tcb->rip = *rip;
         thread_map(tcbq->memroot);
         *rip = tcb->rip;
@@ -1255,7 +1276,7 @@ virt_t dbg_getaddr(char *cmd, size_t size)
 
 void dbg_singlestep(uint8_t enable)
 {
-    OSZ_tcb *tcb=(OSZ_tcb*)&tmpmap;
+    OSZ_tcb *tcb=(OSZ_tcb*)&tmp3map;
     int i;
     pid_t n;
     // enable globally or clear all flags
@@ -1264,7 +1285,7 @@ void dbg_singlestep(uint8_t enable)
             continue;
         n = ccb.hd_active[i];
         while(n != 0) {
-            kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+            kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
             if(enable==SINGLESTEP_GLOBAL)
                 tcb->rflags |= (1<<8);
             else
@@ -1274,7 +1295,7 @@ void dbg_singlestep(uint8_t enable)
     }
     n = ccb.hd_blocked;
     while(n != 0) {
-        kmap((virt_t)&tmpmap, n * __PAGESIZE, PG_CORE_NOCACHE);
+        kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
         if(enable==SINGLESTEP_GLOBAL)
             tcb->rflags |= (1<<8);
         else
@@ -1330,7 +1351,7 @@ void dbg_init()
 void dbg_enable(virt_t rip, virt_t rsp, char *reason)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmpmap;
+    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
     uint64_t scancode = 0, offs, line, x, y;
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM", "Sysinfo", "Syslog" };
@@ -1918,7 +1939,7 @@ help:
                         while(x<cmdlast && cmd[x]==' ') x++;
                         y = 0;
                         env_hex((unsigned char*)&cmd[x], (uint64_t*)&y, 0, 0);
-                        kmap((virt_t)&tmpmap, y * __PAGESIZE, PG_CORE_NOCACHE);
+                        kmap((virt_t)&tmp3map, y * __PAGESIZE, PG_CORE_NOCACHE);
                         if(tcbq->magic == OSZ_TCB_MAGICH) {
                             tcb->rip = rip;
                             thread_map(tcbq->memroot);

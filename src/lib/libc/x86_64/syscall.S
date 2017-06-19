@@ -45,6 +45,7 @@
 .global mapfile
 .global sleep
 .global usleep
+.global meminfo
 #if DEBUG
 .global dbg_printf
 #endif
@@ -329,4 +330,15 @@ usleep:
     movb    $SYS_alarm, %dil
     movl    $0x646E6573, %eax # 'send'
     syscall
+    ret
+
+/**
+ * msg_t *meminfo()
+ */
+meminfo:
+    xorq    %rdi, %rdi
+    movb    $SYS_meminfo, %dil
+    movl    $0x646E6573, %eax # 'send'
+    syscall
+    callq   mymq_recv
     ret

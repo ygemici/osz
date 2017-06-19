@@ -186,6 +186,10 @@ virt_t elf_lookupsym(uchar *name, size_t size)
         name[size] = c;
         return CORE_ADDRESS;
     }
+    if(size==4 && !kmemcmp(name,"buff",5)) {
+        name[size] = c;
+        return BUF_ADDRESS;
+    }
     if(size==2 && !kmemcmp(name,"bt",3)) {
         name[size] = c;
         return (virt_t)(ccb.ist3+ISR_STACK-40);

@@ -1,9 +1,10 @@
  --- Error fixes ---
-./src/core/pmm.c:271:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
-./src/core/syscall.c:171:            /* FIXME: naive implementation, no checks */
+./src/core/pmm.c:279:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
+./src/core/syscall.c:175:            /* FIXME: naive implementation, no checks */
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
+./etc/include/sys/core.h:85:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/sys.c:227:    // TODO: move this printf to init
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc

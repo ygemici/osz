@@ -43,18 +43,19 @@
 #define SYS_stimebcd 10     // driver to CORE, cmos local date
 #define SYS_stime 11
 #define SYS_alarm 12
-#define SYS_mmap 13         // mman functions
-#define SYS_munmap 14
-#define SYS_mprotect 15
-#define SYS_msync 16
-#define SYS_mlock 17
-#define SYS_munlock 18
-#define SYS_mlockall 19
-#define SYS_munlockall 20
-#define SYS_mapfile 21      // process functions
-#define SYS_fork 22
-#define SYS_exec 23
-#define SYS_sync 24
+#define SYS_meminfo 13
+#define SYS_mmap 14         // mman functions
+#define SYS_munmap 15
+#define SYS_mprotect 16
+#define SYS_msync 17
+#define SYS_mlock 18
+#define SYS_munlock 19
+#define SYS_mlockall 20
+#define SYS_munlockall 21
+#define SYS_mapfile 22      // process functions
+#define SYS_fork 23
+#define SYS_exec 24
+#define SYS_sync 25
 
 // rdi: FFFFFFFFFFFFxxxx File system services
 // see sys/fs.h
@@ -81,6 +82,7 @@ int bitalloc(int numints,uint64_t *ptr);  // find the first bit clear and set. R
 #define bitfree(b,p) lockrelease(b,p)     // clear a bit
 
 // Memory and threading
+/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
 void yield();                           // give up CPU time
 void seterr(int errno);                 // set libc errno
@@ -90,6 +92,7 @@ void stime(uint64_t utctimestamp);      // set system time
 void setirq(int8_t irq);                // set irq message for this thread
 void sleep(uint64_t sec);               // sleep the thread for sec
 void usleep(uint64_t usec);             // sleep the thread for micro sec
+msg_t *meminfo();                       // get memory info. msg_t.arg0=free pages, msg_t.arg1=total pages
 // see <sys/mman.h> too
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
 pid_t fork();                           // fork thread

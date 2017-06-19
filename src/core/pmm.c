@@ -64,34 +64,41 @@ void pmm_dump()
 void* pmm_alloc()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
-    int i = pmm.size;
+    int i;
     // run-time asserts
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
-    // skip empty slots
-    if(i>0)
-        while(i-->0 && fmem->size==0)
-            fmem++;
-    if(i) {
-        /* add entropy */
-        srand[(i+0)%4] ^= (uint64_t)fmem->base;
-        srand[(i+2)%4] ^= (uint64_t)fmem->base;
-        kentropy();
-        /* allocate page */
-        if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
-            kmap((virt_t)&tmp2map, fmem->base, PG_CORE_NOCACHE);
-            kmemset((char *)&tmp2map, 0, __PAGESIZE);
-        } else {
-            kmemset((char *)fmem->base, 0, __PAGESIZE);
+    for(i=0;i<pmm.size;i++) {
+        if(fmem->size>0) {
+            /* add entropy */
+            srand[(i+0)%4] ^= (uint64_t)fmem->base;
+            srand[(i+2)%4] ^= (uint64_t)fmem->base;
+            kentropy();
+            /* allocate page */
+            if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
+                kmap((virt_t)&tmp2map, fmem->base, PG_CORE_NOCACHE);
+                kmemset((char *)&tmp2map, 0, __PAGESIZE);
+            } else {
+                kmemset((char *)fmem->base, 0, __PAGESIZE);
+            }
+            fmem->base+=__PAGESIZE;
+            fmem->size--;
+            if(fmem->size==0) {
+                for(;i<pmm.size-1;i++) {
+                    pmm.entries[i].base = pmm.entries[i+1].base;
+                    pmm.entries[i].size = pmm.entries[i+1].size;
+                }
+                pmm.size--;
+            }
+            pmm.freepages--;
+            return (void*)(fmem->base - __PAGESIZE);
         }
-        fmem->base+=__PAGESIZE;
-        fmem->size--;
-        pmm.freepages--;
-    } else {
-        // out of memory, should never happen during boot
-        kpanic("pmm_alloc: Out of physical RAM");
+        fmem++;
     }
-    return i ? (void*)fmem->base - __PAGESIZE : NULL;
+    // out of memory, should never happen during boot
+    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH)
+        kpanic("pmm_alloc: Out of physical RAM");
+    return NULL;
 }
 
 /**
@@ -102,59 +109,60 @@ void* pmm_allocslot()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
     int i,j;
-    uint64_t b;
-again:
-    i = 0;
-    while(i++<pmm.size && fmem->size<__SLOTSIZE/__PAGESIZE)
-        fmem++;
-    i--;
-    if(i<pmm.size) {
-        /* add entropy */
-        srand[(i+0)%4] ^= fmem->base;
-        srand[(i+3)%4] ^= fmem->base;
-        kentropy();
-        /* alignment */
-        if(fmem->base & (__SLOTSIZE-1)){
-            if(fmem->size<(__SLOTSIZE + (fmem->base & (__SLOTSIZE-1)))/__PAGESIZE) {
-                i++;
-                if(i<pmm.size)
-                    goto again;
-                else
-                    goto panic;
-            }
+    uint64_t p,b,s;
 
+    for(i=0;i<pmm.size;i++) {
+        b=((fmem->base+__SLOTSIZE-1)/__SLOTSIZE)*__SLOTSIZE;
+        if(fmem->base+fmem->size*__PAGESIZE>=b+__SLOTSIZE) {
+            /* add entropy */
+            srand[(i+0)%4] ^= fmem->base;
+            srand[(i+3)%4] ^= fmem->base;
+            kentropy();
             /* split the memory fragment in two */
-            for(j=pmm.size;j>i;j--) {
-                pmm.entries[j].base = pmm.entries[j-1].base;
-                pmm.entries[j].size = pmm.entries[j-1].size;
+            if(b!=fmem->base) {
+                if((pmm.size+1)*sizeof(OSZ_pmm_entry)>(uint64_t)(__PAGESIZE * nrphymax))
+                    goto panic;
+                for(j=pmm.size;j>i;j--) {
+                    pmm.entries[j].base = pmm.entries[j-1].base;
+                    pmm.entries[j].size = pmm.entries[j-1].size;
+                }
+                pmm.size++;
+                s=(b-fmem->base)/__PAGESIZE;
+                fmem->size = s;
+                fmem++;
+            } else {
+                s=0;
             }
-            pmm.size++;
-            j= (fmem->base & (__SLOTSIZE-1))/__PAGESIZE;
-            fmem->size = j;
-            fmem++;
-            fmem->base += j*__PAGESIZE;
-            fmem->size -= j;
-        }
-        /* allocate page slot */
-        if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
-            b=fmem->base;
-            for(j=0;j<__SLOTSIZE/__PAGESIZE;j++) {
-                kmap((virt_t)&tmp2map, b, PG_CORE_NOCACHE);
-                kmemset((char *)&tmp2map, 0, __PAGESIZE);
-                b+=__PAGESIZE;
+            /* allocate page slot */
+            fmem->base = b+__SLOTSIZE;
+            fmem->size -= s+(__SLOTSIZE/__PAGESIZE);
+            if(fmem->size==0) {
+                for(j=i;j<pmm.size-1;j++) {
+                    pmm.entries[j].base = pmm.entries[j+1].base;
+                    pmm.entries[j].size = pmm.entries[j+1].size;
+                }
+                pmm.size--;
             }
-        } else {
-            kmemset((char *)fmem->base, 0, __SLOTSIZE);
+            pmm.freepages -= (__SLOTSIZE/__PAGESIZE);
+            if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
+                p=b;
+                for(j=0;j<__SLOTSIZE/__PAGESIZE;j++) {
+                    kmap((virt_t)&tmp2map, p, PG_CORE_NOCACHE);
+                    kmemset((char *)&tmp2map, 0, __PAGESIZE);
+                    p+=__PAGESIZE;
+                }
+            } else {
+                kmemset((char *)b, 0, __SLOTSIZE);
+            }
+            return (void*)b;
         }
-        fmem->base += __SLOTSIZE;
-        fmem->size -= __SLOTSIZE/__PAGESIZE;
-        pmm.freepages-=__SLOTSIZE/__PAGESIZE;
-    } else {
-panic:
-        // out of memory, should never happen during boot
-        kpanic("pmm_allocslot: Out of physical RAM");
+        fmem++;
     }
-    return i<pmm.size ? (void*)fmem->base - __SLOTSIZE : NULL;
+panic:
+    // out of memory, should never happen during boot
+    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH)
+        kpanic("pmm_allocslot: Out of physical RAM");
+    return NULL;
 }
 
 /**
