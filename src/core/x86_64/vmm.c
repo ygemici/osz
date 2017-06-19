@@ -52,8 +52,8 @@ void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t acce
     if(access==0 || access>__PAGESIZE)
         access=PG_USER_RW;
 #if DEBUG
-//    if(debug&DBG_MALLOC)
-//        kprintf("vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
+    if(debug&DBG_MALLOC)
+        kprintf("vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
 #endif
 again:
     kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE);
@@ -102,6 +102,54 @@ again:
         phys += __PAGESIZE;
         size -= __PAGESIZE;
         tcb->linkmem++;
+        i++; if(i>511) goto again;
+    }
+}
+
+/**
+ * unmap memory from thread's address space
+ */
+void vmm_unmapbss(OSZ_tcb *tcb, virt_t bss, size_t size)
+{
+    if(size==0)
+        return;
+    uint64_t *paging = (uint64_t *)&tmpmap;
+    int i;
+    bss &= ~(__PAGESIZE-1);
+    size=((size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
+#if DEBUG
+    if(debug&DBG_MALLOC)
+        kprintf("vmm_unmapbss(%x,%x,%d)\n", tcb->memroot, bss, size);
+#endif
+again:
+    kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE);
+    //PML4E
+    i=(bss>>(12+9+9+9))&0x1FF;
+    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE);
+    //PDPE
+    i=(bss>>(12+9+9))&0x1FF;
+    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE);
+    //PDE
+    i=(bss>>(12+9))&0x1FF;
+    if(paging[i]&PG_SLOT) {
+        while(size>0) {
+            if(paging[i]){
+                pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), __SLOTSIZE/__PAGESIZE);
+                paging[i] = 0;
+                tcb->linkmem -= __SLOTSIZE/__PAGESIZE;
+            }
+            size -= __SLOTSIZE;
+            i++; if(i>511) goto again;
+        }
+    }
+    //PTE
+    while(size>0) {
+        if(paging[i]) {
+            pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), 1);
+            paging[i] = 0;
+            tcb->linkmem--;
+        }
+        size -= __PAGESIZE;
         i++; if(i>511) goto again;
     }
 }

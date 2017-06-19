@@ -25,11 +25,16 @@
  * @brief Memory allocator and deallocator header
  */
 
-#define CHUNKSIZE     __SLOTSIZE                                //one chunk is 2M
-#define MAXARENA     ((CHUNKSIZE/sizeof(void*))-1)              //maximum number of arenas
-#define BITMAPSIZE   (CHUNKSIZE/__PAGESIZE/sizeof(void*)/8)     //number of allocation blocks in a chunk
-#define numallocmaps(a) (a[0]&0x7ffffffff)                         //number of chunks in an arena
-#define chunksize(q) ((q*BITMAPSIZE*sizeof(void*)*8/__PAGESIZE)*__PAGESIZE)  //size of a chunk for a given quantum
+/*
+ * ARENASIZE = 2M maps max. 512G RAM
+ * ARENASIZE = 4M maps max. 1T RAM
+ */
+#define CHUNKSIZE     __SLOTSIZE                                 //one chunk is 2M
+#define ARENASIZE     (CHUNKSIZE)                                //space for 256k pointers
+#define MAXARENA      ((ARENASIZE/sizeof(void*))-1)              //maximum number of arenas
+#define BITMAPSIZE    (CHUNKSIZE/__PAGESIZE/sizeof(void*)/8)     //number of allocation blocks in a chunk
+#define numallocmaps(a) (a[0]&0x7ffffffff)                       //number of chunks in an arena
+#define chunksize(q)  ((q*BITMAPSIZE*sizeof(void*)*8/__PAGESIZE)*__PAGESIZE)  //size of a chunk for a given quantum
 
 typedef struct {
     uint64_t quantum;               //allocation unit in this chunk

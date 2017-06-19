@@ -425,9 +425,6 @@ getmemmap:
             cmp         eax, ebp
             jb          .entryok
 .bigenough: mov         eax, dword [di]
-            ; "allocate" initrd
-            add         dword [di], ebp
-            sub         dword [di+8], ebp
             ;save ramdisk pointer
             mov         dword [bootboot.initrd_ptr], eax
 .entryok:   ;get limit of memory

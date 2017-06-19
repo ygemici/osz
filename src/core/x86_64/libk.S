@@ -161,15 +161,52 @@ kpanic:
 
 /* misc memory functions */
 kmemcpy:
-    movq    %rdx, %rcx
+    cld
+    orq     %rdi, %rdi
+    jz      2f
+    orq     %rsi, %rsi
+    jz      2f
+    orq     %rdx, %rdx
+    jz      2f
+1:  movq    %rdx, %rcx
+    shrq    $3, %rcx
+    or      %rcx, %rcx
+    jz      1f
+    repnz   movsq
+1:  movb    %dl, %cl
+    andb    $0x7, %cl
     repnz   movsb
-    ret
+    cld
+2:  ret
 
 kmemset:
-    movb    %sil, %al
+    cld
+    orq     %rdx, %rdx
+    jz      2f
+    orq     %rdi, %rdi
+    jz      2f
     movq    %rdx, %rcx
+    movq    %rdi, %rbx
+    movb    %sil, %al
+    shrq    $3, %rcx
+    orq     %rcx, %rcx
+    jz      1f
+    movb    %al, %ah
+    shlq    $16, %rax
+    movb    %sil, %al
+    movb    %al, %ah
+    shlq    $16, %rax
+    movb    %sil, %al
+    movb    %al, %ah
+    shlq    $16, %rax
+    movb    %sil, %al
+    movb    %al, %ah
+    repnz   stosq
+1:  movb    %dl, %cl
+    andb    $0x7, %cl
     repnz   stosb
-    ret
+    movq    %rbx, %rax
+2:  ret
 
 kmemcmp:
     pushq   %rdi
@@ -229,6 +266,7 @@ kstrcmp:
    rdx: access rights
 */
 kmap:
+    /* these indeces on kmap_tmp must match supervisor.ld */
     /* shortcut for tmpmap. It's often called from sched_get_tcb */
     cmpq    $tmpmap, %rdi
     jne     1f
@@ -240,6 +278,18 @@ kmap:
     jne     1f
     movq    kmap_tmp, %rax
     addq    $32, %rax
+    jmp     2f
+    /* shortcut for tmpxf */
+1:  cmpq    $tmpfx, %rdi
+    jne     1f
+    movq    kmap_tmp, %rax
+    addq    $40, %rax
+    jmp     2f
+    /* shortcut for tmpalarm */
+1:  cmpq    $tmpalarm, %rdi
+    jne     1f
+    movq    kmap_tmp, %rax
+    addq    $48, %rax
     jmp     2f
 1:  call    kmap_getpte
 2:  andw    $0xF000, %si

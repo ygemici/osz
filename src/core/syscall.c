@@ -174,7 +174,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             if(arg1>=__SLOTSIZE) {
                 arg1=(arg1+__SLOTSIZE-1)/__SLOTSIZE;
                 for(i=0;i<arg1;i++) {
-                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_allocslot(), __PAGESIZE, j);
+                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_allocslot(), __SLOTSIZE, j);
                     tcb->allocmem+=__SLOTSIZE/__PAGESIZE;
                     arg0+=__SLOTSIZE;
                 }
@@ -193,6 +193,9 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         if(debug&DBG_MALLOC)
             kprintf("munmap(%x, %d) pid %2x\n", arg0, arg1, tcb->mypid);
 #endif
+            arg1=((arg1+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
+            vmm_unmapbss(tcb, (virt_t)arg0, (size_t)arg1);
+            tcb->allocmem-=arg1/__PAGESIZE;
             break;
 
         default:

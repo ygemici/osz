@@ -68,11 +68,10 @@ void* pmm_alloc()
     // run-time asserts
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
-    if(pmm.size<1)
-        kprintf("WARNING shound not happen pmm.size %d < 1",pmm.size);
     // skip empty slots
-    while(i-->0 && fmem->size==0)
-        fmem++;
+    if(i>0)
+        while(i-->0 && fmem->size==0)
+            fmem++;
     if(i) {
         /* add entropy */
         srand[(i+0)%4] ^= (uint64_t)fmem->base;
@@ -156,6 +155,38 @@ panic:
         kpanic("pmm_allocslot: Out of physical RAM");
     }
     return i<pmm.size ? (void*)fmem->base - __SLOTSIZE : NULL;
+}
+
+/**
+ * Add to free memory entries
+ */
+void pmm_free(phy_t base, size_t numpages)
+{
+    int i;
+    uint64_t s=numpages*__PAGESIZE;
+    /* add entropy */
+    srand[(numpages+0)%4] ^= (uint64_t)base;
+    srand[(numpages+2)%4] ^= (uint64_t)base;
+    kentropy();
+    /* check for continuous regions */
+    for(i=0;i<pmm.size;i++) {
+        /* add to the beginning */
+        if(pmm.entries[i].base == base+s)
+            goto addregion;
+        /* add to the end */
+        if(pmm.entries[i].base+pmm.entries[i].size*__PAGESIZE == base)
+            goto addregion2;
+    }
+    /* add as a new entry */
+    pmm.size++;
+    pmm.entries[i].size = 0;
+addregion:
+    pmm.entries[i].base = base;
+addregion2:
+    pmm.entries[i].size += numpages;
+    pmm.freepages += numpages;
+    if(pmm.freepages>pmm.totalpages)
+        kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
 }
 
 /**
@@ -252,7 +283,7 @@ void pmm_init()
     pmm.freepages = pmm.totalpages;
     // memory check, -1 for rounding errors
     if(m/1024/1024 < PHYMEM_MIN-1)
-        kpanic("Not enough memory. At least %d Mb of RAM required.", PHYMEM_MIN);
+        kpanic("Not enough memory. At least %d Mb of RAM required, only %d Mb free.", PHYMEM_MIN, m/1024/1024);
 
     // ok, now we can allocate bss memory for core
 
@@ -274,7 +305,7 @@ void pmm_init()
     //dump memory map to log
     num = (bootboot.size-128)/16;
     entry = (MMapEnt*)&bootboot.mmap;
-    syslog_early("Memory Map (%d entries)\n", num);
+    syslog_early("Memory Map (%d entries, %d Mb free)\n", num, pmm.totalpages*__PAGESIZE/1024/1024);
     while(num>0) {
         syslog_early(" %s %8x %9d\n",
             MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],

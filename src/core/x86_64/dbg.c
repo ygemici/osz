@@ -1030,6 +1030,7 @@ void dbg_ram()
 
     o=1;
     for(i=1;i<MAXARENA && arena[i]!=0;i++) {
+        if(i>128) break;
         if(((allocmap_t*)arena[i])->numchunks==0)
             continue;
         fg=dbg_theme[2];
@@ -1040,6 +1041,7 @@ void dbg_ram()
         if(dbg_tui)
             dbg_settheme();
         for(j=0;j<((allocmap_t*)arena[i])->numchunks;j++) {
+            if(j>128 || (((allocmap_t*)arena[i])->chunk[j].quantum&7)!=0) break;
             kprintf("%3d. %6d %x - %x ",o++,
                 ((allocmap_t*)arena[i])->chunk[j].quantum,
                 ((allocmap_t*)arena[i])->chunk[j].ptr,

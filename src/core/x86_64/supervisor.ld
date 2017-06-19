@@ -42,6 +42,7 @@ SECTIONS
     /* mappings hack */
     tmpctrl = .;
     . += 4096;
+    /* kmap relies on these in order for speed up */
     tmpmap = .;
     . += 4096;
     tmppte = .;
@@ -49,6 +50,8 @@ SECTIONS
     tmpmqctrl = .;
     . += 4096;
     tmp2map = .;
+    . += 4096;
+    tmpfx = .;
     . += 4096;
     tmpalarm = .;
     . += 4096;

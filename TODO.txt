@@ -1,5 +1,5 @@
  --- Error fixes ---
-./src/core/pmm.c:240:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
+./src/core/pmm.c:271:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
 ./src/core/syscall.c:171:            /* FIXME: naive implementation, no checks */
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto

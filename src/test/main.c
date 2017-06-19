@@ -47,6 +47,19 @@ void mmap_test()
     ptr=realloc(ptr,200);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
     bzt_dumpmem((void*)BSS_ADDRESS);
+
+    free(ptr);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    free(ptr3);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    free(ptr2);
+    bzt_dumpmem((void*)BSS_ADDRESS);
+
+    ptr=malloc(20000);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+    bzt_dumpmem((void*)BSS_ADDRESS);
 }
 
 int main(int argc, char**argv)

@@ -133,9 +133,14 @@ extern void *pmm_alloc();
 /** Allocate a physical memory slot (2M) */
 extern void *pmm_allocslot();
 
+/** Free physical memory */
+extern void pmm_free(phy_t base, size_t numpages);
+
 /** Map a specific memory area into thread's bss */
 extern void vmm_mapbss(OSZ_tcb *tcb,virt_t bss, phy_t phys, size_t size, uint64_t access);
 
+/** Unmap thread's bss */
+extern void vmm_unmapbss(OSZ_tcb *tcb,virt_t bss, size_t size);
 
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
