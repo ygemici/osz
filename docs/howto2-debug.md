@@ -175,17 +175,20 @@ It's enough to enter commands until it's obvious, in most cases that's the first
 | `SYsinfo` `Log` | show system information and early syslog |
 | `Full`     | toggle full window mode, give space for main information |
 
-Goto has an argument, entered in hexadecimal (prefix 0x is optional). Can be:
+Goto has an argument, entered in hexadecimal (prefix 0x is optional). Note this only moves the window, but does
+not change execution flow. Can be:
  * (empty) if not given, it will go to the next instruction
  * `+X`, `-X` set up rip relative address
  * `X` go to absolute address
  * `symbol+X` symbol relative address
 
-Examine may have two arguments, a flag and an address. Address is the same as in goto, expect it sets rsp instead of rip.
+Examine may have two arguments, a flag and an address. Address is the same as in goto, expect it sets rsp.
  * (empty) return to the original stack
  * `+X`, `-X` set up rsp relative address
  * `X` go to absolute address
  * `symbol+X` symbol relative address
+
+Exampine has a counterpart, `xp` which examines physical addresses.
 
 Break works just like examine, expect that
  * (empty) lists breakpoints
@@ -196,11 +199,23 @@ The flag can be one of:
  * 2,w - 8 words in a row
  * 4,d - 4 double words in a row
  * 8,q - 2 quad words in a row
- * s   - single quad word in a row (stack view, examine only)
+ * s   - single quad word in a row (stack view with symbol translation, examine only)
  * r   - sets data read breakpoint (break only)
  * w   - sets data write breakpoint (break only)
  * p   - sets io port access breakpoint (break only)
  * x   - sets execution breakpoint (break only, default)
+
+In addition to ELF symbols, you can also use these:
+ * tcb   - thread control block
+ * mq    - message queue
+ * stack - start of local stack
+ * text  - start of text segment, end of local stack
+ * bss   - dynamically allocated memory
+ * sbss/shared - shared memory
+ * core  - kernel text segment
+ * buff  - buffer area
+ * bt    - backtrace stack
+ * cr2, cr3 +any general purpose register
 
 #### Examples
 
@@ -214,6 +229,7 @@ x 1234          dump memory at 0x1234
 x /q            dump in quad words
 x /s rsp        print stack
 /b              switch units to bytes
+x /4 rsi        show dwords at register offset
 i               go back to disassemble instructions tab
 b /qw tcb+F0    set a write breakpoint for quadword length at 000F0h
 b /bp 60        monitor keyboard port
