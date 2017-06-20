@@ -64,14 +64,14 @@ extern void bzt_dumpmem(void *arena);
 #define malloc(s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,s,MAP_PRIVATE)
 #define calloc(n,s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,n*s,MAP_PRIVATE)
 #define realloc(p,s) bzt_alloc((void*)BSS_ADDRESS,8,p,s,MAP_PRIVATE)
-#define memalign(s) bzt_alloc((void*)BSS_ADDRESS,a,NULL,s,MAP_PRIVATE)
+#define aligned_alloc(a,s) bzt_alloc((void*)BSS_ADDRESS,a,NULL,s,MAP_PRIVATE)
 #define free(p) bzt_free((void*)BSS_ADDRESS,p)
 
 /* Shared Memory */
 #define smalloc(s) bzt_alloc((void*)SBSS_ADDRESS,8,NULL,s,MAP_SHARED)
 #define scalloc(n,s) bzt_alloc((void*)SBSS_ADDRESS,8,NULL,n*s,MAP_SHARED)
 #define srealloc(p,s) bzt_alloc((void*)SBSS_ADDRESS,8,p,s,MAP_SHARED)
-#define smemalign(s) bzt_alloc((void*)SBSS_ADDRESS,a,NULL,s,MAP_SHARED)
+#define saligned_alloc(s) bzt_alloc((void*)SBSS_ADDRESS,a,NULL,s,MAP_SHARED)
 #define sfree(p) bzt_free((void*)SBSS_ADDRESS,p)
 
 /*** unimplemented ***/

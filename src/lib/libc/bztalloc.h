@@ -35,10 +35,7 @@
 typedef struct {
     uint64_t quantum;               //allocation unit in this chunk
     void *ptr;                      //memory pointer (page or slot aligned)
-    union {
-        uint64_t map[BITMAPSIZE];   //free units in this chunk (512 bits)
-        uint64_t size[BITMAPSIZE];  //size, only first used
-    };
+    uint64_t map[BITMAPSIZE];       //free units in this chunk (512 bits), or first item size
 } chunkmap_t;
 
 /* this must work with a zeroed page, hence no magic and zero bit represents free */

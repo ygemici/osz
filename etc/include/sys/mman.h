@@ -43,6 +43,7 @@
 #define MAP_FIXED       0x10        /* Interpret addr exactly.  */
 #define MAP_FILE        0
 #define MAP_ANONYMOUS   0x20        /* Don't use a file.  */
+#define MAP_SPARE       0x40        /* Don't alloc physical page */
 #define MAP_ANON        MAP_ANONYMOUS
 #define MAP_LOCKED      0x100       /* Lock the mapping.  */
 #define MAP_NONBLOCK    0x200       /* Do not block on IO.  */

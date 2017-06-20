@@ -131,7 +131,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 
         case SYS_mapfile:
             /* map a file info bss */
-            if(arg0<BSS_ADDRESS || arg0>=FBUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
+            if(arg0<BSS_ADDRESS || arg0>=BUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
                 tcb->errno = EINVAL;
                 return 0;
             }

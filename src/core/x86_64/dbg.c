@@ -69,6 +69,7 @@ extern void kprintf_unicodetable();
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern virt_t disasm(virt_t rip, char *str);
 extern char *sprintf(char *dst,char* fmt, ...);
+extern void sched_dump();
 
 // variables
 uint8_t __attribute__ ((section (".data"))) dbg_enabled;
@@ -259,7 +260,7 @@ void dbg_tcb()
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("pid: %x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
+        kprintf("pid: %4x, name: %s\nRunning on cpu core: %x, ",tcb->mypid, tcb->name, tcb->cpu);
         kprintf("priority: %s (%d), state: %s (%1x) ",
             prio[tcb->priority], tcb->priority,
             tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
@@ -275,76 +276,75 @@ void dbg_tcb()
         if(dbg_tui)
             dbg_settheme();
         t=(tcb->state==tcb_state_running?0:ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
-        kprintf("user ticks: %d, system ticks: %d, blocked ticks: %d\n", tcb->billcnt, tcb->syscnt, t);
+        kprintf("user ticks: %9d, system ticks: %9d, blocked ticks: %9d\n", tcb->billcnt, tcb->syscnt, t);
+        kprintf("blocked since: %9d, next in alarm queue: %4x, alarm at: %d.%d\n", tcb->blktime,
+            tcb->alarm, tcb->alarmsec, tcb->alarmns);
         kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
-        if(tcb->state==tcb_state_blocked) {
-            kprintf("blocked since: %d, ", tcb->blktime);
-            kprintf("next in alarm queue: %4x, alarm at: %d.%d\n", tcb->alarm, tcb->alarmsec, tcb->alarmns);
-        }
-        if(tcb->state==tcb_state_hybernated) {
-            fg=dbg_theme[4];
-            if(dbg_tui)
-                dbg_settheme();
-            kprintf("\n\n[Hybernation info]\n");
-            fg=dbg_theme[3];
-            if(dbg_tui)
-                dbg_settheme();
-            kprintf("swapped to: %x\n", tcb->swapminor);
-        }
         kprintf("\n");
     }
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("[Memory]\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("memory root: %x ", tcb->memroot); dbg_pagingflags(tcb->memroot);
-    kprintf(", allocated pages: %d, linked pages: %d\n", tcb->allocmem, tcb->linkmem);
-
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("\n[Virtual Memory Manager%s, allocmaps: %d/%d, chunks: %d, %d units]\n",
-        (arena[0] & (1UL<<63))!=0?" (LOCKED)":"",numallocmaps(arena), MAXARENA,
-        (ALLOCSIZE-8)/sizeof(chunkmap_t), BITMAPSIZE*64);
-    kprintf("Idx Quantum Start       End       Allocation bitmap                    Size\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-
-    o=1;
-    for(i=1;i<MAXARENA && arena[i]!=0;i++) {
-        if(i>128) break;
-        if(((allocmap_t*)arena[i])->numchunks==0)
-            continue;
-        fg=dbg_theme[2];
+    if(tcb->state==tcb_state_hybernated) {
+        fg=dbg_theme[4];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("  --- allocmap %d @%x, numchunks: %d ---\n",i,arena[i],((allocmap_t*)arena[i])->numchunks);
+        kprintf("[Hybernation info]\n");
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        for(j=0;j<((allocmap_t*)arena[i])->numchunks;j++) {
-            if(j>128 || (((allocmap_t*)arena[i])->chunk[j].quantum&7)!=0) break;
-            kprintf("%3d. %9d %x - %x ",o++,
-                ((allocmap_t*)arena[i])->chunk[j].quantum,
-                ((allocmap_t*)arena[i])->chunk[j].ptr,
-                ((allocmap_t*)arena[i])->chunk[j].ptr+
-                    (((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE?
-                        chunksize(((allocmap_t*)arena[i])->chunk[j].quantum):
-                        ((allocmap_t*)arena[i])->chunk[j].size[0]));
-            if(((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE) {
-                m=(uint16_t*)&((allocmap_t*)arena[i])->chunk[j].map;
-                for(k=0;k<BITMAPSIZE*4;k++) {
-                    l=0; for(n=0;n<16;n++) { if(*m & mask[n]) l++; }
-                    kprintf("%c",bmap[l]);
-                    m++;
+        kprintf("swapped to: %8x\n", tcb->swapminor);
+    } else {
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("[Memory]\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("mapping: %8x ", tcb->memroot); dbg_pagingflags(tcb->memroot);
+        kprintf(", allocated pages: %6d, linked pages: %6d\n", tcb->allocmem, tcb->linkmem);
+    
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("\n[Virtual Memory Manager%s, allocmaps: %d/%d, chunks: %d, %d units]\n",
+            (arena[0] & (1UL<<63))!=0?" (LOCKED)":"",numallocmaps(arena), MAXARENA,
+            (ALLOCSIZE-8)/sizeof(chunkmap_t), BITMAPSIZE*64);
+        kprintf("Idx Quantum Start       End       Allocation bitmap                    Size\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+    
+        o=1;
+        for(i=1;i<MAXARENA && arena[i]!=0;i++) {
+            if(i>128) break;
+            if(((allocmap_t*)arena[i])->numchunks==0)
+                continue;
+            fg=dbg_theme[2];
+            if(dbg_tui)
+                dbg_settheme();
+            kprintf("  --- allocmap %d @%x, numchunks: %d ---\n",i,arena[i],((allocmap_t*)arena[i])->numchunks);
+            fg=dbg_theme[3];
+            if(dbg_tui)
+                dbg_settheme();
+            for(j=0;j<((allocmap_t*)arena[i])->numchunks;j++) {
+                if(j>128 || (((allocmap_t*)arena[i])->chunk[j].quantum&7)!=0) break;
+                kprintf("%3d. %9d %x - %x ",o++,
+                    ((allocmap_t*)arena[i])->chunk[j].quantum,
+                    ((allocmap_t*)arena[i])->chunk[j].ptr,
+                    ((allocmap_t*)arena[i])->chunk[j].ptr+
+                        (((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE?
+                            chunksize(((allocmap_t*)arena[i])->chunk[j].quantum):
+                            ((allocmap_t*)arena[i])->chunk[j].map[0]));
+                if(((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE) {
+                    m=(uint16_t*)&((allocmap_t*)arena[i])->chunk[j].map;
+                    for(k=0;k<BITMAPSIZE*4;k++) {
+                        l=0; for(n=0;n<16;n++) { if(*m & mask[n]) l++; }
+                        kprintf("%c",bmap[l]);
+                        m++;
+                    }
+                    kprintf("%8dk\n",chunksize(((allocmap_t*)arena[i])->chunk[j].quantum)/1024);
+                } else {
+                    kprintf("(no bitmap) %8dM\n",((allocmap_t*)arena[i])->chunk[j].map[0]/1024/1024);
                 }
-                kprintf("%8dk\n",chunksize(((allocmap_t*)arena[i])->chunk[j].quantum)/1024);
-            } else {
-                kprintf("(no bitmap) %8dM\n",((allocmap_t*)arena[i])->chunk[j].size[0]/1024/1024);
             }
         }
     }
@@ -977,49 +977,65 @@ void dbg_queues()
         dbg_settheme();
     kprintf("Cpu real id: %d, logical id: %d, ",ccb.realid, ccb.id);
     kprintf("last xreg: %4x, mutex: %4x%4x%4x\n", ccb.lastxreg, ccb.mutex[0], ccb.mutex[1], ccb.mutex[2]);
-    kprintf("ist1: %x, ist2: %x, ist3: %x\n", oldist1, ccb.ist2, ccb.ist3);
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("\n[Blocked Task Queues]\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    if(ccb.hd_timerq)
-        kprintf("timerq head: %4x (awake at %d.%d)\n",
-            ccb.hd_timerq, ((OSZ_tcb*)&tmpalarm)->alarmsec, ((OSZ_tcb*)&tmpalarm)->alarmns);
-    j=0;
-    if(ccb.hd_blocked) {
-        n = ccb.hd_blocked;
-        do {
-            j++;
-            kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
-            // failsafe
-            if( n == tcbq->next)
-                break;
-            n = tcbq->next;
-        } while(n!=0 && j<65536);
-    }
-    kprintf("iowait head: %4x, %d task(s)\n",
-        ccb.hd_blocked, j);
-    fg=dbg_theme[4];
-    if(dbg_tui)
-        dbg_settheme();
-    kprintf("\n[Active Priority Queues]\n Queue number Head      Current   #Tasks\n");
-    fg=dbg_theme[3];
-    if(dbg_tui)
-        dbg_settheme();
-    for(i=0;i<8;i++) {
+
+    if(dbg_full) {
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("\n[Task Queues]\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+        sched_dump();
+    } else {
+        kprintf("ist1: %x, ist2: %x, ist3: %x\n", oldist1, ccb.ist2, ccb.ist3);
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("\n[Active Priority Queues]\n Queue number Head      Current   #Tasks\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
+        for(i=0;i<8;i++) {
+            j=0;
+            if(ccb.hd_active[i]) {
+                n = ccb.hd_active[i];
+                do {
+                    j++;
+                    kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
+                    // failsafe
+                    if( n == tcbq->next)
+                        break;
+                    n = tcbq->next;
+                } while(n!=0 && j<65536);
+            }
+            kprintf(" %d. %s %4x, %4x, %6d\n", i, prio[i], ccb.hd_active[i], ccb.cr_active[i],j);
+        }
+        fg=dbg_theme[4];
+        if(dbg_tui)
+            dbg_settheme();
+        kprintf("\n[Blocked Task Queues]\n");
+        fg=dbg_theme[3];
+        if(dbg_tui)
+            dbg_settheme();
         j=0;
-        if(ccb.hd_active[i]) {
-            n = ccb.hd_active[i];
+        if(ccb.hd_blocked) {
+            n = ccb.hd_blocked;
             do {
                 j++;
                 kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
+                // failsafe
+                if( n == tcbq->next)
+                    break;
                 n = tcbq->next;
-            } while(n!=0);
+            } while(n!=0 && j<65536);
         }
-        kprintf(" %d. %s %4x, %4x, %6d\n", i, prio[i], ccb.hd_active[i], ccb.cr_active[i],j);
+        kprintf("iowait head: %4x, %d task(s)\n",
+            ccb.hd_blocked, j);
+        kprintf("timerq head: %4x, awake at %d.%d\n",
+            ccb.hd_timerq,
+            ccb.hd_timerq?((OSZ_tcb*)&tmpalarm)->alarmsec:0, 
+            ccb.hd_timerq?((OSZ_tcb*)&tmpalarm)->alarmns:0);
     }
 }
 

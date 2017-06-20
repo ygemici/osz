@@ -152,6 +152,61 @@ void mmap_test()
     msg=meminfo();
     dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
     dbg_printf("pmm diff: %d\n",fm-msg->arg0);
+
+    ptr=malloc(8);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+    
+    ptr2=aligned_alloc(128,8);
+    if((uint64_t)ptr2&127UL)
+        dbg_printf("UNALIGNED!!! ");
+    dbg_printf("ptr2=%x errno=%d\n",ptr2, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    free(ptr);
+    free(ptr2);
+
+    ptr=malloc(4096);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+    
+    ptr2=aligned_alloc(65536,4096);
+    if((uint64_t)ptr2&65535UL)
+        dbg_printf("UNALIGNED!!! ");
+    dbg_printf("ptr2=%x errno=%d\n",ptr2, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    ptr3=aligned_alloc(8*1024*1024,2*1024*1024);
+    if((uint64_t)ptr3&(8*1024*1024-1))
+        dbg_printf("UNALIGNED!!! ");
+    dbg_printf("ptr3=%x errno=%d\n",ptr3, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+    ptr=realloc(ptr,2*1024*1024);
+    dbg_printf("ptr=%x errno=%d\n",ptr, errno);
+#if DEBUG
+    if(_debug&DBG_MALLOC)
+        bzt_dumpmem((void*)BSS_ADDRESS);
+#endif
+
+    free(ptr);
+    free(ptr2);
+    free(ptr3);
+
 }
 
 int main(int argc, char**argv)

@@ -33,7 +33,6 @@
 .global mq_send
 .global mq_recv
 .global mq_ismsg
-.global bitalloc
 .global lockacquire
 .global lockrelease
 .global dl
@@ -144,27 +143,6 @@ mq_dispatchcall:
     /* rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
     movq    8(%rsp), %rax
     callq   *%rax
-    ret
-
-/**
- * int bitalloc(int numwords, uint64_t *mem)
- */
-bitalloc:
-    xorq    %rbx, %rbx
-    xorq    %rcx, %rcx
-1:  lodsq
-    notq    %rax
-    bsfq    %rax, %rcx
-    jnz     1f
-    addq    $64, %rbx
-    decq    %rdi
-    jnz     1b
-    xorq    %rax, %rax
-    decq    %rax
-    ret
-1:  btsq    %rcx, -8(%rsi)
-    movq    %rcx, %rax
-    addq    %rbx, %rax
     ret
 
 /**

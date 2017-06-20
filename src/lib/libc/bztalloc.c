@@ -50,11 +50,8 @@
  *  ptr points to a slot aligned address, size[0] holds number of continous allocsize blocks
  *
  * Depends on the following libc functions:
- * - void lockacquire(int bit, uint64_t *ptr);        // return only when the bit is set, yield otherwise
- * - void lockrelease(int bit, uint64_t *ptr);        // release a bit
- * - int bitalloc(int numints,uint64_t *ptr);         // find the first cleared bit and set. Return -1 or error
- * - #define bitfree(b,p) lockrelease(b,p)            // clear a bit, same as lockrelease
- * - void *memset (void *s, int c, size_t n);         // set a memory with character
+ * - void lockacquire(int bit, uint64_t *ptr);        // return only when the bit is set and was clear, yield otherwise
+ * - void lockrelease(int bit, uint64_t *ptr);        // clear a bit
  * - void *memcpy (void *dest, void *src, size_t n);  // copy memory
  * - void *mmap (void *addr, size_t len, int prot, int flags, -1, 0); //query memory from pmm
  * - int munmap (void *addr, size_t len);                             //give back memory to system
@@ -72,7 +69,7 @@
 void bzt_free(uint64_t *arena, void *ptr)
 {
     int i,j,k,cnt=0;
-    uint64_t l;
+    uint64_t l,sh;
     allocmap_t *am;
     chunkmap_t *ocm=NULL; //old chunk map
 
@@ -94,21 +91,22 @@ void bzt_free(uint64_t *arena, void *ptr)
         for(j=0;j<am->numchunks;j++) {
             if( am->chunk[j].ptr <= ptr && 
                 ptr < am->chunk[j].ptr +
-                (am->chunk[j].quantum<ALLOCSIZE? chunksize(am->chunk[j].quantum) : am->chunk[j].size[0])) {
+                (am->chunk[j].quantum<ALLOCSIZE? chunksize(am->chunk[j].quantum) : am->chunk[j].map[0])) {
                     ocm=&am->chunk[j];
                     l=0;
                     if(ocm->quantum<ALLOCSIZE) {
-                        bitfree((ptr-ocm->ptr)/ocm->quantum, (uint64_t*)&ocm->map);
+                        sh=(ptr-ocm->ptr)/ocm->quantum;
+                        ocm->map[sh>>6] &= ~(1UL<<(sh%64));
+                        //was it the last allocation in this chunk?
+                        l=0; for(k=0;k<BITMAPSIZE;k++) l+=ocm->map[k];
                         if(ocm->quantum<__PAGESIZE) {
-                            //was it the last allocation in this chunk?
-                            l=0; for(k=0;k<BITMAPSIZE;k++) l+=ocm->map[k];
                             if(l==0)
                                 munmap(ocm->ptr,chunksize(ocm->quantum));
                         } else {
                             munmap(ptr,ocm->quantum);
                         }
                     } else {
-                        munmap(ocm->ptr,ocm->size[0]);
+                        munmap(ocm->ptr,ocm->map[0]);
                     }
                     if(l==0) {
                         //not last chunk?
@@ -137,7 +135,7 @@ void bzt_free(uint64_t *arena, void *ptr)
 
 void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
 {
-    uint64_t q;
+    uint64_t q,sh,sf;
     int i,j,k,l,fc=0,cnt=0,ocmi,ocmj;
     void *fp, *sp, *lp, *end;
     allocmap_t *am;
@@ -156,6 +154,8 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
     for(q=8;q<s;q<<=1);
     // minimum alignment is quantum
     if(a<q) a=q;
+    // shifts
+    sh=-1; sf=a/q;
 
     lockacquire(63,arena);
 #if DEBUG
@@ -164,7 +164,7 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
 #endif
     // if we don't have any allocmaps yet
     if(!numallocmaps(arena)) {
-        if(mmap((void*)((uint64_t)arena+ARENASIZE), ALLOCSIZE, prot, flag, -1, 0)==MAP_FAILED) {
+        if(mmap((void*)((uint64_t)arena+ARENASIZE), ALLOCSIZE, prot, flag&~MAP_SPARE, -1, 0)==MAP_FAILED) {
             seterr(ENOMEM);
             lockrelease(63,arena);
             return NULL;
@@ -189,10 +189,12 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
             fc=i;
         for(j=0;j<am->numchunks;j++) {
             end=am->chunk[j].ptr +
-                (am->chunk[j].quantum<ALLOCSIZE? chunksize(am->chunk[j].quantum) : am->chunk[j].size[0]);
-            if(am->chunk[j].quantum==q && q<ALLOCSIZE)
-                for(k=0;k<BITMAPSIZE;k++)
-                    if(am->chunk[j].map[k]!=-1) { ncm=&am->chunk[j]; break; }
+                (am->chunk[j].quantum<ALLOCSIZE? chunksize(am->chunk[j].quantum) : am->chunk[j].map[0]);
+            if(am->chunk[j].quantum==q && q<ALLOCSIZE && ((uint64_t)(am->chunk[j].ptr)&(a-1))==0) {
+                for(k=0;k<BITMAPSIZE*64;k+=sf) {
+                    if(((am->chunk[j].map[k>>6])&(1UL<<(k%64)))==0) { ncm=&am->chunk[j]; sh=k; break; }
+                }
+            }
             if(ptr!=NULL && am->chunk[j].ptr <= ptr && ptr < end) {
                     ocm=&am->chunk[j];
                     ocmi=i; ocmj=j;
@@ -208,14 +210,17 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
         lockrelease(63,arena);
         return ptr;
     }
-    if(lp!=NULL && sp!=NULL && lp+((s+ALLOCSIZE-1)/ALLOCSIZE)*ALLOCSIZE < sp)
-        fp=lp;
+    // if we have a big enough, aligned space after allocmap, use that area
+    if(lp!=NULL && sp!=NULL && 
+        lp+((s+ALLOCSIZE-1)/ALLOCSIZE)*ALLOCSIZE < sp && 
+        ((uint64_t)lp&(a-1))==0)
+            fp=lp;
     if(ncm==NULL) {
         // first allocmap with free chunks
         if(fc==0) {
             //do we have place for a new allocmap?
             if(i>=numallocmaps(arena) ||
-                mmap(fp, ALLOCSIZE, prot, flag, -1, 0)==MAP_FAILED) {
+                mmap(fp, ALLOCSIZE, prot, flag&~MAP_SPARE, -1, 0)==MAP_FAILED) {
                     seterr(ENOMEM);
                     lockrelease(63,arena);
                     return ptr;
@@ -223,7 +228,7 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
             arena[0]++;
             //did we just passed a page boundary?
             if((arena[0]*sizeof(void*)/__PAGESIZE)!=((arena[0]+1)*sizeof(void*)/__PAGESIZE)) {
-                if(mmap(&arena[arena[0]], __PAGESIZE, prot, flag, -1, 0)==MAP_FAILED) {
+                if(mmap(&arena[arena[0]], __PAGESIZE, prot, flag&~MAP_SPARE, -1, 0)==MAP_FAILED) {
                     seterr(ENOMEM);
                     lockrelease(63,arena);
                     return ptr;
@@ -235,34 +240,38 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
         }
         // add a new chunk
         am=(allocmap_t*)arena[fc];
+        if(q>=ALLOCSIZE)
+            fp=(void*)((((uint64_t)fp+a-1)/a)*a);
         i=am->numchunks++;
         am->chunk[i].quantum = q;
         am->chunk[i].ptr = fp;
-        memset(&am->chunk[i].map,0,BITMAPSIZE*8);
+        for(k=0;k<BITMAPSIZE;k++)
+            am->chunk[i].map[k]=0;
         // allocate memory for small quantum sizes
-        if(q<__PAGESIZE && !mmap(fp, chunksize(q), prot, flag, -1, 0)) {
+        if((flag&MAP_SPARE)==0 && q<__PAGESIZE && !mmap(fp, chunksize(q), prot, flag, -1, 0)) {
             seterr(ENOMEM);
             lockrelease(63,arena);
             return ptr;
         }
         ncm=&am->chunk[i];
+        sh=0;
     }
     if(q<ALLOCSIZE) {
-        i=bitalloc(BITMAPSIZE, (uint64_t*)&ncm->map);
-        if(i>=0 && i<BITMAPSIZE*64) {
-            fp=ncm->ptr + i*ncm->quantum;
+        if(sh!=-1) {
+            ncm->map[sh>>6] |= (1UL<<(sh%64));
+            fp=ncm->ptr + sh*ncm->quantum;
             //allocate new memory for medium quantum sizes
-            if(q>=__PAGESIZE && !mmap(fp, ncm->quantum, prot, flag, -1, 0))
+            if((flag&MAP_SPARE)==0 && q>=__PAGESIZE && !mmap(fp, ncm->quantum, prot, flag, -1, 0))
                 fp=NULL;
         } else
             fp=NULL;
     } else {
         s=((s+ALLOCSIZE-1)/ALLOCSIZE)*ALLOCSIZE;
         //allocate new memory for large quantum sizes
-        if(!mmap(fp, s, prot, flag, -1, 0))
+        if((flag&MAP_SPARE)==0 && !mmap(fp, s, prot, flag, -1, 0))
             fp=NULL;
         else
-            ncm->size[0]=s;
+            ncm->map[0]=s;
     }
     if(fp==NULL){
         seterr(ENOMEM);
@@ -274,17 +283,18 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
         memcpy(fp,ptr,ocm->quantum);
         l=0;
         if(ocm->quantum<ALLOCSIZE) {
-            bitfree((ptr-ocm->ptr)/ocm->quantum, (uint64_t*)&ocm->map);
+            sh=(ptr-ocm->ptr)/ocm->quantum;
+            ocm->map[sh>>6] &= ~(1UL<<(sh%64));
+            //was it the last allocation in this chunk?
+            l=0; for(k=0;k<BITMAPSIZE;k++) l+=ocm->map[k];
             if(ocm->quantum<__PAGESIZE) {
-                //was it the last allocation in this chunk?
-                l=0; for(k=0;k<BITMAPSIZE;k++) l+=ocm->map[k];
                 if(l==0)
                     munmap(ocm->ptr,chunksize(ocm->quantum));
             } else {
                 munmap(ptr,ocm->quantum);
             }
         } else {
-            munmap(ocm->ptr,ocm->size[0]);
+            munmap(ocm->ptr,ocm->map[0]);
         }
         if(l==0) {
             //not last chunk?
@@ -334,7 +344,7 @@ void bzt_dumpmem(uint64_t *arena)
                 ((allocmap_t*)arena[i])->chunk[j].ptr+
                     (((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE?
                         chunksize(((allocmap_t*)arena[i])->chunk[j].quantum) : 
-                        ((allocmap_t*)arena[i])->chunk[j].size[0]));
+                        ((allocmap_t*)arena[i])->chunk[j].map[0]));
             if(((allocmap_t*)arena[i])->chunk[j].quantum<ALLOCSIZE) {
                 m=(uint16_t*)&((allocmap_t*)arena[i])->chunk[j].map;
                 for(k=0;k<BITMAPSIZE*4;k++) {
@@ -344,7 +354,7 @@ void bzt_dumpmem(uint64_t *arena)
                 }
                 dbg_printf("%8dk\n",chunksize(((allocmap_t*)arena[i])->chunk[j].quantum)/1024);
             } else {
-                dbg_printf("(no bitmap) %8dM\n",((allocmap_t*)arena[i])->chunk[j].size[0]/1024/1024);
+                dbg_printf("(no bitmap) %8dM\n",((allocmap_t*)arena[i])->chunk[j].map[0]/1024/1024);
             }
         }
     }
