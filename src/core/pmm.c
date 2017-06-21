@@ -210,7 +210,7 @@ void pmm_init()
     OSZ_pmm_entry *fmem;
     uint num = (bootboot.size-128)/16;
     uint i;
-    uint64_t m = 0;
+    uint64_t m = 0, e=bootboot.initrd_ptr+((bootboot.initrd_size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
     if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || num>504)
         kpanic("Memory map corrupt");
 
@@ -274,15 +274,41 @@ void pmm_init()
         if(MMapEnt_IsFree(entry)) {
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
-            fmem->base = MMapEnt_Ptr(entry);
-            fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
-            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
-            if(fmem->size!=0) {
-                pmm.size++;
-                pmm.totalpages += fmem->size;
-                fmem++;
+            // bootboot.initrd_ptr should already be excluded, but be sure, failsafe
+            // a: +------------+    initrd at begining of area
+            //    ######
+            // b: +------------+    initrd at the end
+            //            ######
+            // c: +------------+    initrd in the middle
+            //        ######
+            // d: ------++------    initrd over areas boundary
+            //        ######
+            if((MMapEnt_Ptr(entry)<=bootboot.initrd_ptr && MMapEnt_Ptr(entry)+MMapEnt_Size(entry)>bootboot.initrd_ptr)||
+               (MMapEnt_Ptr(entry)<e && MMapEnt_Ptr(entry)+MMapEnt_Size(entry)>=e)) {
+                // begin
+                if(bootboot.initrd_ptr-MMapEnt_Ptr(entry)>__PAGESIZE) {
+                    fmem->base = MMapEnt_Ptr(entry);
+                    fmem->size = (bootboot.initrd_ptr-MMapEnt_Ptr(entry))/__PAGESIZE;
+                    pmm.totalpages += fmem->size;
+                    fmem++;
+                }
+                // end
+                if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry)-e>__PAGESIZE) {
+                    fmem->base = bootboot.initrd_ptr+bootboot.initrd_size;
+                    fmem->size = (MMapEnt_Ptr(entry)+MMapEnt_Size(entry)-e)/__PAGESIZE;
+                    pmm.totalpages += fmem->size;
+                    fmem++;
+                }
             } else {
-                fmem->base = 0;
+                fmem->base = MMapEnt_Ptr(entry);
+                fmem->size = MMapEnt_Size(entry)/__PAGESIZE;
+                if(fmem->size!=0) {
+                    pmm.size++;
+                    pmm.totalpages += fmem->size;
+                    fmem++;
+                } else {
+                    fmem->base = 0;
+                }
             }
         }
         num--;

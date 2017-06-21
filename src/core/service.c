@@ -48,9 +48,9 @@ uint64_t __attribute__ ((section (".data"))) fstab_size;
 /**
  * register a user mode service for pid translation
  */
-uint64_t service_register(pid_t thread)
+uint64_t service_register(pid_t task)
 {
-    services[nrservices++] = thread;
+    services[nrservices++] = task;
     return -(nrservices-1);
 }
 
@@ -63,7 +63,7 @@ void service_init(int subsystem, char *fn)
     while(cmd[0]!='/')
         cmd++;
     cmd++;
-    pid_t pid = thread_new(cmd);
+    pid_t pid = task_new(cmd);
     //set priority for the task
     if(subsystem == SRV_USRFIRST) {
         ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // identity process
@@ -86,7 +86,7 @@ void service_init(int subsystem, char *fn)
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end), BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
         ((OSZ_tcb*)(pmm.bss_end))->allocmem++;
 
-        // add to queue so that scheduler will know about this thread
+        // add to queue so that scheduler will know about this task
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         // block identity process at once
@@ -99,7 +99,7 @@ void service_init(int subsystem, char *fn)
             syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
         }
     } else {
-        syslog_early("WARNING thread check failed for %s", fn);
+        syslog_early("WARNING task check failed for /%s", fn);
     }
 }
 
@@ -113,7 +113,7 @@ void fs_init()
     fstab = (uint64_t)fs_locate("etc/fstab");
     fstab_size=fs_size;
     char fn[256];
-    pid_t pid = thread_new("FS");
+    pid_t pid = task_new("FS");
     ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     // map file system dispatcher
     if(elf_load("sbin/fs") == (void*)(-1)) {
@@ -159,13 +159,13 @@ void fs_init()
         // map initrd in "fs" task's memory
         vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BUF_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
-        // add to queue so that scheduler will know about this thread
+        // add to queue so that scheduler will know about this task
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_FS] = pid;
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_FS,"FS",pid);
     } else {
-        kpanic("thread check failed for /sbin/fs");
+        kpanic("task check failed for /sbin/fs");
     }
 }
 
@@ -176,7 +176,7 @@ void syslog_init()
 {
     int i=0,j=0;
     uint64_t *paging = (uint64_t *)&tmpmap;
-    pid_t pid = thread_new("syslog");
+    pid_t pid = task_new("syslog");
     ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     // map file system dispatcher
     if(elf_load("sbin/syslog") == (void*)(-1)) {
@@ -194,13 +194,13 @@ void syslog_init()
 
     // dynamic linker
     if(elf_rtlink()) {
-        // add to queue so that scheduler will know about this thread
+        // add to queue so that scheduler will know about this task
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_syslog] = pid;
         syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
     } else {
-        kprintf("WARNING thread check failed for /sbin/syslog\n");
+        syslog_early("WARNING task check failed for /%s","sbin/syslog");
     }
 }
 
@@ -209,7 +209,7 @@ void syslog_init()
  */
 void ui_init()
 {
-    pid_t pid = thread_new("UI");
+    pid_t pid = task_new("UI");
     ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     int i;
 
@@ -224,7 +224,7 @@ void ui_init()
 
     // dynamic linker
     if(elf_rtlink()) {
-        // add to queue so that scheduler will know about this thread
+        // add to queue so that scheduler will know about this task
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         services[-SRV_UI] = pid;
@@ -242,7 +242,7 @@ void ui_init()
             bss += __SLOTSIZE;
         }
     } else {
-        kpanic("thread check failed for /sbin/ui");
+        kpanic("task check failed for /sbin/ui");
     }
 }
 
@@ -262,8 +262,8 @@ void drv_init(char *driver)
     while(i>0 && driver[i]!='.') i--;
     driver[i]=0;
 
-    // create a new thread...
-    pid_t pid = thread_new(drvname);
+    // create a new task...
+    pid_t pid = task_new(drvname);
     ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_DRV;
     driver[i]='.';
     // ...start with driver event dispatcher
@@ -281,7 +281,7 @@ void drv_init(char *driver)
     if(elf_rtlink()) {
         //set IOPL=3 in rFlags to permit IO address space
         ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
-        // add to queue so that scheduler will know about this thread
+        // add to queue so that scheduler will know about this task
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
         driver[i]=0;
@@ -312,6 +312,6 @@ void drv_init(char *driver)
             services[-SRV_video] = pid;
         }
     } else {
-        kprintf("WARNING thread check failed for %s\n", driver);
+        syslog_early("WARNING task check failed for /%s", driver);
     }
 }

@@ -22,32 +22,32 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Thread scheduler
+ * @brief Task scheduler
  */
 
 #include "env.h"
 
 extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
-extern uint64_t isr_next;       //next thread to map when isr finishes
+extern uint64_t isr_next;       //next task to map when isr finishes
 extern uint8_t idle_first;      //flag to indicate first idle schedule
 
 /**
  * get and map a TCB. You can also pass a TCB as input for
  * performance reasons. Also, kmap(tmpmap) is pre-cached.
  */
-OSZ_tcb *sched_get_tcb(pid_t thread)
+OSZ_tcb *sched_get_tcb(pid_t task)
 {
     // active tcb
-    if(thread==0)
+    if(task==0)
         return (OSZ_tcb*)0;
     // last mapped or last used tcb
-    if((uint64_t)thread==(uint64_t)(&tmpmap) ||
-       (uint64_t)thread==(uint64_t)(&tmp2map) ||
-       (uint64_t)thread==(uint64_t)(&tmpalarm) ||
-       (uint64_t)thread==(uint64_t)pmm.bss_end)
-        return (OSZ_tcb*)(thread);
+    if((uint64_t)task==(uint64_t)(&tmpmap) ||
+       (uint64_t)task==(uint64_t)(&tmp2map) ||
+       (uint64_t)task==(uint64_t)(&tmpalarm) ||
+       (uint64_t)task==(uint64_t)pmm.bss_end)
+        return (OSZ_tcb*)(task);
     // map a new tcb
-    kmap((uint64_t)&tmpmap, (uint64_t)(thread * __PAGESIZE), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)(task * __PAGESIZE), PG_CORE_NOCACHE);
     return (OSZ_tcb*)(&tmpmap);
 }
 
@@ -97,8 +97,8 @@ void sched_dump()
 #endif
 
 /**
- * block until alarm, add thread to ccb.hd_timerq list too
- * note that isr_timer() consumes threads from timer queue this is only called if sleep time is
+ * block until alarm, add task to ccb.hd_timerq list too
+ * note that isr_timer() consumes tasks from timer queue this is only called if sleep time is
  * bigger than alarmstep, shorter usleeps are implemented as busy loops in isr_syscall0 in isrc.S 
  */
 void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
@@ -130,7 +130,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
         /* walk through ccb.hd_timerq queue */
         do {
             OSZ_tcb *t = sched_get_tcb(next);
-            /* first thread that has to be awaken later than us? */
+            /* first task that has to be awaken later than us? */
             if(t->alarmsec>sec || (t->alarmsec==sec && t->alarmns>nsec)){
                 if(prev) {
                     t = sched_get_tcb(prev);
@@ -152,7 +152,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
 }
 
 /**
- * write out thread's pages to swap, only keep it's TCB in blocked queue
+ * write out task's pages to swap, only keep it's TCB in blocked queue
  *  tcb_state_blocked -> tcb_state_hybernated
  */
 void sched_hybernate(OSZ_tcb *tcb)
@@ -166,7 +166,7 @@ void sched_hybernate(OSZ_tcb *tcb)
 }
 
 /**
- * awake a hybernated or blocked thread
+ * awake a hybernated or blocked task
  *  tcb_state_blocked -> tcb_state_running
  */
 void sched_awake(OSZ_tcb *tcb)
@@ -203,7 +203,7 @@ void sched_awake(OSZ_tcb *tcb)
 }
 
 /**
- * add a thread to an active queue, according to it's priority.
+ * add a task to an active queue, according to it's priority.
  */
 void sched_add(OSZ_tcb *tcb)
 {
@@ -223,7 +223,7 @@ void sched_add(OSZ_tcb *tcb)
 }
 
 /**
- * remove a thread from active queue.
+ * remove a task from active queue.
  */
 void sched_remove(OSZ_tcb *tcb)
 {
@@ -282,7 +282,7 @@ void sched_block(OSZ_tcb *tcb)
 }
 
 /**
- * pick a thread from one of the active queues and return it's memroot 
+ * pick a task from one of the active queues and return it's memroot 
  */
 phy_t sched_pick()
 {
@@ -306,7 +306,7 @@ again:
     }
     /* we came here for two reasons:
      * 1. all queues turned around
-     * 2. there are no threads to run
+     * 2. there are no tasks to run
      * in the first case we choose the highest priority task to run,
      * in the second case we step to IDLE queue */
     if(nonempty)

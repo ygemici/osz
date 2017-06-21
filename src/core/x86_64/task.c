@@ -1,5 +1,5 @@
 /*
- * core/x86_64/thread.c
+ * core/x86_64/task.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Thread functions platform dependent code
+ * @brief Task functions, platform dependent code
  */
 
 phy_t __attribute__ ((section (".data"))) idle_mapping;
@@ -31,9 +31,9 @@ phy_t __attribute__ ((section (".data"))) identity_mapping;
 phy_t __attribute__ ((section (".data"))) *stack_ptr;
 
 /**
- * create a thread, allocate memory for it and init TCB
+ * create a task, allocate memory for it and init TCB
  */
-pid_t thread_new(char *cmdline)
+pid_t task_new(char *cmdline)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap, self;
@@ -111,24 +111,24 @@ pid_t thread_new(char *cmdline)
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    if(debug&DBG_THREADS||debug==DBG_ELF)
-        kprintf("Thread %x %s\n",self/__PAGESIZE,cmdline);
+    if(debug&DBG_TASKS||debug==DBG_ELF)
+        kprintf("Task %x %s\n",self/__PAGESIZE,cmdline);
 #endif
     return self/__PAGESIZE;
 }
 
 /**
- * Check thread address space consistency
+ * Check task address space consistency
  */
-bool_t thread_check(OSZ_tcb *tcb, phy_t *paging)
+bool_t task_check(OSZ_tcb *tcb, phy_t *paging)
 {
     return true;
 }
 
 /**
- * check if a thread has a specific Access Control Entry
+ * check if current task has a specific Access Control Entry
  */
-bool_t thread_allowed(char *grp, uint8_t access)
+bool_t task_allowed(char *grp, uint8_t access)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(0);
     char *g;

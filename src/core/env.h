@@ -49,7 +49,7 @@ extern uint64_t keymap;     // keymap
 /* debug levels */
 #define DBG_NONE     0      // none, false
 #define DBG_MEMMAP   (1<<0) // mm 1
-#define DBG_THREADS  (1<<1) // th 2
+#define DBG_TASKS    (1<<1) // ta 2
 #define DBG_ELF      (1<<2) // el 4
 #define DBG_RTIMPORT (1<<3) // ri 8
 #define DBG_RTEXPORT (1<<4) // re 16

@@ -1126,7 +1126,7 @@ isr_irqtmr:
     movb	$0x20, %al
     outb	%al, $PIC_MASTER
     call	isr_timer
-    /* switch to a new thread if any */
+    /* switch to a new task if any */
     movq	isr_next, %rax
     cmpq	$__PAGESIZE, %rax
     jb		1f
@@ -1188,7 +1188,7 @@ isr_irqtmr_rtc:
     /* reenable NMI */
     xorb	%al, %al
     outb	%al, $0x70
-    /* switch to a new thread if any */
+    /* switch to a new task if any */
     movq	isr_next, %rax
     cmpq	$__PAGESIZE, %rax
     jb		1f

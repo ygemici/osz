@@ -70,12 +70,12 @@ You can check the validity of a pid anytime with:
 ```
 <bochs:3> xp /5bc 0x31000
 [bochs]:
-0x0000000000031000 <bogus+       0>:  T    H    R    D   \2
+0x0000000000031000 <bogus+       0>:  T    A    S    K   \2
 <bochs:4>
 ```
 
-Here we can see that the page starts with the magic `'THRD'` so identifies as a Thread Control Block. The
-number tells us the thread's priority, in our case `priority queue 2`.
+Here we can see that the page starts with the magic `'TASK'` so identifies as a Task Control Block. The
+number tells us the task's priority, in our case `priority queue 2`.
 
 Save the first 8 bytes, the actual bitfields of this TCB page is platform specific as it's holding a copy of the CPU state as well.
 Each struct definition can be found in the according platform's directory [src/core/(platform)/tcb.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h).
@@ -120,7 +120,7 @@ Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd>
 | Code | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internal Debugger Follow Execution">Register dump and code disassembly |
 | Data | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg4.png?raw=true" alt="OS/Z Internal Debugger Data Dump">Memory or stack dump |
 | [Messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg5.png?raw=true" alt="OS/Z Internal Debugger Message Queue">Dump task's message queue |
-| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internal Debugger Thread Control Block">Dump the current task's control block |
+| [TCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/tcb.h)  | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg6.png?raw=true" alt="OS/Z Internal Debugger Task Control Block">Dump the current task's control block |
 | [CCB](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ccb.h) | <img align="left" style="padding-right:10px" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg7.png?raw=true" alt="OS/Z Internal Debugger CPU Control Block">Dump CPU Control Block (task priority queues) |
 | [RAM](https://github.com/bztsrc/osz/blob/master/src/core/pmm.h) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg8.png?raw=true" alt="OS/Z Internal Debugger Physical Memory">Dump physical memory manager |
 | [Sysinfo](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) | <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgB.png?raw=true" alt="OS/Z Internal Debugger Sysinfo">System Information and early syslog buffer |
@@ -163,7 +163,7 @@ It's enough to enter commands until it's obvious, in most cases that's the first
 | `Pid X`    | switch to task |
 | `Prev`     | switch to previous task |
 | `Next`     | switch to next task |
-| `Tcb`      | examine current task's Thread Control Block |
+| `Tcb`      | examine current task's Task Control Block |
 | `TUi`      | toggle video terminal mode for serial console |
 | `Messages` | examine message queue |
 | `All, CCb`   | examine all queues and CPU Control Block |
@@ -206,7 +206,7 @@ The flag can be one of:
  * x   - sets execution breakpoint (break only, default)
 
 In addition to ELF symbols, you can also use these:
- * tcb   - thread control block
+ * tcb   - task control block
  * mq    - message queue
  * stack - start of local stack
  * text  - start of text segment, end of local stack
@@ -220,8 +220,8 @@ In addition to ELF symbols, you can also use these:
 #### Examples
 
 ```
-p               switch to previous thread
-p 29            switch to thread that's pid is 29
+p               switch to previous task
+p 29            switch to task that's pid is 29
 g               go to next instruction (in view, do not confuse with single step)
 g isr_irq1+3    view instruction in function
 g +7F           move disassembler window forward by 127 bytes

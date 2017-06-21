@@ -27,5 +27,5 @@
 
 .section .crt0
 
-    /* initial RIP on thread execution, first byte of text segment */
+    /* initial RIP on task execution, first byte of text segment */
     retq

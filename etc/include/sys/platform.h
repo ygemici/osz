@@ -31,4 +31,7 @@
 #define breakpoint __asm__ __volatile__("int $1":::)
 #define breakbochs __asm__ __volatile__("xchg %%bx,%%bx":::)
 
+#define __platform_va_start(list, param) (list = (((va_list)&param) + sizeof(void*)*4))
+#define __platform_va_arg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
+
 #endif

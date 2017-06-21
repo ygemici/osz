@@ -137,10 +137,10 @@ extern void *pmm_allocslot();
 /** Free physical memory */
 extern void pmm_free(phy_t base, size_t numpages);
 
-/** Map a specific memory area into thread's bss */
+/** Map a specific memory area into task's bss */
 extern void vmm_mapbss(OSZ_tcb *tcb,virt_t bss, phy_t phys, size_t size, uint64_t access);
 
-/** Unmap thread's bss */
+/** Unmap task's bss */
 extern void vmm_unmapbss(OSZ_tcb *tcb,virt_t bss, size_t size);
 
 /** Initialize Interrupt Service Routines */
@@ -151,7 +151,7 @@ extern void isr_disableirq(uint8_t irq);
 extern int  isr_installirq(uint8_t irq, phy_t memroot);
 
 // ----- System -----
-/** Initialize system (idle thread and device drivers) */
+/** Initialize system (idle task and device drivers) */
 extern void sys_init();
 
 /** Switch to first task and start executing user space code */
@@ -167,7 +167,7 @@ extern void sys_reset();
 extern void sys_ready();
 
 // ----- File System -----
-/** Initialize file system thread */
+/** Initialize file system task */
 extern void fs_init();
 
 /** Locate a file on initrd and return it's physical address
@@ -175,12 +175,12 @@ extern void fs_init();
 extern void *fs_locate(char *fn);
 
 // ----- Syslog interface -----
-/** Initialize syslog thread */
+/** Initialize syslog task */
 extern void syslog_init();
 extern void syslog_early(char* fmt, ...);
 
 // ----- User interface -----
-/** Initialize user interface thread */
+/** Initialize user interface task */
 extern void ui_init();
 
 // ----- Memory Management -----
@@ -223,36 +223,36 @@ extern void kfree(void* ptr);
 /** Add entropy to random generator **/
 extern void kentropy();
 
-// ----- Threads -----
-/** Allocate and initialize thread structures */
-extern pid_t thread_new(char *cmdline);
+// ----- Tasks -----
+/** Allocate and initialize process structures */
+extern pid_t task_new(char *cmdline);
 
-/** Sanity check thread data */
-extern bool_t thread_check(OSZ_tcb *tcb, phy_t *paging);
+/** Sanity check process data */
+extern bool_t task_check(OSZ_tcb *tcb, phy_t *paging);
 
 /** Check access for a group */
-extern bool_t thread_allowed(char *grp, uint8_t access);
+extern bool_t task_allowed(char *grp, uint8_t access);
 
 // ----- Scheduler -----
-/** Add thread to scheduling */
+/** Add task to scheduling */
 extern void sched_add(OSZ_tcb *tcb);
 
-/** Remove thread from scheduling */
+/** Remove task from scheduling */
 extern void sched_remove(OSZ_tcb *tcb);
 
-/** Block a thread */
+/** Block a task */
 extern void sched_block(OSZ_tcb *tcb);
 
-/** Unblock a thread */
+/** Unblock a task */
 extern void sched_awake(OSZ_tcb *tcb);
 
-/** suspend a thread until given time */
+/** suspend a task until given time */
 void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec);
 
-/** Hybernate a thread */
+/** Hybernate a task */
 extern void sched_sleep(OSZ_tcb *tcb);
 
-/** Return next thread's memroot phy address */
+/** Return next task's memroot phy address */
 extern phy_t sched_pick();
 
 // ----- Sybsystem Management -----
@@ -272,7 +272,7 @@ extern bool_t elf_rtlink();
 extern void service_init(int subsystem, char *fn);
 
 /** Register a user service */
-extern uint64_t service_register(pid_t thread);
+extern uint64_t service_register(pid_t task);
 
 /** Initialize a device driver service */
 extern void drv_init(char *fn);

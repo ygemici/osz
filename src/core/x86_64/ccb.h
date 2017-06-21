@@ -51,13 +51,13 @@ typedef struct {
     uint64_t ist4;      // +3C not used at the moment
     uint64_t ist5;      // +44 not used at the moment
     uint64_t ist6;      // +4C not used at the moment
-    pid_t    lastxreg;  // +54 thread that last used media registers
+    pid_t    lastxreg;  // +54 task that last used media registers
     uint16_t mutex[5];  // +5C
     uint16_t iomapbase; // +66 IO permission map base, not used, must be zero
     pid_t hd_timerq;    // +68 timer queue head (alarm)
     pid_t hd_blocked;   // blocked queue head
-    pid_t hd_active[8]; // priority queues (heads of active threads)
-    pid_t cr_active[8]; // priority queues (current threads)
+    pid_t hd_active[8]; // priority queues (heads of active tasks)
+    pid_t cr_active[8]; // priority queues (current tasks)
 } __attribute__((packed)) OSZ_ccb;
 
 c_assert(sizeof(OSZ_ccb) <= __PAGESIZE);

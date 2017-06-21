@@ -38,7 +38,7 @@
 #include "../core.h"
 
 #ifndef OSZ_CORE
-#define thread_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
+#define task_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
 #define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
 #endif
 

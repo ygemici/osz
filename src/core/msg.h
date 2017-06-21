@@ -1,5 +1,5 @@
 /*
- * core/x86_64/tcb.h
+ * core/msg.h
  * 
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Thread Control Block, architecture specific part
+ * @brief Message Queue header
  */
 
 #include <limits.h>

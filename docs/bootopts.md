@@ -25,8 +25,8 @@ Boot Parameters
 | nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
 | nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
 | nrlogmax  | 8      | number | core | the number of pages for early syslog buffer |
-| nropenmax | 16     | number | core | the number of open file descriptors per thread |
-| quantum   | 100    | number | core | scheduler frequency, a thread can allocate CPU continously for 1/(quantum) second. |
+| nropenmax | 16     | number | core | the number of open file descriptors per task |
+| quantum   | 100    | number | core | scheduler frequency, a task can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |
 | display   | 0      | number | core | selects output mode (see below) |
 | syslog    | true   | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
@@ -50,7 +50,7 @@ This can be a numeric value, or a comma separated list of flags.
 | ----: | ---- | ------ | ----------- |
 | 0     |      | DBG_NONE | no debug information |
 | 1     | me   | DBG_MEMMAP | dump memory map (either E820 or EFI) |
-| 2     | th   | DBG_THREADS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
+| 2     | ta   | DBG_TASKS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
 | 4     | el   | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
 | 8     | ri   | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/service.c) imported values |
 | 16    | re   | DBG_RTEXPORT | debug run-time linker exported values |

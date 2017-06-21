@@ -48,7 +48,7 @@
 .section .text
 
 /**
- * store thread's context into Thread Control Block
+ * store task's context into Task Control Block
  */
 isr_savecontext:
     movq    %rax, tcb_gpr +   0
@@ -69,7 +69,7 @@ isr_savecontext:
     ret
 
 /**
- * restore thread's context from Thread Control Block
+ * restore task's context from Task Control Block
  */
 isr_loadcontext:
     movq    tcb_gpr +   0, %rax
@@ -292,7 +292,7 @@ isr_timer:
     cmpb    $PRI_DRV, tcb_priority
     jbe     9f
 
-    /* check timer queue's head and awake thread if time passed */
+    /* check timer queue's head and awake task if time passed */
     /* ccb.hd_timerq != 0? */
     movq    ccb + ccb_hd_timerq, %rax
     orq     %rax, %rax
@@ -322,7 +322,7 @@ isr_timer:
     movq    %rax, %rsi
     xorq    %rax, %rax
     movq    %rax, 720(%rdi)
-    /* map next alarm thread, kmap(&tmpalarm, tcb->alarm*__PAGESIZE, PG_CORE_NOCACHE); */
+    /* map next alarm task, kmap(&tmpalarm, tcb->alarm*__PAGESIZE, PG_CORE_NOCACHE); */
     shlq    $12, %rsi
     xorq    %rdx, %rdx
     movw    $PG_CORE_NOCACHE, %dx
@@ -337,7 +337,7 @@ isr_timer:
     cmpq    %rax, qcnt
     jnz     1f
 
-    /* pick the next thread to run */
+    /* pick the next task to run */
     call    sched_pick
 
 3:  /* qcnt = qdiv; */

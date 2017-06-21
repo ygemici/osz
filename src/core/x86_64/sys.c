@@ -127,7 +127,7 @@ __inline__ void sys_enable()
     OSZ_tcb *firsttcb = (OSZ_tcb*)(&tmpmap);
 
 #if DEBUG
-    // initialize debugger, it can be used only with thread mappings
+    // initialize debugger, it can be used only with task mappings
     dbg_init();
 #endif
     sys_fault = false;
@@ -143,7 +143,7 @@ __inline__ void sys_enable()
         "mov %0, %%rax; mov %%rax, %%cr3;"
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
-        // "return" to the thread
+        // "return" to the task
         "movq %1, %%rsp; movq %2, %%rbp;\n#if DEBUG\nxchg %%bx, %%bx;\n#endif\n iretq" :
         :
         "r"(firsttcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
@@ -164,9 +164,9 @@ void sys_init()
     /*** Platform specific initialization ***/
     syslog_early("Device drivers");
 
-    /* create idle thread */
+    /* create idle task */
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    thread_new("idle");
+    task_new("idle");
     // modify TCB for idle task. Don't add to queue, normally it never scheduled
     tcb->priority = PRI_IDLE;
     //start executing a special function.

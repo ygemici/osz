@@ -527,6 +527,7 @@ strrchr:
  * int strcasecmp (char *s1, char *s2);
  */
 strcasecmp:
+    /* TODO: strcasecmp */
     ret
 
 /**
@@ -535,4 +536,5 @@ strcasecmp:
  * int strncasecmp (char *s1, char *s2, size_t n);
  */
 strncasecmp:
+    /* TODO: strncasecmp */
     ret

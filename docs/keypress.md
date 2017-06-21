@@ -12,8 +12,8 @@ OS/Z How a keypress is processed
    8. task switch to UI task (it's also awaken if necessary)
    9. [UI task](https://github.com/bztsrc/osz/blob/master/src/ui) receives scancode message
   10. translates scancode to a key press or release using active [keymap](https://github.com/bztsrc/osz/blob/master/etc/kbd/en_us)
-  11. sends a key event message to the focused window's thread (or to FS task if it's a tty window)
-  12. task switch to the focused window's thread
+  11. sends a key event message to the focused window's task (or to FS task if it's a tty window)
+  12. task switch to the focused window's task
   13. receives key and draws a unicode character for it
   14. sends a window flush message to the UI task
   15. task switch to UI task

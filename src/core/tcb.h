@@ -22,11 +22,11 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Thread Control Block. Common defines
+ * @brief Task Control Block. Common defines
  */
 
-#define OSZ_TCB_MAGIC "THRD"
-#define OSZ_TCB_MAGICH 0x44524854
+#define OSZ_TCB_MAGIC "TASK"
+#define OSZ_TCB_MAGICH 0x4B534154
 
 #define tcb_state_hybernated 0
 #define tcb_state_blocked 1

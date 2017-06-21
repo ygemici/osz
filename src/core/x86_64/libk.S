@@ -153,10 +153,12 @@ kpanic:
     addl    $1, ky
     call    kprintf_putlogo
     /* wait for user input */
-    call    kwaitkey
+1:  call    kwaitkey
+    /* don't accept Alt key. I press it when I press Alt+Q or Alt+F4 to close qemu and bochs */
+    cmpb    $0x38, %al
+    je      1b
     /* reboot computer */
-2:  mov     $0xFE, %al
-    out     %al, $0x64
+2:  callq   sys_reset
     hlt
 
 /* misc memory functions */

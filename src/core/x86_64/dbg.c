@@ -234,7 +234,7 @@ void dbg_setpos()
     }
 }
 
-// dump a Thread Control Block
+// dump a Task Control Block
 void dbg_tcb()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -254,7 +254,7 @@ void dbg_tcb()
         fg=dbg_theme[4];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("[Thread Control Block]\n");
+        kprintf("[Task Control Block]\n");
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
@@ -670,6 +670,7 @@ void dbg_data(uint64_t ptr)
                         else
                             symstr = elf_sym(*((uint64_t*)ptr));
                         if(!sys_fault && symstr!=NULL && symstr!=(uchar*)nosym) {
+                            dbg_indump = false;
                             fg = dbg_theme[2];
                             if(dbg_tui)
                                 dbg_settheme();
@@ -678,6 +679,7 @@ void dbg_data(uint64_t ptr)
                             fg = dbg_theme[3];
                             if(dbg_tui)
                                 dbg_settheme();
+                            dbg_indump = 2;
                         }
                     }
                     sys_fault = false;
@@ -814,7 +816,7 @@ void dbg_data(uint64_t ptr)
     }
 }
 
-// list messages in Thread Message Queue
+// list messages in Task Message Queue
 void dbg_msg()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
@@ -1179,9 +1181,11 @@ void dbg_sysinfo()
             dbg_settheme();
     } else
         ky=2;
+    kprintf("\r");
     fx=kx=0; maxy-=2;
     kprintf("%s",syslog_buf+dbg_logpos);
     maxy+=2;
+    kprintf("\n");
 }
 
 // switch to the previous task
@@ -1218,7 +1222,7 @@ void dbg_switchprev(virt_t *rip, virt_t *rsp)
     if(p) {
         kmap((virt_t)&tmp3map, p * __PAGESIZE, PG_CORE_NOCACHE);
         tcb->rip = *rip;
-        thread_map(tcbq->memroot);
+        task_map(tcbq->memroot);
         *rip = tcb->rip;
         *rsp = tcb->rsp;
     }
@@ -1248,7 +1252,7 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
     if(n) {
         kmap((virt_t)&tmp3map, n * __PAGESIZE, PG_CORE_NOCACHE);
         tcb->rip = *rip;
-        thread_map(tcbq->memroot);
+        task_map(tcbq->memroot);
         *rip = tcb->rip;
         *rsp = tcb->rsp;
     }
@@ -1835,9 +1839,9 @@ help:
                     "  Pid X - switch to task                              \n"
                     "  Prev - switch to previous task                      \n"
                     "  Next - switch to next task                          \n"
-                    "  Tcb - show current task's Thread Control Block      \n"
+                    "  Tcb - show current task's Task Control Block        \n"
                     "  TUi - toggle video terminal support on serial line  \n"
-                    "  Messages - list messages in current thread's queue  \n"
+                    "  Messages - list messages in current task's queue    \n"
                     "  All, CCb - show all task queues and CCB             \n"
                     "  Ram - show RAM information and allocation           \n"
                     "  Instruction, Disasm - instruction disassemble       \n"
@@ -1927,8 +1931,7 @@ help:
                     dbg_putchar(10);
                     kprintf_reset();
                     scry = -1;
-                    thread_map(cr3);
-//                    __asm__ __volatile__ ( "movq %0, %%rax; movq %%rax, %%cr3" : : "r"(cr3) : "%rax");
+                    task_map(cr3);
                     return;
                 } else
                 // reset, reboot
@@ -1961,7 +1964,7 @@ help:
                         kmap((virt_t)&tmp3map, y * __PAGESIZE, PG_CORE_NOCACHE);
                         if(tcbq->magic == OSZ_TCB_MAGICH) {
                             tcb->rip = rip;
-                            thread_map(tcbq->memroot);
+                            task_map(tcbq->memroot);
                             rip = tcb->rip;
                             rsp = tcb->rsp;
                         } else {

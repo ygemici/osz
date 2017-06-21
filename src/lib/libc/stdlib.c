@@ -72,6 +72,7 @@ unsigned char *stdlib_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t 
     return s;
 }
 
+/* Convert a string to an integer.  */
 int atoi(char *c)
 {
     uint64_t r;
@@ -79,6 +80,7 @@ int atoi(char *c)
     return r;
 }
 
+/* Convert a string to a long integer.  */
 long atol(char *c)
 {
     uint64_t r;
@@ -86,11 +88,14 @@ long atol(char *c)
     return r;
 }
 
+/* Convert a string to a long long integer.  */
 long long atoll(char *c)
 {
     return (long long)atol(c);
 }
 
+/* Do a binary search for KEY in BASE, which consists of NMEMB elements
+   of SIZE bytes each, using COMPAR to perform the comparisons.  */
 void *bsearch(void *key, void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *))
 {
     uint64_t s=0, e=nmemb;

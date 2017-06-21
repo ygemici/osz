@@ -156,7 +156,7 @@ virt_t elf_lookupsym(uchar *name, size_t size)
     Elf64_Ehdr *ehdr;
     uchar c = name[size];
     name[size]=0;
-    /* common to all threads */
+    /* common to all tasks */
     virt_t addr = TEXT_ADDRESS;
     if(size==3 && !kmemcmp(name,"tcb",4)) {
         name[size] = c;
@@ -464,9 +464,9 @@ void elf_neededso(int libc)
 /**
  * Fill in GOT entries. Relies on identity mapping
  *  - tmpmap: the text segment's PT mapped,
- *  - pmm.bss_end: current thread's TCB mapped,
+ *  - pmm.bss_end: current task's TCB mapped,
  *  - relas: array of OSZ_rela items alloceted with kalloc()
- *  - stack_ptr: physical address of thread's stack
+ *  - stack_ptr: physical address of task's stack
  */
 bool_t elf_rtlink()
 {
@@ -557,7 +557,7 @@ bool_t elf_rtlink()
                 if(s!=NULL && *(strtable + s->st_name)!=0) {
                     /* get the physical address and sym from stringtable */
                     uint64_t o = (uint64_t)((int64_t)relad->r_offset + j*__PAGESIZE + (int64_t)relad->r_addend);
-                    /* because the thread is not mapped yet, we have to translate
+                    /* because the task is not mapped yet, we have to translate
                      * address manually */
                     rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                     rel->sym = strtable + s->st_name;
@@ -580,7 +580,7 @@ bool_t elf_rtlink()
                 s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(rela->r_info) * syment);
                 /* get the physical address and sym from stringtable */
                 uint64_t o = (uint64_t)((int64_t)rela->r_offset + j*__PAGESIZE + (int64_t)rela->r_addend);
-                /* because the thread is not mapped yet, we have to translate
+                /* because the task is not mapped yet, we have to translate
                  * address manually */
                 rel->offs = (paging[o/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (o&(__PAGESIZE-1));
                 rel->sym = strtable + s->st_name;
@@ -786,7 +786,7 @@ bool_t elf_rtlink()
         stack_ptr--;
         tcb->rsp -= 8;
     }
-    // sanity check thread
-    return thread_check(tcb, (phy_t*)paging);
+    // sanity check task
+    return task_check(tcb, (phy_t*)paging);
 }
 

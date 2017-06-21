@@ -29,7 +29,7 @@
 #define _SYS_CORE_H 1
 
 /*** low level codes in rdi for syscall instruction ***/
-// rax: 00000000000xxxx Memory and threading
+// rax: 00000000000xxxx Memory and multitask related functions
 #define SYS_IRQ 0           // CORE sends it to device drivers, disables IRQ
 #define SYS_ack 1           // device drivers to CORE, re-enable IRQ
 #define SYS_nack 2          // negative acknowledge
@@ -42,22 +42,23 @@
 #define SYS_regservice 9
 #define SYS_stimebcd 10     // driver to CORE, cmos local date
 #define SYS_stime 11
-#define SYS_alarm 12
-#define SYS_meminfo 13
-#define SYS_mmap 14         // mman functions
-#define SYS_munmap 15
-#define SYS_mprotect 16
-#define SYS_msync 17
-#define SYS_mlock 18
-#define SYS_munlock 19
-#define SYS_mlockall 20
-#define SYS_munlockall 21
-#define SYS_mapfile 22      // process functions
-#define SYS_fork 23
-#define SYS_exec 24
-#define SYS_sync 25
-#define SYS_rand 26
-#define SYS_srand 27
+#define SYS_time 12
+#define SYS_alarm 13
+#define SYS_meminfo 14
+#define SYS_mmap 15         // mman functions
+#define SYS_munmap 16
+#define SYS_mprotect 17
+#define SYS_msync 18
+#define SYS_mlock 19
+#define SYS_munlock 20
+#define SYS_mlockall 21
+#define SYS_munlockall 22
+#define SYS_mapfile 23      // process functions
+#define SYS_fork 24
+#define SYS_exec 25
+#define SYS_sync 26
+#define SYS_rand 27
+#define SYS_srand 28
 
 #define SYS_recv 0xFFFF     // receive message
 
@@ -84,7 +85,7 @@
 uint64_t mq_send(pid_t dst, uint64_t func, ...);
 /* sync, send a message and receive result (blocking) */
 msg_t *mq_call(pid_t dst, uint64_t func, ...);
-/* async, is there a message? return serial or null (non-blocking) */
+/* async, is there a message? return serial or 0 (non-blocking) */
 uint64_t mq_ismsg();
 /* sync, wait until there's a message (blocking) */
 msg_t *mq_recv();
@@ -98,21 +99,21 @@ extern uint16_t errno;
 void lockacquire(int bit, uint64_t *ptr); // return only when the bit is set and was clear, yield otherwise
 void lockrelease(int bit, uint64_t *ptr); // clear a bit
 
-// Memory and threading
+// Memory and multitask
 /* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
 void yield();                           // give up CPU time
 void seterr(int errno);                 // set libc errno
-void exit(int err);                     // exit task
-uint64_t regservice(pid_t thread);      // register service (init only)
+uint64_t regservice(pid_t task);        // register service (init only)
+uint64_t time();                        // get system time
 void stime(uint64_t utctimestamp);      // set system time
-void setirq(int8_t irq);                // set irq message for this thread
-void sleep(uint64_t sec);               // sleep the thread for sec
-void usleep(uint64_t usec);             // sleep the thread for micro sec
+void setirq(int8_t irq);                // set irq message for this task
+void sleep(uint64_t sec);               // sleep the task for sec
+void usleep(uint64_t usec);             // sleep the task for micro sec
 msg_t *meminfo();                       // get memory info. msg_t.arg0=free pages, msg_t.arg1=total pages
 // see <sys/mman.h> too
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
-pid_t fork();                           // fork thread
+pid_t fork();                           // fork task
 pid_t exec(uchar *cmd);                 // start a new process in the background
 void sync();                            // flush cache buffers
 

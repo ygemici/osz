@@ -1,10 +1,8 @@
  --- Error fixes ---
-./src/core/pmm.c:279:            // FIXME: exclude bootboot.initrd_ptr from fmem, failsafe
-./src/core/syscall.c:175:            /* FIXME: naive implementation, no checks */
+./src/core/syscall.c:178:            /* FIXME: naive implementation, no checks */
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
-./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
-./etc/include/sys/core.h:102:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
+./etc/include/sys/core.h:103:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/sys.c:227:    // TODO: move this printf to rescueshell
 ./src/core/x86_64/disasm.c:1215:            //TODO: esc
@@ -12,3 +10,8 @@
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/x86_64/crt0.S:45:    /* TODO: call ctors */
+./src/lib/libc/x86_64/string.S:530:    /* TODO: strcasecmp */
+./src/lib/libc/x86_64/string.S:539:    /* TODO: strncasecmp */
+./src/lib/libc/string.c:126:    /* TODO: strtok */
+./src/lib/libc/string.c:132:    /* TODO: strtok_r */
+./src/lib/libc/string.c:140:    /* TODO: strsep */

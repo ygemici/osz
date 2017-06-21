@@ -52,6 +52,7 @@
  * Depends on the following libc functions:
  * - void lockacquire(int bit, uint64_t *ptr);        // return only when the bit is set and was clear, yield otherwise
  * - void lockrelease(int bit, uint64_t *ptr);        // clear a bit
+ * - void memzero (void *dest, size_t n);             // clear memory, fill up with zeros
  * - void *memcpy (void *dest, void *src, size_t n);  // copy memory
  * - void *mmap (void *addr, size_t len, int prot, int flags, -1, 0); //query memory from pmm
  * - int munmap (void *addr, size_t len);                             //give back memory to system
@@ -62,7 +63,7 @@
  */
 
 /**
- * This allocator is used for both thread local storage and shared memory.
+ * This allocator is used for both task local storage and shared memory.
  * Arena points to an allocation map (either at BSS_ADDRESS or SBSS_ADDRESS).
  */
 
@@ -278,9 +279,14 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
         lockrelease(63,arena);
         return ptr;
     }
+    if((flag&MAP_SPARE)==0 && ocm==NULL)
+        memzero(fp,ncm->quantum);
     //free old memory
     if(ocm!=NULL) {
-        memcpy(fp,ptr,ocm->quantum);
+        if((flag&MAP_SPARE)==0){
+            memcpy(fp,ptr,ocm->quantum);
+            memzero(fp+ocm->quantum,ncm->quantum-ocm->quantum);
+        }
         l=0;
         if(ocm->quantum<ALLOCSIZE) {
             sh=(ptr-ocm->ptr)/ocm->quantum;

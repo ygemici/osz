@@ -99,13 +99,16 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
-            if(tcb->priority == PRI_DRV || thread_allowed("stime", A_WRITE)) {
+            if(tcb->priority == PRI_DRV || task_allowed("stime", A_WRITE)) {
                 ticks[TICKS_TS] = arg0;
                 ticks[TICKS_NTS] = 0;
             } else {
                 tcb->errno = EACCES;
             }
             break;
+
+        case SYS_time:
+            return ticks[TICKS_TS];
 
         case SYS_regservice:
             /* only init subsystem allowed to register services */
@@ -124,7 +127,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
     
         case SYS_alarm:
-            /* suspend thread for arg0 sec and arg1 microsec.
+            /* suspend task for arg0 sec and arg1 microsec.
              * Values smaller than alarmstep already handled by isr_syscall0 in isrc.S */
             sched_alarm(tcb, ticks[TICKS_TS]+arg0, ticks[TICKS_NTS]+arg1);
             break;
@@ -140,9 +143,9 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             if(*((char*)arg1)=='/')
                 arg1++;
             kstrcpy((char*)&fn,(char*)arg1);
-            thread_map(identity_mapping);
+            task_map(identity_mapping);
             data = fs_locate(fn);
-            thread_map(tmp);
+            task_map(tmp);
             if(data==NULL) {
                 tcb->errno = ENOENT;
                 return 0;

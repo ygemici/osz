@@ -38,7 +38,7 @@ displaying windows.
 
 `(platform)/sys.c` - system service initialization code.
 
-`(platform)/thread.c` - thread routines. For efficientcy, it has a platform specific implementation.
+`(platform)/task.c` - task routines. For efficientcy, it has a platform specific implementation.
 
 `(platform)/user.S` - the "system" service, which runs in a non-privileged mode.
 
@@ -46,7 +46,7 @@ displaying windows.
 
 `(platform)/supervisor.ld` - linker script for core (privileged).
 
-`(platform)/sahredlib.ld` - linker script for shared libraries and services.
+`(platform)/sharedlib.ld` - linker script for shared libraries and services.
 
 `(platform)/executable.ld` - linker script for normal applications.
 

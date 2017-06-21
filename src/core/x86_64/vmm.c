@@ -40,7 +40,7 @@ void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
 }
 
 /**
- * map memory into thread's address space
+ * map memory into task's address space
  */
 void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access)
 {
@@ -111,7 +111,7 @@ again:
 }
 
 /**
- * unmap memory from thread's address space
+ * unmap memory from task's address space
  */
 void vmm_unmapbss(OSZ_tcb *tcb, virt_t bss, size_t size)
 {

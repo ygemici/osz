@@ -126,7 +126,7 @@ typedef struct {
     uint64_t serial;
 } __attribute__((packed)) msg_t;
 // bits in evt: (63)TTT..TTT P FFFFFFFFFFFFFFF(0)
-//  where T is a thread id or subsystem id, P true if message has a pointer,
+//  where T is a task id or subsystem id, P true if message has a pointer,
 //  F is a function number from 1 to 32767 (SHRT_MAX). Function number 0 is reserved.
 #define EVT_DEST(t) ((uint64_t)(t)<<16)
 #define EVT_SENDER(m) ((pid_t)((m)>>16))

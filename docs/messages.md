@@ -4,7 +4,7 @@ OS/Z Message Queues
 Preface
 -------
 
-The main inter process communication form of OS/Z threads are message queues.
+The main inter process communication form of OS/Z tasks are message queues.
 It's a so essential type that it's defined in [etc/include/sys/types.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/types.h).
 
 ```c
@@ -19,8 +19,6 @@ msghdr = (msghdr_t *)mq[0];
 ```
 
 The other items (starting from 1) form a circular buffer for a FIFO queue. The size of that buffer is `msghdr_t.mq_size - 1`.
-If msghdr_t.mq_recvfrom is set, then the queue is exclusively allocated to that thread: other
-threads sending to the queue will receive errno EAGAIN. When it's zero, all threads can send messages into the queue.
 
 User level library
 ------------------
@@ -62,14 +60,14 @@ Core can't use libc, it has it's own message queue implementation. Two functions
 
 ```c
 bool_t msg_send(
-    pid_t thread,
+    pid_t task,
     uint64_t func,
     void *ptr,
     size_t size,
     uint64_t magic);
 
 bool_t msg_sends(
-    pid_t thread,
+    pid_t task,
     uint64_t func,
     uint64_t arg0,
     uint64_t arg1,
@@ -101,7 +99,7 @@ void ksend(
 ```
 
 It's an effective assembly implementation of copying msg_t into the queue and handle start / end indeces. The `msg_sends()`
-function calls it after it had mapped the destination's thread message queue temporarily.
+function calls it after it had mapped the destination's task message queue temporarily.
 
 From userspace the queue routines can be accessed via `syscall` instruction. The low level user library builds on it (basically
 mq_send() and mq_recv() are just wrappers).
@@ -109,10 +107,10 @@ The destination and function is passed in %rax. When destination is SRV_CORE (0)
 messages. All other values sends.
 
 The arguments are stored and read in System V ABI way, with two exception: %rcx is clobbered by the syscall instruction, so
-it must be passed in %rbx. Also unlike in `mq_send()`, the destination thread and the function code is aggregated into one argument:
+it must be passed in %rbx. Also unlike in `mq_send()`, the destination task and the function code is aggregated into one argument:
 
 ```
-%rax= (pid_t thread) << 16 + function,
+%rax= (pid_t task) << 16 + function,
 %rdi= arg0/ptr
 %rsi= arg1/size
 %rdx= arg2/magic

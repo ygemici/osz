@@ -22,17 +22,17 @@ User Tasks
 | ---------------- | ------- | ----------- |
 | -2^56 .. -512M-1 | global  | global [shared memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) space (user accessible, read/write) |
 | -512M .. 0       | global  | core memory (supervisor only) |
-|     0 .. 4096    | thread  | Thread Control Block (read-only) |
-|  4096 .. x       | thread  | Message Queue (read/write, growing upwards) |
-|     x .. 2M-1    | thread  | local stack (read/write, growing downwards) |
+|     0 .. 4096    | local   | Task Control Block (read-only) |
+|  4096 .. x       | local   | Message Queue (read/write, growing upwards) |
+|     x .. 2M-1    | local   | local stack (read/write, growing downwards) |
 |    2M .. x       | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md) | user program text segment (read only) |
 |     x .. 4G-2M-1 | process | shared libraries (text read only / data read/write) |
-| 4G-2M .. 4G-1    | thread  | list of open files (each 8 bytes, first is a counter) |
-|    4G .. 2^56-4G | thread  | dynamically [allocated tls memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) (growing upwards, read/write) |
-| 2^56-4G .. 2^56  | thread  | pre-allocated mapped system buffers (screen, initrd) |
+| 4G-2M .. 4G-1    | local   | list of open files (each 8 bytes, first is a counter) |
+|    4G .. 2^56-4G | local   | dynamically [allocated tls memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) (growing upwards, read/write) |
+| 2^56-4G .. 2^56  | local   | pre-allocated mapped system buffers (screen, initrd) |
 
 Normal userspace tasks do not have any MMIO, only physical RAM can be mapped in their bss segment.
-If two mappings are identical save the TCB and message queue, their threads belong to the same process.
+If two mappings are identical save the TCB and message queue, their tasks belong to the same process.
 
 The maximum number of pending events in a queue is a boot time parameter and can be set in [etc/CONFIG](https://github.com/bztsrc/osz/tree/master/etc/CONFIG) with "nrmqmax". It's given
 in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/64 = up to 64 pending events.
@@ -73,7 +73,7 @@ The core bss starts where the text segment ends, and is allocated by [kalloc()](
 Process Memory
 --------------
 
-Shared among threads, just as user bss.
+Shared among processes.
 
 | Virtual Address | Description |
 | --------------- | ----------- |
@@ -94,18 +94,18 @@ Message buffers are mapped read/write, so libraries can modify it's contents. No
 On the other hand page faults can occur in the bss section quite often. Mostly because after free or realloc
 physical pages are also freed so the virtual address space is fragmented. The good side is no more physical pages
 were allocated for higher addresses, so it's RAM efficient. When either a read or write cause a page fault in
-thread local bss segment, a new physical page is allocated transparent to the instruction causing the fault.
+task local bss segment, a new physical page is allocated transparent to the instruction causing the fault.
 
 Shared pages are mapped read/write for the first time, and read only on subsequent times. When a write protection
 error in the shared address range occurs, the page will be copied to a new page and the write will affect that
-new page. So until a shared page is written, it's real-time updated. After the write it becames a thread local page.
+new page. So until a shared page is written, it's real-time updated. After the write it becames a task local page.
 
 When a physical page is mapped for the second time (first time read-only), bit 9 in PT entries are set in both
-thread's page tables.
+task's page tables.
 
-When a virtual page is freed with bit 9 set, all thread's page tables searched for the same address. Would it be the
+When a virtual page is freed with bit 9 set, all task's page tables searched for the same address. Would it be the
 last reference and physical page freed as well.
 
-If the system runs out of free physical pages and there's a swap disk configured then the thread with the highest
-blkcnt score will be written out to disk, and allocation will continue transparently. Swapped out threads consume
+If the system runs out of free physical pages and there's a swap disk configured then the task with the highest
+blkcnt score will be written out to disk, and allocation will continue transparently. Swapped out tasks consume
 only one page of physical RAM, their TCB. All those TCBs are in tcb_state_hybernated state.

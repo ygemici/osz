@@ -95,23 +95,41 @@ char *strstr (char *haystack, char *needle)
 /* Return filename part of path */
 char *basename(char *s)
 {
-    return s;
+    if(s==NULL) return NULL;
+    char *r;
+    int i,e=strlen(s)-1;
+    if(s[e]=='/') e--;
+    for(i=e;i>1 && s[i-1]!='/';i--);
+    if(i==e) return NULL;
+    r=(char*)malloc(e-i+1);
+    memcpy(r,s+i,e-i);
+    return r;
 }
 
 /* Return directory part of path */
 char *dirname(char *s)
 {
-    return s;
+    if(s==NULL) return NULL;
+    char *r;
+    int i,e=strlen(s)-1;
+    if(s[e]=='/') e--;
+    for(i=e;i>0 && s[i]!='/';i--);
+    if(i==e||i==0) return NULL;
+    r=(char*)malloc(i);
+    memcpy(r,s,i-1);
+    return r;
 }
 
 /* Divide S into tokens separated by characters in DELIM.  */
 char *strtok (char *s, char *delim)
 {
+    /* TODO: strtok */
     return s;
 }
 
 char *strtok_r (char *s, char *delim, char **ptr)
 {
+    /* TODO: strtok_r */
     return s;
 }
 
@@ -119,5 +137,6 @@ char *strtok_r (char *s, char *delim, char **ptr)
    terminating it with a '\0', and update *STRINGP to point past it.  */
 char *strsep (char **stringp, char *delim)
 {
+    /* TODO: strsep */
     return NULL;
 }

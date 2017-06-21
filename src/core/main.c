@@ -40,7 +40,7 @@
  *   [3] see etc/CONFIG and env.h. Plain ascii key=value pairs,
  *       separated by whitespace characters. Filled up with spaces
  *       to page size.
- *   [4] when main() calls isr_enable(), user thread will be mapped
+ *   [4] when main() calls isr_enable(), user task will be mapped
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
@@ -62,7 +62,7 @@ void main()
     /*** step 1: motoric reflexes ***/
     // parse environment
     env_init();
-    // initialize physical memory manager, required by new thread creation
+    // initialize physical memory manager, required by new task creation
     pmm_init();
 
     // initialize the system, "idle" task and device driver tasks

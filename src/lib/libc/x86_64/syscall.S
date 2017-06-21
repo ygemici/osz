@@ -70,7 +70,7 @@ dbg_printf:
 /**
  * non-blocking, send message
  *
- * void mq_send(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
+ * void mq_send(task,event,arg0,arg1,arg2,arg3,arg4,arg5)
  */
 mq_send:
 mymq_send:
@@ -92,7 +92,7 @@ mymq_send:
 /**
  * blocking, send a request and receive result
  *
- * msg_t *mq_call(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
+ * msg_t *mq_call(task,event,arg0,arg1,arg2,arg3,arg4,arg5)
  */
 mq_call:
 mymq_call:
@@ -221,7 +221,7 @@ myseterr:
     ret
 
 /**
- * uint64_t regservice(pid_t thread) - ONLY for init
+ * uint64_t regservice(pid_t task) - ONLY for init
  */
 regservice:
     xorq    %rax, %rax

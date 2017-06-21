@@ -64,7 +64,7 @@ extern void bzt_free(void *arena, void *ptr);
 extern void bzt_dumpmem(void *arena);
 #endif
 
-/* Thread Local Storage */
+/* Task Local Storage */
 /* Allocate SIZE bytes of memory.  */
 #define malloc(s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,s,MAP_PRIVATE)
 /* Allocate NMEMB elements of SIZE bytes each, all initialized to 0.  */

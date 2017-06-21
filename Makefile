@@ -115,6 +115,7 @@ ifneq ($(wildcard /usr/local/bin/bochs),)
 else
 	bochs -f etc/bochs.rc -q
 endif
+	@rm bin/disk.dd.lock 2>/dev/null || true
 
 testv: bin/disk.vdi
 	@echo "TEST"

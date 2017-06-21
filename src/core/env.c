@@ -161,8 +161,8 @@ unsigned char *env_debug(unsigned char *s)
         // debug flags
         if(s[0]=='m' && s[1]=='m')              debug |= DBG_MEMMAP;
         if(s[0]=='M' && s[1]=='M')              debug |= DBG_MEMMAP;
-        if(s[0]=='t' && s[1]=='h')              debug |= DBG_THREADS;
-        if(s[0]=='T' && s[1]=='H')              debug |= DBG_THREADS;
+        if(s[0]=='t' && s[1]=='a')              debug |= DBG_TASKS;
+        if(s[0]=='T' && s[1]=='A')              debug |= DBG_TASKS;
         if(s[0]=='e' && s[1]=='l')              debug |= DBG_ELF;
         if(s[0]=='E' && s[1]=='L')              debug |= DBG_ELF;
         if(s[0]=='r' && (s[1]=='i'||s[2]=='i')) debug |= DBG_RTIMPORT;
@@ -273,7 +273,7 @@ void env_init()
             env += 9;
             env = env_boolf(env, &identity);
         } else
-        // maximum timeslice rate per second for a thread
+        // maximum timeslice rate per second for a task
         // to allocate CPU continously (1/quantum sec)
         if(!kmemcmp(env, "quantum=", 8)) {
             env += 8;

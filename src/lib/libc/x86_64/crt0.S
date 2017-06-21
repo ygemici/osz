@@ -36,7 +36,7 @@
 
 .section .crt0
 
-    /* initial RIP on thread execution, first byte of text segment */
+    /* initial RIP on task execution, first byte of text segment */
     retq
 
 .section .text
@@ -48,6 +48,6 @@ _start:
     movq    8(%rsp), %rsi
     /* call main(argc,argv) function */
     call    main
-    /* exit thread */
+    /* exit task */
     movq    %rax, %rdi
     jmp    exit

@@ -47,7 +47,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     uint64_t *paging = (uint64_t*)(&tmp2map);
     // don't use EVT_SENDER() here, would loose sign. This can be
     // negative pid if a service referenced.
-    int64_t thread = ((int64_t)(event&~0xFFFF)/(int64_t)65536);
+    int64_t task = ((int64_t)(event&~0xFFFF)/(int64_t)65536);
 
     // only ISRs allowed to send SYS_IRQ message, and they are sent
     // on a more efficient way, directly with ksend
@@ -56,9 +56,9 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         return false;
     }
     // do we need pid_t translation?
-    if(thread < 0) {
-        if(-thread < nrservices) {
-            thread = services[-thread];
+    if(task < 0) {
+        if(-task < nrservices) {
+            task = services[-task];
         } else {
             srctcb->errno = EINVAL;
             return false;
@@ -66,7 +66,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     }
 
     // checks
-    if(thread == services[-SRV_FS]) {
+    if(task == services[-SRV_FS]) {
         // only init allowed to send SYS_mountfs to FS
         if(event==SYS_mountfs && srctcb->mypid!=services[-SRV_init]) {
             srctcb->errno = EPERM;
@@ -74,8 +74,8 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         }
     }
 
-    // map destination thread's message queue
-    kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
+    // map destination task's message queue
+    kmap((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
     if(dsttcb->magic != OSZ_TCB_MAGICH) {
         srctcb->errno = EINVAL;
         return false;
@@ -84,9 +84,9 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     kmap_mq(dsttcb->memroot);
 
     /* mappings:
-     *  tmpmap: destination thread's tcb
-     *  tmp2map: destination thread's message queue's PTE (paging)
-     *  TMPQ_ADDRESS: destination thread's self (message queue) */
+     *  tmpmap: destination task's tcb
+     *  tmp2map: destination task's message queue's PTE (paging)
+     *  TMPQ_ADDRESS: destination task's self (message queue) */
 
     phy_t pte;
     size_t s;
@@ -95,7 +95,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
 #if DEBUG
     if(debug&DBG_MSG) {
         kprintf(" msg pid %x sending to pid %x (%d), event #%x",
-            srctcb->mypid, thread, msghdr->mq_start, EVT_FUNC(event));
+            srctcb->mypid, task, msghdr->mq_start, EVT_FUNC(event));
         if(event & MSG_PTRDATA)
             kprintf(" *%x[%d] (%x)",arg0,arg1,arg2);
         else
@@ -139,7 +139,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // send message to the mapped queue. Don't use EVT_FUNC, would
     // loose MSG_PTRDATA flag
     if(!ksend(msghdr,
-        EVT_DEST((uint64_t)thread) | (event&0xFFFF),
+        EVT_DEST((uint64_t)task) | (event&0xFFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
         if(srctcb->mypid!=dsttcb->mypid)
