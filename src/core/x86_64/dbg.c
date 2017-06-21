@@ -1814,7 +1814,7 @@ help:
                     dbg_setpos();
                 kprintf(
                     "                                                      \n"
-                    " OS/Z " OSZ_ARCH " Debugger (build " OSZ_BUILD ") \n"
+                    "     ---==<  OS/Z " OSZ_VER " " OSZ_ARCH " Debugger  >==---      \n"
                     "                                                      \n"
                     " Keyboard Shortcuts                                   \n"
                     "  F1 - this help                                      \n"

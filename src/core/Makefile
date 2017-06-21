@@ -19,6 +19,10 @@ endif
 
 all: $(OBJS) $(BINTARGET)
 
+main.o: main.c ../../etc/etc/os-release
+	@#echo "  src		$<"
+	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
+
 %.o: %.c
 	@#echo "  src		$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
