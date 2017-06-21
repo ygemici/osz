@@ -37,7 +37,7 @@ irq1:
     /* is there a key waiting? */
     movw    $512, %cx
     xorq    %rax, %rax
-    xorq    %rsi, %rsi
+    xorq    %rdi, %rdi
     xorq    %rdx, %rdx
 1:  inb     $0x64, %al
     andb    $1, %al
@@ -48,33 +48,31 @@ irq1:
     ret
     /* yes, read the scancode */
 2:  inb     $0x60, %al
-    movb    %al, %sil
+    movb    %al, %dil
     /* acknowledge */
     inb     $0x61, %al
     outb    %al, $0x61
     /* check extended scancode */
-    cmpb    $0xE0, %sil
+    cmpb    $0xE0, %dil
     jne     1f
     movw    $1*128, kbd_prefix(%rip)
     ret
-1:  cmpb    $0xE1, %sil
+1:  cmpb    $0xE1, %dil
     jne     1f
     movw    $2*128, kbd_prefix(%rip)
     ret
-1:  cmpb    $0xFF, %sil
+1:  cmpb    $0xFF, %dil
     jne     1f
     movw    $3*128, kbd_prefix(%rip)
     ret
-1:  movb    %sil, %al
+1:  movb    %dil, %al
     /* clear release bit so that it won't mess up scancode */
-    btr     $7, %si
-    addw    kbd_prefix(%rip), %si
+    btr     $7, %di
+    addw    kbd_prefix(%rip), %di
     movw    $0, kbd_prefix(%rip)
-    orw     %si, %si
+    orw     %di, %di
     jz      4f
-    /* extended scancode in si */
-    movq    $SRV_UI, %rdi
-    shlq    $16, %rdi
+    /* extended scancode in di */
     bt      $7, %ax
     jnc     2f
     /* keyrelease */
@@ -84,7 +82,7 @@ irq1:
     cmpb    $2, kbd_pressed(%rip)
     jg      4f
     decb    kbd_pressed(%rip)
-    movw    $SYS_keyrelease, %di
+    movw    $SYS_keyrelease, %si
     jmp     3f
 2:  /* keypress */
     incb    kbd_pressed(%rip)
@@ -94,9 +92,9 @@ irq1:
     cmpb    $0x1D, kbd_hist+1(%rip)
     jne     5f
     /* handle Ctrl + Alt + Del */
-    cmpw    $0x53, %si
+    cmpw    $0x53, %di
     je      6f
-    cmpw    $0xd3, %si
+    cmpw    $0xd3, %di
     jne     4f
 6:  movb    $0xFE, %al
     outb    %al, $0x64
@@ -104,10 +102,12 @@ irq1:
 4:
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
-    movb    %sil, kbd_hist+0(%rip)
-    movw    $SYS_keypress, %di
+    movb    %dil, kbd_hist+0(%rip)
+    movw    $SYS_keypress, %si
 3:  /* send a key event to UI task */
-    movl     $0x646E6573, %eax # 'send'
+    movq    $SRV_UI, %rax
+    shlq    $16, %rax
+    movw    %si, %ax
     syscall
     ret
 4:  movb    $0, kbd_pressed(%rip)

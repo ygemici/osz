@@ -1,2 +1,0 @@
-#define OSZ_BUILD "2017-06-21 07:25:06 UTC"
-#define OSZ_ARCH_x86_64 1

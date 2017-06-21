@@ -44,11 +44,10 @@
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
-#include <lastbuild.h>
 #include "env.h"
 
-char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"
-    "Use is subject to license terms. CC-by-nc-sa, copyright bzt (bztsrc@github)\n\n";
+char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"
+    "Use is subject to license terms. Copyright bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *

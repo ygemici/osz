@@ -342,5 +342,6 @@ output:
         }
         s++;
     }
-    printf("\n");
+    if(reloc==-1)
+        printf("\n");
 }

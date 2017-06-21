@@ -50,7 +50,6 @@
 # include <ui.h>
 #endif
 
-#include <lastbuild.h>
 #include <syscall.h>
 
 #endif /* osZ.h */

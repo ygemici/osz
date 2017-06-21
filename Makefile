@@ -27,8 +27,10 @@ loader/bootboot.efi:
 	@make -e --no-print-directory -C loader/efi-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
 
 util: tools
-	@date +'#define OSZ_BUILD "%Y-%m-%d %H:%M:%S UTC"' >etc/include/lastbuild.h
-	@echo '#define OSZ_ARCH_$(ARCH) 1' >>etc/include/lastbuild.h
+	@cat etc/etc/os-release | grep -v ^BUILD | grep -v ^ARCH >/tmp/os-release
+	@mv /tmp/os-release etc/etc/os-release
+	@date +'BUILD = "%Y-%m-%d %H:%M:%S UTC"' >>etc/etc/os-release
+	@echo 'ARCH = "$(ARCH)"' >>etc/etc/os-release
 	@echo "TOOLS"
 	@make --no-print-directory -e -C tools all | grep -v 'Nothing to be done' || true
 

@@ -179,27 +179,26 @@ popq %rax
     movb    $0, cnt(%rip)
     movq    packet(%rip), %rax
     /* get buttons */
-    xorq    %rsi, %rsi
-    movb    %al, %sil
+    xorq    %rdi, %rdi
+    movb    %al, %dil
     shrq    $8, %rax
-    movq    packet(%rip), %rsi
+    movq    packet(%rip), %rdi
     /* get delta X */
-    movsxb  %al, %rdx
+    movsxb  %al, %rsi
     shrq    $8, %rax
     /* get delta Y */
-    movsxb  %al, %r12
+    movsxb  %al, %rdx
     shrq    $8, %rax
     /* get delta Z */
-    movsxb  %al, %r8
+    movsxb  %al, %rbx
     /* reset packet */
     xorq    %rax, %rax
     movq    %rax, packet(%rip)
     /* send a key event to UI task */
-    xorq    %r9, %r9
-    movq    $SRV_UI, %rdi
-    shlq    $16, %rdi
-    movw    $SYS_pointer, %di
-    movl     $0x646E6573, %eax # 'send'
+    xorq    %r8, %r8
+    movq    $SRV_UI, %rax
+    shlq    $16, %rax
+    movw    $SYS_pointer, %ax
     syscall
 .end:
     ret

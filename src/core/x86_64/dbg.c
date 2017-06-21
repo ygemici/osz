@@ -27,7 +27,6 @@
 
 #if DEBUG
 
-#include <lastbuild.h>
 #include <sys/init.h>
 #include <sys/video.h>
 #include "../font.h"
@@ -1815,7 +1814,7 @@ help:
                     dbg_setpos();
                 kprintf(
                     "                                                      \n"
-                    " OS/Z " ARCH " Debugger (build " OSZ_BUILD ") \n"
+                    " OS/Z " OSZ_ARCH " Debugger (build " OSZ_BUILD ") \n"
                     "                                                      \n"
                     " Keyboard Shortcuts                                   \n"
                     "  F1 - this help                                      \n"

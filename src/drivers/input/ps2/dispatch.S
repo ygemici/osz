@@ -48,17 +48,17 @@ _init:
     /* failsafe */
     cmpw    $SYS_IRQ, (%rax)
     jne     1b
-    xorq    %rsi, %rsi
-    movb    8(%rax), %sil
+    xorq    %rdi, %rdi
+    movb    8(%rax), %dil
     /* irq==1? */
-    cmpb    $1, %sil
+    cmpb    $1, %dil
     jne     2f
     call    3f
     call    irq1@PLT
     jmp     1b
 
     /* irq==12? */
-2:  cmpb    $12, %sil
+2:  cmpb    $12, %dil
     jne     1b
     call    3f
     call    irq12@PLT
@@ -66,9 +66,8 @@ _init:
 
 3:  /* IRQ ack to re-enable */
     pushq   %rax
-    xorq    %rdi, %rdi
-    movb    $SYS_ack, %dil
-    movl     $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_ack, %al
     syscall
     popq    %rax
     ret
