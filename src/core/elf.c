@@ -80,7 +80,9 @@ void *elf_load(char *fn)
         kpanic("out of memory, text segment too big: %s", fn);
     }
     ret = i;
+    srand[(i+0)%4] *= 16807;
     srand[(i+1)%4] ^= (uint64_t)elf;
+    srand[(i+2)%4] *= 16807;
     srand[(i+3)%4] ^= (uint64_t)elf;
 
 #if DEBUG

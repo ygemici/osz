@@ -90,3 +90,18 @@ long long atoll(char *c)
 {
     return (long long)atol(c);
 }
+
+void *bsearch(void *key, void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *))
+{
+    uint64_t s=0, e=nmemb;
+    int ret;
+        while (s<e) {
+        uint64_t m=s+(e-s)/2;
+        ret = cmp(key, base + m*s);
+        if (ret<0) e=m; else
+        if (ret>0) s=m+1; else
+            return (void *)base + m*s;
+    }
+    return NULL;
+}
+

@@ -27,10 +27,51 @@
 #include <osZ.h>
 #include <syscall.h>
 
-void exit(int code)
+typedef void (*atexit_t)(void);
+
+public int atexit_num = 0;
+public atexit_t *atexit_hooks = NULL;
+
+/**
+ *  Register a function to be called when `exit' is called.
+ */
+int atexit (void (*func) (void))
 {
-    /* TODO: call atexit handlers and dtors */
-    mq_call(SRV_CORE, SYS_exit, code, 0, 0, 0, 0, 0);
-    while(1);
+    /* POSIX allows multiple registrations */
+    /*
+    int i;
+    for(i=0;i<atexit_num;i++)
+        if(atexit_hooks[i] == func)
+            return 1;
+    */
+    atexit_hooks = realloc(atexit_hooks, (atexit_num+1)*sizeof(atexit_t));
+    if(errno!=SUCCESS)
+        return 1;
+    atexit_hooks[atexit_num++] = func;
+    return 0;
 }
 
+/**
+ *  Call all functions registered with `atexit' and `on_exit',
+ *  in the reverse of the order in which they were registered,
+ *  perform stdio cleanup, and terminate program execution with STATUS.
+ */
+void exit(int code)
+{
+    int i;
+    /* call atexit handlers in reverse order */
+    if(atexit_num>0)
+        for(i=atexit_num;i>=0;--i)
+            (*atexit_hooks[i])();
+    mq_call(SRV_CORE, SYS_exit, code, 0, 0, 0, 0, 0);
+    while(1) mq_recv();
+}
+
+/**
+ *  Abort execution and generate a core-dump.
+ */
+void abort()
+{
+    mq_call(SRV_CORE, SYS_exit, -1, 1, 0, 0, 0, 0);
+    while(1) mq_recv();
+}

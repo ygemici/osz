@@ -47,6 +47,8 @@ vid_swapbuf:
     ret
 
 /**
+ * Load sprites for cursor
+ *
  * void vid_loadcursor(char *file);
  */
 vid_loadcursor:
@@ -57,6 +59,8 @@ vid_loadcursor:
     ret
 
 /**
+ * Move cursor pointer
+ *
  * void vid_movecursor(int hand,int x,int y);
  */
 vid_movecursor:
@@ -68,6 +72,8 @@ vid_movecursor:
     ret
 
 /**
+ * Change cursor's shape
+ *
  * void vid_setcursor(int hand,uint8_t shape);
  */
 vid_setcursor:

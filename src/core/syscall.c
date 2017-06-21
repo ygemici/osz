@@ -202,6 +202,19 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             tcb->allocmem-=arg1/__PAGESIZE;
             break;
 
+        case SYS_rand:
+            return srand[0] ^ srand[1] ^ srand[2] ^ srand[3];
+        
+        case SYS_srand:
+            srand[(arg0+0)%4] += (uint64_t)arg0;
+            srand[(arg0+1)%4] ^= (uint64_t)arg0;
+            srand[(arg0+2)%4] += (uint64_t)arg0;
+            srand[(arg0+3)%4] ^= (uint64_t)arg0;
+            srand[(arg0+0)%4] *= 16807;
+            srand[(arg0+1)%4] *= ticks[TICKS_LO];
+            kentropy();
+            break;
+
         default:
             tcb->errno = EPERM;
             return (uint64_t)false;

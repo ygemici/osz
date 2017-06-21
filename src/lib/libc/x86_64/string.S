@@ -28,8 +28,8 @@
 /* All functions must be direction flag independent, and must behave well on NULL input.
  * What's more str* functions must be UTF-8 aware. */
 
-.global memcpy
 .global memzero
+.global memcpy
 .global memmove
 .global memset
 .global memcmp
@@ -46,12 +46,16 @@
 .global strlen
 .global strnlen
 .global mbstrlen
-.global mbstrnlen
 .global strcasecmp
 .global strncasecmp
 
 .section .text
 
+/**
+ * Set N bytes of S to zero.
+ *
+ * void *memzero (void *s, size_t n);
+ */
 memzero:
     cld
     orq     %rdi, %rdi
@@ -71,6 +75,12 @@ memzero:
     movq    %rbx, %rax
 2:  ret
 
+/**
+ * Copy N bytes of SRC to DEST, guaranteeing
+ * correct behavior for overlapping strings. Shares code with memcpy()
+ *
+ * void *memmove (void *dest, void *src, size_t n);
+ */
 memmove:
     orq     %rdi, %rdi
     jz      2f
@@ -86,6 +96,11 @@ memmove:
     addq    %rdx, %rsi
     std
     jmp     1f
+/**
+ * Copy N bytes of SRC to DEST.
+ *
+ * void *memcpy (void *dest, void *src, size_t n);
+ */
 memcpy:
     cld
     orq     %rdi, %rdi
@@ -107,6 +122,11 @@ memcpy:
     movq    %rbx, %rax
 2:  ret
 
+/**
+ * Set N bytes of S to C.
+ *
+ * void *memset (void *s, int c, size_t n);
+ */
 memset:
     cld
     orq     %rdx, %rdx
@@ -136,6 +156,11 @@ memset:
     movq    %rbx, %rax
 2:  ret
 
+/**
+ * Compare N bytes of S1 and S2.
+ *
+ * int memcmp (void *s1, void *s2, size_t n);
+ */
 memcmp:
     cld
     xorq    %rax, %rax
@@ -154,6 +179,11 @@ memcmp:
     incb    %al
 1:  ret
 
+/**
+ * These are not UTF-8 safe
+ *
+ * void *memchr (void *s, int c, size_t n);
+ */
 memchr:
     movq    %rdi, %rax
     orq     %rax, %rax
@@ -166,6 +196,9 @@ memchr:
     xorq    %rax, %rax
 2:  ret
 
+/**
+ * void *memrchr (void *s, int c, size_t n);
+ */
 memrchr:
     orq     %rdi, %rdi
     jz      2f
@@ -182,6 +215,12 @@ memrchr:
 2:  xorq    %rax, %rax
 1:  ret
 
+/**
+ * Return the position of the first bit set in I, or 0 if none are set.
+ * The least-significant bit is position 1, the most-significant 64.
+ *
+ * uint64_t ffs (uint64_t i);
+ */
 ffs:
     xorq    %rax, %rax
     orq     %rdi, %rdi
@@ -191,11 +230,21 @@ ffs:
     incq    %rax
 1:  ret
 
+/**
+ * Append SRC onto DEST. Shares code with strcpy()
+ *
+ * char *strcat (char *dest, char *src);
+ */
 strcat:
 1:  cmpb    $0, (%rdi)
     jz      1f
     incq    %rdi
     jmp     1b
+/**
+ * Copy SRC to DEST.
+ *
+ * char *strcpy (char *dest, char *src);
+ */
 strcpy:
 1:  cld
     movq    %rdi, %rbx
@@ -210,11 +259,21 @@ strcpy:
 2:  movq    %rbx, %rax
     ret
 
+/**
+ * Append no more than N characters from SRC onto DEST. Shares code with strncpy()
+ *
+ * char *strncat (char *dest, char *src, size_t n);
+ */
 strncat:
 1:  cmpb    $0, (%rdi)
     jz      1f
     incq    %rdi
     jmp     1b
+/**
+ * Copy no more than N characters of SRC to DEST.
+ *
+ * char *strncpy (char *dest, char *src, size_t n);
+ */
 strncpy:
 1:  cld
     movq    %rdi, %rbx
@@ -233,6 +292,11 @@ strncpy:
 2:  movq    %rbx, %rax
     ret
 
+/**
+ * Compare S1 and S2.
+ *
+ * int strcmp (char *s1, char *s2);
+ */
 strcmp:
     xorq    %rax, %rax
     cmpq    %rsi, %rdi
@@ -250,6 +314,11 @@ strcmp:
     jnz     1b
 2:  ret
 
+/**
+ * Compare N characters of S1 and S2.
+ *
+ * int strncmp (char *s1, char *s2, size_t n);
+ */
 strncmp:
     cld
     xorq    %rax, %rax
@@ -278,6 +347,9 @@ strncmp:
     jz      1b
 3:  ret
 
+/**
+ * size_t strlen (char *s);
+ */
 strlen:
     cld
     movq    %rdi, %rsi
@@ -292,6 +364,9 @@ strlen:
 2:  movq    %rcx, %rax
     ret
 
+/**
+ * size_t strnlen (char *s, size_t maxlen);
+ */
 strnlen:
     cld
     movq    %rsi, %rdx
@@ -311,6 +386,12 @@ strnlen:
 2:  movq    %rcx, %rax
     ret
 
+/**
+ * Return the number of multibytes (UTF-8 sequences) in S.
+ * For mbstrnlen(), see mblen() in stdlib.h
+ *
+ * size_t mbstrlen (char *s);
+ */
 mbstrlen:
     cld
     movq    %rdi, %rsi
@@ -338,37 +419,11 @@ mbstrlen:
 2:  movq    %rcx, %rax
     ret
 
-mbstrnlen:
-    cld
-    movq    %rsi, %rdx
-    movq    %rdi, %rsi
-    xor     %rcx, %rcx
-    orq     %rsi, %rsi
-    jz      2f
-    decq    %rcx
-1:  lodsb
-    incq    %rcx
-    btw     $7, %ax
-    jnc     3f
-    incq    %rsi
-    movb    %al, %ah
-    shrb    $5, %al
-    cmpb    $0b110, %al
-    je      3f
-    incq    %rsi
-    movb    %ah, %al
-    shrb    $4, %al
-    cmpb    $0b1110, %al
-    je      3f
-    incq    %rsi
-3:  decq    %rdx
-    jz      2f
-    or      %al, %al
-    jnz     1b
-2:  movq    %rcx, %rax
-    ret
-
-/* NOTE: utf-8 multibyte safe */
+/**
+ * NOTE: utf-8 multibyte safe
+ *
+ * char *strchr (char *s, int c);
+ */
 strchr:
     movq    %rdi, %rax
     orq     %rax, %rax
@@ -412,7 +467,11 @@ strchr:
     xorq    %rax, %rax
 3:  ret
 
-/* NOTE: utf-8 multibyte safe */
+/**
+ * NOTE: utf-8 multibyte safe
+ *
+ * char *strrchr (char *s, int c);
+ */
 strrchr:
     orq     %rdi, %rdi
     jz      5f
@@ -462,8 +521,18 @@ strrchr:
     xorq    %rax, %rax
 3:  ret
 
+/**
+ * Compare S1 and S2, ignoring case.
+ *
+ * int strcasecmp (char *s1, char *s2);
+ */
 strcasecmp:
     ret
 
+/**
+ * Compare no more than N chars of S1 and S2, ignoring case.
+ *
+ * int strncasecmp (char *s1, char *s2, size_t n);
+ */
 strncasecmp:
     ret

@@ -69,7 +69,7 @@
 #define LLONG_MIN	(-LLONG_MAX - 1LL)
 #define ULLONG_MAX	18446744073709551615ULL
 
-/* The largest number rand will return (same as INT_MAX).  */
-#define	RAND_MAX	2147483647
+/* The largest number rand will return.  */
+#define	RAND_MAX	ULLONG_MAX
 
 #endif	/* limits.h */

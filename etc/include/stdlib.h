@@ -32,8 +32,12 @@
 
 /* We define these the same for all machines.
    Changes from this to the outside world should be done in `_exit'.  */
-#define	EXIT_FAILURE	1	/* Failing exit status.  */
-#define	EXIT_SUCCESS	0	/* Successful exit status.  */
+#define	EXIT_FAILURE    1   /* Failing exit status.  */
+#define	EXIT_SUCCESS    0   /* Successful exit status.  */
+/* see also sysexits.h for services */
+
+/* Maximum length of a multibyte character in the current locale.  */
+#define	MB_CUR_MAX  4
 
 #ifdef DEBUG
 /* debug flags, and user mode kprintf */
@@ -61,10 +65,16 @@ extern void bzt_dumpmem(void *arena);
 #endif
 
 /* Thread Local Storage */
+/* Allocate SIZE bytes of memory.  */
 #define malloc(s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,s,MAP_PRIVATE)
+/* Allocate NMEMB elements of SIZE bytes each, all initialized to 0.  */
 #define calloc(n,s) bzt_alloc((void*)BSS_ADDRESS,8,NULL,n*s,MAP_PRIVATE)
+/* Re-allocate the previously allocated block
+   in PTR, making the new block SIZE bytes long.  */
 #define realloc(p,s) bzt_alloc((void*)BSS_ADDRESS,8,p,s,MAP_PRIVATE)
+/* ISO C variant of aligned allocation.  */
 #define aligned_alloc(a,s) bzt_alloc((void*)BSS_ADDRESS,a,NULL,s,MAP_PRIVATE)
+/* Free a block allocated by `malloc', `realloc' or `calloc'.  */
 #define free(p) bzt_free((void*)BSS_ADDRESS,p)
 
 /* Shared Memory */
@@ -74,12 +84,50 @@ extern void bzt_dumpmem(void *arena);
 #define saligned_alloc(s) bzt_alloc((void*)SBSS_ADDRESS,a,NULL,s,MAP_SHARED)
 #define sfree(p) bzt_free((void*)SBSS_ADDRESS,p)
 
+/* Return a random integer between 0 and RAND_MAX inclusive.  */
+extern uint64_t rand (void);
+/* Seed the random number generator with the given number.  */
+extern void srand (uint64_t seed);
+
+/* Register a function to be called when `exit' is called.  */
+extern int atexit (void (*func) (void));
+
+/* Call all functions registered with `atexit' and `on_exit',
+   in the reverse of the order in which they were registered,
+   perform stdio cleanup, and terminate program execution with STATUS.  */
+extern void exit (int __status) __attribute__ ((__noreturn__));
+
+/* Abort execution and generate a core-dump.  */
+extern void abort (void)  __attribute__ ((__noreturn__));
+
+/* Return the length of the multibyte character
+   in S, which is no longer than N.  */
+extern int mblen (char *s, size_t n);
+
+/* Return the absolute value of X.  */
+#define abs(x) ((x)<0?-(x):(x))
+#define labs(x) ((x)<0?-(x):(x))
+#define llabs(x) ((x)<0?-(x):(x))
+/* Minimum and maximum. Not in POSIX standard, but this is the right place */
+#define min(x,y) ((x)<(y)?(x):(y))
+#define max(x,y) ((x)>(y)?(x):(y))
+
+/* Return the `div_t', `ldiv_t' or `lldiv_t' representation
+   of the value of NUMER over DENOM. */
+extern div_t div (int numer, int denom);
+extern ldiv_t ldiv (long int numer, long int denom);
+extern lldiv_t lldiv (long long int numer, long long int denom);
+
+/* Do a binary search for KEY in BASE, which consists of NMEMB elements
+   of SIZE bytes each, using COMPAR to perform the comparisons.  */
+extern void *bsearch (void *key, void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *));
+
+/* Sort NMEMB elements of BASE, of SIZE bytes each,
+   using COMPAR to perform the comparisons.  */
+extern void qsort (void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *));
+
 /*** unimplemented ***/
 #if 0
-
-/* Maximum length of a multibyte character in the current locale.  */
-#define	MB_CUR_MAX	(__ctype_get_mb_cur_max ())
-extern size_t __ctype_get_mb_cur_max (void);
 
 /* Convert a string to a floating-point number.  */
 extern double atof (char *__nptr);
@@ -96,35 +144,6 @@ extern unsigned long int strtoul (char *nptr, char **endptr, int base);
 extern long long int strtoll (char *nptr, char **endptr, int base);
 /* Convert a string to an unsigned quadword integer.  */
 extern unsigned long long int strtoull (char *nptr, char **endptr, int base);
-
-/* Return a random integer between 0 and RAND_MAX inclusive.  */
-extern int rand (void);
-/* Seed the random number generator with the given number.  */
-extern void srand (unsigned int seed);
-
-/* Allocate SIZE bytes of memory.  */
-extern void *malloc (size_t size);
-/* Allocate NMEMB elements of SIZE bytes each, all initialized to 0.  */
-extern void *calloc (size_t nmemb, size_t size);
-
-/* Re-allocate the previously allocated block
-   in PTR, making the new block SIZE bytes long.  */
-extern void *realloc (void *__ptr, size_t __size);
-/* Free a block allocated by `malloc', `realloc' or `calloc'.  */
-extern void free (void *ptr);
-/* ISO C variant of aligned allocation.  */
-extern void *aligned_alloc (size_t alignment, size_t size);
-
-/* Abort execution and generate a core-dump.  */
-extern void abort (void)  __attribute__ ((__noreturn__));
-
-/* Register a function to be called when `exit' is called.  */
-extern int atexit (void (*func) (void));
-
-/* Call all functions registered with `atexit' and `on_exit',
-   in the reverse of the order in which they were registered,
-   perform stdio cleanup, and terminate program execution with STATUS.  */
-extern void exit (int __status) __attribute__ ((__noreturn__));
 
 /* Return the value of envariable NAME, or NULL if it doesn't exist.  */
 extern char *getenv (char *name);
@@ -149,29 +168,6 @@ extern char *canonicalize_file_name (char *name);
    returns the name in RESOLVED.  */
 extern char *realpath (char *name, char *resolved);
 
-typedef int (*__compar_fn_t) (const void *, const void *);
-
-/* Do a binary search for KEY in BASE, which consists of NMEMB elements
-   of SIZE bytes each, using COMPAR to perform the comparisons.  */
-extern void *bsearch (void *key, void *base, size_t nmemb, size_t size, __compar_fn_t compar);
-
-/* Sort NMEMB elements of BASE, of SIZE bytes each,
-   using COMPAR to perform the comparisons.  */
-extern void qsort (void *base, size_t nmemb, size_t size, __compar_fn_t compar);
-
-/* Return the absolute value of X.  */
-extern int abs (int x);
-extern long int labs (long int x);
-extern long long int llabs (long long int x);
-/* Return the `div_t', `ldiv_t' or `lldiv_t' representation
-   of the value of NUMER over DENOM. */
-extern div_t div (int numer, int denom);
-extern ldiv_t ldiv (long int numer, long int denom);
-extern lldiv_t lldiv (long long int numer, long long int denom);
-
-/* Return the length of the multibyte character
-   in S, which is no longer than N.  */
-extern int mblen (char *s, size_t n);
 /* Return the length of the given multibyte character,
    putting its `wchar_t' representation in *PWC.  */
 extern int mbtowc (wchar_t *pwc, char *s, size_t n);

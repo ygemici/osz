@@ -47,6 +47,7 @@
 .global sleep
 .global usleep
 .global meminfo
+.global rand
 #if DEBUG
 .global dbg_printf
 #endif
@@ -67,11 +68,12 @@ dbg_printf:
 /* dest: pid_t<<16 + msg type */
 
 /**
+ * non-blocking, send message
+ *
  * void mq_send(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
  */
 mq_send:
 mymq_send:
-    # non-blocking send message
     incq    MQ_ADDRESS + 24
     movq    %rdi, %rax
     shlq    $16, %rax
@@ -88,11 +90,12 @@ mymq_send:
     ret
 
 /**
+ * blocking, send a request and receive result
+ *
  * msg_t *mq_call(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
  */
 mq_call:
 mymq_call:
-    # blocking, send a request and receive result
     /* send request */
 1:  callq   mymq_send
     cmpb    $EAGAIN, tcb_errno
@@ -104,11 +107,12 @@ mymq_call:
     ret
 
 /**
+ * blocking if there's no message waiting
+ *
  * msg_t *mq_recv()
  */
 mq_recv:
 mymq_recv:
-    # blocking if there's no message waiting
 1:  movq    $MQ_ADDRESS, %rbx
     movq    8(%rbx), %rax
     cmpq    (%rbx), %rax
@@ -133,6 +137,7 @@ mymq_recv:
 
 /**
  * returns message serial or 0 if no message waiting
+ *
  * uint64_t mq_ismsg()
  */
 mq_ismsg:
@@ -146,8 +151,7 @@ mq_ismsg:
     incb    %al
 1:  ret
 
-/* Don't use directly
-   uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,stack func); */
+/* Don't use directly */
 mq_dispatchcall:
     /* rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
     movq    8(%rsp), %rax
@@ -155,6 +159,8 @@ mq_dispatchcall:
     ret
 
 /**
+ * Set a bit. Return if it was zero, yield otherwise.
+ *
  * void lockacquire(int bit, uint64_t *mem)
  */
 lockacquire:
@@ -166,6 +172,8 @@ lockacquire:
 1:  ret
 
 /**
+ * Clear a bit
+ *
  * void lockrelease(int bit, uint64_t *mem)
  */
 lockrelease:
@@ -174,10 +182,11 @@ lockrelease:
     ret
 
 /**
+ * Dynamically link a shared object
+ *
  * void *dl(so, sym)
  */
 dl:
-    # dynamically link a shared object
     # rdi: pointer to .so file path
     # rsi: pointer to symbol name
     xorq    %rax, %rax
@@ -188,6 +197,8 @@ dl:
     ret
 
 /**
+ * Give up remaining CPU time in this quantum
+ *
  * void yield()
  */
 yield:
@@ -198,6 +209,8 @@ myyield:
     ret
 
 /**
+ * Set errno variable (which is read-only, no direct access)
+ *
  * void seterr(uint64_t err)
  */
 seterr:
@@ -295,4 +308,17 @@ meminfo:
     movb    $SYS_meminfo, %al
     syscall
     callq   mymq_recv
+    ret
+
+/**
+ * should be in stdlib.S, but calls mymq_recv
+ *
+ * uint64_t rand()
+ */
+rand:
+    xorq    %rax, %rax
+    movb    $SYS_rand, %al
+    syscall
+    callq   mymq_recv
+    movq    8(%rax), %rax
     ret

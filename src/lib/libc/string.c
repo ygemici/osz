@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Function implementations for string.h. Note there's a (platform)/string.S
+ * @brief Function implementations for string.h. Note there's a (platform)/string.S too
  */
 #include <osZ.h>
 
@@ -35,16 +35,19 @@ public char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EM
     "SYS", "PIPE", "ALRM", "TERM", "URG", "STOP", "TSTP", "CONT", "CHLD", "TTIN", "TTOU", "IO", "XCPU", "XFSZ",
     "VTALRM", "PROF", "WINCH", "INFO", "USR1", "USR2" };
 
+/* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 char *strerror(int errnum)
 {
     return errnum>=0 && errnum<sizeof(errnums) ? errnums[errnum] : "EUNKWN";
 }
 
+/* Return a string describing the meaning of the signal number in SIG.  */
 char *strsignal(int sig)
 {
     return sig>=0 && sig<sizeof(sigs) ? sigs[sig] : "?";
 }
 
+/* Duplicate S, returning an identical malloc'd string.  */
 char *strdup(char *s)
 {
     int i=strlen(s)+1;
@@ -54,6 +57,7 @@ char *strdup(char *s)
     return s2;
 }
 
+/* Duplicate S, returning an identical malloc'd string.  */
 char *strndup(char *s, size_t n)
 {
     int i=strnlen(s,n);
@@ -65,16 +69,9 @@ char *strndup(char *s, size_t n)
     return s2;
 }
 
-char *basename(char *s)
-{
-    return s;
-}
-
-char *dirname(char *s)
-{
-    return s;
-}
-
+/* Find the first occurrence of NEEDLE in HAYSTACK.
+   NEEDLE is NEEDLELEN bytes long;
+   HAYSTACK is HAYSTACKLEN bytes long.  */
 void *memmem (void *haystack, size_t hl, void *needle, size_t nl)
 {
     char *c=haystack;
@@ -89,8 +86,38 @@ void *memmem (void *haystack, size_t hl, void *needle, size_t nl)
     return NULL;
 }
 
+/* Find the first occurrence of NEEDLE in HAYSTACK.  */
 char *strstr (char *haystack, char *needle)
 {
     return memmem(haystack, strlen(haystack), needle, strlen(needle));
 }
 
+/* Return filename part of path */
+char *basename(char *s)
+{
+    return s;
+}
+
+/* Return directory part of path */
+char *dirname(char *s)
+{
+    return s;
+}
+
+/* Divide S into tokens separated by characters in DELIM.  */
+char *strtok (char *s, char *delim)
+{
+    return s;
+}
+
+char *strtok_r (char *s, char *delim, char **ptr)
+{
+    return s;
+}
+
+/* Return the next DELIM-delimited token from *STRINGP,
+   terminating it with a '\0', and update *STRINGP to point past it.  */
+char *strsep (char **stringp, char *delim)
+{
+    return NULL;
+}

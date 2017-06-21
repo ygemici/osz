@@ -34,6 +34,8 @@
 
 #include <osZ.h>
 
+/* Set N bytes of S to zero.  */
+extern void *memzero (void *s, size_t n);
 /* Copy N bytes of SRC to DEST.  */
 extern void *memcpy (void *dest, void *src, size_t n);
 /* Copy N bytes of SRC to DEST, guaranteeing
@@ -86,7 +88,8 @@ extern size_t strlen (char *s);
 extern size_t strnlen (char *s, size_t maxlen);
 /* Return the number of multibytes (UTF-8 sequences) in S. */
 extern size_t mbstrlen (char *s);
-extern size_t mbstrnlen (char *s, size_t maxlen);
+/* see stdlib's mblen()
+extern size_t mbstrnlen (char *s, size_t maxlen); */
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 extern char *strerror (int errnum);
 /* Return the position of the first bit set in I, or 0 if none are set.
@@ -101,7 +104,9 @@ extern int strncasecmp (char *s1, char *s2, size_t n);
 extern char *strsep (char **stringp, char *delim);
 /* Return a string describing the meaning of the signal number in SIG.  */
 extern char *strsignal (int sig);
-extern char *basename (char *filename);
-extern char *dirname (char *filename);
+/* Return filename part of path */
+extern char *basename (char *s);
+/* Return directory part of path */
+extern char *dirname (char *s);
 
 #endif /* string.h  */
