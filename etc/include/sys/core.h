@@ -113,10 +113,10 @@ pid_t exec(uchar *cmd);                 // start a new process in the background
 void sync();                            // flush cache buffers
 
 // rax: FFFFFFFFFFFAxxxx Init, user services
-extern void start(){}
-extern void stop(){}
-extern void restart(){}
-extern void status(){}
+extern void start();
+extern void stop();
+extern void restart();
+extern void status();
 
 #endif
 
