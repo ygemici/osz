@@ -70,6 +70,8 @@
 // see sys/net.h, inet.h
 // rax: FFFFFFFFFFFBxxxx Audio services
 // see sys/sound.h
+// rax: FFFFFFFFFFFAxxxx Init, user services
+// see sys/init.h
 
 /*** libc implementation prototypes */
 #ifndef _AS

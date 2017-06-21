@@ -46,5 +46,6 @@
 #include <sys/syslog.h>
 #include <sys/net.h>
 #include <sys/sound.h>
+#include <sys/init.h>
 
 #endif /* syscall.h */

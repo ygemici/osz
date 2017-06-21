@@ -4,7 +4,7 @@
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
-./etc/include/sys/core.h:98:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
+./etc/include/sys/core.h:100:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/sys.c:227:    // TODO: move this printf to rescueshell
 ./src/core/x86_64/disasm.c:1215:            //TODO: esc
