@@ -38,7 +38,8 @@
 #define SRV_init		-6
 #define SRV_video		-7
 #define SRV_USRFIRST		-8
-// get function indeces
+
+// get function indeces and prototypes
 #include <sys/core.h>
 #include <sys/fs.h>
 #include <sys/ui.h>
