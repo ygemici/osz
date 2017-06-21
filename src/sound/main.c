@@ -26,6 +26,6 @@
  */
 #include <osZ.h>
 
-void task_init()
+void task_init(int argc, char **argv)
 {
 }

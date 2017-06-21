@@ -41,10 +41,8 @@
  * void vid_swapbuf()
  */
 vid_swapbuf:
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_swapbuf, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_swapbuf, %al
     syscall
     ret
 
@@ -52,11 +50,9 @@ vid_swapbuf:
  * void vid_loadcursor(char *file);
  */
 vid_loadcursor:
-    movq    %rdi, %rsi
-    movq    $SRV_video, %rdi
-    shlq    $16, %rdi
-    movb    $VID_loadcursor, %dil
-    movl    $0x646E6573, %eax # 'send'
+    movq    $SRV_video, %rax
+    shlq    $16, %rax
+    movb    $VID_loadcursor, %al
     syscall
     ret
 
@@ -64,13 +60,10 @@ vid_loadcursor:
  * void vid_movecursor(int hand,int x,int y);
  */
 vid_movecursor:
-    movq    %rdx, %r12
-    movq    %rsi, %rdx
-    movq    %rdi, %rsi
-    movq    $SRV_video, %rdi
-    shlq    $16, %rdi
-    movb    $VID_movecursor, %dil
-    movl    $0x646E6573, %eax # 'send'
+    andq    $0xFF, %rdi
+    movq    $SRV_video, %rax
+    shlq    $16, %rax
+    movb    $VID_movecursor, %al
     syscall
     ret
 
@@ -78,12 +71,10 @@ vid_movecursor:
  * void vid_setcursor(int hand,uint8_t shape);
  */
 vid_setcursor:
-    xorq    %rdx, %rdx
-    movsxb  %sil, %rdx
-    movq    %rdi, %rsi
-    movq    $SRV_video, %rdi
-    shlq    $16, %rdi
-    movb    $VID_setcursor, %dil
-    movl    $0x646E6573, %eax # 'send'
+    andq    $0xFF, %rdi
+    andq    $0xFF, %rsi
+    movq    $SRV_video, %rax
+    shlq    $16, %rax
+    movb    $VID_setcursor, %al
     syscall
     ret

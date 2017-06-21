@@ -33,10 +33,13 @@ public void stop(){}
 public void restart(){}
 public void status(){}
 
-void task_init()
+void task_init(int argc, char **argv)
 {
     //wait for sys_ready() to send an SYS_ack
     mq_recv();
+
+    /* first thing, mount all filesystems */
+    mq_call(SRV_FS, SYS_mountfs);
 
 //block for now
     mq_recv();

@@ -506,7 +506,7 @@ ksend:
     movq    %r9, 40(%rax)
     movq    32(%rbp), %r9
     movq    %r9, 48(%rax)
-    movq    ticks, %r9
+    movq    MQ_ADDRESS + 24, %r9
     movq    %r9, 56(%rax)
     /* mqhdr->mq_start++ */
     incq    (%rdi)

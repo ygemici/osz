@@ -34,12 +34,11 @@
  * this is implemented in assembly. Call a function
  */
 extern uint64_t mq_dispatchcall(
-    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5,
-    virt_t func);
+    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, virt_t func);
 
 /** 
  * Message queue dispatcher. Receives messages and calls functions accordingly.
- * Returns errno or does not return at all */
+ * Returns errno ENOEXEC, or does not return at all. Called from service.c */
 public uint64_t mq_dispatch()
 {
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)TEXT_ADDRESS;
@@ -49,6 +48,8 @@ public uint64_t mq_dispatch()
     uint16_t func, maxfunc;
     msg_t *msg;
     Elf64_Sym *symfunc;
+
+    /*** Parse ELF to get valid function calls ***/
 
     /* Program Header */
     for(i = 0; i < ehdr->e_phnum; i++) {
@@ -85,7 +86,7 @@ public uint64_t mq_dispatch()
         return EX_SOFTWARE;
     }
 
-    /* endless loop */
+    /*** endless loop ***/
     while(1) {
         /* get work */
         msg = mq_recv();
@@ -108,7 +109,7 @@ public uint64_t mq_dispatch()
         }
         /* send positive or negative acknowledgement back to the caller */
         mq_send(msg->evt & ~USHRT_MAX, errno == SUCCESS ? SYS_ack : SYS_nack,
-            i/*return value*/, errno, func, 0, 0, 0);
+            i/*return value*/, errno, func, msg->serial);
     }
     /* should never reach this */
     return EX_OK;

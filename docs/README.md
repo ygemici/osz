@@ -10,7 +10,7 @@ Materials interests for developers.
  * The [FS/Z](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h) file system's on disk format
  * About [processes](https://github.com/bztsrc/osz/blob/master/docs/process.md)
  * [Scheduler](https://github.com/bztsrc/osz/blob/master/docs/scheduler.md)
- * Using [messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) at different levels
+ * Using [messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) at different levels (aka. syscalls in OS/Z)
  * How a [keypress](https://github.com/bztsrc/osz/blob/master/docs/keypress.md) is processed
  * [Compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md)
  * [Boot procedure](https://github.com/bztsrc/osz/blob/master/docs/boot.md)

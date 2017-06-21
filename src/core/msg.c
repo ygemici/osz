@@ -65,6 +65,15 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         }
     }
 
+    // checks
+    if(thread == services[-SRV_FS]) {
+        // only init allowed to send SYS_mountfs to FS
+        if(event==SYS_mountfs && srctcb->mypid!=services[-SRV_init]) {
+            srctcb->errno = EPERM;
+            return false;
+        }
+    }
+
     // map destination thread's message queue
     kmap((uint64_t)&tmpmap, (uint64_t)((thread!=0?thread:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
     if(dsttcb->magic != OSZ_TCB_MAGICH) {
@@ -79,11 +88,6 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
      *  tmp2map: destination thread's message queue's PTE (paging)
      *  TMPQ_ADDRESS: destination thread's self (message queue) */
 
-    // check if the dest is receiving from ANY (0) or from our pid
-    if(msghdr->mq_recvfrom != 0 && msghdr->mq_recvfrom != srctcb->mypid) {
-        srctcb->errno = EAGAIN;
-        return false;
-    }
     phy_t pte;
     size_t s;
     int bs = 0;

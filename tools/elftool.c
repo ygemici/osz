@@ -335,8 +335,9 @@ output:
                 printf("%08lx %s\n", s->st_value+reloc, strtable + s->st_name);
             else
             /* don't include entry point... GNU ld can't set private entry points */
-            if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && s->st_size && ELF64_ST_BIND(s->st_info)==STB_GLOBAL &&
-                ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT && strcmp(strtable + s->st_name, "mq_dispatch"))
+            if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && s->st_size && 
+                ELF64_ST_BIND(s->st_info)==STB_GLOBAL && ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT && 
+                strcmp(strtable + s->st_name, "mq_dispatch") && strcmp(strtable + s->st_name, "main"))
                 printf("#define SYS_%s\t(%3d)\n", strtable + s->st_name, i);
         }
         s++;

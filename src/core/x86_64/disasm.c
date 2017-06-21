@@ -1151,13 +1151,6 @@ prefixend:
     if (opcode == 0x0f) {
         opcode2 = *((uint8_t*)addr);
         addr++;
-        //handle syscall specially (mov eax,...;syscall)
-        if (opcode2 == 0x05) {
-            if(str != NULL)
-                str = sprintf(str, "syscall '%c%c%c%c'",
-                    *((uchar*)addr-6),*((uchar*)addr-5),*((uchar*)addr-4),*((uchar*)addr-3));
-            goto end;
-        }
         inst = inst_tbl0f[opcode2>>4];
         if (inst != NULL)
             inst = &inst[opcode2&0xf];

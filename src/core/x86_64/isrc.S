@@ -100,11 +100,11 @@ isr_syscall0:
     /* make the environment look like in an irq handler */
     /* tcb->rip */
     movq    %rcx, __PAGESIZE-40
-    /* use %r12 in ABI as %rcx and %r11 are clobbered */
-    movq    %r12, %rcx
+    /* use %rbx in ABI as %rcx and %r11 are clobbered */
+    movq    %rbx, %rcx
 #if DEBUG
     /* dbg_printf */
-    orl     %eax, %eax
+    orq     %rax, %rax
     jnz     1f
     callq   kprintf
     jmp     6f
@@ -115,44 +115,66 @@ isr_syscall0:
     movq    safestack, %rsp
     addq    512, %rsp
 
-    /* 'send' */
-    cmpl    $0x646E6573, %eax
+    /* rbx: destination pid, ax: function */
+    movq    %rax, %rbx
+    shrq    $16, %rbx
+
+    /* 'recv' */
+1:  orq     %rbx, %rbx
+    jnz     1f
+    cmpw    $SYS_recv, %ax
     jne     1f
+    /* tcb->gpr */
+    call    isr_savecontext
+    xorq    %rdi, %rdi
+    /* sched_block(tcb); */
+    call    sched_block
+    /* isr_next = sched_pick(); */
+3:  call    sched_pick
+    cmpq    $__PAGESIZE, %rax
+    jb      8f
+    movq    %rax, %cr3
+    xorq    %rax, %rax
+    movq    %rax, isr_next
+    jmp     8f
+
+    /* 'send' */
     /* is destination SRV_CORE? */
-    movq    %rdi, %rax
-    shrq    $16, %rax
-    orq     %rax, %rax
+1:  orq     %rbx, %rbx
     jnz     4f
 
     /*** public syscalls ***/
     /* shortcut to seterr syscall */
-    cmpb    $SYS_seterr, %dil
+    cmpb    $SYS_seterr, %al
     jne     2f
-    /* tcb->errno = rsi */
-    movb    %sil, tcb_errno
+    /* tcb->errno = rdi */
+    movb    %dil, tcb_errno
     jmp     9f
 2:
     /* shortcut for yield */
-    cmpb    $SYS_sched_yield, %dil
-    je      7f
+    cmpb    $SYS_sched_yield, %al
+    jne      2f
+    call    isr_savecontext
+    jmp      3b
 
     /* small alarm(sec,usec) */
-    cmpb    $SYS_alarm, %dil
+2:  cmpb    $SYS_alarm, %al
     jne     2f
     /* sec == 0? */
-    cmpq    $0, %rsi
+    orq     %rdi, %rdi
     jnz     3f
     /* usec < alarmstep? */
-    cmpq    alarmstep, %rdx
+    cmpq    alarmstep, %rsi
     ja      3f
     /* loops = usec*bogomips/1000000 */
-    movq    %rdx, %rax
+    movq    %rsi, %rax
     xorq    %rdx, %rdx
     movq    bogomips, %rcx
     mulq    %rcx
     movq    $1000000, %rcx
     divq    %rcx
-5:  dec     %rax
+5:  decq    %rax
+    orq     %rax, %rax
     jnz     5b
     jmp     9f
 
@@ -160,9 +182,9 @@ isr_syscall0:
 2:  cmpb    $PRI_DRV, tcb_priority
     jne     3f
     /* shortcut to ack syscall */
-    cmpb    $SYS_ack, %dil
+    cmpb    $SYS_ack, %al
     jne     3f
-    movq    %rsi, %rdi
+    movq    %rdi, %rsi
     /* tcb->memroot == irq_routing_table[irq]? */
     shlq    $3, %rsi
     addq    irq_routing_table, %rsi
@@ -172,52 +194,23 @@ isr_syscall0:
     /* enable the given irq */
     call    isr_enableirq
     jmp     9f
-
-3:  call    isr_syscall
-    jmp     9f
-4:  call    msg_sends
-    jmp     9f
-
-    /* 'call' */
-1:  cmpl    $0x6c6c6163, %eax
-    jne     1f
-    /* tcb->gpr */
-    call    isr_savecontext
-    xorq    %rdi, %rdi
-    call    sched_block
-    call    sched_pick
-    call    isr_loadcontext
-    /* if destination is SRV_core */
-    movq    %rdi, %rax
-    shrq    $16, %rax
-    orq     %rax, %rax
-    jnz     2f
+    /* syscall or message send */
+3:  movq    %rdx, %rcx
+    movq    %rsi, %rdx
+    movq    %rdi, %rsi
+    movq    %rax, %rdi
     call    isr_syscall
-    jmp     7f
-2:  call    msg_sends
-    /* map dest thread */
-7:  movq    isr_next, %rax
-3:  cmpq    $__PAGESIZE, %rax
-    jb      8f
-    movq    %rax, %cr3
-    xorq    %rax, %rax
-    movq    %rax, isr_next
-    jmp     8f
-
-    /* 'recv' */
-1:  cmpl    $0x76636572, %eax
-    jne     1f
-    /* tcb->gpr */
-    call    isr_savecontext
-    xorq    %rdi, %rdi
-    /* sched_block(tcb); */
-    call    sched_block
-    /* isr_next = sched_pick(); */
-    call    sched_pick
-    jmp     3b
-
-    /* tcb->errno = EINVAL */
-1:  movw    $EINVAL, tcb_errno
+    jmp     9f
+4:  pushq   %r9
+    movq    %r8, %r9
+    movq    %rcx, %r8
+    movq    %rdx, %rcx
+    movq    %rsi, %rdx
+    movq    %rdi, %rsi
+    movq    %rax, %rdi
+    call    msg_sends
+    addq    $8, %rsp
+    jmp     9f
 
 8:  call    isr_loadcontext
     /* raise priority level on return (idle task only) */

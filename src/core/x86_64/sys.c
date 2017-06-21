@@ -256,7 +256,4 @@ void sys_ready()
         /* notify init service to start */
         msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
     }
-
-    /* now that drivers were initialized, mount all filesystems */
-    msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }

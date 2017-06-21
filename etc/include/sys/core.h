@@ -57,6 +57,9 @@
 #define SYS_exec 24
 #define SYS_sync 25
 
+#define SYS_recv 0xFFFF     // receive message
+
+
 // rdi: FFFFFFFFFFFFxxxx File system services
 // see sys/fs.h
 // rdi: FFFFFFFFFFFExxxx User Interface services
@@ -71,6 +74,18 @@
 /*** libc implementation prototypes */
 #ifndef _AS
 #include <sys/stat.h>
+
+/*** message queue ***/
+/* async, send a message (non-blocking, except dest queue is full) */
+uint64_t mq_send(pid_t dst, uint64_t func, ...);
+/* sync, send a message and receive result (blocking) */
+msg_t *mq_call(pid_t dst, uint64_t func, ...);
+/* async, is there a message? return serial or null (non-blocking) */
+uint64_t mq_ismsg();
+/* sync, wait until there's a message (blocking) */
+msg_t *mq_recv();
+/* sync, dispatch events (blocking, noreturn unless error) */
+uint64_t mq_dispatch();
 
 //thread-safe libc errno at an absolute address (in TCB). Read-only, use seterr()
 extern uint16_t errno;

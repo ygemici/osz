@@ -923,7 +923,12 @@ void dbg_msg()
                     case SYS_start: kprintf("start"); break;
                     case SYS_restart: kprintf("restart"); break;
                     case SYS_status: kprintf("status"); break;
-                    default: kprintf("%2x?", *((uint64_t*)m) &0x7FFF); break;
+                    default:
+                        if(tcb->mypid==(*((uint64_t*)m)>>16) && *((uint8_t*)m)) {
+                            kprintf("ack()"); args=0;
+                        } else
+                            kprintf("%2x?", *((uint64_t*)m) &0x7FFF);
+                        break;
                 }
             } else
             if(tcb->mypid == services[-SRV_video]) {
@@ -936,11 +941,11 @@ void dbg_msg()
                     default: kprintf("%2x?", *((uint64_t*)m) &0x7FFF); break;
                 }
             } else
-            if(tcb->priority==PRI_DRV) {
+            if(tcb->priority==PRI_DRV || tcb->mypid==(*((uint64_t*)m)>>16)) {
                 switch(*((uint8_t*)m)) {
                     case SYS_IRQ: kprintf("IRQ(%d)",*((uint64_t*)(m+8))); args=0; break;
-                    case SYS_ack: kprintf("ack"); break;
-                    case SYS_nack: kprintf("nack"); break;
+                    case SYS_ack: kprintf("ack()"); args=0; break;
+                    case SYS_nack: kprintf("nack()"); args=0; break;
                     default: kprintf("%2x?", *((uint64_t*)m) &0x7FFF); break;
                 }
             } else

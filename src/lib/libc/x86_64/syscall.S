@@ -28,6 +28,8 @@
 #define _AS 1
 #include <limits.h>
 #include <syscall.h>
+#include <errno.h>
+#include "../../../core/x86_64/tcb.h"
 
 .global mq_call
 .global mq_send
@@ -57,7 +59,7 @@
 #if DEBUG
 dbg_printf:
     xorq    %rax, %rax
-    movq    %rcx, %r12
+    movq    %rcx, %rbx
     syscall
     ret
 #endif
@@ -68,11 +70,21 @@ dbg_printf:
  * void mq_send(thread,event,arg0,arg1,arg2,arg3,arg4,arg5)
  */
 mq_send:
+mymq_send:
     # non-blocking send message
+    incq    MQ_ADDRESS + 24
+    movq    %rdi, %rax
+    shlq    $16, %rax
+    movw    %si, %ax
+    movq    %rdx, %rdi
+    movq    %rcx, %rsi
+    movq    %r8, %rdx
+    movq    %r9, %rbx
+    movq    8(%rsp), %r8
+    movq    16(%rsp), %r9
     /* this will call msg_sends() in core */
-    movq     %rcx, %r12
-    movl     $0x646E6573, %eax # 'send'
     syscall
+    movq    MQ_ADDRESS + 24, %rax
     ret
 
 /**
@@ -81,43 +93,34 @@ mq_send:
 mq_call:
 mymq_call:
     # blocking, send a request and receive result
-    # rdi: destination pid + message type
-    /* must match OSZ_tcb, tcb->recvfrom */
-    movq     %rdi, %rax
-    shrq     $16, %rax
-    /* lock message queue */
-    movl     %eax, MQ_ADDRESS + 24
-    shrq     $32, %rax
-    movswl   %ax, %eax
-    movl     %eax, MQ_ADDRESS + 28
-    movq     %rcx, %r12
-    movl     $0x6c6c6163, %eax # 'call'
-    syscall
-    /* unlock */
-    movq     $0, MQ_ADDRESS + 24
-    /* receive result. Stupid GNU ld needs another label to avoid relocation
-       for in text segment calls... */
-    call    mymq_recv
-    movq    8(%rax), %rax
+    /* send request */
+1:  callq   mymq_send
+    cmpb    $EAGAIN, tcb_errno
+    jne     1f
+    callq   myyield
+    jmp     1b
+1:  /* receive result */
+    callq   mymq_recv
     ret
 
 /**
- * msg_t *mq_recv(from)
+ * msg_t *mq_recv()
  */
 mq_recv:
 mymq_recv:
-    # blocking receive message
-1:  movq     $MQ_ADDRESS, %rbx
-    movq     8(%rbx), %rax
-    cmpq     (%rbx), %rax
-    jne      2f
-    movq     %rcx, %r12
-    movl     $0x76636572, %eax # 'recv'
+    # blocking if there's no message waiting
+1:  movq    $MQ_ADDRESS, %rbx
+    movq    8(%rbx), %rax
+    cmpq    (%rbx), %rax
+    jne     2f
     /* block until we receive something */
+    xorq    %rax, %rax
+    movw    $SYS_recv, %ax
     syscall
     /* failsafe, repeat if there's no message */
     jmp      1b
 2:  /* must match sizeof(msg_t) */
+    movq    $MQ_ADDRESS, %rbx
     shlq    $6, %rax
     addq    %rbx, %rax
     /* mqhdr->mq_end++ */
@@ -129,13 +132,19 @@ mymq_recv:
 3:  ret
 
 /**
- * bool_t mq_ismsg()
+ * returns message serial or 0 if no message waiting
+ * uint64_t mq_ismsg()
  */
 mq_ismsg:
     # non-blocking is there a message?
-    movq     MQ_ADDRESS, %rax
-    subq     MQ_ADDRESS+8, %rax
-    ret
+    movq    MQ_ADDRESS, %rax
+    cmpq    MQ_ADDRESS+8, %rax
+    je      1f
+    movq    56(%rax), %rax
+    orq     %rax, %rax
+    jnz     1f
+    incb    %al
+1:  ret
 
 /* Don't use directly
    uint64_t mq_displatchcall(rdi a0,rsi a1,rdx a2,rcx a3,r8 a4,r9 a5,stack func); */
@@ -152,11 +161,7 @@ lockacquire:
 1:  lock
     btsq    %rdi, (%rsi)
     jnc     1f
-    pushq   %rdi
-    pushq   %rsi
     callq   myyield
-    popq    %rsi
-    popq    %rdi
     jmp     1b
 1:  ret
 
@@ -175,11 +180,8 @@ dl:
     # dynamically link a shared object
     # rdi: pointer to .so file path
     # rsi: pointer to symbol name
-    movq    %rsi, %rdx
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_dl, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_dl, %al
     syscall
     call    mymq_recv
     mov     8(%rax), %rax
@@ -190,9 +192,8 @@ dl:
  */
 yield:
 myyield:
-    xorq    %rdi, %rdi
-    movb    $SYS_sched_yield, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_sched_yield, %al
     syscall
     ret
 
@@ -201,10 +202,8 @@ myyield:
  */
 seterr:
 myseterr:
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_seterr, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_seterr, %al
     syscall
     ret
 
@@ -212,10 +211,8 @@ myseterr:
  * uint64_t regservice(pid_t thread) - ONLY for init
  */
 regservice:
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_regservice, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_regservice, %al
     syscall
     ret
 
@@ -223,14 +220,9 @@ regservice:
  * void *mmap (void *addr, size_t len, int prot, int flags, int fd, off_t offset);
  */
 mmap:
-    movq    %rcx, %r12 //flags
-    shlq    $8, %r12
-    addq    %rdx, %r12 //prot
-    movq    %rsi, %rdx //len
-    movq    %rdi, %rsi //addr
-    xorq    %rdi, %rdi
-    movb    $SYS_mmap, %dil
-    movl    $0x646E6573, %eax # 'send'
+    movq    %rcx, %rbx
+    xorq    %rax, %rax
+    movb    $SYS_mmap, %al
     syscall
     ret
 
@@ -238,11 +230,8 @@ mmap:
  * int munmap (void *addr, size_t len);
  */
 munmap:
-    movq    %rsi, %rdx //len
-    movq    %rdi, %rsi //addr
-    xorq    %rdi, %rdi
-    movb    $SYS_munmap, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_munmap, %al
     syscall
     ret
 
@@ -250,12 +239,8 @@ munmap:
  * int mprotect (void *addr, size_t len, int prot);
  */
 mprotect:
-    movq    %rdx, %r12  //prot
-    movq    %rsi, %rdx //len
-    movq    %rdi, %rsi //addr
-    xorq    %rdi, %rdi
-    movb    $SYS_munmap, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_munmap, %al
     syscall
     ret
 
@@ -263,11 +248,8 @@ mprotect:
  * size_t mapfile(void *bss, char *fn)
  */
 mapfile:
-    movq    %rsi, %rdx
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_mapfile, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_mapfile, %al
     syscall
     ret
 
@@ -275,11 +257,9 @@ mapfile:
  * void setirq(uint8_t irq) - ONLY for drivers
  */
 setirq:
-    xorq    %rsi, %rsi
-    movb    %dil, %sil
-    xorq    %rdi, %rdi
-    movb    $SYS_setirq, %dil
-    movl    $0x646E6573, %eax # 'send'
+    andq    $0xFF, %rdi
+    xorq    %rax, %rax
+    movb    $SYS_setirq, %al
     syscall
     ret
 
@@ -287,11 +267,8 @@ setirq:
  * void sleep(uint64_t sec)
  */
 sleep:
-    xorq    %rdx, %rdx
-    movq    %rdi, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_alarm, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_alarm, %al
     syscall
     ret
 
@@ -303,10 +280,10 @@ usleep:
     movq    %rdi, %rax
     movq    $1000000,%rcx
     divq    %rcx
-    movq    %rax, %rsi
-    xorq    %rdi, %rdi
-    movb    $SYS_alarm, %dil
-    movl    $0x646E6573, %eax # 'send'
+    movq    %rax, %rdi
+    movq    %rdx, %rsi
+    xorq    %rax, %rax
+    movb    $SYS_alarm, %al
     syscall
     ret
 
@@ -314,9 +291,8 @@ usleep:
  * msg_t *meminfo()
  */
 meminfo:
-    xorq    %rdi, %rdi
-    movb    $SYS_meminfo, %dil
-    movl    $0x646E6573, %eax # 'send'
+    xorq    %rax, %rax
+    movb    $SYS_meminfo, %al
     syscall
     callq   mymq_recv
     ret

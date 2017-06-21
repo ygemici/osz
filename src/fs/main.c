@@ -51,7 +51,7 @@ public int stat(fid_t fd, stat_t *buf) { return 0; }
 public void pipe(){}
 public void ioctl(){}
 
-void task_init()
+void task_init(int argc, char **argv)
 {
 //    parse_fstab(1);
 }

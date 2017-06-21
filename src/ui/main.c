@@ -42,7 +42,7 @@ public void opentty(){}
 public void openwin(){}
 public void openwrd(){}
 
-void task_init()
+void task_init(int argc, char **argv)
 {
     uint64_t bss = BSS_ADDRESS+__SLOTSIZE;
     uint64_t len;

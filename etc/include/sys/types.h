@@ -123,7 +123,7 @@ typedef struct {
     uint64_t arg3;
     uint64_t arg4;
     uint64_t arg5;
-    uint64_t ts;   //UTC timestamp of event
+    uint64_t serial;
 } __attribute__((packed)) msg_t;
 // bits in evt: (63)TTT..TTT P FFFFFFFFFFFFFFF(0)
 //  where T is a thread id or subsystem id, P true if message has a pointer,

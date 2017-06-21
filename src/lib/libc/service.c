@@ -27,12 +27,14 @@
 
 #include <osZ.h>
 
-/* this will be implemented in the given task */
-extern void task_init();
+/* this will be implemented in the task that links with this object */
+extern void task_init(int argc, char **argv);
 
-/* initialize service and dispatch messages */
-public void _init()
+/* service and device driver version of main() */
+public void _init(int argc, char **argv)
 {
-    task_init();
+    /* initialize task */
+    task_init(argc, argv);
+    /* dispatch messages. Only returns on error */
     mq_dispatch();
 }
