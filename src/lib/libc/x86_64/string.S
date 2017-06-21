@@ -605,8 +605,7 @@ strncasecmp:
     xorq    %rax, %rax
     xorq    %rbx, %rbx
     /* get s2 character */
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     mov     %al, %bl
     btw     $7, %ax
     jnc     2f
@@ -616,8 +615,7 @@ strncasecmp:
     cmpb    $0b110, %al
     jne     4f
     andb    $0b11111, %bl
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     andb    $0b111111, %al
     shll    $6, %ebx
     addb    %al, %bl
@@ -628,13 +626,11 @@ strncasecmp:
     cmpb    $0b1110, %al
     jne     4f
     andb    $0b1111, %bl
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     andb    $0b111111, %al
     shll    $6, %ebx
     addb    %al, %bl
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     andb    $0b111111, %al
     shll    $6, %ebx
     addb    %al, %bl
@@ -646,18 +642,15 @@ strncasecmp:
     cmpb    $0b11110, %al
     jne      5f
     andb    $0b111, %bl
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     andb    $0b111111, %al
     shll    $6, %ebx
     addb    %al, %bl
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     andb    $0b111111, %al
     shll    $6, %ebx
     addb    %al, %bl
-    movb    (%rdi), %al
-    incq    %rdi
+    lodsb
     andb    $0b111111, %al
     shll    $6, %ebx
     addb    %al, %bl

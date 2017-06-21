@@ -35,9 +35,9 @@ public char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EM
     "SYS", "PIPE", "ALRM", "TERM", "URG", "STOP", "TSTP", "CONT", "CHLD", "TTIN", "TTOU", "IO", "XCPU", "XFSZ",
     "VTALRM", "PROF", "WINCH", "INFO", "USR1", "USR2" };
 
-/* lowercase conversion table for UTF-8 multibytes, see string.S tolower */
+/* lowercase conversion table for UNICODE, see string.S tolower */
 public uint32_t translatelower[] = {
-    'Ÿ','ÿ', 0 };
+    0x178/*Ÿ*/,0xFF/*ÿ*/, 0 };
 
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 char *strerror(int errnum)

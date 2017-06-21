@@ -7,7 +7,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS =
 
 # without the -no flags, gcc generates extra, unwanted xmm code in printf...
-CFLAGS = -Wall -Wno-multichar -fPIC -ffreestanding -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -nostdinc -I../../../etc/include -I. -I../../core/$(ARCH)
+CFLAGS = -Wall -fPIC -ffreestanding -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -nostdinc -I../../../etc/include -I. -I../../core/$(ARCH)
 ifeq ($(DEBUG),1)
 CFLAGS += -DDEBUG=1
 endif
