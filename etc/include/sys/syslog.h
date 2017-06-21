@@ -29,3 +29,4 @@
 #define SYS_openlog	(  8)
 #define SYS_closelog	(  9)
 #define SYS_syslog	( 10)
+

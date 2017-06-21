@@ -6,7 +6,7 @@
 ./etc/include/stdarg.h:36://TODO: this is x86_64 ABI specific
 ./etc/include/sys/core.h:83:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
-./src/core/x86_64/sys.c:227:    // TODO: move this printf to init
+./src/core/x86_64/sys.c:227:    // TODO: move this printf to rescueshell
 ./src/core/x86_64/disasm.c:1222:            //TODO: esc
 ./src/core/msg.c:102:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */

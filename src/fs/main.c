@@ -28,6 +28,18 @@
 
 public uint8_t *_initrd_ptr;
 public uint64_t _initrd_size;
+public char *_fstab_ptr;
+public uint64_t _fstab_size;
+
+void parse_fstab(int level)
+{
+    dbg_printf("fstab #%d: %x %d\n%s\n",level,_fstab_ptr,_fstab_size,_fstab_ptr);
+}
+
+public void mountfs()
+{
+//    parse_fstab(2);
+}
 
 public size_t read(fid_t fid, void *buf, size_t size) { return 0; }
 public fid_t dup2(fid_t oldfd, fid_t newfd) { return 0; }
@@ -41,4 +53,5 @@ public void ioctl(){}
 
 void task_init()
 {
+//    parse_fstab(1);
 }

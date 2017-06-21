@@ -41,6 +41,10 @@ uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_USRFIRST;
 /* needs screen pointer mapping */
 uint8_t __attribute__ ((section (".data"))) scrptr = 0;
 
+/* location of fstab in mapped initrd */
+uint64_t __attribute__ ((section (".data"))) fstab;
+uint64_t __attribute__ ((section (".data"))) fstab_size;
+
 /**
  * register a user mode service for pid translation
  */
@@ -106,6 +110,8 @@ void fs_init()
 {
     char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
     char *drvs_end = drvs + fs_size;
+    fstab = (uint64_t)fs_locate("etc/fstab");
+    fstab_size=fs_size;
     char fn[256];
     pid_t pid = thread_new("FS");
     ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;

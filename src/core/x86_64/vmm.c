@@ -118,7 +118,9 @@ void vmm_unmapbss(OSZ_tcb *tcb, virt_t bss, size_t size)
     if(size==0)
         return;
     uint64_t *paging = (uint64_t *)&tmpmap;
-    int i;
+    uint64_t *paging2 = (uint64_t *)&tmp2map;
+    uint64_t *paging3 = (uint64_t *)&tmp3map;
+    int i,j,k,sk,sj;
     bss &= ~(__PAGESIZE-1);
     size=((size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
 #if DEBUG
@@ -137,7 +139,7 @@ again:
     i=(bss>>(12+9))&0x1FF;
     if(paging[i]&PG_SLOT) {
         while(size>0) {
-            if(paging[i]){
+            if(paging[i]&1){
                 pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), __SLOTSIZE/__PAGESIZE);
                 paging[i] = 0;
                 tcb->linkmem -= __SLOTSIZE/__PAGESIZE;
@@ -147,13 +149,45 @@ again:
         }
     }
     //PTE
+    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE);
+    i=(bss>>(12))&0x1FF;
     while(size>0) {
-        if(paging[i]) {
+        if(paging[i]&1) {
             pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), 1);
             paging[i] = 0;
             tcb->linkmem--;
         }
         size -= __PAGESIZE;
         i++; if(i>511) goto again;
+    }
+
+    //free mapping pages
+    kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE);
+    //PML4E
+    i=(bss>>(12+9+9+9))&0x1FF;
+    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE);
+    //PDPE
+    for(i=0;i<512;i++) {
+        if(paging[i]&1) {
+            //PDE
+            kmap((uint64_t)&tmp2map, paging[i], PG_CORE_NOCACHE);
+            sj=0;
+            for(j=0;j<512;j++) {
+                if(paging2[j]&1 && (paging2[j]&PG_SLOT)==0) {
+                    //PTE
+                    kmap((uint64_t)&tmp3map, paging2[j], PG_CORE_NOCACHE);
+                    sk=0;for(k=0;k<512;k++) if(paging3[k]&1) sk++;
+                    if(sk==0) {
+                        pmm_free((phy_t)(paging2[j]&~(__PAGESIZE-1+(1UL<<63))), 1);
+                        paging2[j]=0;
+                    } else
+                        sj++;
+                }
+            }
+            if(sj==0) {
+                pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), 1);
+                paging[i]=0;
+            }
+        }
     }
 }

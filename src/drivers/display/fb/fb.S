@@ -68,15 +68,6 @@ task_init:
 
 /* main loop */
 _init:
-    /* left hand bottom left */
-    movl    fb_height(%rip), %eax
-    movl    %eax, cursor_y+4(%rip)
-    /* right hand middle of screen */
-    shrl    $1, %eax
-    movl    %eax, cursor_y(%rip)
-    movl    fb_width(%rip), %eax
-    shrl    $1, %eax
-    movl    %eax, cursor_x(%rip)
 
 .getwork:
     call    mq_recv@PLT

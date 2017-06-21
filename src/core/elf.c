@@ -34,6 +34,8 @@ extern uint8_t _code;
 extern uint64_t *stack_ptr;
 extern uint8_t sys_fault;
 extern uint8_t scrptr;
+extern uint64_t fstab;
+extern uint64_t fstab_size;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -690,6 +692,10 @@ bool_t elf_rtlink()
                             {k=8; *objptr=BUF_ADDRESS;}
                         if(!kmemcmp(strtable + s->st_name,"_initrd_size",13) && s->st_size==8)
                             {k=8; *objptr=bootboot.initrd_size;}
+                        if(!kmemcmp(strtable + s->st_name,"_fstab_ptr",11) && s->st_size==8)
+                            {k=8; *objptr=(fstab-bootboot.initrd_ptr+BUF_ADDRESS);}
+                        if(!kmemcmp(strtable + s->st_name,"_fstab_size",12) && s->st_size==8)
+                            {k=8; *objptr=fstab_size;}
                         if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
                             {k=4; kmemcpy(objptr,&bootboot.fb_width,4);}
                         if(!kmemcmp(strtable + s->st_name,"_fb_height",11) && s->st_size>=4)

@@ -49,7 +49,7 @@ void reset_pointers()
 {
     pointers[0].btn = 0;
     pointers[0].x = _fb_width/2;
-    pointers[0].y = _fb_height/2;
+    pointers[0].y = _fb_height/2+64;
     pointers[0].z = 0;
     vid_movecursor(_lefthanded?1:0,pointers[0].x,pointers[0].y);
     pointers[1].btn = 0;

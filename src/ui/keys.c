@@ -140,9 +140,11 @@ public void keypress(uint64_t scancode, keymap_t keycode)
             keyflags |= KEYFLAG_SUPER;
     }
 #if DEBUG
-    // handle break
-    if(k[0]=='^' && k[1]=='B' && k[2]=='r' && k[3]=='k')
+    // handle break, start internal debugger
+    if(k[0]=='^' && k[1]=='B' && k[2]=='r' && k[3]=='k') {
         breakpoint;
+        keyflags=0;
+    }
 #endif
 //asm("movl %0, %%eax;movq %1, %%rbx;xchg %%bx,%%bx;int $1"::"r"(*((uint32_t*)&k)),"r"(scancode):);
 }

@@ -48,7 +48,7 @@
 #include "env.h"
 
 char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER "-" ARCH " (build " OSZ_BUILD ")\n"
-    "Copyright 2017 CC-by-nc-sa bztsrc@github\nUse is subject to license terms.\n\n";
+    "Use is subject to license terms. CC-by-nc-sa, copyright bzt (bztsrc@github)\n\n";
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *

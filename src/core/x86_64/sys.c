@@ -169,7 +169,7 @@ void sys_init()
     thread_new("idle");
     // modify TCB for idle task. Don't add to queue, normally it never scheduled
     tcb->priority = PRI_IDLE;
-    //start executing at the begining of the text segment.
+    //start executing a special function.
     tcb->rip = (uint64_t)&idle;
     tcb->cs = 0x8;  //ring 0 selectors
     tcb->ss = 0x10;
@@ -224,11 +224,16 @@ void sys_ready()
     /* reset early kernel console */
     kprintf_reset();
 
-    // TODO: move this printf to init
+    // TODO: move this printf to rescueshell
     kprintf("OS/Z ready. Allocated %d pages out of %d",
         pmm.totalpages - pmm.freepages, pmm.totalpages);
     kprintf(", free %d.%d%%\n",
         pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
+
+    /* finish up ISR initialization */
+    isr_fini();
+    /* log we're ready */
+    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
 
 #if DEBUG
     if(debug&DBG_LOG)
@@ -240,10 +245,6 @@ void sys_ready()
 #if DEBUG
     __asm__ __volatile__("xchg %bx,%bx");
 #endif
-    /* finish up ISR initialization */
-    isr_fini();
-    /* log we're ready */
-    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
 
     /* set up user services */
     if(identity_pid) {
@@ -255,4 +256,7 @@ void sys_ready()
         /* notify init service to start */
         msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
     }
+
+    /* now that drivers were initialized, mount all filesystems */
+    msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }

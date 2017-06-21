@@ -60,7 +60,6 @@ extern char *syslog_buf;
 extern char *syslog_ptr;
 extern char osver[];
 extern char *nosym;
-extern uint8_t tmp3map;               // temporarily mapped page #3
 
 extern uchar *elf_sym(virt_t addr);
 extern virt_t elf_lookupsym(uchar *sym, size_t size);
