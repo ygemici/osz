@@ -86,5 +86,7 @@ zlib: Mark Adler
 
 MurmurHash: Austin Appleby
 
+qsort: Copyright The Regents of the University of California
+
 BOOTBOOT, OS/Z: bzt
 
