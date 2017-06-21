@@ -10,8 +10,3 @@
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/x86_64/crt0.S:45:    /* TODO: call ctors */
-./src/lib/libc/x86_64/string.S:530:    /* TODO: strcasecmp */
-./src/lib/libc/x86_64/string.S:539:    /* TODO: strncasecmp */
-./src/lib/libc/string.c:126:    /* TODO: strtok */
-./src/lib/libc/string.c:132:    /* TODO: strtok_r */
-./src/lib/libc/string.c:140:    /* TODO: strsep */

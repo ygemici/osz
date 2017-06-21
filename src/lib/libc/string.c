@@ -35,6 +35,10 @@ public char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EM
     "SYS", "PIPE", "ALRM", "TERM", "URG", "STOP", "TSTP", "CONT", "CHLD", "TTIN", "TTOU", "IO", "XCPU", "XFSZ",
     "VTALRM", "PROF", "WINCH", "INFO", "USR1", "USR2" };
 
+/* lowercase conversion table for UTF-8 multibytes, see string.S tolower */
+public uint32_t translatelower[] = {
+    'Ÿ','ÿ', 0 };
+
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 char *strerror(int errnum)
 {
@@ -120,23 +124,54 @@ char *dirname(char *s)
     return r;
 }
 
+/* helper for tokenizer functions */
+private char *_strtok_r (char *s, char *d, char **p, uint8_t skip)
+{
+    int c, sc;
+    char *tok, *sp;
+
+    if(d==NULL || (s==NULL&&(s=*p)==NULL)) return NULL;
+again:
+    c=*s++;
+    for(sp=(char *)d;(sc=*sp++)!=0;) {
+        if(c==sc) {
+            if(skip) goto again;
+            else { *p=s; *(s-1)=0; return s-1; }
+        }
+    }
+
+    if (c==0) { *p=NULL; return NULL; }
+    tok=s-1;
+    while(1) {
+        c=*s++;
+        sp=(char *)d;
+        do {
+            if((sc=*sp++)==c) {
+                if(c==0) s=NULL;
+                else *(s-1)=0;
+                *p=s;
+                return tok;
+            }
+        } while(sc!=0);
+    }
+    return NULL;
+}
+
 /* Divide S into tokens separated by characters in DELIM.  */
 char *strtok (char *s, char *delim)
 {
-    /* TODO: strtok */
-    return s;
+    char *p=s;
+    return _strtok_r (s, delim, &p, 1);
 }
 
 char *strtok_r (char *s, char *delim, char **ptr)
 {
-    /* TODO: strtok_r */
-    return s;
+    return _strtok_r (s, delim, ptr, 1);
 }
 
 /* Return the next DELIM-delimited token from *STRINGP,
    terminating it with a '\0', and update *STRINGP to point past it.  */
 char *strsep (char **stringp, char *delim)
 {
-    /* TODO: strsep */
-    return NULL;
+    return _strtok_r (*stringp, delim, stringp, 0);
 }

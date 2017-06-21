@@ -49,6 +49,8 @@
 .global strcasecmp
 .global strncasecmp
 
+.extern translatelower
+
 .section .text
 
 /**
@@ -527,14 +529,222 @@ strrchr:
  * int strcasecmp (char *s1, char *s2);
  */
 strcasecmp:
-    /* TODO: strcasecmp */
-    ret
-
+    xorq    %rdx, %rdx
+    decq    %rdx
 /**
  * Compare no more than N chars of S1 and S2, ignoring case.
  *
  * int strncasecmp (char *s1, char *s2, size_t n);
  */
 strncasecmp:
-    /* TODO: strncasecmp */
+1:  xorq    %rax, %rax
+    xorq    %rbx, %rbx
+    orq     %rdx, %rdx
+    jz      3f
+    decq    %rdx
+    /* get s1 character */
+    movb    (%rdi), %al
+    incq    %rdi
+    mov     %al, %bl
+    btw     $7, %ax
+    jnc     2f
+    /* 2 bytes */
+    movb    %bl, %al
+    shrb    $5, %al
+    cmpb    $0b110, %al
+    jne     4f
+    andb    $0b11111, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    jmp     2f
+    /* 3 bytes */
+4:  movb    %bl, %al
+    shrb    $4, %al
+    cmpb    $0b1110, %al
+    jne     4f
+    andb    $0b1111, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    jmp     2f
+
+    /* 4 bytes */
+4:  movb    %bl, %al
+    shrb    $3, %al
+    cmpb    $0b11110, %al
+    jne     5f
+    andb    $0b111, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+
+2:  callq   tolower
+    movq    %rax, %rcx
+    xorq    %rax, %rax
+    xorq    %rbx, %rbx
+    /* get s2 character */
+    movb    (%rdi), %al
+    incq    %rdi
+    mov     %al, %bl
+    btw     $7, %ax
+    jnc     2f
+    /* 2 bytes */
+    movb    %bl, %al
+    shrb    $5, %al
+    cmpb    $0b110, %al
+    jne     4f
+    andb    $0b11111, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    jmp     2f
+    /* 3 bytes */
+4:  movb    %bl, %al
+    shrb    $4, %al
+    cmpb    $0b1110, %al
+    jne     4f
+    andb    $0b1111, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    jmp     2f
+
+    /* 4 bytes */
+4:  movb    %bl, %al
+    shrb    $3, %al
+    cmpb    $0b11110, %al
+    jne      5f
+    andb    $0b111, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+    movb    (%rdi), %al
+    incq    %rdi
+    andb    $0b111111, %al
+    shll    $6, %ebx
+    addb    %al, %bl
+
+2:  callq   tolower
+    subl    %ecx, %eax
+    orl     %eax, %eax
+    jnz     1b
+3:  ret
+    /* bad UTF-8 encoding */
+5:  mov     $1, %al
     ret
+
+/* IN: ebx: char, OUT: eax: lower char, must save rcx, rdx */
+tolower:
+    movl    %ebx, %eax
+    /* 'A' - 'Z' */
+    cmpl    $0x61, %ebx
+    jb      1f
+    cmpl    $0x7a, %ebx
+    ja      2f
+    subb    $0x20, %al
+    jmp     1f
+    /* < 128 */
+2:  cmpl    $128, %ebx
+    jb      1f
+    /* 0xC0 - 0xDE */
+    cmpl    $0xC0, %ebx
+    jb      1f
+    cmpl    $0x7a, %ebx
+    ja      2f
+    addl    $0x20, %eax
+    jmp     1f
+2:  /* 0x100 - 0x137 */
+    cmpl    $0x100, %ebx
+    jb      1f
+    cmpl    $0x137, %ebx
+    ja      2f
+    btw     $0, %ax
+    jc      1f
+    incl    %eax
+    jmp     1f
+2:  /* 0x139 - 0x148 */
+    cmpl    $0x139, %ebx
+    jb      1f
+    cmpl    $0x148, %ebx
+    ja      2f
+    btw     $0, %ax
+    jnc     1f
+    incl    %eax
+    jmp     1f
+2:  /* 0x14A - 0x177 */
+    cmpl    $0x14A, %ebx
+    jb      1f
+    cmpl    $0x17E, %ebx
+    ja      2f
+    btw     $0, %ax
+    jc      1f
+    incl    %eax
+    jmp     1f
+2:  /* 0x182 - 0x185 */
+    cmpl    $0x182, %ebx
+    jb      1f
+    cmpl    $0x185, %ebx
+    ja      2f
+    btw     $0, %ax
+    jc      1f
+    incl    %eax
+    jmp     1f
+2:  /* 0x1A0 - 0x1A5 */
+    cmpl    $0x1A0, %ebx
+    jb      1f
+    cmpl    $0x1A5, %ebx
+    ja      2f
+    btw     $0, %ax
+    jnc     1f
+    incl    %eax
+    jmp     1f
+2:
+    /* use translate table */
+    movq    translatelower@GOTPCREL(%rip), %r8
+2:  cmpl    $0, (%r8)
+    jz      1f
+    cmpl    %eax, (%r8)
+    je      2f
+    addq    $8, %r8
+    jmp     2b
+2:  movl    4(%r8), %eax
+1:  ret
+    
