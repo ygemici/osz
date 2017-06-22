@@ -43,7 +43,8 @@
 
 #include "env.h"
 
-char __attribute__ ((section (".data"))) osver[] = OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"
+char __attribute__ ((section (".data"))) osver[] =
+    OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"
     "Use is subject to license terms. Copyright bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
 /**********************************************************************
