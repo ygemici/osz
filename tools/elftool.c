@@ -338,7 +338,9 @@ output:
             if(ELF64_ST_TYPE(s->st_info)==STT_FUNC && s->st_size && 
                 ELF64_ST_BIND(s->st_info)==STB_GLOBAL && ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT && 
                 strcmp(strtable + s->st_name, "mq_dispatch") && strcmp(strtable + s->st_name, "main"))
-                printf("#define SYS_%s\t(%3d)\n", strtable + s->st_name, i);
+                /* +3: make sure not conflicting with IRQ, ack and nack */
+                printf("#define SYS_%s\t%s(%3d)\n",
+                    strtable + s->st_name, strlen(strtable + s->st_name)<8?"\t":"", i+3);
         }
         s++;
     }

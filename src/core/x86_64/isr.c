@@ -256,6 +256,10 @@ void isr_init()
     idt[(tmrirq+32)*2+0] = IDT_GATE_LO(IDT_INT, ptr);
     idt[(tmrirq+32)*2+1] = IDT_GATE_HI(ptr);
 
+    /* add entropy */
+    srand[i%4] *= 16807;
+    srand[bogomips%4] *= 16807;
+
     i *= tmrfreq;
     bogomips *= tmrfreq;
     syslog_early(" cpu %d cps, %d bogomips",i, bogomips);

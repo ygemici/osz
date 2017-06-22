@@ -59,6 +59,7 @@ void acpi_early(ACPI_Header *hdr)
     if(!kmemcmp("RSDT", hdr->magic, 4) || !kmemcmp("XSDT", hdr->magic, 4)) {
         ptr = 0;
         while(len>0) {
+            kentropy();
             if(hdr->magic[0]=='X') {
                 ptr = (char*)(*((uint64_t*)data));
                 data += 8;
@@ -78,6 +79,7 @@ void acpi_early(ACPI_Header *hdr)
         // This header is 8 bytes longer than normal header
         len -= 8; ptr = (char*)(data+8);
         while(len>0) {
+            kentropy();
             if(ptr[0]==ACPI_APIC_IOAPIC_MAGIC) {
                 ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
                 ioapic_addr = rec->address;
@@ -150,6 +152,7 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     srand[(len+1)%4] -= (uint64_t)hdr;
     srand[(len+2)%4] += ((uint64_t)hdr<<1);
     srand[(len+4)%4] -= (uint64_t)((uint64_t)hdr>>1);
+    srand[(level+len)%4] *= 16807;
     kentropy();
 
     /* maximum tree depth */

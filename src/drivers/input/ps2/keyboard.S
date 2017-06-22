@@ -97,6 +97,7 @@ irq1:
     cmpw    $0x1, %di
     jne     5f
     int     $1
+    jmp     4f
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %dil, kbd_hist+0(%rip)

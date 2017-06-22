@@ -91,6 +91,9 @@ public uint64_t mq_dispatch()
         /* get work */
         msg = mq_recv();
         func = EVT_FUNC(msg->evt);
+        /* -3: added by elftool to make sure not conflict with IRQ, ack, nack */
+        if(func<3) continue;
+        func-=3;
         symfunc = (Elf64_Sym*)((virt_t)sym + (virt_t)(func * syment));
         /* is it a valid call? */
         if(func > 0 && func < maxfunc &&                       // within boundaries?
@@ -108,8 +111,8 @@ public uint64_t mq_dispatch()
             i = false;
         }
         /* send positive or negative acknowledgement back to the caller */
-        mq_send(msg->evt & ~USHRT_MAX, errno == SUCCESS ? SYS_ack : SYS_nack,
-            i/*return value*/, errno, func, msg->serial);
+        mq_send(EVT_SENDER(msg->evt), errno == SUCCESS ? SYS_ack : SYS_nack,
+            i/*return value*/, errno, func+3, msg->serial);
     }
     /* should never reach this */
     return EX_OK;

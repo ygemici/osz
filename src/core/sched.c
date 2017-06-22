@@ -63,9 +63,9 @@ void sched_dump()
         while(p!=0) {
             tcb=sched_get_tcb(p);
             kprintf("%s%x%s(%x,%x) ",
-                tcb->mypid==ccb.cr_active[i]?">":"",
-                tcb->mypid,
-                tcb->mypid==curr->mypid?"*":"",
+                tcb->pid==ccb.cr_active[i]?">":"",
+                tcb->pid,
+                tcb->pid==curr->pid?"*":"",
                 tcb->prev,tcb->next);
             p=tcb->next;
         }
@@ -76,8 +76,8 @@ void sched_dump()
     while(p!=0) {
         tcb=sched_get_tcb(p);
         kprintf("%x%s(%x,%x) ",
-            tcb->mypid,
-            tcb->mypid==curr->mypid?"*":"",
+            tcb->pid,
+            tcb->pid==curr->pid?"*":"",
             tcb->prev,tcb->next);
         p=tcb->next;
     }
@@ -87,8 +87,8 @@ void sched_dump()
     while(p!=0) {
         tcb=sched_get_tcb(p);
         kprintf("%x%s(%x) ",
-            tcb->mypid,
-            tcb->mypid==curr->mypid?"*":"",
+            tcb->pid,
+            tcb->pid==curr->pid?"*":"",
             tcb->alarm);
         p=tcb->alarm;
     }
@@ -111,9 +111,9 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
     }
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_alarm(%x, %d.%d)\n", tcb->mypid, sec, nsec);
+        kprintf("sched_alarm(%x, %d.%d)\n", tcb->pid, sec, nsec);
 #endif
-    pid_t pid = tcb->mypid, next=ccb.hd_timerq, prev=0;
+    pid_t pid = tcb->pid, next=ccb.hd_timerq, prev=0;
     /* ccb.hd_active -> ccb.hd_blocked */
     sched_block(tcb);
     // restore mapping
@@ -159,7 +159,7 @@ void sched_hybernate(OSZ_tcb *tcb)
 {
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_sleep(%x)\n", tcb->mypid);
+        kprintf("sched_sleep(%x)\n", tcb->pid);
 #endif
     /* TODO: memory -> swap (except tcb) */
     tcb->state = tcb_state_hybernated;
@@ -171,10 +171,10 @@ void sched_hybernate(OSZ_tcb *tcb)
  */
 void sched_awake(OSZ_tcb *tcb)
 {
-    pid_t pid = tcb->mypid, next = tcb->next, prev = tcb->prev;
+    pid_t pid = tcb->pid, next = tcb->next, prev = tcb->prev;
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_awake(%x)\n", tcb->mypid);
+        kprintf("sched_awake(%x)\n", tcb->pid);
 #endif
     if(tcb->state == tcb_state_hybernated) {
         /* TODO: swap -> memory */
@@ -207,7 +207,7 @@ void sched_awake(OSZ_tcb *tcb)
  */
 void sched_add(OSZ_tcb *tcb)
 {
-    pid_t pid = tcb->mypid;
+    pid_t pid = tcb->pid;
 #if DEBUG
     if(debug&DBG_SCHED)
         kprintf("sched_add(%x) pri %d\n", pid, tcb->priority);
@@ -230,13 +230,13 @@ void sched_remove(OSZ_tcb *tcb)
     pid_t next = tcb->next, prev = tcb->prev;
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_remove(%x) pri %d\n", tcb->mypid, tcb->priority);
+        kprintf("sched_remove(%x) pri %d\n", tcb->pid, tcb->priority);
 #endif
     tcb->prev = tcb->next = 0;
-    if(ccb.hd_active[tcb->priority] == tcb->mypid) {
+    if(ccb.hd_active[tcb->priority] == tcb->pid) {
         ccb.hd_active[tcb->priority] = next;
     }
-    if(ccb.cr_active[tcb->priority] == tcb->mypid) {
+    if(ccb.cr_active[tcb->priority] == tcb->pid) {
         ccb.cr_active[tcb->priority] = next;
     }
     if(prev != 0) {
@@ -260,12 +260,12 @@ void sched_block(OSZ_tcb *tcb)
         return;
 #if DEBUG
     if(debug&DBG_SCHED)
-        kprintf("sched_block(%x)\n", tcb->mypid);
+        kprintf("sched_block(%x)\n", tcb->pid);
 #endif
     tcb->blktime = ticks[TICKS_LO];
     tcb->state = tcb_state_blocked;
     /* ccb.hd_active -> ccb.hd_blocked */
-    pid_t pid = tcb->mypid;
+    pid_t pid = tcb->pid;
     sched_remove(tcb);
     // link into blocked queue
     if(ccb.hd_blocked!=0) {
@@ -334,10 +334,10 @@ found:
     tcb = sched_get_tcb(ccb.cr_active[i]);
     ccb.cr_active[i] = tcb->next;
 
-    if(curr->mypid != tcb->mypid) {
+    if(curr->pid != tcb->pid) {
 #if DEBUG
         if(debug&DBG_SCHED)
-            kprintf("sched_pick()=%x  \n", tcb->mypid);
+            kprintf("sched_pick()=%x  \n", tcb->pid);
 #endif
         isr_next = tcb->memroot;
     }

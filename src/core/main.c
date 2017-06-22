@@ -79,8 +79,7 @@ void main()
 /*
     if(syslog) {
         // start "syslog" task so others can log errors
-        // special service_init(SRV_syslog, "sbin/syslog")
-        syslog_init();
+        service_init(SRV_syslog, "sbin/syslog")
     }
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing

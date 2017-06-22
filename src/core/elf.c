@@ -544,6 +544,7 @@ bool_t elf_rtlink()
         if(got) {
            /* GOT data entries */
             for(i = 0; i < reladsz / relaent; i++){
+                kentropy();
                 // failsafe
                 if(n >= 2*__PAGESIZE/sizeof(OSZ_rela))
                     break;
@@ -639,6 +640,7 @@ bool_t elf_rtlink()
         //foreach(sym)
         s=sym;
         for(i=0;i<(strtable-(char*)sym)/syment;i++) {
+            kentropy();
             if(s->st_name > strsz) break;
             // is it defined in this object?
             if(s->st_value) {
@@ -718,13 +720,13 @@ bool_t elf_rtlink()
                             {k=8; *objptr=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
                         if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
                             syslog_early("pid %x: exporting %s on page boundary",
-                                ((OSZ_tcb*)(pmm.bss_end))->mypid,strtable + s->st_name);
+                                ((OSZ_tcb*)(pmm.bss_end))->pid,strtable + s->st_name);
                     }
                     // export data to user processes
                     if(!kmemcmp(strtable + s->st_name,"_osver",7) && s->st_size > vs) {
                         if((s->st_value%__PAGESIZE)+vs>__PAGESIZE)
-                            syslog_early("Exporting %s to pid %x on page boundary",
-                                strtable + s->st_name,((OSZ_tcb*)(pmm.bss_end))->mypid);
+                            syslog_early("pid %x: exporting %s on page boundary",
+                                ((OSZ_tcb*)(pmm.bss_end))->pid,strtable + s->st_name);
                         kmemcpy(objptr,&osver,vs+1);
                     }
 //kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
@@ -757,7 +759,7 @@ bool_t elf_rtlink()
     for(i=0;i<n;i++){
         OSZ_rela *r = (OSZ_rela*)((char *)relas + i*sizeof(OSZ_rela));
         if(r->offs!=0) {
-            kpanic("pid %x: shared library missing for %s()", ((OSZ_tcb*)(pmm.bss_end))->mypid, r->sym);
+            kpanic("pid %x: shared library missing for %s()", ((OSZ_tcb*)(pmm.bss_end))->pid, r->sym);
         }
     }
 

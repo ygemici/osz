@@ -164,10 +164,8 @@ void sys_init()
     syslog_early("Device drivers");
 
     /* create idle task */
-    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    task_new("idle");
-    // modify TCB for idle task. Don't add to queue, normally it never scheduled
-    tcb->priority = PRI_IDLE;
+    OSZ_tcb *tcb = task_new("idle", PRI_IDLE);
+    // modify TCB for idle task. Don't add to scheduler queue, normally it will never be scheduled
     //start executing a special function.
     tcb->rip = (uint64_t)&idle;
     tcb->cs = 0x8;  //ring 0 selectors

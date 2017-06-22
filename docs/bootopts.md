@@ -60,7 +60,7 @@ This can be a numeric value, or a comma separated list of flags.
 | 1024	| ma   | DBG_MALLOC | debug [memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
 | 2048  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test/main.c) instead of [init](https://github.com/bztsrc/osz/blob/master/docs/services.md) task |
 
-Most of these only available when compiled with debug. Normally you can only use a few to debug booting: me, el, de and the most useful, lo.
+Most of these only available when compiled with debug. Normally you can only use a few: DBG_ELF, DBG_DEVICES, DBG_LOG and DBG_MSG.
 
 Clock Source
 ------------

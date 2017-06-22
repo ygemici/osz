@@ -33,12 +33,11 @@
 #define tcb_errno 6
 #define tcb_gpr   8
 #define tcb_fx  128
-#define tcb_mypid 640
+#define tcb_pid 640
 #define tcb_memroot 648
 #define tcb_billcnt 656
 #define tcb_excerr 680
-#define tcb_sigmask 808
-#define tcb_sigpending 812
+#define tcb_serial 816
 
 /* platform specific TCB flags */
 #define tcb_flag_needsxsave     128
@@ -64,7 +63,7 @@ typedef struct {
     uint8_t forklevel;  // fork level                        tcb+   7
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128
-    pid_t mypid;        // task's pid at                     tcb+ 640
+    pid_t pid;          // task's pid at                     tcb+ 640
     uint64_t memroot;   // memory mapping root at            tcb+ 648
     uint64_t billcnt;   // ticks task spent in ring 3        tcb+ 656
     uint64_t syscnt;    // ticks task spent in ring 0        tcb+ 664
@@ -87,11 +86,12 @@ typedef struct {
     uint64_t name;      // pointer to argv[0] in stack       tcb+ 800
     uint32_t filesmax;  // number of maximum open files      tcb+ 808
     uint32_t memmax;    // number of maximum allocated pages tcb+ 812
-    sighandler_t sighandler[32]; // for receiving signals    tcb+ 816
-    uuid_t acl[TCB_MAXACE];// access control list            tcb+ 1072
+    uint64_t serial;    // message serial                    tcb+ 816
+    sighandler_t sighandler[32]; // for receiving signals    tcb+ 824
+    uuid_t acl[TCB_MAXACE];// access control list            tcb+ 1080
 
     // compile time check for minimum stack size
-    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 1072 ];
+    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 1080 ];
     uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
     // the last 40 bytes of stack is referenced directly from asm

@@ -31,7 +31,7 @@
 /* external resources */
 extern phy_t screen[2];
 extern phy_t pdpe;
-extern uint64_t *syslog_buf;
+extern void task_mapsyslog();
 
 /* pids of services. Negative pids are service ids and looked up in this */
 pid_t  __attribute__ ((section (".data"))) services[NUMSRV];
@@ -52,35 +52,38 @@ void service_init(int subsystem, char *fn)
     while(cmd[0]!='/')
         cmd++;
     cmd++;
-    pid_t pid = task_new(cmd);
-    //set priority for the task
-    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
+    OSZ_tcb *tcb = task_new(cmd, PRI_SRV);
     // map executable
     if(elf_load(fn) == (void*)(-1)) {
         syslog_early("WARNING unable to load ELF from %s", fn);
         return;
     }
+    // little trick to support syslog buffer
+    if(subsystem==SRV_syslog)
+        task_mapsyslog();
     // map libc and other libraries
     elf_neededso(0);
 
     // dynamic linker
     if(elf_rtlink()) {
         // map the first page in bss
-        vmm_mapbss((OSZ_tcb*)(pmm.bss_end), BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
-        ((OSZ_tcb*)(pmm.bss_end))->allocmem++;
+        vmm_mapbss(tcb, BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+        tcb->allocmem++;
 
         // add to queue so that scheduler will know about this task
-        sched_add((OSZ_tcb*)(pmm.bss_end));
+        sched_add(tcb);
 
-        services[-subsystem] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
+        services[-subsystem] = tcb->pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,tcb->pid);
     } else {
         syslog_early("WARNING task check failed for /%s", fn);
     }
 }
 
+/*** critical tasks, need special initialization ***/
+
 /**
- * Initialize the file system service, the "fs" task
+ * Initialize the file system service, the "FS" task
  */
 void fs_init()
 {
@@ -89,8 +92,7 @@ void fs_init()
     fstab = (uint64_t)fs_locate("etc/fstab");
     fstab_size=fs_size;
     char fn[256];
-    pid_t pid = task_new("FS");
-    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
+    OSZ_tcb *tcb = task_new("FS", PRI_SRV);
     // map file system dispatcher
     if(elf_load("sbin/fs") == (void*)(-1)) {
         kpanic("unable to load ELF from /sbin/fs");
@@ -129,65 +131,29 @@ void fs_init()
     // dynamic linker
     if(elf_rtlink()) {
         // map the first page in bss
-        vmm_mapbss((OSZ_tcb*)(pmm.bss_end), BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
-        ((OSZ_tcb*)(pmm.bss_end))->allocmem++;
+        vmm_mapbss(tcb, BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+        tcb->allocmem++;
 
         // map initrd in "fs" task's memory
-        vmm_mapbss((OSZ_tcb*)(pmm.bss_end),BUF_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
+        vmm_mapbss(tcb,BUF_ADDRESS,bootboot.initrd_ptr, bootboot.initrd_size, PG_USER_RW);
 
         // add to queue so that scheduler will know about this task
-        sched_add((OSZ_tcb*)(pmm.bss_end));
+        sched_add(tcb);
 
-        services[-SRV_FS] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_FS,"FS",pid);
+        services[-SRV_FS] = tcb->pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_FS,"FS",tcb->pid);
     } else {
         kpanic("task check failed for /sbin/fs");
     }
 }
 
 /**
- * Initialize the system logger service, the "syslog" task
- */
-void syslog_init()
-{
-    int i=0,j=0;
-    uint64_t *paging = (uint64_t *)&tmpmap;
-    pid_t pid = task_new("syslog");
-    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
-    // map file system dispatcher
-    if(elf_load("sbin/syslog") == (void*)(-1)) {
-        syslog_early("unable to load ELF from /sbin/syslog");
-    }
-    // map early syslog buffer after ELF
-    for(i=0;paging[i]!=0;i++);
-    for(j=0;j<nrlogmax;j++)
-        paging[i+j] = ((*((uint64_t*)kmap_getpte(
-            (uint64_t)syslog_buf + j*__PAGESIZE)))
-            & ~(__PAGESIZE-1)) + PG_USER_RO;
-
-    // map libc and other libraries
-    elf_neededso(0);
-
-    // dynamic linker
-    if(elf_rtlink()) {
-        // add to queue so that scheduler will know about this task
-        sched_add((OSZ_tcb*)(pmm.bss_end));
-
-        services[-SRV_syslog] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_syslog,"syslog",pid);
-    } else {
-        syslog_early("WARNING task check failed for /%s","sbin/syslog");
-    }
-}
-
-/**
- * Initialize the user interface service, the "ui" task
+ * Initialize the user interface service, the "UI" task
  */
 void ui_init()
 {
-    pid_t pid = task_new("UI");
-    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     int i;
+    OSZ_tcb *tcb = task_new("UI", PRI_SRV);
 
     // map user interface code
     if(elf_load("sbin/ui") == (void*)(-1)) {
@@ -201,16 +167,16 @@ void ui_init()
     // dynamic linker
     if(elf_rtlink()) {
         // add to queue so that scheduler will know about this task
-        sched_add((OSZ_tcb*)(pmm.bss_end));
+        sched_add(tcb);
 
-        services[-SRV_UI] = pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",pid);
+        services[-SRV_UI] = tcb->pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",tcb->pid);
 
         // allocate and map screen buffer A
         virt_t bss=BUF_ADDRESS;
         for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
             __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
-            vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
+            vmm_mapbss(tcb,bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
             // save it for SYS_swapbuf
             if(!screen[0]) {
                 screen[0]=pdpe;
@@ -239,8 +205,7 @@ void drv_init(char *driver)
     driver[i]=0;
 
     // create a new task...
-    pid_t pid = task_new(drvname);
-    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_DRV;
+    OSZ_tcb *tcb = task_new(drvname, PRI_DRV);
     driver[i]='.';
     // ...start with driver event dispatcher
     if(elf_load("lib/sys/drv") == (void*)(-1)) {
@@ -255,13 +220,11 @@ void drv_init(char *driver)
     // dynamic linker
     scrptr = false;
     if(elf_rtlink()) {
-        //set IOPL=3 in rFlags to permit IO address space
-        ((OSZ_tcb*)(pmm.bss_end))->rflags |= (3<<12);
         // add to queue so that scheduler will know about this task
-        sched_add((OSZ_tcb*)(pmm.bss_end));
+        sched_add(tcb);
 
         driver[i]=0;
-        syslog_early(" %s %x pid %x",drvname,((OSZ_tcb*)(pmm.bss_end))->memroot,pid);
+        syslog_early(" %s %x pid %x",drvname,tcb->memroot,tcb->pid);
         driver[i]='.';
 
         //do we need to map screen and framebuffer?
@@ -270,7 +233,7 @@ void drv_init(char *driver)
             virt_t bss=BUF_ADDRESS;
             for(i = ((bootboot.fb_width * bootboot.fb_height * 4 +
                 __SLOTSIZE - 1) / __SLOTSIZE) * (display>=DSP_STEREO_MONO?2:1);i>0;i--) {
-                vmm_mapbss((OSZ_tcb*)(pmm.bss_end), bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_DRVMEM);
+                vmm_mapbss(tcb, bss, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_DRVMEM);
                 // save it for SYS_swapbuf
                 if(!screen[1]) {
                     screen[1]=pdpe;
@@ -281,11 +244,11 @@ void drv_init(char *driver)
             bss=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));
             phy_t fbp=(phy_t)bootboot.fb_ptr;
             for(i = (bootboot.fb_scanline * bootboot.fb_height * 4 + __SLOTSIZE - 1) / __SLOTSIZE;i>0;i--) {
-                vmm_mapbss((OSZ_tcb*)(pmm.bss_end),bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
+                vmm_mapbss(tcb,bss,fbp,__SLOTSIZE, PG_USER_DRVMEM);
                 bss += __SLOTSIZE;
                 fbp += __SLOTSIZE;
             }
-            services[-SRV_video] = pid;
+            services[-SRV_video] = tcb->pid;
         }
     } else {
         syslog_early("WARNING task check failed for /%s", driver);

@@ -209,8 +209,9 @@ void kprintf_putchar(int c)
         glyph+=bytesperline;
         offs+=bootboot.fb_scanline;
     }
-    srand[offs%4] += (uint64_t)c;
-    srand[(offs+1)%4] -= (uint64_t)glyph;
+    srand[(offs+c)%4] += (uint64_t)c;
+    srand[(offs+c+1)%4] -= ticks[TICKS_LO];
+    srand[(c+bootboot.datetime[7]+bootboot.datetime[6]+bootboot.datetime[5])%4] *= 16807;
 #if DEBUG
     dbg_putchar(c);
 #endif

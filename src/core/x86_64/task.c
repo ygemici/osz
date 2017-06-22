@@ -25,6 +25,8 @@
  * @brief Task functions, platform dependent code
  */
 
+extern uint64_t *syslog_buf;
+
 phy_t __attribute__ ((section (".data"))) idle_mapping;
 phy_t __attribute__ ((section (".data"))) core_mapping;
 phy_t __attribute__ ((section (".data"))) identity_mapping;
@@ -33,7 +35,7 @@ phy_t __attribute__ ((section (".data"))) *stack_ptr;
 /**
  * create a task, allocate memory for it and init TCB
  */
-pid_t task_new(char *cmdline)
+OSZ_tcb *task_new(char *cmdline, uint8_t prio)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap, self;
@@ -49,13 +51,16 @@ pid_t task_new(char *cmdline)
     kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE);
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->state = tcb_state_running;
-    tcb->priority = PRI_APP;
+    tcb->priority = prio;
     self = (uint64_t)ptr;
-    tcb->mypid = (pid_t)(self/__PAGESIZE);
+    tcb->pid = (pid_t)(self/__PAGESIZE);
     tcb->allocmem = 8 + nrmqmax;
     tcb->cs = 0x20+3; // ring 3 user code
     tcb->ss = 0x18+3; // ring 3 user data
     tcb->rflags = 0x202; // enable interrupts and mandatory bit 1
+    //set IOPL=3 in rFlags to permit IO address space
+    if(prio==PRI_DRV)
+        tcb->rflags |= (3<<12);
 
     /* allocate memory mappings */
     // PML4
@@ -114,7 +119,7 @@ pid_t task_new(char *cmdline)
     if(debug&DBG_TASKS||debug==DBG_ELF)
         kprintf("Task %x %s\n",self/__PAGESIZE,cmdline);
 #endif
-    return self/__PAGESIZE;
+    return tcb;
 }
 
 /**
@@ -128,9 +133,8 @@ bool_t task_check(OSZ_tcb *tcb, phy_t *paging)
 /**
  * check if current task has a specific Access Control Entry
  */
-bool_t task_allowed(char *grp, uint8_t access)
+bool_t task_allowed(OSZ_tcb *tcb, char *grp, uint8_t access)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)(0);
     char *g;
     int i,j;
     if(grp==NULL||grp[0]==0)
@@ -146,4 +150,19 @@ bool_t task_allowed(char *grp, uint8_t access)
             return (g[15] & access)!=0;
     }
     return false;
+}
+
+/**
+ * Map early syslog buffer into task's memory
+ */
+void task_mapsyslog()
+{
+    int i=0,j=0;
+    uint64_t *paging = (uint64_t *)&tmpmap;
+    // map early syslog buffer after ELF
+    for(i=0;paging[i]!=0;i++);
+    for(j=0;j<nrlogmax;j++)
+        paging[i+j] = ((*((uint64_t*)kmap_getpte(
+            (uint64_t)syslog_buf + j*__PAGESIZE)))
+            & ~(__PAGESIZE-1)) + PG_USER_RO;
 }

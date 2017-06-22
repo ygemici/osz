@@ -34,7 +34,7 @@ void unistd_test();
 
 int main(int argc, char**argv)
 {
-    //wait until sys_ready() sends us an SYS_ack message
+    /* wait until sys_ready() sends us an SYS_ack message */
     mq_recv();
 
     dbg_printf("\n------------------------- TESTS ----------------------------\n");

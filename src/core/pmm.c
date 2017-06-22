@@ -234,6 +234,7 @@ void pmm_init()
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
     while(num>0) {
+        kentropy();
         if(MMapEnt_IsFree(entry) &&
            (uint)(MMapEnt_Size(entry)/__PAGESIZE)>=(uint)nrphymax) {
             // map free physical pages to pmm.entries
@@ -255,14 +256,22 @@ void pmm_init()
     num = (bootboot.size-128)/16;
     entry = &bootboot.mmap;
     pmm.totalpages = 0;
+#if DEBUG
     if(debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
+#endif
     while(num>0) {
+        srand[(entry->ptr/__PAGESIZE+num)%4] += entry->size + 
+            1000*bootboot.datetime[7] - 100*bootboot.datetime[6] + bootboot.datetime[5];
+        srand[(entry->ptr/__PAGESIZE+entry->size)%4] *= 16807;
+        kentropy();
+#if DEBUG
         if(debug&DBG_MEMMAP)
             kprintf("  %s %8x %9d\n",
                 MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Size(entry)
             );
+#endif
         if(MMapEnt_IsFree(entry)) {
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);

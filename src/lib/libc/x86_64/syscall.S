@@ -74,7 +74,6 @@ dbg_printf:
  */
 mq_send:
 mymq_send:
-    incq    MQ_ADDRESS + 24
     movq    %rdi, %rax
     shlq    $16, %rax
     movw    %si, %ax
@@ -86,7 +85,7 @@ mymq_send:
     movq    16(%rsp), %r9
     /* this will call msg_sends() in core */
     syscall
-    movq    MQ_ADDRESS + 24, %rax
+    movq    tcb_serial, %rax
     ret
 
 /**

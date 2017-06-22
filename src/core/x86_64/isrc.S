@@ -239,6 +239,10 @@ isr_tmrcalibrate:
     jz      1b
     cli
     movq    %rcx, bogomips
+    xorq    %rax, srand
+    xorq    %rbx, srand+8
+    xorq    %rax, srand+16
+    xorq    %rbx, srand+24
     subq    %rbx, %rax
     ret
 
@@ -273,9 +277,8 @@ isr_timer:
     movw    %ax, isr_lastfps
     xorw    %ax, %ax
     movw    %ax, isr_currfps
-#if DEBUG
+
     call    kprintf_putfps
-#endif
 1:
 
 /* housekeeping */
@@ -336,6 +339,7 @@ isr_timer:
     xorq    %rax, %rax
     cmpq    %rax, qcnt
     jnz     1f
+    callq   kentropy
 
     /* pick the next task to run */
     call    sched_pick

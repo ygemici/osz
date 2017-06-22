@@ -78,9 +78,22 @@ _start:
     xorq    %rax, %rax
     movq    %rax, __PAGESIZE-40
 
+    /* init entropy */
+    movq    $srand, %rdi
+    movq    %rbx, %rsi
+    movw    $512, %cx
+1:  lodsq
+    addq    %rax, (%rdi)
+    subq    %rax, 8(%rdi)
+    xorq    %rax, 16(%rdi)
+    addq    %rax, 24(%rdi)
+    pushq   %rcx
+    callq   kentropy
+    popq    %rcx
+    dec     %cx
+    jnz     1b
 /* check and enable all CPU features that this release use
    and gain entropy in the meantime */
-    movq    $srand, %rdi
     xorq    %rax, %rax
     incb    %al
     cpuid
@@ -152,28 +165,6 @@ _start:
     andb    $0xFB, %al
     movq    %rax, %cr4
 
-    /* init entropy */
-    movq    $srand, %rdi
-    /* add bootboot structure, environment and core segments */
-    movq    $bootboot, %rsi
-2:  lodsq
-    xorq    %rax, (%rdi)
-    lodsq
-    xorq    %rax, 8(%rdi)
-    lodsq
-    xorq    %rax, 16(%rdi)
-    lodsq
-    xorq    %rax, 24(%rdi)
-    lodsq
-    addq    %rax, (%rdi)
-    lodsq
-    addq    %rax, 8(%rdi)
-    lodsq
-    addq    %rax, 16(%rdi)
-    lodsq
-    addq    %rax, 24(%rdi)
-    cmp     $srandinitend, %rsi
-    jb      2b
     call    kentropy
 
 /* jump to C function main() in 64 bit code segment */

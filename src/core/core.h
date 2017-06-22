@@ -225,13 +225,13 @@ extern void kentropy();
 
 // ----- Tasks -----
 /** Allocate and initialize process structures */
-extern pid_t task_new(char *cmdline);
+extern OSZ_tcb *task_new(char *cmdline, uint8_t prio);
 
 /** Sanity check process data */
 extern bool_t task_check(OSZ_tcb *tcb, phy_t *paging);
 
 /** Check access for a group */
-extern bool_t task_allowed(char *grp, uint8_t access);
+extern bool_t task_allowed(OSZ_tcb *tcb, char *grp, uint8_t access);
 
 // ----- Scheduler -----
 /** Add task to scheduling */

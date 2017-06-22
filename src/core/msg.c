@@ -47,6 +47,9 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // negative pid if a service referenced.
     int64_t task = ((int64_t)(event&~0xFFFF)/(int64_t)65536);
 
+    srand[event%4] *= srctcb->pid;
+    kentropy();
+
     // only ISRs allowed to send SYS_IRQ message, and they are sent
     // on a more efficient way, directly with ksend
     if(EVT_FUNC(event)==0) {
@@ -66,14 +69,14 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // checks
     if(task == services[-SRV_FS]) {
         // only init allowed to send SYS_mountfs to FS
-        if(event==SYS_mountfs && srctcb->mypid!=services[-SRV_init]) {
+        if(event==SYS_mountfs && srctcb->pid!=services[-SRV_init]) {
             srctcb->errno = EPERM;
             return false;
         }
     }
 
     // map destination task's message queue
-    kmap((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->mypid)*__PAGESIZE), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->pid)*__PAGESIZE), PG_CORE_NOCACHE);
     if(dsttcb->magic != OSZ_TCB_MAGICH) {
         srctcb->errno = EINVAL;
         return false;
@@ -90,17 +93,15 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     size_t s;
     int bs = 0;
     void *p = (void *)(arg0 & ~(__PAGESIZE-1));
-#if DEBUG
     if(debug&DBG_MSG) {
         kprintf(" msg pid %x sending to pid %x (%d), event #%x",
-            srctcb->mypid, task, msghdr->mq_start, EVT_FUNC(event));
+            srctcb->pid, task, msghdr->mq_start, EVT_FUNC(event));
         if(event & MSG_PTRDATA)
             kprintf(" *%x[%d] (%x)",arg0,arg1,arg2);
         else
             kprintf("(%x,%x,%x,%x)",arg0,arg1,arg2,arg3);
         kprintf("\n");
     }
-#endif
     /* TODO: use mq_buffstart properly as a circular buffer */
     // we have to save message buffer's address first
     if(event & MSG_PTRDATA){
@@ -140,12 +141,12 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         EVT_DEST((uint64_t)task) | (event&0xFFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
-        if(srctcb->mypid!=dsttcb->mypid)
+        if(srctcb->pid!=dsttcb->pid)
             sched_block(dsttcb);
         return false;
     } else {
         srctcb->errno = SUCCESS;
-        if(srctcb->mypid!=dsttcb->mypid)
+        if(srctcb->pid!=dsttcb->pid)
             sched_awake(dsttcb);
     }
     return true;

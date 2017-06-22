@@ -78,8 +78,15 @@ kentropy:
     pushq   %rdx
     movq    (%rax), %rsi
     xorq    %rsi, (%rdx)
-    movq    $4*8, %rsi
-    callq   MurmurHash64A
+    movq    $16807, %rcx
+    movq    (%rdx), %rax
+    mulq    %rcx
+    movq    bootboot + 24, %rsi
+    xorq    %rsi, %rdx
+    movq    $srand, %rsi
+    andq    $24-1, %rdx
+    addq    %rdx, %rsi
+    movq    %rax, (%rsi)
     popq    %rdi
     stosq
     popq    %rsi
@@ -490,8 +497,8 @@ ksend:
     movq    $1, 8(%rdi)
 2:  /* replace destination pid with sender's */
     andq    $0xFFFF, %rsi
-    /* tcb.mypid<<16 */
-    movq    tcb_mypid, %rax
+    /* tcb.pid<<16 */
+    movq    tcb_pid, %rax
     shlq    $16, %rax
     orq     %rax, %rsi
     /* copy message */
@@ -508,7 +515,8 @@ ksend:
     movq    %r9, 40(%rax)
     movq    32(%rbp), %r9
     movq    %r9, 48(%rax)
-    movq    MQ_ADDRESS + 24, %r9
+    incq    tcb_serial
+    movq    tcb_serial, %r9
     movq    %r9, 56(%rax)
     /* mqhdr->mq_start++ */
     incq    (%rdi)

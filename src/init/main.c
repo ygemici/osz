@@ -36,7 +36,8 @@ public void status(){}
 
 void task_init(int argc, char **argv)
 {
-    //wait for sys_ready() to send an SYS_ack
+    /* wait for sys_ready() to send an SYS_ack, meaning all
+     * drivers and subsystems finished with initialization */
     mq_recv();
 
     /* first thing, mount all filesystems */

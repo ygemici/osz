@@ -5,7 +5,7 @@
 ./etc/include/sys/core.h:102:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/disasm.c:1215:            //TODO: esc
-./src/core/msg.c:104:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/msg.c:105:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/x86_64/crt0.S:45:    /* TODO: call ctors */

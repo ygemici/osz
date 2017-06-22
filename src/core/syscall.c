@@ -59,7 +59,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
         case SYS_exit:
-            if(tcb->mypid == services[-SRV_init]) {
+            if(tcb->pid == services[-SRV_init]) {
                 /* power off or reboot system when init task exits */
                 if(arg0 == EX_OK)
                     sys_disable();
@@ -74,7 +74,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 
         case SYS_swapbuf:
             /* only UI allowed to send swapbuf */
-            if(tcb->mypid == services[-SRV_UI]) {
+            if(tcb->pid == services[-SRV_UI]) {
                 isr_currfps++;
                 /* swap screen[0] and screen[1] mapping */
                 kmap((uint64_t)&tmpmap,  (uint64_t)(screen[0] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
@@ -94,7 +94,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* no break */
         case SYS_stime:
             /* set system time stamp in uint64_t (UTC) */
-            if(tcb->priority == PRI_DRV || task_allowed("stime", A_WRITE)) {
+            if(tcb->priority == PRI_DRV || task_allowed(tcb, "stime", A_WRITE)) {
                 ticks[TICKS_TS] = arg0;
                 ticks[TICKS_NTS] = 0;
             } else {
@@ -155,13 +155,13 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             return fs_size;
 
         case SYS_meminfo:
-                msg_sends(EVT_DEST(tcb->mypid) | EVT_FUNC(SYS_ack), pmm.freepages,pmm.totalpages,0,0,0,0);
+                msg_sends(EVT_DEST(tcb->pid) | EVT_FUNC(SYS_ack), pmm.freepages,pmm.totalpages,0,0,0,0);
             break;
 
         case SYS_mmap:
 #if DEBUG
         if(debug&DBG_MALLOC)
-            kprintf("  mmap(%x, %d, %x) pid %2x\n", arg0, arg1, arg2, tcb->mypid);
+            kprintf("  mmap(%x, %d, %x) pid %2x\n", arg0, arg1, arg2, tcb->pid);
 #endif
             /* FIXME: naive implementation, no checks */
             data=(void *)arg0;
@@ -186,7 +186,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_munmap:
 #if DEBUG
         if(debug&DBG_MALLOC)
-            kprintf("  munmap(%x, %d) pid %2x\n", arg0, arg1, tcb->mypid);
+            kprintf("  munmap(%x, %d) pid %2x\n", arg0, arg1, tcb->pid);
 #endif
             arg1=((arg1+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
             vmm_unmapbss(tcb, (virt_t)arg0, (size_t)arg1);
