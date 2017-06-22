@@ -43,16 +43,16 @@ void task_init(int argc, char **argv)
     /* first thing, mount all filesystems */
     mq_call(SRV_FS, SYS_mountfs);
 
-    if(_identity) {
-        /* start first time turn on's set up task */
-//        system("/sbin/identity");
-    }
-
-//block for now
-    mq_recv();
     if(_rescueshell) {
-        breakpoint;
+        /* create a TTY window for rescue shell */
+        /* replace ourself with shell */
+//        exec("/bin/sh");
+        // never return here.
     } else {
-ee:goto ee;
+        if(_identity) {
+            /* start first time turn on's set up task, wait until it returns */
+//            system("/sbin/identity");
+        }
+        // TODO: load user services
     }
 }

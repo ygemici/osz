@@ -8,12 +8,10 @@ OS/Z uses the [BOOTBOOT](https://github.com/bztsrc/osz/tree/master/loader) proto
 The compatible loader is loaded by the firmware, presumeably from ROM. It does the following (platform independently):
 
  1. initialize hardware and framebuffer
- 2. locate first bootable disk
- 3. locate first bootable partition
- 4. locate initrd on boot partition
- 5. locate `lib/sys/core` inside initrd
- 6. map it's elf segments at -2M..0 and framebuffer at -512M..-4M
- 7. transfer control to core
+ 2. locate initrd on boot partition (or in ROM)
+ 3. locate `lib/sys/core` inside initrd
+ 4. map it's elf segments at -2M..0 and framebuffer at -512M..-4M
+ 5. transfer control to core
 
 Currently both x86_64 [BIOS](https://github.com/bztsrc/osz/blob/master/loader/mb-x86_64/bootboot.asm) and [UEFI](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/bootboot.c) boot supported by the same disk image.
 
@@ -37,14 +35,14 @@ After that it initializes subsystems (or system [services](https://github.com/bz
  1. first is `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), that loads idle task and [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md).
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal service, save it has the initrd entirely mapped in it's bss segment.
  3. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike syslog, networking and sound services which are optional.
- 4. initializes syslog service by `syslog_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). It shares a buffer with core used by [syslog_early](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c).
- 5. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `net`, `sound` and `init` service daemon.
- 6. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
+ 4. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `net`, `sound` and `init` service daemon.
+ 5. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 That `sys_enable()` function switches to the first device driver task, and starts executing it. The scheduler, 
 `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) will
-choose one by one until all tasks blocks. Note that preemption is not enabled at this point. When the `idle` task
-is first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
+choose drivers and services one by one until all blocks. Note that preemption is not enabled at this point. 
+
+ 6. When the `idle` task first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 Driver Initialization
 ---------------------
@@ -62,9 +60,9 @@ enables pre-emption.
 User land
 ---------
 
-The first real 100% userspace process is either [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c), or if rescueshell was requested in [etc/CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG), it's [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c).
-
-Init will start further services (not subsystems) among others the user session service that provides a login prompt.
+The first real 100% userspace process is started by [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c).
+If rescueshell was requested in [BOOTBOOT/CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
+instead of services. Those services are classic UNIX daemons, among others the user session service that provides a login prompt.
 
 ### Executables
 
@@ -76,4 +74,6 @@ Similarly to executables, but the entry point is called `_init`. If not defined 
 
 ### Services
 
-Service's entry point is also called `_init`, which function must call either `mq_recv()` or `mq_dispatch()`. If not defined, fallbacks to [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
+Service's entry point is also called `_init`, which function must call either `mq_recv()` or `mq_dispatch()`. If not defined otherwise,
+fallbacks to the default in [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c). In that case
+the service must implement `task_init()` to initialize it's structures.
