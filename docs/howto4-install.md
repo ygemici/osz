@@ -25,15 +25,15 @@ Where `/dev/sdc` is the device where you want to install.
 Once you've booted up OS/Z, you can clone the running system with
 
 ```sh
-sys install /dev/disk2
+sys clone /dev/disk2
 ```
 
-Where `/dev/disk2` is the device where you want to install.
+Where `/dev/disk2` is the device where you want to install the system.
 
 Next time we'll see how to use the [user interface](https://github.com/bztsrc/osz/blob/master/docs/howto5-interface.md).
 
-Package Management
-------------------
+Package Install
+---------------
 
 ### Refresh package list
 
