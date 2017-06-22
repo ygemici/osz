@@ -25,22 +25,19 @@
  * @brief Core, boot environment
  *
  *   Memory map
- *       -512M framebuffer                      (0xFFFFFFFFE0000000)
- *       -4M tmpmq       message queue [1]      (0xFFFFFFFFFFC00000)
- *       -2M core        bootboot[2] struct     (0xFFFFFFFFFFE00000)
- *         -2M + 1page   environment[3]         (0xFFFFFFFFFFE01000)
+ *       -512M framebuffer for kprintf          (0xFFFFFFFFE0000000)
+ *         -2M core      bootboot[1] struct     (0xFFFFFFFFFFE00000)
+ *         -2M + 1page   environment[2]         (0xFFFFFFFFFFE01000)
  *         -2M + 2page.. core text segment v    (0xFFFFFFFFFFE02000)
  *         -2M + Xpage.. core bss          v    (0xFFFFFFFFFFExxxxx)
  *         ..0           core boot stack   ^    (0x0000000000000000)
 
- *       0-16G user      RAM identity mapped[4] (0x0000000000000000)
+ *       0-16G user      RAM identity mapped[3] (0x0000000000000000)
  *
- *   [1] see msg_t in etc/include/sys/types.h
- *   [2] see loader/bootboot.h
- *   [3] see etc/CONFIG and env.h. Plain ascii key=value pairs,
- *       separated by whitespace characters. Filled up with spaces
- *       to page size.
- *   [4] when main() calls isr_enable(), user task will be mapped
+ *   [1] see loader/bootboot.h
+ *   [2] see etc/CONFIG and env.h. Plain ascii key=value pairs,
+ *       separated by newline characters.
+ *   [3] when main() calls sys_enable(), user task will be mapped
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
  */
 
