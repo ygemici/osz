@@ -89,6 +89,21 @@ kentropy:
     movq    %rax, (%rsi)
     popq    %rdi
     stosq
+    movq    ticks, %rsi
+    andq    $24-1, %rsi
+    addq    $srand, %rsi
+    movq    (%rsi), %rax
+    mulq    %rcx
+    movq    %rax, (%rsi)
+    movq    $srand, %rsi
+    movq    (%rsi), %rax
+    xorq    %rax, 8(%rsi)
+    movq    8(%rsi), %rax
+    xorq    %rax, 16(%rsi)
+    movq    16(%rsi), %rax
+    xorq    %rax, 24(%rsi)
+    movq    24(%rsi), %rax
+    xorq    %rax, (%rsi)
     popq    %rsi
     popq    %rdi
     ret

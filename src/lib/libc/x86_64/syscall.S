@@ -301,7 +301,8 @@ meminfo:
     ret
 
 /**
- * should be in stdlib.S, but calls mymq_recv
+ * should be in stdlib.S, but calls mymq_recv.
+ * Fills up almost every register with random
  *
  * uint64_t rand()
  */
@@ -309,6 +310,4 @@ rand:
     xorq    %rax, %rax
     movb    $SYS_rand, %al
     syscall
-    callq   mymq_recv
-    movq    8(%rax), %rax
     ret

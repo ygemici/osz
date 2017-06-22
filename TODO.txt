@@ -1,5 +1,5 @@
  --- Error fixes ---
-./src/core/syscall.c:166:            /* FIXME: naive implementation, no checks */
+./src/core/syscall.c:167:            /* FIXME: naive implementation, no checks */
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
 ./etc/include/sys/core.h:102:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */

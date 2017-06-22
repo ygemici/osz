@@ -58,6 +58,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
     switch(EVT_FUNC(event)) {
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
+        /* case SYS_rand: in isr_syscall0 asm for more bits */
         case SYS_exit:
             if(tcb->pid == services[-SRV_init]) {
                 /* power off or reboot system when init task exits */
@@ -193,9 +194,6 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             tcb->allocmem-=arg1/__PAGESIZE;
             break;
 
-        case SYS_rand:
-            return srand[0] ^ srand[1] ^ srand[2] ^ srand[3];
-        
         case SYS_srand:
             srand[(arg0+0)%4] += (uint64_t)arg0;
             srand[(arg0+1)%4] ^= (uint64_t)arg0;

@@ -178,6 +178,25 @@ isr_syscall0:
     jnz     5b
     jmp     9f
 
+    /* uint64_t rand() */
+2:  cmpb    $SYS_rand, %al
+    jne     2f
+    callq   kentropy
+    movq    srand, %r8
+    movq    srand+8, %r9
+    movq    srand+16, %r10
+    movq    srand+24, %r12
+    callq   kentropy
+    movq    srand, %r13
+    movq    srand+8, %r14
+    movq    srand+16, %r15
+    xorq    srand+24, %r10
+    callq   kentropy
+    movq    srand, %rax
+    movq    srand+16, %rdx
+    movq    srand+24, %rbx
+    jmp     9f
+
     /*** drivers tasks only ***/
 2:  cmpb    $PRI_DRV, tcb_priority
     jne     3f
