@@ -112,6 +112,9 @@ extern void kprintf_init();
 /** Set default colors and move cursor home */
 extern void kprintf_reset();
 
+/** fade the screen and reset cursor */
+extern void kprintf_fade();
+
 /** Scroll the screen */
 extern void kprintf_scrollscr();
 

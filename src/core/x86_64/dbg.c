@@ -1394,7 +1394,7 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
         if(dr6&(1<<0)||dr6&(1<<1)||dr6&(1<<2)||dr6&(1<<3))
             reason="breakpoint";
     }
-    kprintf_reset();
+    kprintf_fade();
     if(!dbg_tui) {
         dbg_putchar(13);
         dbg_putchar(10);

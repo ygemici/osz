@@ -371,12 +371,37 @@ void kprintf_scrollscr()
 }
 
 /**
+ * fade the screen
+ */
+void kprintf_fade()
+{
+    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    int offs = 0;
+    int x,y, line;
+    int w = maxx*(font->width+1)/2;
+    kprintf_reset();
+    // darken the screen, two pixels at once
+    for(y=0;y<maxy*font->height;y++){
+        line=offs;
+        for(x=0;x<w;x++){
+            *((uint64_t*)(FBUF_ADDRESS + line)) =
+                (*((uint64_t*)(FBUF_ADDRESS + line))>>2)&0x3F3F3F3F3F3F3F3FULL;
+            line+=8;
+        }
+        offs+=bootboot.fb_scanline;
+    }
+}
+
+/**
  * clear current line
  */
 void kprintf_clearline()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     int x,y, line, tmp = ky*font->height*bootboot.fb_scanline;
+#if DEBUG
+    if(dbg_indump) return;
+#endif
     // clear the row
     for(y=0;y<font->height;y++){
         line=tmp;

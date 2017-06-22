@@ -114,7 +114,7 @@ kpanic:
     pushq   %rdi
     pushq   %rsi
     pushq   %rdx
-    call    kprintf_reset
+    call    kprintf_fade
     /* clear the first line */
     movl    $0xFFDD33, fg
     movl    $0, bg
