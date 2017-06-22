@@ -32,11 +32,9 @@
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
-extern pid_t identity_pid;
 
 /* pids of services. Negative pids are service ids and looked up in this */
-pid_t  __attribute__ ((section (".data"))) *services;
-uint64_t __attribute__ ((section (".data"))) nrservices = -SRV_USRFIRST;
+pid_t  __attribute__ ((section (".data"))) services[NUMSRV];
 
 /* needs screen pointer mapping */
 uint8_t __attribute__ ((section (".data"))) scrptr = 0;
@@ -44,15 +42,6 @@ uint8_t __attribute__ ((section (".data"))) scrptr = 0;
 /* location of fstab in mapped initrd */
 uint64_t __attribute__ ((section (".data"))) fstab;
 uint64_t __attribute__ ((section (".data"))) fstab_size;
-
-/**
- * register a user mode service for pid translation
- */
-uint64_t service_register(pid_t task)
-{
-    services[nrservices++] = task;
-    return -(nrservices-1);
-}
 
 /**
  * Initialize a non-special system service
@@ -65,13 +54,7 @@ void service_init(int subsystem, char *fn)
     cmd++;
     pid_t pid = task_new(cmd);
     //set priority for the task
-    if(subsystem == SRV_USRFIRST) {
-        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_APP;    // identity process
-        identity_pid = pid;
-    } else if(subsystem == SRV_USRFIRST-1)
-        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_IDLE;   // screen saver
-    else
-        ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;    // everything else
+    ((OSZ_tcb*)(pmm.bss_end))->priority = PRI_SRV;
     // map executable
     if(elf_load(fn) == (void*)(-1)) {
         syslog_early("WARNING unable to load ELF from %s", fn);
@@ -89,15 +72,8 @@ void service_init(int subsystem, char *fn)
         // add to queue so that scheduler will know about this task
         sched_add((OSZ_tcb*)(pmm.bss_end));
 
-        // block identity process at once
-        if(identity_pid == pid) {
-            sched_block((OSZ_tcb*)(pmm.bss_end));
-        }
-
-        if(subsystem > SRV_USRFIRST) {
-            services[-subsystem] = pid;
-            syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
-        }
+        services[-subsystem] = pid;
+        syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,pid);
     } else {
         syslog_early("WARNING task check failed for /%s", fn);
     }

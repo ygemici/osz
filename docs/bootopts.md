@@ -23,9 +23,7 @@ Boot Parameters
 | debug     | 0      | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
 | nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
 | nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
-| nrsrvmax  | 1      | number | core | the number of pages for services pid translation table (8 bytes each) |
 | nrlogmax  | 8      | number | core | the number of pages for early syslog buffer |
-| nropenmax | 16     | number | core | the number of open file descriptors per task |
 | quantum   | 100    | number | core | scheduler frequency, a task can allocate CPU continously for 1/(quantum) second. |
 | fps       | 10     | number | core | requested frame rate |
 | display   | 0      | number | core | selects output mode (see below) |
@@ -61,6 +59,8 @@ This can be a numeric value, or a comma separated list of flags.
 | 512   | lo   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
 | 1024	| ma   | DBG_MALLOC | debug [memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
 | 2048  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test/main.c) instead of [init](https://github.com/bztsrc/osz/blob/master/docs/services.md) task |
+
+Most of these only available when compiled with debug. Normally you can only use a few to debug booting: me, el, de and the most useful, lo.
 
 Clock Source
 ------------

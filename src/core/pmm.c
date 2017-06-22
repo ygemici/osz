@@ -36,7 +36,6 @@ extern OSZ_rela *relas;
 extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
-extern pid_t *services;
 
 /* Main scructure */
 OSZ_pmm __attribute__ ((section (".data"))) pmm;
@@ -218,9 +217,6 @@ void pmm_init()
     // that's 2*4096/16 = 512 maximum fragments
     if(nrphymax<2)
         nrphymax=2;
-    // minimum for services pages
-    if(nrsrvmax<1)
-        nrsrvmax=1;
     // minimum for syslog buffer pages
     if(nrlogmax<1)
         nrlogmax=1;
@@ -259,18 +255,14 @@ void pmm_init()
     num = (bootboot.size-128)/16;
     entry = &bootboot.mmap;
     pmm.totalpages = 0;
-#if DEBUG
     if(debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
-#endif
     while(num>0) {
-#if DEBUG
         if(debug&DBG_MEMMAP)
             kprintf("  %s %8x %9d\n",
                 MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Size(entry)
             );
-#endif
         if(MMapEnt_IsFree(entry)) {
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
@@ -326,8 +318,6 @@ void pmm_init()
     relas = (OSZ_rela*)kalloc(2);
     //allocate stack for ISRs and syscall
     safestack = kalloc(1);
-    //allocate services structure
-    services = kalloc(nrsrvmax);
     //allocate syslog buffer
     syslog_buf = syslog_ptr = kalloc(nrlogmax);
 

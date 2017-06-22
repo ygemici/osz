@@ -29,8 +29,6 @@
 #include <syscall.h>
 #include "env.h"
 
-extern uint64_t nrservices;
-extern pid_t *services;
 extern pid_t isr_next;
 
 /* pointer to PDE for TMPQ_ADDRESS */
@@ -57,10 +55,10 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     }
     // do we need pid_t translation?
     if(task < 0) {
-        if(-task < nrservices) {
+        if(-task >= NUMSRV || services[-task]!=0) {
             task = services[-task];
         } else {
-            srctcb->errno = EINVAL;
+            srctcb->errno = EFAULT;
             return false;
         }
     }

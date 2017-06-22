@@ -38,7 +38,6 @@ extern OSZ_ccb ccb;                   // CPU Control Block
 extern uint64_t isr_getts(char *p,int16_t timezone);
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
-extern pid_t identity_pid;
 extern phy_t screen[2];
 
 /**
@@ -60,10 +59,6 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         /* case SYS_ack: in isr_syscall0 asm for performance */
         /* case SYS_seterr: in isr_syscall0 asm for performance */
         case SYS_exit:
-            if(identity_pid && tcb->mypid == identity_pid) {
-                /* notify init service to start */
-                msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
-            }
             if(tcb->mypid == services[-SRV_init]) {
                 /* power off or reboot system when init task exits */
                 if(arg0 == EX_OK)
@@ -109,13 +104,6 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 
         case SYS_time:
             return ticks[TICKS_TS];
-
-        case SYS_regservice:
-            /* only init subsystem allowed to register services */
-            if(tcb->mypid == services[-SRV_init])
-                return (uint64_t)service_register((pid_t)arg0);
-            tcb->errno = EACCES;
-            break;
 
         case SYS_setirq:
             /* set irq handler, only device drivers allowed to do so */

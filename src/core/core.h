@@ -85,7 +85,7 @@ extern OSZ_pmm pmm;                   // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
 
 /* see etc/include/syscall.h */
-extern pid_t *services;
+extern pid_t services[NUMSRV];
 
 /* size of the file returned by fs_locate() */
 extern uint64_t fs_size;

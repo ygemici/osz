@@ -1058,8 +1058,8 @@ void dbg_ram()
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("Core bss: %8x - %8x, %d pages\nNumber of free memory fragments: %d\n\n",
-            pmm.bss, pmm.bss_end,(pmm.bss_end-pmm.bss)/__PAGESIZE,pmm.size
+        kprintf("Core bss: %8x - %8x, %d pages\n\n",
+            pmm.bss, pmm.bss_end,(pmm.bss_end-pmm.bss)/__PAGESIZE
         );
         kprintf("Total: %9d pages, allocated: %9d pages, free: %9d pages\n",
             pmm.totalpages, pmm.totalpages-pmm.freepages, pmm.freepages
@@ -1091,7 +1091,7 @@ void dbg_ram()
         if(dbg_tui)
             dbg_settheme();
     }
-    kprintf("[Free Memory Fragments]\nAddress           Num pages\n");
+    kprintf("[Free Memory Fragments #%d]\nAddress           Num pages\n",pmm.size);
     fg=dbg_theme[3];
     if(dbg_tui)
         dbg_settheme();
@@ -1168,10 +1168,10 @@ void dbg_sysinfo()
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("cpu: %d bogomips, quantum: %d ticks\nnrphymax: %d, nrmqmax: %d, nrsrvmax: %d",
-            bogomips, quantum, nrphymax, nrmqmax, nrsrvmax);
-        kprintf(", nrlogmax: %d\nkeyboard map: %a, debug flags: %x, rescueshell: %s, lefthanded: %s\n\n",
-            nrlogmax, keymap, debug, rescueshell?"true":"false", lefthanded?"true":"false");
+        kprintf("cpu: %d bogomips, quantum: %d ticks\nnrphymax: %d, nrmqmax: %d, nrlogmax: %d, ",
+            bogomips, quantum, nrphymax, nrmqmax, nrlogmax);
+        kprintf("keyboard map: %a, debug flags: %x\nidentity: %s, rescueshell: %s, lefthanded: %s\n\n",
+            keymap, debug, identity?"true":"false", rescueshell?"true":"false", lefthanded?"true":"false");
         fg=dbg_theme[4];
         if(dbg_tui)
             dbg_settheme();

@@ -33,7 +33,9 @@ public uint64_t _fstab_size;
 
 void parse_fstab(int level)
 {
+#if DEBUG
     dbg_printf("fstab #%d: %x %d\n%s\n",level,_fstab_ptr,_fstab_size,_fstab_ptr);
+#endif
 }
 
 public void mountfs()

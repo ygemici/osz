@@ -221,15 +221,6 @@ myseterr:
     ret
 
 /**
- * uint64_t regservice(pid_t task) - ONLY for init
- */
-regservice:
-    xorq    %rax, %rax
-    movb    $SYS_regservice, %al
-    syscall
-    ret
-
-/**
  * void *mmap (void *addr, size_t len, int prot, int flags, int fd, off_t offset);
  */
 mmap:

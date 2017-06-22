@@ -227,11 +227,13 @@ realmode_start:
 @@:         mov         byte [bootdev], dl
 
             ;-----initialize serial port COM1,115200,8N1------
+if DEBUG eq 1
             mov         ax, 0401h
             xor         bx, bx
             mov         cx, 030Bh
             xor         dx, dx
             int         14h
+end if
             real_print  starting
 
             DBG         dbg_cpu
@@ -633,9 +635,11 @@ real_printfunc:
             mov         bx, word 11
             int         10h
             pop         ax
+if DEBUG eq 1
             mov         ah, byte 01h
             xor         dx, dx
             int         14h
+end if
             pop         si
             jmp         real_printfunc
 .end:       ret

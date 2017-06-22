@@ -106,13 +106,11 @@ void acpi_early(ACPI_Header *hdr)
  */
 void acpi_parseaml(ACPI_Header *hdr)
 {
-#if DEBUG
-        if(debug&DBG_DEVICES) {
-            kprintf("AML %c%c%c%c  %x\n",
-                hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3],
-                hdr);
-        }
-#endif
+    if(debug&DBG_DEVICES) {
+        kprintf("AML %c%c%c%c  %x\n",
+            hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3],
+            hdr);
+    }
     // search the \_S5 package in the DSDT
     char *c = (char *)hdr + sizeof(ACPI_Header);
     int len = (uint32_t)hdr->length;
@@ -157,7 +155,6 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
     /* maximum tree depth */
     if(level>8)
         return;
-#if DEBUG
     uint64_t i;
     if(debug&DBG_DEVICES) {
         for(i=0;i<level;i++) kprintf("  ");
@@ -165,7 +162,6 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
         kprintf("%8x %d ", hdr, hdr->length);
         kprintf("%c%c%c%c\n", hdr->oemid[0], hdr->oemid[1], hdr->oemid[2], hdr->oemid[3]);
     }
-#endif
     /* System tables pointer, should never get it, but just in case, failsafe */
     if(!kmemcmp("RSD PTR ", hdr->magic, 8)) {
         ACPI_RSDPTR *rsdptr = (ACPI_RSDPTR *)hdr;
@@ -221,7 +217,6 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
         // This header is 8 bytes longer than normal header
         len -= 8; ptr = (char*)(data+8);
         while(len>0) {
-#if DEBUG
             if(ptr[0]==ACPI_APIC_LAPIC_MAGIC) {
                 ACPI_APIC_LAPIC *rec = (ACPI_APIC_LAPIC*)ptr;
                 if(debug&DBG_DEVICES) {
@@ -282,7 +277,6 @@ void acpi_parse(ACPI_Header *hdr, uint64_t level)
                     for(i=0;i<=level;i++) kprintf("  ");
                     kprintf("X2NMI   %x %d\n", ptr, ptr[1]);
                 }
-#endif
             }
             len-=ptr[1];
             ptr+=ptr[1];
@@ -304,15 +298,11 @@ bool_t acpi_init()
         (char)(*((uint64_t*)bootboot.x86_64.acpi_ptr))!='X')
     ) {
         // should never happen!
-#if DEBUG
         kprintf("WARNING no ACPI tables found\n");
-#endif
     } else {
         // recursively parse ACPI tables to detect devices
-#if DEBUG
         if(debug&DBG_DEVICES)
             kprintf("\nACPI System Tables\n");
-#endif
         acpi_parse((ACPI_Header*)bootboot.x86_64.acpi_ptr, 1);
     }
     if(systables[systable_dsdt_idx] != 0)
@@ -335,14 +325,14 @@ bool_t acpi_init()
     // check if acpi is enabled
     __asm__ __volatile__ (
         "xor %%rax, %%rax;movl %1, %%edx; inw %%dx, %%ax" :
-        "=r"(tmp) :
-        "r"(PM1a_CNT) );
+        "=a"(tmp) :
+        "d"(PM1a_CNT) );
     if ( (tmp &SCI_EN) == 0 ) {
         // enable
         if (SMI_CMD != 0 && ACPI_ENABLE != 0) {
             __asm__ __volatile__ (
                 "movl %0, %%eax; movl %1, %%edx; outw %%ax, %%dx" : :
-                "r"(ACPI_ENABLE), "r"(SMI_CMD) );
+                "a"(ACPI_ENABLE), "d"(SMI_CMD) );
             do {
                 __asm__ __volatile__ (
                     "xor %%rax, %%rax;movl %1, %%edx; inw %%dx, %%ax" :
@@ -384,12 +374,12 @@ void acpi_poweroff()
         en = SLP_TYPa | SLP_EN;
         __asm__ __volatile__ (
             "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :
-            "r"(en), "r"(PM1a_CNT) );
+            "a"(en), "d"(PM1a_CNT) );
         if ( PM1b_CNT != 0 ) {
             en = SLP_TYPb | SLP_EN;
             __asm__ __volatile__ (
                 "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :
-                "r"(en), "r"(PM1b_CNT) );
+                "a"(en), "d"(PM1b_CNT) );
         }
     }
 }

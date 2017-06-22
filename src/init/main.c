@@ -26,6 +26,7 @@
  */
 #include <osZ.h>
 
+public uint8_t _identity = false;
 public uint8_t _rescueshell = false;
 
 public void start(){}
@@ -40,6 +41,11 @@ void task_init(int argc, char **argv)
 
     /* first thing, mount all filesystems */
     mq_call(SRV_FS, SYS_mountfs);
+
+    if(_identity) {
+        /* start first time turn on's set up task */
+//        system("/sbin/identity");
+    }
 
 //block for now
     mq_recv();

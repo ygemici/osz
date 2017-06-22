@@ -76,16 +76,9 @@ irq1:
     bt      $7, %ax
     jnc     2f
     /* keyrelease */
-    cmpb    $0, kbd_pressed(%rip)
-    /* spurious interrupt, release without a press, no message */
-    jl      4f
-    cmpb    $2, kbd_pressed(%rip)
-    jg      4f
-    decb    kbd_pressed(%rip)
     movw    $SYS_keyrelease, %si
     jmp     3f
 2:  /* keypress */
-    incb    kbd_pressed(%rip)
     /* handle Ctrl + Alt */
     cmpb    $0x38, kbd_hist+0(%rip)
     jne     5f
@@ -100,6 +93,10 @@ irq1:
     outb    %al, $0x64
     hlt
 4:
+    /* Ctrl + Alt + Esc */
+    cmpw    $0x1, %di
+    jne     5f
+    int     $1
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %dil, kbd_hist+0(%rip)
@@ -109,15 +106,11 @@ irq1:
     shlq    $16, %rax
     movw    %si, %ax
     syscall
-    ret
-4:  movb    $0, kbd_pressed(%rip)
-    ret
+4:  ret
 
 .section .data
 kbd_prefix:
     .hword 0
-kbd_pressed:
-    .byte 0
 kbd_hist:
     .byte 0
-    .byte 1
+    .byte 0

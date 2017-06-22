@@ -85,10 +85,8 @@ void *elf_load(char *fn)
     srand[(i+2)%4] *= 16807;
     srand[(i+3)%4] ^= (uint64_t)elf;
 
-#if DEBUG
     if(debug&DBG_ELF)
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
-#endif
     // valid elf for this platform?
     if(elf==NULL || kmemcmp(elf->e_ident,ELFMAG,SELFMAG) ||
         elf->e_ident[EI_CLASS]!=ELFCLASS64 ||
@@ -101,9 +99,7 @@ void *elf_load(char *fn)
         // linkage information
         phdr_l->p_type!=PT_DYNAMIC
         ) {
-#if DEBUG
             kprintf("WARNING corrupt ELF binary: %s\n", fn);
-#endif
             return (void*)(-1);
     }
     /* clear autodetected irq number field */
@@ -140,10 +136,8 @@ void *elf_load(char *fn)
  */
 __inline__ void elf_loadso(char *fn)
 {
-#if DEBUG
     if(debug&DBG_ELF)
         kprintf("  ");
-#endif
     elf_load(fn);
 }
 
@@ -711,7 +705,9 @@ bool_t elf_rtlink()
                         if(!kmemcmp(strtable + s->st_name,"_lefthanded",12) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&lefthanded,1);}
                         if(!kmemcmp(strtable + s->st_name,"_debug",7) && s->st_size>0)
-                            {k=1; kmemcpy(objptr,&debug,4);}
+                            {k=4; kmemcpy(objptr,&debug,4);}
+                        if(!kmemcmp(strtable + s->st_name,"_identity",10) && s->st_size>0)
+                            {k=1; kmemcpy(objptr,&identity,1);}
                         if(!kmemcmp(strtable + s->st_name,"_rescueshell",13) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&rescueshell,1);}
                         if(!kmemcmp(strtable + s->st_name,"_keymap",8) && s->st_size==8)

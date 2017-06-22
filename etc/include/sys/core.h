@@ -39,26 +39,25 @@
 #define SYS_setirq 6
 #define SYS_exit 7
 #define SYS_swapbuf 8
-#define SYS_regservice 9
-#define SYS_stimebcd 10     // driver to CORE, cmos local date
-#define SYS_stime 11
-#define SYS_time 12
-#define SYS_alarm 13
-#define SYS_meminfo 14
-#define SYS_mmap 15         // mman functions
-#define SYS_munmap 16
-#define SYS_mprotect 17
-#define SYS_msync 18
-#define SYS_mlock 19
-#define SYS_munlock 20
-#define SYS_mlockall 21
-#define SYS_munlockall 22
-#define SYS_mapfile 23      // process functions
-#define SYS_fork 24
-#define SYS_exec 25
-#define SYS_sync 26
-#define SYS_rand 27
-#define SYS_srand 28
+#define SYS_stimebcd 9     // driver to CORE, cmos local date
+#define SYS_stime 10
+#define SYS_time 11
+#define SYS_alarm 12
+#define SYS_meminfo 13
+#define SYS_mmap 14         // mman functions
+#define SYS_munmap 15
+#define SYS_mprotect 16
+#define SYS_msync 17
+#define SYS_mlock 18
+#define SYS_munlock 19
+#define SYS_mlockall 20
+#define SYS_munlockall 21
+#define SYS_mapfile 22      // process functions
+#define SYS_fork 23
+#define SYS_exec 24
+#define SYS_sync 25
+#define SYS_rand 26
+#define SYS_srand 27
 
 #define SYS_recv 0xFFFF     // receive message
 
@@ -104,7 +103,6 @@ void lockrelease(int bit, uint64_t *ptr); // clear a bit
 void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
 void yield();                           // give up CPU time
 void seterr(int errno);                 // set libc errno
-uint64_t regservice(pid_t task);        // register service (init only)
 uint64_t time();                        // get system time
 void stime(uint64_t utctimestamp);      // set system time
 void setirq(int8_t irq);                // set irq message for this task

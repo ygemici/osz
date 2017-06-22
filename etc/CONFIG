@@ -1,5 +1,4 @@
 // BOOTBOOT Options
-// this file has to be 4096 bytes long.
 
 // requested screen dimension
 width=800
@@ -14,9 +13,6 @@ nrphymax=2
 // number of pages for message queue
 nrmqmax=1
 
-// number of pages for service pid translation
-nrsrvmax=1
-
 // scheduler quantum. A task can run 
 // continuously up to 1/quantum secs.
 quantum=10
@@ -30,7 +26,7 @@ fps=20
 //  ir = IRQ Routing Table, de = devices, sc = scheduler
 //  ms = messaging, ma = memory allocation, lo = print out system log
 //  te = run tests instead of init
-debug=te
+debug=
 
 // display transformation type, decimal number 0-3 or one of:
 //  0 mc = mono channel, rgb color

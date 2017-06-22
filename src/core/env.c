@@ -28,7 +28,6 @@
 /*** parsed values ***/
 uint64_t __attribute__ ((section (".data"))) nrphymax;
 uint64_t __attribute__ ((section (".data"))) nrmqmax;
-uint64_t __attribute__ ((section (".data"))) nrsrvmax;
 uint64_t __attribute__ ((section (".data"))) nrlogmax;
 uint64_t __attribute__ ((section (".data"))) clocksource;
 uint64_t __attribute__ ((section (".data"))) fps;
@@ -138,7 +137,6 @@ unsigned char *env_keymap(unsigned char *s)
     return s;
 }
 
-#if DEBUG
 unsigned char *env_debug(unsigned char *s)
 {
     uint64_t tmp;
@@ -187,7 +185,6 @@ unsigned char *env_debug(unsigned char *s)
     }
     return s;
 }
-#endif
 
 /*** initialize environment ***/
 /**
@@ -232,11 +229,6 @@ void env_init()
         if(!kmemcmp(env, "nrmqmax=", 8)) {
             env += 8;
             env = env_dec(env, &nrmqmax, 1, NRMQ_MAX);
-        } else
-        // number of services pages
-        if(!kmemcmp(env, "nrsrvmax=", 9)) {
-            env += 9;
-            env = env_dec(env, &nrsrvmax, 1, 16);
         } else
         // number of syslog buffer pages
         if(!kmemcmp(env, "nrlogmax=", 9)) {
@@ -296,13 +288,11 @@ void env_init()
             env += 7;
             env = env_keymap(env);
         } else
-#if DEBUG
         // output verbosity level
         if(!kmemcmp(env, "debug=", 6)) {
             env += 6;
             env = env_debug(env);
         } else
-#endif
 		// architecture specific keys
             env = envarch_parse(env);
     }

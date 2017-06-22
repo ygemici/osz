@@ -37,7 +37,8 @@
 #define SRV_sound		-5
 #define SRV_init		-6
 #define SRV_video		-7
-#define SRV_USRFIRST		-8
+
+#define NUMSRV          8
 
 // get function indeces and prototypes
 #include <sys/core.h>

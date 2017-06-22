@@ -353,6 +353,6 @@ isr_timer:
     btw     $4, %ax
     jnc     1f
     int     $1
-1:
 #endif
+1:
     ret

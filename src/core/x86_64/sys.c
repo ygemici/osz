@@ -39,6 +39,7 @@ extern char poweroffsuffix[];
 extern uint64_t pt;
 extern OSZ_rela *relas;
 extern phy_t pdpe;
+extern char *syslog_buf;
 
 extern void kprintf_center(int w, int h);
 extern void acpi_init();
@@ -46,7 +47,6 @@ extern void acpi_poweroff();
 extern void pci_init();
 extern void idle();
 #if DEBUG
-extern char *syslog_buf;
 extern void dbg_putchar(int c);
 #endif
 
@@ -57,7 +57,6 @@ phy_t __attribute__ ((section (".data"))) screen[2];
 char __attribute__ ((section (".data"))) fn[256];
 uint8_t __attribute__ ((section (".data"))) sys_fault;
 uint8_t __attribute__ ((section (".data"))) idle_first;
-pid_t __attribute__ ((section (".data"))) identity_pid;
 
 /* system tables */
 uint64_t __attribute__ ((section (".data"))) systables[8];
@@ -144,7 +143,7 @@ __inline__ void sys_enable()
         // clear ABI arguments
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
         // "return" to the task
-        "movq %1, %%rsp; movq %2, %%rbp;\n#if DEBUG\nxchg %%bx, %%bx;\n#endif\n iretq" :
+        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
         :
         "r"(firsttcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
@@ -175,7 +174,6 @@ void sys_init()
     tcb->ss = 0x10;
     idle_mapping = tcb->memroot;
     idle_first = true;
-    identity_pid = 0;
 
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
@@ -224,36 +222,25 @@ void sys_ready()
     /* reset early kernel console */
     kprintf_reset();
 
-    // TODO: move this printf to rescueshell
-    kprintf("OS/Z ready. Allocated %d pages out of %d",
-        pmm.totalpages - pmm.freepages, pmm.totalpages);
-    kprintf(", free %d.%d%%\n",
-        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
-
     /* finish up ISR initialization */
     isr_fini();
     /* log we're ready */
     syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
 
-#if DEBUG
+    /* Display ready message */
+    kprintf("OS/Z ready. Allocated %d pages out of %d",
+        pmm.totalpages - pmm.freepages, pmm.totalpages);
+    kprintf(", free %d.%d%%\n",
+        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
+    // breakpoint for bochs
+    __asm__ __volatile__("xchg %bx,%bx");
+
     if(debug&DBG_LOG)
         kprintf(syslog_buf);
-#endif
+
     /* disable scroll pause */
     scry = -1;
 
-#if DEBUG
-    __asm__ __volatile__("xchg %bx,%bx");
-#endif
-
-    /* set up user services */
-    if(identity_pid) {
-        /* start first time turn on's set up task */
-        syslog_early("Identity process started");
-        sched_awake((OSZ_tcb*)identity_pid);
-        /* we will notify init when identity exited, see isr_syscall in syscall.c */
-    } else {
-        /* notify init service to start */
-        msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
-    }
+    /* notify init service to start */
+    msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
 }
