@@ -92,6 +92,7 @@ virt_t __attribute__ ((section (".data"))) dbg_comment;
 virt_t __attribute__ ((section (".data"))) dbg_next;
 virt_t __attribute__ ((section (".data"))) dbg_start;
 virt_t __attribute__ ((section (".data"))) dbg_lastrip;
+virt_t __attribute__ ((section (".data"))) dbg_origrip;
 char __attribute__ ((section (".data"))) *dbg_err;
 uint32_t __attribute__ ((section (".data"))) *dbg_theme;
 uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x400000,0x800000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
@@ -348,8 +349,73 @@ void dbg_tcb()
     }
 }
 
+uint64_t dbg_getrip(int *idx)
+{
+    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    uint64_t i, *rsp=(uint64_t*)(tcb->rsp), *o;
+    int j=0;
+    uchar *symstr;
+    o=rsp;
+    if(j==*idx) return dbg_origrip;
+    sys_fault = false;
+    i=0;
+    if(*idx<0) *idx=0;
+    while(i++<4 && !sys_fault && rsp!=0 && 
+        ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+        if((((rsp[1]==0x23||rsp[1]==0x08) &&
+            (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault){
+            if(j==*idx)
+                return *rsp;
+            symstr=elf_sym(*rsp);
+            j++;
+            rsp=(uint64_t*)rsp[3];
+            o=0;
+            continue;
+        }
+        if(sys_fault)
+            break;
+        if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
+           (*rsp>((uint64_t)&__bss_start))) {
+            if(sys_fault)
+                break;
+            symstr=elf_sym(*rsp);
+            if(sys_fault)
+                break;
+            if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
+                (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata")) {
+                if(j==*idx)
+                    return *rsp;
+                j++;
+            }
+        }
+        rsp++;
+    }
+    if(o) {
+        rsp=o; i=0;
+        while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+            if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
+               (*rsp>((uint64_t)&__bss_start))) {
+                if(sys_fault)
+                    break;
+                symstr=elf_sym(*rsp);
+                if(sys_fault)
+                    break;
+                if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
+                    (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata")) {
+                    if(j==*idx)
+                        return *rsp;
+                    j++;
+                }
+            }
+            rsp++;
+        }
+    }
+    j--; if(*idx>j) *idx=j;
+    return dbg_origrip;
+}
+
 // disassembly instructions and dump registers, stack
-void dbg_code(uint64_t rip, uint64_t rs)
+void dbg_code(uint64_t rip, uint64_t rs, int *idx)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
     uchar *symstr;
@@ -431,21 +497,34 @@ void dbg_code(uint64_t rip, uint64_t rs)
             dbg_setpos();
         rsp = (uint64_t*)(ccb.ist3+ISR_STACK-40);
         kprintf("\n[Back trace %8x]\n", rsp);
-        fg=0xFFDD33;
+        if(*idx==0)
+            fg=0xFFDD33;
+        else
+            fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
         kprintf("%8x: %s \n",
-            rip, elf_sym(rip)
+            dbg_origrip, elf_sym(dbg_origrip)
         );
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
         sys_fault = false;
-        i=0;
+        i=0;j=1;
         while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
             if((((rsp[1]==0x23||rsp[1]==0x08) &&
                 (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
+                if(*idx==j)
+                    fg=0xFFDD33;
+                else
+                    fg=dbg_theme[3];
+                if(dbg_tui)
+                    dbg_settheme();
                 kprintf("%8x: %s   * interrupt %x * \n",*rsp, elf_sym(*rsp), rsp[3]);
+                j++;
+                fg=dbg_theme[3];
+                if(dbg_tui)
+                    dbg_settheme();
                 rsp=(uint64_t*)rsp[3];
                 o=0;
                 continue;
@@ -460,22 +539,25 @@ void dbg_code(uint64_t rip, uint64_t rs)
                 if(sys_fault)
                     break;
                 if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
-                    (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata"))
+                    (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata")) {
+                    if(*idx==j)
+                        fg=0xFFDD33;
+                    else
+                        fg=dbg_theme[3];
+                    if(dbg_tui)
+                        dbg_settheme();
                     kprintf("%8x: %s \n", *rsp, symstr);
+                    j++;
+                    fg=dbg_theme[3];
+                    if(dbg_tui)
+                        dbg_settheme();
+                }
             }
             rsp++;
         }
         if(o) {
             rsp=o; i=0;
             while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
-                if((((rsp[1]==0x23||rsp[1]==0x08) &&
-                    (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
-                    kprintf("%8x: %s   * interrupt %x * \n",*rsp, elf_sym(*rsp), rsp[3]);
-                    rsp=(uint64_t*)rsp[3];
-                    continue;
-                }
-                if(sys_fault)
-                    break;
                 if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
                    (*rsp>((uint64_t)&__bss_start))) {
                     if(sys_fault)
@@ -484,8 +566,19 @@ void dbg_code(uint64_t rip, uint64_t rs)
                     if(sys_fault)
                         break;
                     if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
-                        (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata"))
+                        (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata")) {
+                        if(*idx==j)
+                            fg=0xFFDD33;
+                        else
+                            fg=dbg_theme[3];
+                        if(dbg_tui)
+                            dbg_settheme();
                         kprintf("%8x: %s \n", *rsp, symstr);
+                        j++;
+                        fg=dbg_theme[3];
+                        if(dbg_tui)
+                            dbg_settheme();
+                    }
                 }
                 rsp++;
             }
@@ -1360,7 +1453,7 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM", "Sysinfo", "Syslog" };
     char cmd[64], c;
-    int cmdidx=0,cmdlast=0,currhist=sizeof(cmdhist);
+    int cmdidx=0,cmdlast=0,currhist=sizeof(cmdhist),dbg_bt=0;
     uint8_t m,l;
 
     // turn of scroll
@@ -1379,6 +1472,7 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
     if(rsp == 0)
         rsp = tcb->rsp;
 
+    dbg_origrip = rip;
     dbg_logpos = 0;
     dbg_next = 0;
     dbg_isshft = false;
@@ -1394,7 +1488,7 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
         if(dr6&(1<<0)||dr6&(1<<1)||dr6&(1<<2)||dr6&(1<<3))
             reason="breakpoint";
     }
-    kprintf_fade();
+    kprintf_reset();
     if(!dbg_tui) {
         dbg_putchar(13);
         dbg_putchar(10);
@@ -1477,7 +1571,7 @@ redraw:
         if(dbg_tui)
             dbg_setpos();
         __asm__ __volatile__ ("pushq %%rdi":::"%rdi");
-        if(dbg_tab==tab_code) dbg_code(rip, tcb->rsp); else
+        if(dbg_tab==tab_code) dbg_code(rip, tcb->rsp, &dbg_bt); else
         if(dbg_tab==tab_data) dbg_data(rsp); else
         if(dbg_tab==tab_tcb) dbg_tcb(); else
         if(dbg_tab==tab_msg) dbg_msg(); else
@@ -1764,6 +1858,11 @@ getcmd:
                     rsp = (rsp/s)*s;
                     goto redraw;
                 }
+                if(dbg_tab == tab_code) {
+                    if(dbg_bt>0) dbg_bt--;
+                    rip = dbg_getrip(&dbg_bt);
+                    goto redraw;
+                }
                 goto getcmd;
             }
             // PgDn
@@ -1772,6 +1871,11 @@ getcmd:
                     int s=dbg_isshft? __SLOTSIZE : __PAGESIZE;
                     rsp += s;
                     rsp = (rsp/s)*s;
+                    goto redraw;
+                }
+                if(dbg_tab == tab_code) {
+                    dbg_bt++;
+                    rip = dbg_getrip(&dbg_bt);
                     goto redraw;
                 }
                 goto getcmd;

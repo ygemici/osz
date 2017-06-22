@@ -106,14 +106,10 @@ void seterr(int errno);                 // set libc errno
 uint64_t time();                        // get system time
 void stime(uint64_t utctimestamp);      // set system time
 void setirq(int8_t irq);                // set irq message for this task
-void sleep(uint64_t sec);               // sleep the task for sec
-void usleep(uint64_t usec);             // sleep the task for micro sec
 msg_t *meminfo();                       // get memory info. msg_t.arg0=free pages, msg_t.arg1=total pages
 // see <sys/mman.h> too
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
-pid_t fork();                           // fork task
 pid_t exec(uchar *cmd);                 // start a new process in the background
-void sync();                            // flush cache buffers
 
 // rax: FFFFFFFFFFFAxxxx Init, user services
 extern void start();

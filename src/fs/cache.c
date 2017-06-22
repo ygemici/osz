@@ -1,5 +1,5 @@
 /*
- * fs/main.c
+ * fs/cache.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,34 +22,44 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief File System Service
+ * @brief Cache implementation
  */
 #include <osZ.h>
 #include "cache.h"
-#include "vfs.h"
 
-public uint8_t *_initrd_ptr;
-public uint64_t _initrd_size;
-public char *_fstab_ptr;
-public uint64_t _fstab_size;
+/* directory cache */
+uint64_t ncachedir = 0;
+cachedir_t *cachedir = NULL;
 
-void parse_fstab()
+/* block cache */
+uint64_t ncache = 0;
+cachedir_t *cache = NULL;
+
+void cache_dir(char*name,ino_t inode)
 {
+    cachedir=(cachedir_t*)realloc(cachedir,++ncachedir*sizeof(cachedir_t));
+    if(!cachedir || errno)
+        abort();
+    cachedir[ncachedir-1].inode = inode;
+    strncpy((char*)&cachedir[ncachedir-1].name, name, CACHEDIRNAME-1);
+}
+
+void cache_init()
+{
+}
+
 #if DEBUG
-    dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
-    
-    cache_dump();
-    vfs_dump();
+void cache_dump()
+{
+    int i;
+    dbg_printf("Directory cache %d:\n",ncachedir);
+    for(i=0;i<ncachedir;i++)
+        dbg_printf("%3d. %5d %s\n",i,cachedir[i].inode,cachedir[i].name);
+
+    dbg_printf("\nBlock cache %d:\n",ncache);
+    for(i=0;i<ncache;i++)
+        dbg_printf("%3d. \n",i);
+
+    dbg_printf("\n");
+}
 #endif
-}
-
-public void mountfs()
-{
-    parse_fstab();
-}
-
-void task_init(int argc, char **argv)
-{
-    cache_init();
-    vfs_init();
-}

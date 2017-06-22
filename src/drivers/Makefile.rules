@@ -7,7 +7,7 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS += -lc
 
-CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_DRIVER=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH)
+CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_DRIVER=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH) -I../../../lib/libc -I../../../lib/libc/$(ARCH) -I../../../fs
 LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/initrd/lib -lc
 
 all: $(OBJS) $(EXTOBJS) $(BINTARGET)

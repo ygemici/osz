@@ -27,16 +27,37 @@
 #include <osZ.h>
 
 typedef struct {
-    uint32_t major;
-    uint32_t minor;
+    const char *name;
+    const char *desc;
+    bool_t (*detect)(void *blk);
+} fsdrv_t;
+
+typedef struct {
+} pipe_t;
+
+typedef struct {
+} superblock_t;
+
+typedef struct {
+} directory_t;
+
+typedef struct {
+} file_t;
+
+typedef struct {
+    pid_t drivertask;
+    dev_t device;
     blksize_t blksize;
     blkcnt_t size;
     fpos_t startsec;
-    pid_t drivertask;
-} device_t;
+} blkdev_t;
 
 typedef struct {
+    pid_t drivertask;
     dev_t device;
+} chrdev_t;
+
+typedef struct {
     nlink_t nlink;
     ino_t next;
     ino_t prev;
@@ -44,32 +65,24 @@ typedef struct {
     uint16_t fs;
     uint32_t type;
     union {
-        struct {
-        } pipe;
-        struct {
-        } superblock;
-        struct {
-        } directory;
-        struct {
-        } file;
-        struct {
-        } socket;
-        struct {
-        } blkdev;
-        struct {
-        } chrdev;
+        pipe_t pipe;
+        superblock_t superblock;
+        directory_t directory;
+        file_t file;
+        blkdev_t blkdev;
+        chrdev_t chrdev;
     };
 } inode_t;
 
 typedef struct {
-    pid_t owner;
+    pid_t pid;
     fpos_t pos;
     ino_t inode;
-} file_t;
+} openfile_t;
 
-/* devices */
-extern uint64_t ndevices;
-extern device_t *devices;
+/* filesystem parsers */
+extern uint16_t nfsdrvs;
+extern fsdrv_t *fsdrvs;
 
 /* files and directories */
 extern uint64_t ninodes;
@@ -77,7 +90,11 @@ extern inode_t *inodes;
 
 /* open files, returned by lsof */
 extern uint64_t nfiles;
-extern file_t *files;
+extern openfile_t *files;
 
 extern void mknod();
+extern uint16_t _vfs_regfs(const fsdrv_t *fs);
 extern void vfs_init();
+#if DEBUG
+extern void vfs_dump();
+#endif
