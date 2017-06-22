@@ -48,6 +48,8 @@
 .global usleep
 .global meminfo
 .global rand
+.global abort
+.global _exit
 #if DEBUG
 .global dbg_printf
 #endif
@@ -309,5 +311,31 @@ meminfo:
 rand:
     xorq    %rax, %rax
     movb    $SYS_rand, %al
+    syscall
+    ret
+
+/**
+ * Abort execution and generate a core-dump.
+ *
+ * void _exit(code) 
+ */
+_exit:
+    xorq    %rax, %rax
+    xorq    %rsi, %rsi
+    movb    $SYS_exit, %al
+    syscall
+    /* fall into abort code is something really bad happened */
+/**
+ * Abort execution and generate a core-dump.
+ *
+ * void abort() 
+ */
+abort:
+    xorq    %rax, %rax
+    xorq    %rdi, %rdi
+    movb    $EFAULT, %dil
+    xorq    %rsi, %rsi
+    incb    %sil
+    movb    $SYS_exit, %al
     syscall
     ret

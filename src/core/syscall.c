@@ -31,6 +31,8 @@
 #include <sys/video.h>
 #include <sys/mman.h>
 #include "env.h"
+/* get errno strings */
+#include "../../lib/libc/strings.h"
 
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
@@ -53,6 +55,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
     char fn[128];
     phy_t tmp;
     uint64_t i,j;
+    uint64_t errn = tcb->errno;
 
     tcb->errno = SUCCESS;
     switch(EVT_FUNC(event)) {
@@ -60,12 +63,20 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         /* case SYS_seterr: in isr_syscall0 asm for performance */
         /* case SYS_rand: in isr_syscall0 asm for more bits */
         case SYS_exit:
+            /* is it a critical service that's exiting? */
+            if(tcb->pid == services[-SRV_FS] || tcb->pid == services[-SRV_UI]) {
+                kpanic("%s task panic: %s",tcb->pid == services[-SRV_FS]?"FS":"UI",
+                errn>0 && errn<sizeof(errnums) ? errnums[errn] : "EUNKWN");
+            }
+            /* power off or reboot system when init task exits */
             if(tcb->pid == services[-SRV_init]) {
-                /* power off or reboot system when init task exits */
                 if(arg0 == EX_OK)
                     sys_disable();
                 else
                     sys_reset();
+            }
+            /* is it an abort(), and core dump requested? */
+            if(arg1) {
             }
             sched_pick();
             break;

@@ -25,15 +25,7 @@
  * @brief Function implementations for string.h. Note there's a (platform)/string.S too
  */
 #include <osZ.h>
-
-public char *errnums[] = { "SUCCESS", "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", "E2BIG", "ENOEXEC",
-    "EBADF", "ECHILD", "EAGAIN", "ENOMEM", "EACCES", "EFAULT", "ENOTBLK", "EBUSY", "EEXIST", "EXDEV",
-    "ENODEV", "ENOTDIR", "EISDIR", "EINVAL", "ENFILE", "EMFILE", "ENOTTY", "ETXTBSY", "EFBIG", "ENOSPC",
-    "ESPIPE", "EROFS", "EMLNK", "EPIPE", "EDOM", "ERANGE" };
-
-public char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EMT", "FPE", "KILL", "BUS", "SEGV",
-    "SYS", "PIPE", "ALRM", "TERM", "URG", "STOP", "TSTP", "CONT", "CHLD", "TTIN", "TTOU", "IO", "XCPU", "XFSZ",
-    "VTALRM", "PROF", "WINCH", "INFO", "USR1", "USR2" };
+#include "strings.h"
 
 /* lowercase conversion table for UNICODE, see string.S tolower */
 public uint32_t translatelower[] = {

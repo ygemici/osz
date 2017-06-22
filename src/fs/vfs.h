@@ -40,7 +40,8 @@ typedef struct {
     nlink_t nlink;
     ino_t next;
     ino_t prev;
-    uint32_t flags;
+    uint16_t flags;
+    uint16_t fs;
     uint32_t type;
     union {
         struct {

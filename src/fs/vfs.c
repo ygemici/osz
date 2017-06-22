@@ -43,8 +43,17 @@ public void mknod()
 {
 }
 
+void add_inode()
+{
+    inodes=(inode_t*)realloc(inodes,ninodes+1);
+    if(!inodes || errno)
+        abort();
+}
+
 void vfs_init()
 {
     ndevices = ninodes = nfiles = 0;
     devices = NULL; inodes = NULL; files = NULL;
+
+    add_inode();
 }

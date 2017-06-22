@@ -142,7 +142,7 @@ isr_syscall0:
     /* is destination SRV_CORE? */
 1:  orq     %rbx, %rbx
     jnz     4f
-
+xchg %bx,%bx
     /*** public syscalls ***/
     /* shortcut to seterr syscall */
     cmpb    $SYS_seterr, %al

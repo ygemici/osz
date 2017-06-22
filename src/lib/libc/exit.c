@@ -27,6 +27,8 @@
 #include <osZ.h>
 #include <syscall.h>
 
+extern void _exit(int code);
+
 typedef void (*atexit_t)(void);
 
 public int atexit_num = 0;
@@ -37,18 +39,16 @@ public atexit_t *atexit_hooks = NULL;
  */
 int atexit (void (*func) (void))
 {
-    /* POSIX allows multiple registrations */
-    /*
+    /* POSIX allows multiple registrations. OS/Z don't. */
     int i;
     for(i=0;i<atexit_num;i++)
         if(atexit_hooks[i] == func)
             return 1;
-    */
     atexit_hooks = realloc(atexit_hooks, (atexit_num+1)*sizeof(atexit_t));
-    if(errno!=SUCCESS)
-        return 1;
+    if(!atexit_hooks || errno)
+        return errno;
     atexit_hooks[atexit_num++] = func;
-    return 0;
+    return SUCCESS;
 }
 
 /**
@@ -63,15 +63,7 @@ void exit(int code)
     if(atexit_num>0)
         for(i=atexit_num;i>=0;--i)
             (*atexit_hooks[i])();
-    mq_call(SRV_CORE, SYS_exit, code, 0, 0, 0, 0, 0);
-    while(1) mq_recv();
-}
-
-/**
- *  Abort execution and generate a core-dump.
- */
-void abort()
-{
-    mq_call(SRV_CORE, SYS_exit, -1, 1, 0, 0, 0, 0);
-    while(1) mq_recv();
+    _exit(code);
+    /* make gcc happy */
+    while(1);
 }

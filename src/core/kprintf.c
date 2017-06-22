@@ -371,6 +371,24 @@ void kprintf_scrollscr()
 }
 
 /**
+ * clear current line
+ */
+void kprintf_clearline()
+{
+    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    int x,y, line, tmp = ky*font->height*bootboot.fb_scanline;
+    // clear the row
+    for(y=0;y<font->height;y++){
+        line=tmp;
+        for(x=0;x<bootboot.fb_width;x+=2){
+            *((uint64_t*)(FBUF_ADDRESS + line)) = (uint64_t)0;
+            line+=8;
+        }
+        tmp+=bootboot.fb_scanline;
+    }
+}
+
+/**
  * for testing purposes, print out all characters
  */
 void kprintf_unicodetable()
@@ -503,9 +521,10 @@ newline:        kx=fx;
                     if(dbg_indump)
                         return;
 #endif
-//                    if(scry!=-1)
-                        kprintf_scrollscr();
+                    kprintf_scrollscr();
                 }
+                if(scry==-1)
+                    kprintf_clearline();
 #if DEBUG
                 if(dbg_tui)
                     dbg_setpos();

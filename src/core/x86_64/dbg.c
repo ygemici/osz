@@ -1632,11 +1632,8 @@ getcmd:
         switch(scancode){
             // ESC
             case 1: {
-                if(cmdlast==0) {
-                    cmd[0] = 'c';
-                    cmdlast = 1;
+                if(cmdlast==0)
                     goto quitdbg;
-                }
                 cmdidx = cmdlast = 0;
                 cmd[cmdidx]=0;
                 goto getcmd;

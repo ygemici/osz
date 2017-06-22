@@ -38,6 +38,7 @@ irq1:
     movw    $512, %cx
     xorq    %rax, %rax
     xorq    %rdi, %rdi
+    xorq    %rsi, %rsi
     xorq    %rdx, %rdx
 1:  inb     $0x64, %al
     andb    $1, %al
@@ -76,7 +77,7 @@ irq1:
     bt      $7, %ax
     jnc     2f
     /* keyrelease */
-    movw    $SYS_keyrelease, %si
+    movw    $SYS_keyrelease, %bx
     jmp     3f
 2:  /* keypress */
     /* handle Ctrl + Alt */
@@ -97,15 +98,15 @@ irq1:
     cmpw    $0x1, %di
     jne     5f
     int     $1
-    jmp     4f
+    xorw    %di, %di
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %dil, kbd_hist+0(%rip)
-    movw    $SYS_keypress, %si
+    movw    $SYS_keypress, %bx
 3:  /* send a key event to UI task */
     movq    $SRV_UI, %rax
     shlq    $16, %rax
-    movw    %si, %ax
+    movw    %bx, %ax
     syscall
 4:  ret
 

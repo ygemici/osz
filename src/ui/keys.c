@@ -117,6 +117,11 @@ public void keypress(uint64_t scancode, keymap_t keycode)
     uint64_t i = altmap*(512*16)+scancode*16;
     uint64_t j = modmap[keyflags];
     uint8_t k[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    // failsafe
+    if(scancode==0 && keycode==0) {
+        keyflags=0;
+        return;
+    }
     // look up scancode
     if(scancode!=0) {
         // messages sent by keyboard comes with scancode
@@ -154,6 +159,11 @@ public void keyrelease(uint64_t scancode, keymap_t keycode)
     uint64_t i = altmap*(512*16)+scancode*16;
     uint64_t j = modmap[keyflags];
     uint8_t k[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    // failsafe
+    if(scancode==0 && keycode==0) {
+        keyflags=0;
+        return;
+    }
     // look up scancode
     if(scancode!=0) {
         // messages sent by keyboard comes with scancode
