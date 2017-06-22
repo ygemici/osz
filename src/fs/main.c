@@ -25,35 +25,26 @@
  * @brief File System Service
  */
 #include <osZ.h>
+#include "vfs.h"
 
 public uint8_t *_initrd_ptr;
 public uint64_t _initrd_size;
 public char *_fstab_ptr;
 public uint64_t _fstab_size;
 
-void parse_fstab(int level)
+void parse_fstab()
 {
 #if DEBUG
-    dbg_printf("fstab #%d: %x %d\n%s\n",level,_fstab_ptr,_fstab_size,_fstab_ptr);
+    dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
 #endif
 }
 
 public void mountfs()
 {
-//    parse_fstab(2);
+    parse_fstab();
 }
-
-public size_t read(fid_t fid, void *buf, size_t size) { return 0; }
-public fid_t dup2(fid_t oldfd, fid_t newfd) { return 0; }
-public size_t write(void *buf, size_t size, fid_t fid) { return 0; }
-public fpos_t seek(fid_t fid, fpos_t offset, int whence) { return 0; }
-public fid_t dup(fid_t oldfd) { return 0; }
-public int stat(fid_t fd, stat_t *buf) { return 0; }
-
-public void pipe(){}
-public void ioctl(){}
 
 void task_init(int argc, char **argv)
 {
-//    parse_fstab(1);
+    vfs_init();
 }

@@ -340,7 +340,7 @@ output:
                 strcmp(strtable + s->st_name, "mq_dispatch") && strcmp(strtable + s->st_name, "main"))
                 /* +3: make sure not conflicting with IRQ, ack and nack */
                 printf("#define SYS_%s\t%s(%3d)\n",
-                    strtable + s->st_name, strlen(strtable + s->st_name)<8?"\t":"", i+3);
+                    strtable + s->st_name, strlen(strtable + s->st_name)<4?"\t":"", i+3);
         }
         s++;
     }

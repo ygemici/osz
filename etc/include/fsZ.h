@@ -45,30 +45,30 @@ typedef struct {
     uint8_t     magic[4];           // 512
     uint8_t     version_major;      // 516
     uint8_t     version_minor;      // 517
-    uint8_t     logsec;             // 518 logical sector size, 0=2048,1=4096(default),2=8192...
-    uint8_t     physec;             // 519 how many physical sector gives up a logical one
+    uint8_t     flags;              // 518 flags
+    uint8_t     raidtype;           // 519 raid type
     uint64_t    numsec;             // 520 total number of logical sectors
     uint64_t    numsec_hi;          //      128 bit
     uint64_t    freesec;            // 536 first free sector if fs is defragmented
     uint64_t    freesec_hi;
     uint64_t    rootdirfid;         // 552 logical sector number of root directory's inode
     uint64_t    rootdirfid_hi;
-    uint64_t    freesecfid;         // 568 inode to fragmentation records (FSZ_SectorList)
+    uint64_t    freesecfid;         // 568 inode to free records (FSZ_SectorList allocated)
     uint64_t    freesecfid_hi;
-    uint64_t    badsecfid;          // 584 inode to bad sectors table (FSZ_SectorList)
+    uint64_t    badsecfid;          // 584 inode to bad sectors table (FSZ_SectorList allocated)
     uint64_t    badsecfid_hi;
     uint64_t    indexfid;           // 600 inode to index tables (index file)
     uint64_t    indexfid_hi;
     uint8_t     encrypt[20];        // 616 inode to label meta data (label database)
-    uint16_t    maxmounts;          // 636 number of maximum mounts allowed
+    uint16_t    maxmounts;          // 636 number of maximum mounts allowed to next fsck
     uint16_t    currmounts;         // 638 current mount counter
     uint32_t    owneruuid[4];       // 640 owner UUID
     uint64_t    createdate;         // 656 creation timestamp UTC
     uint64_t    lastmountdate;      // 664
     uint64_t    lastcheckdate;      // 672
     uint64_t    lastdefragdate;     // 680
-    uint8_t     raidtype;           // 688
-    uint8_t     flags[7];           // 689
+    uint32_t    logsec;             // 688 logical sector size, 0=2048,1=4096(default),2=8192...
+    uint32_t    physec;             // 672 how many physical sector gives up a logical one
     uint8_t     reserved[320];
     uint8_t     magic2[4];          //1016
     uint32_t    checksum;           //1020 Castagnoli CRC32 of bytes at 512-1020
@@ -77,22 +77,24 @@ typedef struct {
 
 #define FSZ_MAGIC "FS/Z"
 
-#define FSZ_SB_FLAG_HIST   (1<<0)   // indicates that previous file versions are kept
-#define FSZ_SB_SOFTRAID_NONE      0    // single disk
-#define FSZ_SB_SOFTRAID0          1    // mirror
-#define FSZ_SB_SOFTRAID1          2    // concatenate
-#define FSZ_SB_SOFTRAID5          3    // xored blocks
+#define FSZ_SB_FLAG_HIST      (1<<0)   // indicates that previous file versions are kept
+
+#define FSZ_SB_SOFTRAID_NONE   0xff    // single disk
+#define FSZ_SB_SOFTRAID0          0    // mirror
+#define FSZ_SB_SOFTRAID1          1    // concatenate
+#define FSZ_SB_SOFTRAID5          5    // xored blocks
 
 /*********************************************************
  *                    I-node sector                      *
  *********************************************************/
 // fid: file id, logical sector number where the sector
 //      contains an inode.
-//sizeof = 16
+//sizeof = 32
 typedef struct {
     uint64_t    fid;
-    uint32_t    fid_hi;
-    uint32_t    numsec;
+    uint64_t    fid_hi;
+    uint64_t    numsec;
+    uint64_t    numsec_hi;
 } __attribute__((packed)) FSZ_SectorList;
 // used at several places, like free and bad block list in
 // superblock or data locators in inodes.
@@ -132,14 +134,13 @@ typedef struct {
     uint8_t     magic[4];       //   0 magic 'FSIN'
     uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to end of the sector
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
-    uint8_t     mimetype[48];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
-    uint8_t     encrypt[20];    //  60 AES encryption key part or zero
-    uint64_t    numlinks;       //  80 number of references to this inode
+    uint8_t     mimetype[56];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
+    uint8_t     encrypt[20];    //  68 AES encryption key part or zero
     uint64_t    createdate;     //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
     uint64_t    lastaccess;     //  96
     uint64_t    metalabelsec;   // 104 meta label sector
     uint64_t    metalabelsec_hi;
-    uint8_t     reserved[8];    // 120 padding
+    uint64_t    numlinks;       // 120 number of references to this inode
     // FSZ_Version oldversions[5];
     uint8_t     version5[64];   // 128 previous versions if enabled
     uint8_t     version4[64];   // 192 all the same format as the current
@@ -153,8 +154,8 @@ typedef struct {
     uint64_t        size_hi;
     FSZ_Access      owner;      // 480
     uint64_t        modifydate; // 496
-    uint32_t        filechksum; // 504 Castignioli CRC32 of data
-    uint32_t        flags;      // 508
+    uint32_t        filechksum; // 504 Castagnoli CRC32 of data
+    uint32_t        flags;      // 508 see FSZ_IN_FLAG_*
     FSZ_Access  groups[32];     // 512 List of 32 FSZ_Access entries
     uint8_t     inlinedata[FSZ_SECSIZE-1024];
 } __attribute__((packed)) FSZ_Inode;
@@ -173,11 +174,6 @@ typedef struct {
 #define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths
 #define FILETYPE_SECLST     "lst:"  // for free and bad sector lists
 #define FILETYPE_INDEX      "idx:"  // search cache, not implemented yet
-#define FILETYPE_CHARDEV    "chr:"  // character device
-#define FILETYPE_BLKDEV     "blk:"  // block device
-#define FILETYPE_FIFO       "fio:"  // First In First Out queue (named pipe)
-#define FILETYPE_SOCK       "sck:"  // socket
-#define FILETYPE_MOUNT      "mnt:"  // mount point
 
 // logical sector address to data sector translation. These file sizes
 // were calculated with 4096 sector size. That is configurable in the
@@ -197,14 +193,14 @@ typedef struct {
     FSZ_Inode.sec -> data */
 #define FSZ_IN_FLAG_DIRECT  (0<<0)
 
-/*  data size < sector size * sector size / 16 (1 M)
+/*  data size < sector size * sector size / 8 (2 M)
     FSZ_Inode.sec points to a sector directory,
     which is a sector with up to 512 sector
     addresses
     FSZ_Inode.sec -> sd -> data */
 #define FSZ_IN_FLAG_SD      (1<<0)
 
-/*  data size < sector size * sector size / 16 * sector size / 16 (256 M)
+/*  data size < sector size * sector size / 8 * sector size / 8 (1 G)
     FSZ_Inode.sec points to a sector directory,
     which is a sector with up to 512 sector
     directory addresses, which in turn point
@@ -212,19 +208,19 @@ typedef struct {
     FSZ_Inode.sec -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD2     (2<<0)
 
-/*  data size < (64 G)
+/*  data size < (512 G)
     FSZ_Inode.sec -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD3     (3<<0)
 
-/*  data size < (16 T)
+/*  data size < (256 T)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD4     (4<<0)
 
-/*  data size < (4 Peta, equals 4096 Terra)
+/*  data size < (128 Peta, equals 131072 Terra)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD5     (5<<0)
 
-/*  data size < (1 Exa, equals 1024 Peta)
+/*  data size < (64 Exa, equals 65536 Peta)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD6     (6<<0)
 
@@ -232,7 +228,7 @@ typedef struct {
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD7     (7<<0)
 
-/*  data size < (64 Zetta, equals 65536 Exa) */
+/*  data size < (32 Zetta, equals 32768 Exa) */
 #define FSZ_IN_FLAG_SD8     (8<<0)
 
 /*  data size < (16 Yotta, equals 16384 Zetta) */
@@ -266,8 +262,9 @@ typedef struct {
     uint8_t     magic[4];
     uint32_t    checksum;       // Castagnoli CRC32 of entries
     uint64_t    numentries;
+    uint64_t    numentries_hi;
     uint32_t    flags;
-    uint8_t     reserved[108];
+    uint8_t     reserved[100];
 } __attribute__((packed)) FSZ_DirEntHeader;
 
 #define FSZ_DIR_MAGIC "FSDR"

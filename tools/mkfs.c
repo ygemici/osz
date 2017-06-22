@@ -104,6 +104,7 @@ void add_superblock()
     memcpy(sb->magic,FSZ_MAGIC,4);
     sb->version_major=FSZ_VERSION_MAJOR;
     sb->version_minor=FSZ_VERSION_MINOR;
+    sb->raidtype=FSZ_SB_SOFTRAID_NONE;
     sb->logsec=secsize==2048?0:(secsize==4096?1:2); //0=2048, 1=4096, 2=8192
     sb->physec=secsize/512; //logsec/mediasectorsize
     sb->maxmounts=255;
@@ -189,6 +190,7 @@ void add_file(char *name, char *datafile)
     if(read_size<=secsize-1024) {
         // small, inline data
         in->sec=inode;
+        in->flags=FSZ_IN_FLAG_INLINE;
         memcpy(in->inlinedata,data,read_size);
         s=0;
     } else {
@@ -207,7 +209,9 @@ void add_file(char *name, char *datafile)
                 i++; ptr+=8;
             }
             size+=secsize;
-        }
+            in->flags=FSZ_IN_FLAG_SD;
+        } else
+            in->flags=FSZ_IN_FLAG_DIRECT;
         // direct sector link
         memset(fs+size+read_size,0,s-read_size);
         memcpy(fs+size,data,read_size);
@@ -240,6 +244,11 @@ void add_file(char *name, char *datafile)
          memcpy(in->filetype,"text",4);
         }
     else
+    if(!strcmp(name+strlen(name)-4,".svg"))
+        {memset(in->mimetype,0,52);memcpy(in->mimetype,"svg",3);
+         memcpy(in->filetype,"imag",4);
+        }
+    else
     if(!strcmp(name+strlen(name)-4,".gif"))
         {memset(in->mimetype,0,52);memcpy(in->mimetype,"gif",3);
          memcpy(in->filetype,"imag",4);
@@ -249,10 +258,12 @@ void add_file(char *name, char *datafile)
         {memset(in->mimetype,0,52);memcpy(in->mimetype,"png",3);
          memcpy(in->filetype,"imag",4);
         }
+    else
     if(!strcmp(name+strlen(name)-4,".jpg"))
         {memset(in->mimetype,0,52);memcpy(in->mimetype,"jpeg",4);
          memcpy(in->filetype,"imag",4);
         }
+    else
     if(!strcmp(name+strlen(name)-4,".bmp"))
         {memset(in->mimetype,0,52);memcpy(in->mimetype,"bitmap",6);
          memcpy(in->filetype,"imag",4);

@@ -1,5 +1,5 @@
 /*
- * init/main.c
+ * fs/fileop.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,35 +22,17 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Init System Service
+ * @brief File operations
  */
 #include <osZ.h>
 
-public uint8_t _identity = false;
-public uint8_t _rescueshell = false;
+public size_t read(fid_t fid, void *buf, size_t size) { return 0; }
+public fid_t dup2(fid_t oldfd, fid_t newfd) { return 0; }
+public size_t write(void *buf, size_t size, fid_t fid) { return 0; }
+public fpos_t seek(fid_t fid, fpos_t offset, int whence) { return 0; }
+public fid_t dup(fid_t oldfd) { return 0; }
+public int stat(fid_t fd, stat_t *buf) { return 0; }
 
-extern void services_init();
+public void pipe(){}
+public void ioctl(){}
 
-void task_init(int argc, char **argv)
-{
-    /* wait for sys_ready() to send an SYS_ack, meaning all
-     * drivers and subsystems finished with initialization */
-    mq_recv();
-
-    /* first thing, mount all filesystems */
-    mq_call(SRV_FS, SYS_mountfs);
-
-    if(_rescueshell) {
-        /* create a TTY window for rescue shell */
-        /* replace ourself with shell */
-//        exec("/bin/sh");
-        // never return here.
-    } else {
-        if(_identity) {
-            /* start first time turn on's set up task, wait until it returns */
-//            system("/sbin/identity");
-        }
-        // load user services
-        services_init();
-    }
-}

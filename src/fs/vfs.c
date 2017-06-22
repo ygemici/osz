@@ -1,5 +1,5 @@
 /*
- * init/main.c
+ * fs/vfs.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,35 +22,29 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Init System Service
+ * @brief Virtual File System implementation
  */
 #include <osZ.h>
+#include "vfs.h"
 
-public uint8_t _identity = false;
-public uint8_t _rescueshell = false;
+/* devices */
+uint64_t ndevices;
+device_t *devices;
 
-extern void services_init();
+/* files and directories */
+uint64_t ninodes;
+inode_t *inodes;
 
-void task_init(int argc, char **argv)
+/* open files, returned by lsof */
+uint64_t nfiles;
+file_t *files;
+
+public void mknod()
 {
-    /* wait for sys_ready() to send an SYS_ack, meaning all
-     * drivers and subsystems finished with initialization */
-    mq_recv();
+}
 
-    /* first thing, mount all filesystems */
-    mq_call(SRV_FS, SYS_mountfs);
-
-    if(_rescueshell) {
-        /* create a TTY window for rescue shell */
-        /* replace ourself with shell */
-//        exec("/bin/sh");
-        // never return here.
-    } else {
-        if(_identity) {
-            /* start first time turn on's set up task, wait until it returns */
-//            system("/sbin/identity");
-        }
-        // load user services
-        services_init();
-    }
+void vfs_init()
+{
+    ndevices = ninodes = nfiles = 0;
+    devices = NULL; inodes = NULL; files = NULL;
 }

@@ -1,5 +1,5 @@
 /*
- * init/main.c
+ * init/services.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,35 +22,16 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Init System Service
+ * @brief Routines for user services
  */
 #include <osZ.h>
 
-public uint8_t _identity = false;
-public uint8_t _rescueshell = false;
+public void start(){}
+public void stop(){}
+public void restart(){}
+public void status(){}
 
-extern void services_init();
-
-void task_init(int argc, char **argv)
+void services_init()
 {
-    /* wait for sys_ready() to send an SYS_ack, meaning all
-     * drivers and subsystems finished with initialization */
-    mq_recv();
-
-    /* first thing, mount all filesystems */
-    mq_call(SRV_FS, SYS_mountfs);
-
-    if(_rescueshell) {
-        /* create a TTY window for rescue shell */
-        /* replace ourself with shell */
-//        exec("/bin/sh");
-        // never return here.
-    } else {
-        if(_identity) {
-            /* start first time turn on's set up task, wait until it returns */
-//            system("/sbin/identity");
-        }
-        // load user services
-        services_init();
-    }
+    // TODO: load and start user services
 }

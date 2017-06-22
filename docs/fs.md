@@ -2,7 +2,8 @@ FS/Z File System
 ================
 
 It was designed to store unimagineable amounts of data. It's a classic UNIX type filesystem with inodes and superblock
-but without their limitations.
+but without their limitations. Logical sector numbers are stored in 2^128 bits to be future proof. Current implementation
+only uses 2^64 bits.
 
 Block size can be 2048, 4096, 8192... etc. The suggested sector size is multiple of 4096 which matches the TLB page size.
 That would ease the loading of sectors to memory.
@@ -63,25 +64,25 @@ Sector List
 -----------
 
 Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting fid and the number
-of sectors in that area. In list fids can go up to 2^96 and the maximum area size is 2^32*(sectorsize).
+of sectors in that area.
 
 Sector Directory
 ----------------
 
-A sector that has (sectorsize)/16 fid entries. The building block of memory paging like translations. Unlike sector lists,
+A sector that has (sectorsize)/16 fid entries. The building block of memory paging like translations. As with sector lists,
 sector directories can handle fids up to 2^128, but describe fix sized, continous areas on disk. Not to confuse with common
 directories which are used to assign names to fids.
 
 Directory
 ---------
 
-Every directory have 128 bytes long entries which gives 2^121-1 as the maximum number of entries in one directory. The first
+Every directory has 128 bytes long entries which gives 2^121-1 as the maximum number of entries in one directory. The first
 entry is reserved for the directory header, the others are normal fid and name assignments. Entries are alphabetically ordered
-thus allowing fast O(log n) look ups.
+thus allowing fast 0(log n) look ups with `libc`'s [bsearch](https://github.com/bztsrc/osz/blob/master/src/lib/libc/stdlib.c#L99).
 
-16 bytes go for the fid, 1 byte reserved for the number of characters (not bytes) in the filename. That gives 111 bytes for
+16 bytes go for the fid, 1 byte reserved for the number of multibyte characters (not bytes) in the filename. That gives 111 bytes for
 filename (maybe less in characters as UTF-8 is a variable length encoding). That's the hardest limitation in FS/Z, but let's
-face it most likely you've never seen a filename longer than 42 characters in your whole life.
+face it most likely you've never seen a filename longer than 42 characters in your whole life. Most filenames are below 16 characters.
 
 Mounts
 ------

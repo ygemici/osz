@@ -45,6 +45,9 @@ endif
 
 initrd:
 	@echo "  mkfs		initrd"
+	@# populate with static files
+	@cp -r ../etc/etc ../bin/initrd || true
+	@cp -r ../etc/root ../bin/initrd || true
 	@./mkfs.o $(INITRD) ../bin/initrd
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 	@./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
@@ -53,6 +56,7 @@ usr: $(USRFILE)
 
 $(USRFILE): ../bin/usr
 	@echo "  mkfs		usr"
+	@cp -r ../etc/include ../bin/usr/core || true
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
 	@./mkfs.o $(USRFILE) ../bin/usr
 	@./mkfs.o $(USRFILE) union bin/ "/bin" "/usr/*/bin"
@@ -102,6 +106,7 @@ ifeq ("$(wildcard ../bin/initrd)","")
 	@mkdir ../bin/initrd/bin || true
 	@mkdir ../bin/initrd/dev || true
 	@mkdir ../bin/initrd/etc || true
+	@mkdir ../bin/initrd/etc/sys || true
 	@mkdir ../bin/initrd/home || true
 	@mkdir ../bin/initrd/lib || true
 	@mkdir ../bin/initrd/lib/sys || true
@@ -113,9 +118,6 @@ ifeq ("$(wildcard ../bin/initrd)","")
 	@mkdir ../bin/initrd/usr || true
 	@mkdir ../bin/initrd/var || true
 	@mkdir ../bin/initrd/tmp || true
-	@# populate with static files
-	@cp -r ../etc/etc ../bin/initrd || true
-	@cp -r ../etc/root ../bin/initrd || true
 endif
 ifeq ("$(wildcard ../bin/usr)","")
 	@mkdir ../bin/usr || true
@@ -123,7 +125,6 @@ ifeq ("$(wildcard ../bin/usr)","")
 	@mkdir ../bin/usr/core/bin
 	@mkdir ../bin/usr/core/etc
 	@mkdir ../bin/usr/core/include
-	@cp -r ../etc/include ../bin/usr/core || true
 	@mkdir ../bin/usr/core/lib || true
 	@mkdir ../bin/usr/core/share || true
 endif
