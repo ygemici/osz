@@ -91,6 +91,11 @@ msg_t *mq_recv();
 /* sync, dispatch events (blocking, noreturn unless error) */
 uint64_t mq_dispatch();
 
+typedef struct {
+    uint64_t freepages;
+    uint64_t totalpages;
+} meminfo_t;
+
 //thread-safe libc errno at an absolute address (in TCB). Read-only, use seterr()
 extern uint16_t errno;
 
@@ -106,7 +111,7 @@ void seterr(int errno);                 // set libc errno
 uint64_t time();                        // get system time
 void stime(uint64_t utctimestamp);      // set system time
 void setirq(int8_t irq);                // set irq message for this task
-msg_t *meminfo();                       // get memory info. msg_t.arg0=free pages, msg_t.arg1=total pages
+meminfo_t meminfo();                    // get memory info
 // see <sys/mman.h> too
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
 pid_t exec(uchar *cmd);                 // start a new process in the background

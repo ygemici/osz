@@ -300,6 +300,8 @@ meminfo:
     movb    $SYS_meminfo, %al
     syscall
     callq   mymq_recv
+    movq    16(%rax), %rdx
+    movq    8(%rax), %rax
     ret
 
 /**

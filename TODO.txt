@@ -2,7 +2,7 @@
 ./src/core/syscall.c:178:            /* FIXME: naive implementation, no checks */
  --- Features ---
 ./docs/howto3-rescueshell.md:19:TODO: write howto
-./etc/include/sys/core.h:102:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
+./etc/include/sys/core.h:107:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/disasm.c:1215:            //TODO: esc

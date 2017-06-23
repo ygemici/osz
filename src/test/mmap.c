@@ -29,12 +29,12 @@
 void mmap_test()
 {
     uint64_t fm;
-    msg_t *msg=meminfo();dbg_printf("pmm: %d/%d\n",msg->arg0,msg->arg1);
-    fm=msg->arg0;
+    meminfo_t m=meminfo();dbg_printf("pmm: %d/%d\n",m.freepages,m.totalpages);
+    fm=m.freepages;
 
     void *ptr=malloc(100);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         bzt_dumpmem((void*)BSS_ADDRESS);
@@ -81,7 +81,7 @@ void mmap_test()
 #endif
 
     free(ptr2);
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         bzt_dumpmem((void*)BSS_ADDRESS);
@@ -89,7 +89,7 @@ void mmap_test()
 
     ptr=malloc(20000);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         bzt_dumpmem((void*)BSS_ADDRESS);
@@ -111,7 +111,7 @@ void mmap_test()
 
     ptr=realloc(ptr,__SLOTSIZE);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         bzt_dumpmem((void*)BSS_ADDRESS);
@@ -119,7 +119,7 @@ void mmap_test()
 
     ptr=realloc(ptr,2*__SLOTSIZE);
     dbg_printf("ptr=%x errno=%d\n",ptr, errno);
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         bzt_dumpmem((void*)BSS_ADDRESS);
@@ -143,7 +143,7 @@ void mmap_test()
 #endif
     dbg_printf("freed.\n");
 
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
 
     ptr=malloc(8);
     dbg_printf("ptr=%x errno=%d align=8\n",ptr, errno);
@@ -204,8 +204,8 @@ void mmap_test()
     free(ptr3);
     dbg_printf("freed.\n");
 
-    msg=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",msg->arg0,msg->arg1,fm-msg->arg0);
-    if(fm!=msg->arg0) {
-        dbg_printf("LEAKING!!! %d pages\n",fm-msg->arg0);
+    m=meminfo();dbg_printf("pmm: %d/%d diff: %d\n",m.freepages,m.totalpages,fm-m.freepages);
+    if(fm!=m.freepages) {
+        dbg_printf("LEAKING!!! %d pages\n",fm-m.freepages);
     }
 }

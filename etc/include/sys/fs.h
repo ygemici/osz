@@ -34,5 +34,6 @@
 #define SYS_ioctl	( 23)
 #define SYS_stat	( 25)
 #define SYS_dup2	( 27)
-#define SYS_read	( 28)
+#define SYS_getinode	( 28)
+#define SYS_read	( 29)
 

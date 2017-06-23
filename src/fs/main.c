@@ -36,7 +36,7 @@ public uint64_t _fstab_size;
 void parse_fstab()
 {
 #if DEBUG
-    dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
+//    dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
     
     cache_dump();
     vfs_dump();

@@ -46,6 +46,11 @@ public void mknod()
 {
 }
 
+public ino_t getinode(const char *path)
+{
+    return 0;
+}
+
 public uint16_t _vfs_regfs(const fsdrv_t *fs)
 {
     fsdrvs=(fsdrv_t*)realloc(fsdrvs,++nfsdrvs*sizeof(fsdrv_t));

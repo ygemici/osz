@@ -2,7 +2,7 @@
 # or for block devices /dev/(major)/(minor)/(path)
 
 # auto detected values at boot time
-none		/dev     	devfs 	rw,memory	0 1
+none		/dev     	devfs 	rw		0 1
 none		/tmp     	tmpfs	rw		0 1
 /dev/vol/0    	/boot    	vfat	ro,wheel:rw	0 2
 /dev/vol/home 	/home    	auto	users:rw	0 2

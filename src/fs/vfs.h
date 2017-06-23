@@ -93,6 +93,7 @@ extern uint64_t nfiles;
 extern openfile_t *files;
 
 extern void mknod();
+extern ino_t getinode(const char *path);
 extern uint16_t _vfs_regfs(const fsdrv_t *fs);
 extern void vfs_init();
 #if DEBUG
