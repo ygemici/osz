@@ -32,6 +32,7 @@ public uint8_t *_initrd_ptr;
 public uint64_t _initrd_size;
 public char *_fstab_ptr;
 public uint64_t _fstab_size;
+public uint32_t _pathmax;
 
 void parse_fstab()
 {

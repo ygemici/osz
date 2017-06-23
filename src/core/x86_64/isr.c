@@ -36,9 +36,6 @@ c_assert(ISR_NUMIRQ < 224);
 /* external resources */
 extern OSZ_ccb ccb;                   // CPU Control Block
 
-extern uint64_t ioapic_addr;
-extern uint64_t hpet_addr;
-
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
@@ -80,7 +77,6 @@ uint64_t __attribute__ ((section (".data"))) *idt;
 /* irq routing */
 pid_t __attribute__ ((section (".data"))) *irq_routing_table;
 uint16_t __attribute__ ((section (".data"))) isr_maxirq;
-uint64_t __attribute__ ((section (".data"))) ioapic_addr;
 
 uint64_t __attribute__ ((section (".data"))) bogomips;
 
@@ -198,13 +194,13 @@ void isr_init()
 #if ISR_CTRL == CTRL_PIC
     if(clocksource>3) clocksource=0;
     if(clocksource==0) {
-        clocksource=hpet_addr==0?TMR_PIT:TMR_HPET;
+        clocksource=systables[systable_hpet_idx]==0?TMR_PIT:TMR_HPET;
     }
 #else
     clocksource = TMR_HPET;
 #endif
     // if HPET not found, fallback to PIT
-    if(clocksource==TMR_HPET && hpet_addr!=0) {
+    if(clocksource==TMR_HPET && systables[systable_hpet_idx]!=0) {
         hpet_init();
 #if ISR_CTRL == CTRL_PIC
     } else if(clocksource==TMR_RTC) {

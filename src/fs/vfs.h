@@ -61,6 +61,7 @@ typedef struct {
     nlink_t nlink;
     ino_t next;
     ino_t prev;
+    uint64_t cachedir;
     uint16_t flags;
     uint16_t fs;
     uint32_t type;
@@ -93,7 +94,7 @@ extern uint64_t nfiles;
 extern openfile_t *files;
 
 extern void mknod();
-extern ino_t getinode(const char *path);
+extern ino_t getinode(ino_t parent,const char *path);
 extern uint16_t _vfs_regfs(const fsdrv_t *fs);
 extern void vfs_init();
 #if DEBUG

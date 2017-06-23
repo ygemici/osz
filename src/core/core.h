@@ -59,6 +59,8 @@
 #define systable_mp_idx 3
 #define systable_dsdt_idx 4
 #define systable_apic_idx 5
+#define systable_ioapic_idx 6
+#define systable_hpet_idx 7
 
 #include "msg.h"
 #include "env.h"

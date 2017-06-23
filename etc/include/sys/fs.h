@@ -33,7 +33,7 @@
 #define SYS_mountfs	( 22)
 #define SYS_ioctl	( 23)
 #define SYS_stat	( 25)
-#define SYS_dup2	( 27)
-#define SYS_getinode	( 28)
-#define SYS_read	( 29)
+#define SYS_dup2	( 28)
+#define SYS_getinode	( 29)
+#define SYS_read	( 30)
 

@@ -26,7 +26,6 @@
  */
 
 #ifndef _AS
-#ifndef _ENV_C
 extern uint64_t nrphymax;   // number of physical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
 extern uint64_t nrlogmax;   // number of syslog_buf pages
@@ -42,7 +41,7 @@ extern uint64_t quantum;    // max CPU allocation time: 1/quantum sec
 extern uint64_t fps;        // max frame per sec
 extern uint64_t display;    // display type
 extern uint64_t keymap;     // keymap
-#endif
+extern uint64_t pathmax;    // maximum length of path in bytes
 #endif
 
 /* debug levels */

@@ -35,6 +35,7 @@ uint64_t __attribute__ ((section (".data"))) debug;
 uint64_t __attribute__ ((section (".data"))) display;
 uint64_t __attribute__ ((section (".data"))) quantum;
 uint64_t __attribute__ ((section (".data"))) keymap;
+uint64_t __attribute__ ((section (".data"))) pathmax;
 uint8_t __attribute__ ((section (".data"))) identity;
 uint8_t __attribute__ ((section (".data"))) syslog;
 uint8_t __attribute__ ((section (".data"))) networking;
@@ -201,6 +202,7 @@ void env_init()
     identity = false;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
+    pathmax = 512;
     fps = 10;
     quantum = 100;
     display = DSP_MONO_COLOR;
@@ -234,6 +236,11 @@ void env_init()
         if(!kmemcmp(env, "nrlogmax=", 9)) {
             env += 9;
             env = env_dec(env, &nrlogmax, 4, 128);
+        } else
+        // maximum length of path in bytes
+        if(!kmemcmp(env, "pathmax=", 8)) {
+            env += 8;
+            env = env_dec(env, &pathmax, 512, 1024*1024);
         } else
         // disable syslog
         if(!kmemcmp(env, "syslog=", 7)) {

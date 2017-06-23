@@ -342,7 +342,7 @@ else
 	    outb	%al, \$PIC_SLAVE_DATA
 
 	    /* IOAPIC init */
-	    movq	ioapic_addr, %rax
+	    movq	systables + 8*systable_ioapic_idx, %rax
 	    orq 	%rax, %rax
 	    jnz 	1f
 	    movq	\$nopic, %rdi

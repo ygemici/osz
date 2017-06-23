@@ -694,6 +694,8 @@ bool_t elf_rtlink()
                             {k=8; *objptr=(fstab-bootboot.initrd_ptr+BUF_ADDRESS);}
                         if(!kmemcmp(strtable + s->st_name,"_fstab_size",12) && s->st_size==8)
                             {k=8; *objptr=fstab_size;}
+                        if(!kmemcmp(strtable + s->st_name,"_pathmax",9) && s->st_size>=4)
+                            {k=4; kmemcpy(objptr,&pathmax,4);}
                         if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
                             {k=4; kmemcpy(objptr,&bootboot.fb_width,4);}
                         if(!kmemcmp(strtable + s->st_name,"_fb_height",11) && s->st_size>=4)

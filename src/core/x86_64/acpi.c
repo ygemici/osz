@@ -41,9 +41,6 @@ uint32_t __attribute__ ((section (".data"))) SCI_EN;
 uint32_t __attribute__ ((section (".data"))) SCI_INT;
 uint32_t __attribute__ ((section (".data"))) SMI_CMD;
 
-extern uint64_t ioapic_addr;
-extern uint64_t hpet_addr;
-
 /**
  * pre-parse ACPI tables. Detect IOAPIC and HPET address, called by isr_init()
  */
@@ -82,10 +79,10 @@ void acpi_early(ACPI_Header *hdr)
             kentropy();
             if(ptr[0]==ACPI_APIC_IOAPIC_MAGIC) {
                 ACPI_APIC_IOAPIC *rec = (ACPI_APIC_IOAPIC*)ptr;
-                ioapic_addr = rec->address;
+                systables[systable_ioapic_idx] = rec->address;
 #if DEBUG
                 if(debug&DBG_DEVICES)
-                    kprintf("IOAPIC  %x\n", ioapic_addr);
+                    kprintf("IOAPIC  %x\n", systables[systable_ioapic_idx]);
 #endif
                 break;
             }
@@ -94,11 +91,11 @@ void acpi_early(ACPI_Header *hdr)
         }
     } else
     /* High Precision Event Timer */
-    if(!hpet_addr && !kmemcmp("HPET", hdr->magic, 4)) {
-        hpet_addr = (uint64_t)hdr;
+    if(!systables[systable_hpet_idx] && !kmemcmp("HPET", hdr->magic, 4)) {
+        systables[systable_hpet_idx] = (uint64_t)hdr;
 #if DEBUG
         if(debug&DBG_DEVICES)
-            kprintf("HPET  %x\n", hpet_addr);
+            kprintf("HPET  %x\n", systables[systable_hpet_idx]);
 #endif
     }
 }
@@ -311,8 +308,8 @@ bool_t acpi_init()
     if(systables[systable_dsdt_idx] != 0)
         acpi_parseaml((ACPI_Header *)systables[systable_dsdt_idx]);
     // fallback to default if not found and not given either
-    if(ioapic_addr==0)
-        ioapic_addr=0xFEC00000;
+    if(systables[systable_ioapic_idx]==0)
+        systables[systable_ioapic_idx]=0xFEC00000;
 
     if(PM1a_CNT==0)
         return false;

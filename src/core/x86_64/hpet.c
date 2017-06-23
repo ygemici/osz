@@ -28,8 +28,6 @@
 extern uint64_t tmrfreq;
 extern uint8_t tmrirq;
 
-uint64_t __attribute__ ((section (".data"))) hpet_addr;
-
 /**
  * Initialize HPET. Called by isr_init()
  */

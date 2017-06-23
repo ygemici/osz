@@ -28,6 +28,10 @@
 #include "vfs.h"
 #include "cache.h"
 
+extern uint64_t _pathmax;
+char *pathtmp;
+
+/* initialize in memory filesystems */
 extern void memfs_init();
 
 /* filesystem parsers */
@@ -46,8 +50,13 @@ public void mknod()
 {
 }
 
-public ino_t getinode(const char *path)
+public ino_t getinode(ino_t parent,const char *path)
 {
+    if(parent>ninodes)
+        parent=0;
+    if(path==NULL||path[0]==0)
+        return parent;
+    dbg_printf("parent: '%s'\n", cachedir[inodes[parent].cachedir].name);
     return 0;
 }
 
@@ -70,11 +79,17 @@ ino_t vfs_inode()
 
 void vfs_init()
 {
+    pathtmp=(char*)malloc(_pathmax<512?512:_pathmax);
+    if(!pathtmp || errno)
+        abort();
+
     /* initialize memory "block devices" */
     memfs_init();
     
     /* add root directory */
     cache_dir("/",vfs_inode());
+
+    getinode(0,"/etc");
 }
 
 #if DEBUG
