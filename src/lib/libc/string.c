@@ -44,22 +44,22 @@ char *strsignal(int sig)
 }
 
 /* Duplicate S, returning an identical malloc'd string.  */
-char *strdup(char *s)
+char *strdup(const char *s)
 {
     int i=strlen(s)+1;
     char *s2=(char *)malloc(i);
     if(s2!=NULL)
-        memcpy(s2,s,i);
+        memcpy(s2,(void*)s,i);
     return s2;
 }
 
 /* Duplicate S, returning an identical malloc'd string.  */
-char *strndup(char *s, size_t n)
+char *strndup(const char *s, size_t n)
 {
     int i=strnlen(s,n);
     char *s2=(char *)malloc(i+1);
     if(s2!=NULL) {
-        memcpy(s2,s,i);
+        memcpy(s2,(void*)s,i);
         s2[i]=0;
     }
     return s2;
@@ -68,9 +68,9 @@ char *strndup(char *s, size_t n)
 /* Find the first occurrence of NEEDLE in HAYSTACK.
    NEEDLE is NEEDLELEN bytes long;
    HAYSTACK is HAYSTACKLEN bytes long.  */
-void *memmem (void *haystack, size_t hl, void *needle, size_t nl)
+void *memmem (const void *haystack, size_t hl, const void *needle, size_t nl)
 {
-    char *c=haystack;
+    char *c=(char*)haystack;
     if(haystack==NULL || needle==NULL || hl==0 || nl==0 || nl>hl)
         return NULL;
     hl-=nl;
@@ -83,13 +83,30 @@ void *memmem (void *haystack, size_t hl, void *needle, size_t nl)
 }
 
 /* Find the first occurrence of NEEDLE in HAYSTACK.  */
-char *strstr (char *haystack, char *needle)
+char *strstr (const char *haystack, const char *needle)
 {
     return memmem(haystack, strlen(haystack), needle, strlen(needle));
 }
 
+/* Similar to `strstr' but this function ignores the case of both strings.  */
+char *strcasestr (const char *haystack, const char *needle)
+{
+    char *c=(char*)haystack;
+    size_t hl=strlen(haystack);
+    size_t nl=strlen(needle);
+    if(haystack==NULL || needle==NULL || hl==0 || nl==0 || nl>hl)
+        return NULL;
+    hl-=nl;
+    while(hl) {
+        if(!strncasecmp(c,needle,nl))
+            return c;
+        c++; hl--;
+    }
+    return NULL;
+}
+
 /* Return filename part of path */
-char *basename(char *s)
+char *basename(const char *s)
 {
     if(s==NULL) return NULL;
     char *r;
@@ -98,12 +115,12 @@ char *basename(char *s)
     for(i=e;i>1 && s[i-1]!='/';i--);
     if(i==e) return NULL;
     r=(char*)malloc(e-i+1);
-    memcpy(r,s+i,e-i);
+    memcpy(r,(void*)s+i,e-i);
     return r;
 }
 
 /* Return directory part of path */
-char *dirname(char *s)
+char *dirname(const char *s)
 {
     if(s==NULL) return NULL;
     char *r;
@@ -112,7 +129,7 @@ char *dirname(char *s)
     for(i=e;i>0 && s[i]!='/';i--);
     if(i==e||i==0) return NULL;
     r=(char*)malloc(i);
-    memcpy(r,s,i-1);
+    memcpy(r,(void*)s,i-1);
     return r;
 }
 

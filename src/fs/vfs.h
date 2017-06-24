@@ -24,8 +24,34 @@
  *
  * @brief Virtual File System definitions
  */
-#include <osZ.h>
 
+#ifndef _VFS_H_
+#define _VFS_H_
+
+#include <osZ.h>
+#include <fsZ.h>
+
+#define VFS_INODE_TYPE_PIPE         0
+#define VFS_INODE_TYPE_SUPERBLOCK   1
+#define VFS_INODE_TYPE_DIRECTORY    2
+#define VFS_INODE_TYPE_FILE         3
+#define VFS_INODE_TYPE_BLKDEV       4
+#define VFS_INODE_TYPE_CHRDEV       5
+
+#define VFS_INODE_FLAG_DIRTY        (1<<0)
+
+#define VFS_INODE_ROOT              0
+#define VFS_INODE_ZERODEV           1
+#define VFS_INODE_RAMDISK           2
+#define VFS_INODE_RNDDEV            3
+#define VFS_INODE_DEVFS             4
+
+#define VFS_BLKDEV_MEMFS            0
+#define VFS_MEMFS_ZERO_DEVICE       0
+#define VFS_MEMFS_RAMDISK_DEVICE    1
+#define VFS_MEMFS_RANDOM_DEVICE     2
+
+#ifndef _AS
 typedef struct {
     const char *name;
     const char *desc;
@@ -36,25 +62,33 @@ typedef struct {
 } pipe_t;
 
 typedef struct {
+    // first is FSZ_DirEntHeader, root directory
+    FSZ_DirEnt *entries;
+    ino_t storage;
+    uint16_t flags;
+    uint16_t fs;
 } superblock_t;
 
 typedef struct {
+    // first is FSZ_DirEntHeader
+    FSZ_DirEnt *entries;
 } directory_t;
 
 typedef struct {
+    void *data;
 } file_t;
 
 typedef struct {
-    pid_t drivertask;
-    dev_t device;
+    pid_t drivertask;   //major
+    dev_t device;       //minor
     blksize_t blksize;
     blkcnt_t size;
     fpos_t startsec;
 } blkdev_t;
 
 typedef struct {
-    pid_t drivertask;
-    dev_t device;
+    pid_t drivertask;   //major
+    dev_t device;       //minor
 } chrdev_t;
 
 typedef struct {
@@ -62,8 +96,6 @@ typedef struct {
     ino_t next;
     ino_t prev;
     uint64_t cachedir;
-    uint16_t flags;
-    uint16_t fs;
     uint32_t type;
     union {
         pipe_t pipe;
@@ -96,7 +128,11 @@ extern openfile_t *files;
 extern void mknod();
 extern ino_t getinode(ino_t parent,const char *path);
 extern uint16_t _vfs_regfs(const fsdrv_t *fs);
-extern void vfs_init();
+extern ino_t vfs_inode(const inode_t *inode);
 #if DEBUG
 extern void vfs_dump();
 #endif
+#endif /* _AS */
+
+#endif /* vfs.h */
+

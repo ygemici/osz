@@ -5,7 +5,7 @@ Configuration file
 ------------------
 
 The boot options are kept on the first bootable partition on the first bootable disk under FS0:\BOOTBOOT\CONFIG. When you're
-creating a disk image, the contents of that file are taken from [etc/CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG).
+creating a disk image, the contents of that file are taken from [etc/sys/config](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config).
 
 This file is a plain ASCII file with key=value pairs parsed by [core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c). No whitespaces allowed, and each pair is separated by a newline (0x0A) character.
 The file has to be one page long (4096 bytes on x86_64), and filled up with newlines. You can put comments in it with '//'.

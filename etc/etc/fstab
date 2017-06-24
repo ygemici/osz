@@ -1,10 +1,6 @@
-# note that /dev paths are parsed as /dev/(major)/(minor)
-# or for block devices /dev/(major)/(minor)/(path)
-
 # auto detected values at boot time
-none		/dev     	devfs 	rw		0 1
 none		/tmp     	tmpfs	rw		0 1
-/dev/vol/0    	/boot    	vfat	ro,wheel:rw	0 2
+/dev/vol/efi  	/boot    	vfat	ro,wheel:rw	0 2
 /dev/vol/home 	/home    	auto	users:rw	0 2
 /dev/vol/usr  	/usr     	auto	ro,wheel:rw	0 2
 /dev/vol/var  	/var     	auto	rw		0 2

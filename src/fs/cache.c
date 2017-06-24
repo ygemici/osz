@@ -35,7 +35,7 @@ cachedir_t *cachedir = NULL;
 uint64_t ncache = 0;
 cachedir_t *cache = NULL;
 
-void cache_dir(char*name,ino_t inode)
+void cache_dir(char *name,ino_t inode)
 {
     cachedir=(cachedir_t*)realloc(cachedir,++ncachedir*sizeof(cachedir_t));
     if(!cachedir || errno)
@@ -52,14 +52,15 @@ void cache_init()
 void cache_dump()
 {
     int i;
-    dbg_printf("Directory cache %d:\n",ncachedir);
+    dbg_printf("Directory cache %x %d:\n",cachedir,ncachedir);
     for(i=0;i<ncachedir;i++)
         dbg_printf("%3d. %5d %s\n",i,cachedir[i].inode,cachedir[i].name);
-
-    dbg_printf("\nBlock cache %d:\n",ncache);
+/*
+    dbg_printf("\nBlock cache %x %d:\n",cache,ncache);
     for(i=0;i<ncache;i++)
         dbg_printf("%3d. \n",i);
 
     dbg_printf("\n");
+*/
 }
 #endif

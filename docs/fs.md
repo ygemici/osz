@@ -3,7 +3,10 @@ FS/Z File System
 
 It was designed to store unimagineable amounts of data. It's a classic UNIX type filesystem with inodes and superblock
 but without their limitations. Logical sector numbers are stored in 2^128 bits to be future proof. Current implementation
-only uses 2^64 bits.
+only uses 2^64 bits (can handle drives up to 64 Zettabytes).
+
+The filesystem is designed to be recoverable as much as possible. A totally screwed up superblock can be reconstructed
+by examining the sectors on a disk.
 
 Block size can be 2048, 4096, 8192... etc. The suggested sector size is multiple of 4096 which matches the TLB page size.
 That would ease the loading of sectors to memory.

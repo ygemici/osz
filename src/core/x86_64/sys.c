@@ -123,7 +123,7 @@ void sys_disable()
 __inline__ void sys_enable()
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *firsttcb = (OSZ_tcb*)(&tmpmap);
+    OSZ_tcb *fstcb = (OSZ_tcb*)(&tmpmap);
 
 #if DEBUG
     // initialize debugger, it can be used only with task mappings
@@ -131,9 +131,9 @@ __inline__ void sys_enable()
 #endif
     sys_fault = false;
 
-    // map first device driver or if none, FS task's TCB
+    // map FS task's TCB
     kmap((uint64_t)&tmpmap,
-        (uint64_t)((ccb.hd_active[PRI_DRV]!=0?ccb.hd_active[PRI_DRV]:services[-SRV_FS])*__PAGESIZE),
+        (uint64_t)(services[-SRV_FS]*__PAGESIZE),
         PG_CORE_NOCACHE);
 
     // fake an interrupt handler return to force first task switch
@@ -145,7 +145,7 @@ __inline__ void sys_enable()
         // "return" to the task
         "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
         :
-        "r"(firsttcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
+        "a"(fstcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
         "%rsp" );
 }
 

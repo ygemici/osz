@@ -35,7 +35,9 @@
 #define FSZ_VERSION_MINOR 0
 #define FSZ_SECSIZE 4096
 
-// fid is a file id, a logical sector address of an inode.
+// fid is a file id, a logical sector address of an inode. Logical sector addresses
+// are 128 bits long to be future proof, although currently only 64 bits used. That
+// gives you to total capacity of 64 Zettabytes current implementation can handle.
 
 /*********************************************************
  *            1st sector, the super block                *
@@ -49,27 +51,35 @@ typedef struct {
     uint8_t     raidtype;           // 519 raid type
     uint64_t    numsec;             // 520 total number of logical sectors
     uint64_t    numsec_hi;          //      128 bit
-    uint64_t    freesec;            // 536 first free sector if fs is defragmented
-    uint64_t    freesec_hi;
+    uint64_t    freesec;            // 536 first free sector if fs is defragmented, otherwise
+    uint64_t    freesec_hi;         //     it's the last used sector+1
     uint64_t    rootdirfid;         // 552 logical sector number of root directory's inode
     uint64_t    rootdirfid_hi;
     uint64_t    freesecfid;         // 568 inode to free records (FSZ_SectorList allocated)
     uint64_t    freesecfid_hi;
     uint64_t    badsecfid;          // 584 inode to bad sectors table (FSZ_SectorList allocated)
     uint64_t    badsecfid_hi;
-    uint64_t    indexfid;           // 600 inode to index tables (index file)
+    uint64_t    indexfid;           // 600 inode to search index. Zero if not indexed
     uint64_t    indexfid_hi;
-    uint8_t     encrypt[20];        // 616 inode to label meta data (label database)
-    uint16_t    maxmounts;          // 636 number of maximum mounts allowed to next fsck
-    uint16_t    currmounts;         // 638 current mount counter
-    uint32_t    owneruuid[4];       // 640 owner UUID
-    uint64_t    createdate;         // 656 creation timestamp UTC
-    uint64_t    lastmountdate;      // 664
-    uint64_t    lastcheckdate;      // 672
-    uint64_t    lastdefragdate;     // 680
-    uint32_t    logsec;             // 688 logical sector size, 0=2048,1=4096(default),2=8192...
-    uint32_t    physec;             // 672 how many physical sector gives up a logical one
-    uint8_t     reserved[320];
+    uint64_t    metafid;            // 616 inode to meta labels file. Zero if there's no meta label
+    uint64_t    metafid_hi;
+    uint64_t    journalfid;         // 632 inode to journal file. Zero if journaling is turned off
+    uint64_t    journalfid_hi;
+    uint64_t    journalstr;         // 648 logical sector inside journal file where buffer starts
+    uint64_t    journalstr_hi;
+    uint64_t    journalend;         // 664 logical sector inside journal file where buffer ends
+    uint64_t    journalend_hi;
+    uint8_t     encrypt[20];        // 680 encryption mask for AES or zero
+    uint16_t    maxmounts;          // 700 number of maximum mounts allowed to next fsck
+    uint16_t    currmounts;         // 702 current mount counter
+    uint32_t    owneruuid[4];       // 704 owner UUID
+    uint64_t    createdate;         // 720 creation timestamp UTC
+    uint64_t    lastmountdate;      // 728
+    uint64_t    lastcheckdate;      // 736
+    uint64_t    lastdefragdate;     // 744
+    uint32_t    logsec;             // 752 logical sector size, 0=2048,1=4096(default),2=8192...
+    uint32_t    physec;             // 756 how many physical sector gives up a logical one
+    uint8_t     reserved[256];
     uint8_t     magic2[4];          //1016
     uint32_t    checksum;           //1020 Castagnoli CRC32 of bytes at 512-1020
     uint8_t     raidspecific[FSZ_SECSIZE-1024];
@@ -78,17 +88,22 @@ typedef struct {
 #define FSZ_MAGIC "FS/Z"
 
 #define FSZ_SB_FLAG_HIST      (1<<0)   // indicates that previous file versions are kept
+#define FSZ_SB_FLAG_BIGINODE  (1<<1)   // indicates inode size is 2048 (ACL size 96 instead of 32)
 
 #define FSZ_SB_SOFTRAID_NONE   0xff    // single disk
 #define FSZ_SB_SOFTRAID0          0    // mirror
 #define FSZ_SB_SOFTRAID1          1    // concatenate
 #define FSZ_SB_SOFTRAID5          5    // xored blocks
 
+/* Encryption: the mask is xored with the hash(password+salt) to get the AES key. This way
+ * the encrypted disk doesn't need to be rewritten when password changes. Also you can
+ * re-encrypt the disk without changing the password. */
+ 
 /*********************************************************
  *                    I-node sector                      *
  *********************************************************/
-// fid: file id, logical sector number where the sector
-//      contains an inode.
+// fid: file id, logical sector number where the sector contains an inode.
+
 //sizeof = 32
 typedef struct {
     uint64_t    fid;
@@ -96,8 +111,7 @@ typedef struct {
     uint64_t    numsec;
     uint64_t    numsec_hi;
 } __attribute__((packed)) FSZ_SectorList;
-// used at several places, like free and bad block list in
-// superblock or data locators in inodes.
+// used at several places, like free and bad block list inodes.
 
 //sizeof = 16, one Access Control Entry, UUID without the last byte
 typedef struct {
@@ -122,10 +136,10 @@ typedef struct {
     uint64_t    sec_hi;
     uint64_t    size;
     uint64_t    size_hi;
-    FSZ_Access  owner;
     uint64_t    modifydate;
     uint32_t    filechksum;
     uint32_t    flags;
+    FSZ_Access  owner;
 } __attribute__((packed)) FSZ_Version;
 
 // if inode.fid == inode.sec => inline data
@@ -135,11 +149,11 @@ typedef struct {
     uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to end of the sector
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
     uint8_t     mimetype[56];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
-    uint8_t     encrypt[20];    //  68 AES encryption key part or zero
+    uint8_t     encrypt[20];    //  68 AES encryption key mask or zero
     uint64_t    createdate;     //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
     uint64_t    lastaccess;     //  96
-    uint64_t    metalabelsec;   // 104 meta label sector
-    uint64_t    metalabelsec_hi;
+    uint64_t    metalabel;      // 104 sector offset into meta labels file
+    uint64_t    metalabel_hi;
     uint64_t    numlinks;       // 120 number of references to this inode
     // FSZ_Version oldversions[5];
     uint8_t     version5[64];   // 128 previous versions if enabled
@@ -152,12 +166,17 @@ typedef struct {
     uint64_t        sec_hi;
     uint64_t        size;       // 464 file size
     uint64_t        size_hi;
-    FSZ_Access      owner;      // 480
-    uint64_t        modifydate; // 496
-    uint32_t        filechksum; // 504 Castagnoli CRC32 of data
-    uint32_t        flags;      // 508 see FSZ_IN_FLAG_*
+    uint64_t        modifydate; // 480
+    uint32_t        filechksum; // 488 Castagnoli CRC32 of data
+    uint32_t        flags;      // 492 see FSZ_IN_FLAG_*
+    FSZ_Access      owner;      // 496
+//if BIGINODE==0
     FSZ_Access  groups[32];     // 512 List of 32 FSZ_Access entries
     uint8_t     inlinedata[FSZ_SECSIZE-1024];
+//else
+//  FSZ_Access  groups[96];     // 512 List of 96 FSZ_Access entries
+//  uint8_t     inlinedata[FSZ_SECSIZE-2048];
+//endif
 } __attribute__((packed)) FSZ_Inode;
 
 #define FSZ_IN_MAGIC "FSIN"
@@ -171,9 +190,16 @@ typedef struct {
 // special entities, 4th character always ':'
 #define FILETYPE_DIR        "dir:"  // see below
 #define FILETYPE_SYMLINK    "url:"  // symbolic link, inlined data is a path
-#define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths
-#define FILETYPE_SECLST     "lst:"  // for free and bad sector lists
-#define FILETYPE_INDEX      "idx:"  // search cache, not implemented yet
+#define FILETYPE_UNION      "uni:" // directory union, inlined data is a zero separated list of paths with jokers
+// mime types for filesystem specific files
+// for FILETYPE_DIR
+#define MIMETYPE_DIR_ROOT   "fs-root"  // root directory (for recovery)
+// for FILETYPE_REG_APP
+#define MIMETYPE_APP_FREELST "fs-free-sectors" // for free sector list
+#define MIMETYPE_APP_BADLST  "fs-bad-sectors"  // for bad sector list
+#define MIMETYPE_APP_INDEX   "fs-search-index" // search cache
+#define MIMETYPE_APP_META    "fs-meta-labels"  // meta labels
+#define MIMETYPE_APP_JOURNAL "fs-journal-data" // journaling records
 
 // logical sector address to data sector translation. These file sizes
 // were calculated with 4096 sector size. That is configurable in the
@@ -184,7 +210,7 @@ typedef struct {
 
 /*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
-    the data is included in the inode sector at 1024
+    the data is included in the inode sector at 1024 (or 2048 if BIGINODE)
     FSZ_Inode.sec -> FSZ_Inode.sec  */
 #define FSZ_IN_FLAG_INLINE  (0xFF<<0)
 
@@ -240,13 +266,13 @@ typedef struct {
 #define FSZ_IN_FLAG_SECLIST (0x80<<0)
 
 /*  indirect sector list
-    FSZ_Inode.sec points to a sector directory with FSZ_SectorList
+    FSZ_Inode.sec points to a sector directory with FSZ_SectorLists
     FSZ_Inode.sec -> sd-> sl -> data */
 #define FSZ_IN_FLAG_SECLIST1 (0x81<<0)
 
 /*  double-indirect sector list
     FSZ_Inode.sec points to a sector directory pointing to
-    sector directories with FSZ_SectorList
+    sector directories with FSZ_SectorLists
     FSZ_Inode.sec -> sd-> sd -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST2 (0x82<<0)
 
@@ -280,5 +306,33 @@ typedef struct {
     uint8_t     length;             // number of UNICODE characters in name
     uint8_t     name[111];          // zero terminated UTF-8 string
 } __attribute__((packed)) FSZ_DirEnt;
+
+/*********************************************************
+ *                     Meta labels                       *
+ *********************************************************/
+
+/* meta labels are list of sector aligned, zero terminated JSON strings,
+ * filled up with zeros to be multiple of sector size. The metalabel sector
+ * in inode points to the start position.
+ *
+ * Example (assuming meta label file is continous and starts at lba 1234):
+ * {"icon":"/usr/firefox/share/icon.png"} (zeros padding to sector size)
+ * {"icon":"/usr/vlc/share/icon.svg","downloaded":"http://videolan.org"} (zeros, at least one)
+ *
+ * Inode of /usr/firefox/bin/firefox: metalabel=1234
+ * Inode of /usr/vlc/bin/vlc: metalabel=1235
+ */
+
+/*********************************************************
+ *                    Search index                       *
+ *********************************************************/
+
+/* to be specified */
+
+/*********************************************************
+ *                    Journal data                       *
+ *********************************************************/
+
+/* to be specified */
 
 #endif /* fsZ.h */

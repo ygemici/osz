@@ -11,6 +11,7 @@
 #include <efi.h>
 #include <efilib.h>
 #include <efiprot.h>
+#include <efigpt.h>
 #define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
 #include "tinf.h"
@@ -104,6 +105,9 @@ unsigned char *kne;
 int reqwidth = 1024, reqheight = 768;
 char *kernelname="lib/sys/core";
 
+// alternative environment name
+char *cfgname="etc/sys/config";
+
 int atoi(unsigned char*c)
 {
     int r=0;
@@ -147,7 +151,7 @@ int oct2bin(unsigned char *str,int size)
 #include "fs.h"
 
 /**
- * Parse FS0:\BOOTBOOT\CONFIG
+ * Parse FS0:\BOOTBOOT\CONFIG or /etc/sys/config
  */
 EFI_STATUS
 ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
@@ -156,11 +160,13 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
     int i;
     if(len>PAGESIZE-1) {
         len=PAGESIZE-1;
-        cfg[len]=0;
     }
+    cfg[len]=0;
     DBG(L" * Environment @%lx %d bytes\n",cfg,len);
-    while(ptr<cfg+len && ptr[0]!=0) {
+    while(ptr<cfg+len) {
         ptr++;
+        if(ptr[0]==0)
+            break;
         if(ptr[0]==' '||ptr[0]=='\t'||ptr[0]=='\r'||ptr[0]=='\n')
             continue;
         if(ptr[0]=='/'&&ptr[1]=='/') {
@@ -239,7 +245,6 @@ GetLFB()
            info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor &&
           (info->PixelFormat != PixelBitMask || info->PixelInformation.ReservedMask!=0)))
             continue;
-        DBG(L"    %c%d %d x %d\n", i==nativeMode?'>':' ', i, info->HorizontalResolution, info->VerticalResolution);
         // get the mode for the closest resolution
         if( info->HorizontalResolution >= (unsigned int)reqwidth && 
             info->VerticalResolution >= (unsigned int)reqheight &&
@@ -248,6 +253,8 @@ GetLFB()
                 sw = info->HorizontalResolution;
                 sh = info->VerticalResolution;
         }
+        DBG(L"    %c%d %d x %d\n", i==selectedMode?'+':(i==nativeMode?'-':' '),
+            i, info->HorizontalResolution, info->VerticalResolution);
     }
     // if we have found a new, better mode
     if(selectedMode != 9999 && selectedMode != nativeMode) {
@@ -294,8 +301,9 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
     status = uefi_call_wrapper(RootDir->Open, 5, RootDir, &FileHandle, FileName, 
         EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
     if (EFI_ERROR(status)) {
-        Print(L"%s not found\n",FileName);
-        return report(status,L"Open error");
+        return status;
+//        Print(L"%s not found\n",FileName);
+//        return report(status,L"Open error");
     }
     FileInfo = LibFileInfo(FileHandle);
     if (FileInfo == NULL) {
@@ -396,13 +404,19 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     EFI_GUID lipGuid = LOADED_IMAGE_PROTOCOL;
     EFI_GUID RomTableGuid = EFI_PCI_OPTION_ROM_TABLE_GUID;
     EFI_PCI_OPTION_ROM_TABLE *RomTable;
+    EFI_GUID bioGuid = BLOCK_IO_PROTOCOL;
+    EFI_BLOCK_IO *bio;
+    EFI_HANDLE *handles = NULL;
     EFI_STATUS status=EFI_SUCCESS;
     EFI_MEMORY_DESCRIPTOR *memory_map = NULL, *mement;
-    UINTN i, memory_map_size=0, map_key=0, desc_size=0;
+    EFI_PARTITION_TABLE_HEADER *gptHdr;
+    EFI_PARTITION_ENTRY *gptEnt;
+    UINTN i, j=0, handle_size=0,memory_map_size=0, map_key=0, desc_size=0;
     UINT32 desc_version=0;
+    UINT64 lba_s=0,lba_e=0;
     MMapEnt *mmapent, *last=NULL;
     CHAR16 **argv, *initrdfile, *configfile, *help=
-        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended\n  to the environment.\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
+        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended to the\n  environment. If INITRD not found, it will use the first bootable partition\n  in GPT. If CONFIG not found, it will look for /etc/sys/config inside\n  the INITRD (or partition).\n\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
     CHAR8 *ptr;
 
@@ -446,7 +460,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         : "=b"(bootboot->bspid) : : );
 
     // locate InitRD in ROM
-    DBG(L" * Locate initrd in Option ROMs\n");
+    DBG(L" * Locate initrd in Option ROMs%s\n",L"");
     RomTable = NULL; initrd_ptr = NULL; initrd_len = 0;
     status=EFI_LOAD_ERROR;
     // first, try RomTable
@@ -502,22 +516,69 @@ foundinrom:
 
     // fall back to INITRD on filesystem
     if(EFI_ERROR(status) || initrd_ptr==NULL){
+        DBG(L" * Locate initrd in %s\n",initrdfile);
         // Initialize FS with the DeviceHandler from loaded image protocol
-        status = uefi_call_wrapper(systab->BootServices->HandleProtocol,
+        status = uefi_call_wrapper(BS->HandleProtocol,
                     3,
                     image,
                     &lipGuid,
                     (void **) &loaded_image);
-        if (EFI_ERROR(status) || loaded_image==NULL) {
-            return report(status, L"HandleProtocol LoadedImageProtocol");
+        if (!EFI_ERROR(status) && loaded_image!=NULL) {
+            status=EFI_LOAD_ERROR;
+            RootDir = LibOpenRoot(loaded_image->DeviceHandle);
+            // load ramdisk
+            status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
         }
-        status=EFI_LOAD_ERROR;
-        RootDir = LibOpenRoot(loaded_image->DeviceHandle);
-
-        // load ramdisk
-        status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
     }
-    if(status==EFI_SUCCESS){
+    // if even that failed, look for a partition
+    if(status!=EFI_SUCCESS || initrd_len==0){
+        DBG(L" * Locate root fs in GPT%s\n",L"");
+        status = uefi_call_wrapper(BS->LocateHandle, 5, ByProtocol, &bioGuid, NULL, &handle_size, handles);
+        if (status!=EFI_BUFFER_TOO_SMALL || handle_size==0) {
+            return report(EFI_OUT_OF_RESOURCES,L"LocateHandle getSize");
+        }
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (handle_size+PAGESIZE-1)/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&handles);
+        if(handles==NULL)
+            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&initrd_ptr);
+        if (initrd_ptr == NULL)
+            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+        lba_s=lba_e=0;
+        status = uefi_call_wrapper(BS->LocateHandle, 5, ByProtocol, &bioGuid, NULL, &handle_size, handles);
+        for(i=0;i<handle_size/sizeof(EFI_HANDLE);i++) {
+            // we have to do it the hard way. HARDDRIVE_DEVICE_PATH does not return partition type...
+            status = uefi_call_wrapper(BS->HandleProtocol, 3, handles[i], &bioGuid, (void **) &bio);
+            if(status!=EFI_SUCCESS || bio==NULL || bio->Media->BlockSize==0)
+                continue;
+            status=bio->ReadBlocks(bio, bio->Media->MediaId, 1, PAGESIZE, initrd_ptr);
+            if(status!=EFI_SUCCESS || CompareMem(initrd_ptr,EFI_PTAB_HEADER_ID,8))
+                continue;
+            gptHdr = (EFI_PARTITION_TABLE_HEADER*)initrd_ptr;
+            ptr= initrd_ptr + (gptHdr->PartitionEntryLBA-1) * bio->Media->BlockSize;
+            for(j=0;j<27 && j<gptHdr->NumberOfPartitionEntries;j++) {
+                gptEnt=(EFI_PARTITION_ENTRY*)ptr;
+                if((ptr[0]==0 && ptr[1]==0 && ptr[2]==0 && ptr[3]==0) || gptEnt->EndingLBA==0)
+                    break;
+                if(gptEnt->Attributes & EFI_PART_USED_BY_OS) {
+                    lba_s=gptEnt->StartingLBA; lba_e=gptEnt->EndingLBA;
+                    initrd_len = (((lba_e-lba_s)*bio->Media->BlockSize + PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+                    status=EFI_SUCCESS;
+                    goto partok;
+                }
+                ptr+=gptHdr->SizeOfPartitionEntry;
+            }
+        }
+partok:
+        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, 1);
+        if(initrd_len>0 && bio!=NULL) {
+            uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, initrd_len/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&initrd_ptr);
+            if (initrd_ptr == NULL)
+                return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+            status=bio->ReadBlocks(bio, bio->Media->MediaId, lba_s, initrd_len, initrd_ptr);            
+        } else
+            status=EFI_LOAD_ERROR;
+    }
+    if(status==EFI_SUCCESS && initrd_len>0){
         //check if initrd is gzipped
         if(initrd_ptr[0]==0x1f && initrd_ptr[1]==0x8b){
             unsigned char *addr,f;
@@ -560,11 +621,23 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             initrd_len=len;
         }
         DBG(L" * Initrd loaded @%lx %d bytes\n",initrd_ptr,initrd_len);
-        kne=NULL;
+        kne=env_ptr=NULL;
         // if there's an environment file, load it
-        if(loaded_image!=NULL && LoadFile(configfile,&env_ptr,&env_len)==EFI_SUCCESS)
+        if(loaded_image!=NULL) {
+            if(LoadFile(configfile,&env_ptr,&env_len)!=EFI_SUCCESS)
+                env_ptr=NULL;
+        }
+        if(env_ptr==NULL) {
+            DBG(L" * Alternative environment%s\n",L"");
+            core_len=0; j=0;
+            while(env_ptr==NULL && fsdrivers[j]!=NULL) {
+                env_ptr=(UINT8*)(*fsdrivers[j++])((unsigned char*)initrd_ptr,cfgname);
+            }
+            env_len=core_len; core_len=0;
+        }
+        if(env_ptr!=NULL) {
             ParseEnvironment(env_ptr,env_len, argc, argv);
-        else {
+        } else {
             env_len=0;
             uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
             if (env_ptr == NULL) {
@@ -764,7 +837,6 @@ get_memory_map:
             "retq"
             : : "a"(entrypoint): "memory" );
     }
-
-    return status;
+    return report(status,L"FS0:\\BOOTBOOT\\INITRD not found");
 }
 

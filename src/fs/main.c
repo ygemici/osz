@@ -34,23 +34,32 @@ public char *_fstab_ptr;
 public uint64_t _fstab_size;
 public uint32_t _pathmax;
 
+extern void cache_init();
+extern void vfs_init();
+extern void devfs_init();
+
 void parse_fstab()
 {
 #if DEBUG
-//    dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
-    
-    cache_dump();
     vfs_dump();
+
+    dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
 #endif
 }
 
 public void mountfs()
 {
+cache_dump();
     parse_fstab();
 }
 
 void task_init(int argc, char **argv)
 {
+    /* allocate directory and block caches */
     cache_init();
+    /* add root directory. first inode must be the root */
     vfs_init();
+    /* initialize dev directory, and memory "block devices" */
+    devfs_init();
+cache_dump();
 }

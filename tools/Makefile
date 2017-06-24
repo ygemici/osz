@@ -1,6 +1,8 @@
 include ../Config
+NOINITRD = 0
 INITRD = ../bin/ESP/BOOTBOOT/INITRD
 ESPFILE = ../bin/esp.part
+SYSFILE = ../bin/sys.part
 USRFILE = ../bin/usr.part
 VARFILE = ../bin/var.part
 HOMEFILE = ../bin/home.part
@@ -28,12 +30,14 @@ imgclean:
 
 esp: initrd
 	@echo "  mkfs		boot (ESP)"
-	@cp -f ../etc/CONFIG ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
-ifneq ("$(wildcard ../loader/bootboot.efi)","")
-	@cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true
-endif
+ifneq ($(NOINITRD),1)
+	@cp -f ../etc/etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.bin)","")
 	@cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
+endif
+endif
+ifneq ("$(wildcard ../loader/bootboot.efi)","")
+	@cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
 	@mkfs.vfat -F 12 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
@@ -44,13 +48,24 @@ endif
 	@rmdir ../bin/tmp
 
 initrd:
+ifeq ($(NOINITRD),1)
+	@echo "  mkfs		root"
+else
 	@echo "  mkfs		initrd"
+endif
 	@# populate with static files
 	@cp -r ../etc/etc ../bin/initrd || true
 	@cp -r ../etc/root ../bin/initrd || true
+ifeq ($(NOINITRD),1)
+ifneq ("$(wildcard ../loader/bootboot.bin)","")
+	@cp ../loader/bootboot.bin ../bin/initrd/lib/sys/loader || true
+endif
+	@./mkfs.o $(SYSFILE) ../bin/initrd
+else
 	@./mkfs.o $(INITRD) ../bin/initrd
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
-	@./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
+	@#./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
+endif
 
 usr: $(USRFILE)
 
@@ -97,27 +112,31 @@ endif
 ifeq ("$(wildcard ../bin/ESP/EFI/BOOT)","")
 	@mkdir -p ../bin/ESP/EFI/BOOT
 endif
+ifneq ($(NOINITRD),1)
 ifeq ("$(wildcard ../bin/ESP/BOOTBOOT)","")
 	@mkdir ../bin/ESP/BOOTBOOT
+endif
 endif
 ifeq ("$(wildcard ../bin/initrd)","")
 	@# to be kept in memory
 	@mkdir ../bin/initrd || true
 	@mkdir ../bin/initrd/bin || true
-	@mkdir ../bin/initrd/dev || true
 	@mkdir ../bin/initrd/etc || true
 	@mkdir ../bin/initrd/etc/sys || true
-	@mkdir ../bin/initrd/home || true
 	@mkdir ../bin/initrd/lib || true
 	@mkdir ../bin/initrd/lib/sys || true
 	@mkdir ../bin/initrd/root || true
 	@mkdir ../bin/initrd/sbin || true
+ifeq ($(NOINITRD),1)
+	@mkdir ../bin/initrd/dev || true
+	@mkdir ../bin/initrd/home || true
 	@mkdir ../bin/initrd/run || true
 	@# mount points
 	@mkdir ../bin/initrd/sys || true
 	@mkdir ../bin/initrd/usr || true
 	@mkdir ../bin/initrd/var || true
 	@mkdir ../bin/initrd/tmp || true
+endif
 endif
 ifeq ("$(wildcard ../bin/usr)","")
 	@mkdir ../bin/usr || true

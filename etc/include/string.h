@@ -45,49 +45,49 @@ extern void *memmove (void *dest, void *src, size_t n);
 extern void *memset (void *s, int c, size_t n);
 
 /* Compare N bytes of S1 and S2.  */
-extern int memcmp (void *s1, void *s2, size_t n);
+extern int memcmp (const void *s1, const void *s2, size_t n);
 /* These are not UTF-8 safe */
-extern void *memchr (void *s, int c, size_t n);
-extern void *memrchr (void *s, int c, size_t n);
+extern void *memchr (const void *s, int c, size_t n);
+extern void *memrchr (const void *s, int c, size_t n);
 /* Find the first occurrence of NEEDLE in HAYSTACK.
    NEEDLE is NEEDLELEN bytes long;
    HAYSTACK is HAYSTACKLEN bytes long.  */
-extern void *memmem (void *haystack, size_t haystacklen, void *needle, size_t needlelen);
+extern void *memmem (const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
 
 /* Copy SRC to DEST.  */
-extern char *strcpy (char *dest, char *src);
+extern char *strcpy (char *dest, const char *src);
 /* Copy no more than N characters of SRC to DEST.  */
-extern char *strncpy (char *dest, char *src, size_t n);
+extern char *strncpy (char *dest, const char *src, size_t n);
 
 /* Append SRC onto DEST.  */
-extern char *strcat (char *dest, char *src);
+extern char *strcat (char *dest, const char *src);
 /* Append no more than N characters from SRC onto DEST.  */
-extern char *strncat (char *dest, char *src, size_t n);
+extern char *strncat (char *dest, const char *src, size_t n);
 
 /* Compare S1 and S2.  */
-extern int strcmp (char *s1, char *s2);
+extern int strcmp (const char *s1, const char *s2);
 /* Compare N characters of S1 and S2.  */
-extern int strncmp (char *s1, char *s2, size_t n);
+extern int strncmp (const char *s1, const char *s2, size_t n);
 
 /* Duplicate S, returning an identical malloc'd string.  */
-extern char *strdup (char *s);
-extern char *strndup (char *s, size_t n);
+extern char *strdup (const char *s);
+extern char *strndup (const char *s, size_t n);
 
 /* In OS/Z, these are UTF-8 safe */
-extern char *strchr (char *s, int c);
-extern char *strrchr (char *s, int c);
+extern char *strchr (const char *s, int c);
+extern char *strrchr (const char *s, int c);
 /* Find the first occurrence of NEEDLE in HAYSTACK.  */
-extern char *strstr (char *haystack, char *needle);
+extern char *strstr (const char *haystack, const char *needle);
 
 /* Divide S into tokens separated by characters in DELIM.  */
 extern char *strtok (char *s, char *delim);
 extern char *strtok_r (char *s, char *delim, char **ptr);
 /* Similar to `strstr' but this function ignores the case of both strings.  */
-extern char *strcasestr (char *haystack, char *needle);
-extern size_t strlen (char *s);
-extern size_t strnlen (char *s, size_t maxlen);
+extern char *strcasestr (const char *haystack, const char *needle);
+extern size_t strlen (const char *s);
+extern size_t strnlen (const char *s, size_t maxlen);
 /* Return the number of multibytes (UTF-8 sequences) in S. */
-extern size_t mbstrlen (char *s);
+extern size_t mbstrlen (const char *s);
 /* see stdlib's mblen()
 extern size_t mbstrnlen (char *s, size_t maxlen); */
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
@@ -96,17 +96,17 @@ extern char *strerror (int errnum);
    The least-significant bit is position 1, the most-significant 64.  */
 extern uint64_t ffs (uint64_t i);
 /* Compare S1 and S2, ignoring case.  */
-extern int strcasecmp (char *s1, char *s2);
+extern int strcasecmp (const char *s1, const char *s2);
 /* Compare no more than N chars of S1 and S2, ignoring case.  */
-extern int strncasecmp (char *s1, char *s2, size_t n);
+extern int strncasecmp (const char *s1, const char *s2, size_t n);
 /* Return the next DELIM-delimited token from *STRINGP,
    terminating it with a '\0', and update *STRINGP to point past it.  */
 extern char *strsep (char **stringp, char *delim);
 /* Return a string describing the meaning of the signal number in SIG.  */
 extern char *strsignal (int sig);
 /* Return filename part of path */
-extern char *basename (char *s);
+extern char *basename (const char *s);
 /* Return directory part of path */
-extern char *dirname (char *s);
+extern char *dirname (const char *s);
 
 #endif /* string.h  */

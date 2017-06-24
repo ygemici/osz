@@ -29,6 +29,11 @@
 #include <syscall.h>
 #include "env.h"
 
+// failsafe
+#ifndef SYS_mountfs
+#define SYS_mountfs 1
+#endif
+
 extern pid_t isr_next;
 
 /* pointer to PDE for TMPQ_ADDRESS */

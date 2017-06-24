@@ -333,7 +333,7 @@ void pmm_init()
     //first real message
     syslog_early("Started uuid %4x-%2x-%2x-%8x",
         (uint32_t)srand[0],(uint16_t)srand[1],(uint16_t)srand[2],srand[3]);
-    syslog_early("Frame buffer %d x %d @%x",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr);
+    syslog_early("Frame buffer %d x %d @%x sc %d",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr,bootboot.fb_scanline);
 
     //dump memory map to log
     num = (bootboot.size-128)/16;

@@ -28,11 +28,12 @@
  *
  *  Usage:
  *  ./mkfs (file) (dir) - creates a new FS/Z image file
+ *  ./mkfs (file) initrdrom (romfile) - create Option ROM from file
  *  ./mkfs (file) union (path) (members...) - add an union directory to image file
  *  ./mkfs (file) symlink (path) (target) - add a symbolic link to image file
+ *  ./mkfs (file) mime (path) (mimetype) - change the mime type of a file in image file
  *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
  *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
- *  ./mkfs (file) initrdrom - create Option ROM from file
  *  ./mkfs disk - assembles partition images into one GPT disk, saves bin/disk.dd
  *
  * It's a minimal implementation, has several limitations compared to the FS/Z spec.
@@ -52,6 +53,7 @@
 char *diskname;     //entire disk
 char *stage1;       //mbr code
 char *espfile;      //EFI System Partition imagefile
+char *sysfile;      //system partition imagefile
 char *usrfile;      //usr partition imagefile
 char *varfile;      //var partition imagefile
 char *homefile;     //home partition imagefile
@@ -117,7 +119,7 @@ void add_superblock()
 //appends an inode
 int add_inode(char *filetype, char *mimetype)
 {
-    int i,j=!strcmp(filetype,"url:")||!strcmp(filetype,"uni:")?secsize-1024:48;
+    int i,j=!strcmp(filetype,"url:")||!strcmp(filetype,"uni:")?secsize-1024:56;
     FSZ_Inode *in;
     fs=realloc(fs,size+secsize);
     if(fs==NULL) exit(4);
@@ -140,7 +142,7 @@ int add_inode(char *filetype, char *mimetype)
         } else {
             i=strlen(mimetype);
         }
-        memcpy(j==48?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
+        memcpy(j==56?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
     }
     in->checksum=crc32_calc((char*)in->filetype,secsize-8);
     size+=secsize;
@@ -348,20 +350,22 @@ void checkcompilation()
     FSZ_Inode in;
     FSZ_DirEntHeader hdr;
     FSZ_DirEnt ent;
-
     // ********* WARNING *********
     // These numbers MUST match the ones in: etc/include/fsZ.h
     if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 520 ||
         (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 552 ||
+        (uint64_t)(&sb.owneruuid) - (uint64_t)(&sb) != 704 ||
+        (uint64_t)(&sb.magic2) - (uint64_t)(&sb) != 1016 ||
         (uint64_t)(&in.filetype) - (uint64_t)(&in) != 8 ||
         (uint64_t)(&in.version5) - (uint64_t)(&in) != 128 ||
         (uint64_t)(&in.sec) - (uint64_t)(&in) != 448 ||
         (uint64_t)(&in.size) - (uint64_t)(&in) != 464 ||
         (uint64_t)(&in.groups) - (uint64_t)(&in) != 512 ||
-        (uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 1024 ||
+        ((uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 1024 &&
+         (uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 2048) ||
         (uint64_t)(&hdr.numentries) - (uint64_t)(&hdr) != 8 ||
         (uint64_t)(&ent.name) - (uint64_t)(&ent) != 17) {
-        fprintf(stderr,"mkfs: your compiler rearranged stucture members. Recompile me with packed struct.\n");
+        fprintf(stderr,"mkfs: your compiler rearranged structure members. Recompile me with packed struct.\n");
         exit(1);
     }
 }
@@ -370,17 +374,19 @@ void checkcompilation()
 //Assemble all together. Get the partition images and write out as a whole disk
 int createdisk()
 {
-    unsigned long int i,gs=7*512,es,us,vs,hs,ss=4096;
+    unsigned long int i,j=0,gs=7*512,rs=0,es,us,vs,hs,ss=4096;
     unsigned long int uuid[4]={0x12345678,0x12345678,0x12345678,0x12345678};
     char *esp=readfileall(espfile);
     es=read_size;
+    char *ssp=readfileall(sysfile);
+    rs=read_size;
     char *usr=readfileall(usrfile);
     us=read_size;
     char *var=readfileall(varfile);
     vs=read_size;
     char *home=readfileall(homefile);
     hs=read_size;
-    char *gpt=malloc(gs+512);
+    char *gpt=malloc(gs+512),*p;
     char *swap=malloc(ss);
     // get MBR code if any
     char *loader=readfileall(stage1);   //stage1 loader
@@ -389,123 +395,167 @@ int createdisk()
         memset(loader,0,512);
     }
     memset(loader+0x1B8,0,0x1FE - 0x1B8);
+    j=0;
     // locate stage2 loader FS0:\BOOTBOOT\LOADER on ESP
-    for(i=0;i<es-512;i+=512) {
-        if((unsigned char)esp[i+0]==0x55 &&
-           (unsigned char)esp[i+1]==0xAA &&
-           (unsigned char)esp[i+3]==0xE9 &&
-           (unsigned char)esp[i+8]=='B' &&
-           (unsigned char)esp[i+12]=='B') {
-            // save stage2 address in stage1
-            setint(((i+gs)/512)+1,loader+0x1B0);
-            break;
+    if(es>0) {
+        for(i=0;i<es-512;i+=512) {
+            if((unsigned char)esp[i+0]==0x55 &&
+               (unsigned char)esp[i+1]==0xAA &&
+               (unsigned char)esp[i+3]==0xE9 &&
+               (unsigned char)esp[i+8]=='B' &&
+               (unsigned char)esp[i+12]=='B') {
+                // save stage2 address in stage1
+                setint(((i+gs)/512)+1,loader+0x1B0);
+                j=1;
+                break;
+            }
         }
     }
+    // locate stage2 loader /lib/sys/loader on root partition
+    if(!j && rs>0) {
+        for(i=0;i<rs-512;i+=512) {
+            if((unsigned char)ssp[i+0]==0x55 &&
+               (unsigned char)ssp[i+1]==0xAA &&
+               (unsigned char)ssp[i+3]==0xE9 &&
+               (unsigned char)ssp[i+8]=='B' &&
+               (unsigned char)ssp[i+12]=='B') {
+                // save stage2 address in stage1
+                setint(((i+gs+es)/512)+1,loader+0x1B0);
+                break;
+            }
+        }
+    }
+/*
     // save ESP, we've modified pointers
     f=fopen(espfile,"wb");
     if(f) {
         fwrite(esp,es,1,f);
         fclose(f);
     }
-
+*/
     // WinNT disk id
     setint(uuid[0],loader+0x1B8);
 
     // generate partitioning tables
     // MBR, GPT record
-    setint(2,loader+0x1C0);                     //start CHS
+    setint(1,loader+0x1C0);                     //start CHS
     loader[0x1C2]=0xEE;                         //type
     setint((gs/512)+1,loader+0x1C4);            //end CHS
     setint(1,loader+0x1C6);                     //start lba
     setint((gs/512),loader+0x1CA);              //end lba
     // MBR, EFI System Partition record
-    setint((gs/512)+2,loader+0x1D0);            //start CHS
-    loader[0x1D2]=0xEF;                         //type
-    setint(((gs+es)/512)+2,loader+0x1D4);       //end CHS
-    setint((gs/512)+1,loader+0x1D6);            //start lba
-    setint(((es)/512),loader+0x1DA);            //end lba
+    if(es>0) {
+        setint((gs/512)+2,loader+0x1D0);        //start CHS
+        loader[0x1D2]=0xEF;                     //type
+        setint(((gs+es)/512)+2,loader+0x1D4);   //end CHS
+        setint((gs/512)+1,loader+0x1D6);        //start lba
+        setint(((es)/512),loader+0x1DA);        //end lba
+    }
     // magic
     loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
 
     // GPT Header
     memset(gpt,0,gs);
-    memcpy(gpt,"EFI PART",8);                   //magic
-    setint(1,gpt+10);                           //revision
-    setint(92,gpt+12);                          //size
-    setint(0xDEADCC32,gpt+16);                  //crc
-    setint(1,gpt+24);                           //primarylba
-    setint(((gs+gs+es+us+vs+hs+ss)/512),gpt+32);//backuplba
-    setint((gs/512)+1,gpt+40);                  //firstusable
-    setint(((gs+es+us+vs+hs+ss)/512),gpt+48);   //lastusable
-    setint(uuid[0],gpt+56);                     //disk UUID
+    memcpy(gpt,"EFI PART",8);                       //magic
+    setint(1,gpt+10);                               //revision
+    setint(92,gpt+12);                              //size
+    setint(0xDEADCC32,gpt+16);                      //crc
+    setint(1,gpt+24);                               //primarylba
+    setint(((gs+gs+es+rs+us+vs+hs+ss)/512),gpt+32); //backuplba
+    setint((gs/512)+1,gpt+40);                      //firstusable
+    setint(((gs+es+rs+us+vs+hs+ss)/512),gpt+48);    //lastusable
+    setint(uuid[0],gpt+56);                         //disk UUID
     setint(uuid[1],gpt+60);
     setint(uuid[2],gpt+64);
     setint(uuid[3],gpt+68);
-    setint(2,gpt+72);                           //partitionlba
-    setint(4,gpt+80);                           //numentries
-    setint(128,gpt+84);                         //entrysize
-    setint(0xDEADCC32,gpt+88);                  //entriescrc
+    setint(2,gpt+72);                               //partitionlba
+    setint(3+(es?1:0)+(rs?1:0),gpt+80);             //numentries
+    setint(128,gpt+84);                             //entrysize
+    setint(0xDEADCC32,gpt+88);                      //entriescrc
 
-    // GPT, EFI System Partition (mounted at /boot)
-    setint(0x0C12A7328,gpt+512);                    //entrytype
-    setint(0x011D2F81F,gpt+516);
-    setint(0x0A0004BBA,gpt+520);
-    setint(0x03BC93EC9,gpt+524);
-    setint(uuid[0]+1,gpt+528);                      //partition UUID
-    setint(uuid[1],gpt+532);
-    setint(uuid[2],gpt+536);
-    setint(uuid[3],gpt+540);
-    setint((gs/512)+1,gpt+544);                     //startlba
-    setint(((gs+es)/512),gpt+552);                  //endlba
-    memcpy(gpt+568,L"EFI System Partition",42);     //name
+    p=gpt+512;
+    // GPT, EFI System Partition (mounted at /boot) OPTIONAL
+    if(es>0) {
+        setint(0x0C12A7328,p);                       //entrytype
+        setint(0x011D2F81F,p+4);
+        setint(0x0A0004BBA,p+8);
+        setint(0x03BC93EC9,p+12);
+        setint(uuid[0]+1,p+16);                      //partition UUID
+        setint(uuid[1],p+20);
+        setint(uuid[2],p+24);
+        setint(uuid[3],p+28);
+        setint((gs/512)+1,p+32);                     //startlba
+        setint(((gs+es)/512),p+40);                  //endlba
+        memcpy(p+64,L"EFI System Partition",42);     //name
+        p+=128;
+    }
 
+    // GPT, OS/Z System Partition (mounted at /) OPTIONAL
+    if(rs>0) {
+        memcpy(p,"OS/Z",4);                      //entrytype, magic
+        setint(256,p+4);                         //version 1.0, no flags
+        memcpy(p+12,"root",4);                   //mount point
+        setint(uuid[0]+2,p+16);                  //partition UUID
+        setint(uuid[1],p+20);
+        setint(uuid[2],p+24);
+        setint(uuid[3],p+28);
+        setint(((gs+es)/512)+1,p+32);            //startlba
+        setint(((gs+es+rs)/512),p+40);           //endlba
+        setint(4,p+48);                          //bootable flag
+        memcpy(p+64,L"OS/Z System",22);          //name
+        p+=128;
+    }
     // GPT, OS/Z System Partition (mounted at /usr)
-    memcpy(gpt+512+128,"OS/Z",4);                   //entrytype, magic
-    setint(256,gpt+516+128);                        //version 1.0, no flags
-    memcpy(gpt+522+128,"usr",3);                    //mount point
-    setint(uuid[0]+2,gpt+528+128);                  //partition UUID
-    setint(uuid[1],gpt+532+128);
-    setint(uuid[2],gpt+536+128);
-    setint(uuid[3],gpt+540+128);
-    setint(((gs+es)/512)+1,gpt+544+128);            //startlba
-    setint(((gs+es+us)/512),gpt+552+128);           //endlba
-    memcpy(gpt+568+128,L"OS/Z System",22);          //name
+    memcpy(p,"OS/Z",4);                          //entrytype, magic
+    setint(256,p+4);                             //version 1.0, no flags
+    memcpy(p+12,"usr",3);                        //mount point
+    setint(uuid[0]+3,p+16);                      //partition UUID
+    setint(uuid[1],p+20);
+    setint(uuid[2],p+24);
+    setint(uuid[3],p+28);
+    setint(((gs+es+rs)/512)+1,p+32);             //startlba
+    setint(((gs+es+rs+us)/512),p+40);            //endlba
+    memcpy(p+64,L"OS/Z System",22);              //name
+    p+=128;
 
     // GPT, OS/Z Public Data Partition (mounted at /var)
-    memcpy(gpt+512+256,"OS/Z",4);                   //entrytype, magic
-    setint(256,gpt+516+256);                        //version 1.0, no flags
-    memcpy(gpt+522+256,"var",3);                    //mount point
-    setint(uuid[0]+3,gpt+528+256);                  //partition UUID
-    setint(uuid[1],gpt+532+256);
-    setint(uuid[2],gpt+536+256);
-    setint(uuid[3],gpt+540+256);
-    setint(((gs+es+us)/512)+1,gpt+544+256);         //startlba
-    setint(((gs+es+us+vs)/512),gpt+552+256);        //endlba
-    memcpy(gpt+568+256,L"OS/Z Public Data",32);     //name
+    memcpy(p,"OS/Z",4);                          //entrytype, magic
+    setint(256,p+4);                             //version 1.0, no flags
+    memcpy(p+12,"var",3);                        //mount point
+    setint(uuid[0]+4,p+16);                      //partition UUID
+    setint(uuid[1],p+20);
+    setint(uuid[2],p+24);
+    setint(uuid[3],p+28);
+    setint(((gs+es+rs+us)/512)+1,p+32);          //startlba
+    setint(((gs+es+rs+us+vs)/512),p+40);         //endlba
+    memcpy(p+64,L"OS/Z Public Data",32);         //name
+    p+=128;
 
     // GPT, OS/Z Home Partition (mounted at /home)
-    memcpy(gpt+512+384,"OS/Z",4);                   //entrytype, magic
-    setint(256,gpt+516+384);                        //version 1.0, no flags
-    memcpy(gpt+522+384,"home",4);                   //mount point
-    setint(uuid[0]+4,gpt+528+384);                  //partition UUID
-    setint(uuid[1],gpt+532+384);
-    setint(uuid[2],gpt+536+384);
-    setint(uuid[3],gpt+540+384);
-    setint(((gs+es+us+vs)/512)+1,gpt+544+384);      //startlba
-    setint(((gs+es+us+vs+hs)/512),gpt+552+384);     //endlba
-    memcpy(gpt+568+384,L"OS/Z Private Data",34);    //name
+    memcpy(p,"OS/Z",4);                          //entrytype, magic
+    setint(256,p+4);                             //version 1.0, no flags
+    memcpy(p+12,"home",4);                       //mount point
+    setint(uuid[0]+5,p+16);                      //partition UUID
+    setint(uuid[1],p+20);
+    setint(uuid[2],p+24);
+    setint(uuid[3],p+28);
+    setint(((gs+es+rs+us+vs)/512)+1,p+32);       //startlba
+    setint(((gs+es+rs+us+vs+hs)/512),p+40);      //endlba
+    memcpy(p+64,L"OS/Z Private Data",34);        //name
+    p+=128;
 
     // GPT, OS/Z Swap Partition (mounted at /dev/swap)
-    memcpy(gpt+512+512,"OS/Z",4);                   //entrytype, magic
-    setint(256,gpt+516+512);                        //version 1.0, no flags
-    memcpy(gpt+522+512,"swap",4);                   //mount point
-    setint(uuid[0]+5,gpt+528+512);                  //partition UUID
-    setint(uuid[1],gpt+532+512);
-    setint(uuid[2],gpt+536+512);
-    setint(uuid[3],gpt+540+512);
-    setint(((gs+es+us+vs+hs)/512)+1,gpt+544+512);   //startlba
-    setint(((gs+es+us+vs+hs+ss)/512),gpt+552+512);  //endlba
-    memcpy(gpt+568+512,L"OS/Z Swap Area",30);       //name
+    memcpy(p,"OS/Z",4);                          //entrytype, magic
+    setint(256,p+4);                             //version 1.0, no flags
+    memcpy(p+12,"swap",4);                       //mount point
+    setint(uuid[0]+6,p+16);                      //partition UUID
+    setint(uuid[1],p+20);
+    setint(uuid[2],p+24);
+    setint(uuid[3],p+28);
+    setint(((gs+es+rs+us+vs+hs)/512)+1,p+32);    //startlba
+    setint(((gs+es+rs+us+vs+hs+ss)/512),p+40);   //endlba
+    memcpy(p+64,L"OS/Z Swap Area",30);           //name
+    p+=128;
 
     // Checksums
     //partitions
@@ -522,7 +572,10 @@ int createdisk()
     // GPT header + entries
     fwrite(gpt,gs,1,f);
     // Partitions
-    fwrite(esp,es,1,f);
+    if(es>0)
+        fwrite(esp,es,1,f);
+    if(rs>0)
+        fwrite(ssp,rs,1,f);
     fwrite(usr,us,1,f);
     fwrite(var,vs,1,f);
     fwrite(home,hs,1,f);
@@ -554,7 +607,7 @@ int createimage(char *image,char *dir)
     // superblock
     add_superblock();
     // add root directory
-    ((FSZ_SuperBlock *)fs)->rootdirfid = add_inode("dir:",NULL);
+    ((FSZ_SuperBlock *)fs)->rootdirfid = add_inode("dir:",MIMETYPE_DIR_ROOT);
 
     // recursively parse the directory and add everything in it
     // into the fs image
@@ -582,12 +635,23 @@ void ls(int argc, char **argv)
 
     if(dir==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
     int cnt=0;
+    if(!memcmp(dir->filetype,"uni:",4)){
+        char *c=((char*)dir+1024);
+        printf("Union list of:\n");
+        while(*c!=0) {
+            printf("  %s\n",c);
+            while(*c!=0) c++;
+            c++;
+        }
+        return;
+    }
+    if(memcmp(dir->filetype,"dir:",4)) { printf("mkfs: not a directory\n"); exit(2); }
     FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)((char*)dir+1024);
     FSZ_DirEnt *ent;
     ent=(FSZ_DirEnt *)hdr; ent++;
     while(ent->fid!=0 && cnt<((secsize-1024)/128-1)) {
         FSZ_Inode *in = (FSZ_Inode *)((char*)data+ent->fid*secsize);
-        printf("%c%c%c%c %6ld %6ld %s\n",
+        printf("  %c%c%c%c %6ld %6ld %s\n",
             in->filetype[0],in->filetype[1],in->filetype[2],in->filetype[3],
             in->sec, in->size, ent->name);
         ent++; cnt++;
@@ -611,6 +675,31 @@ void cat(int argc, char **argv)
             fwrite(data + ((unsigned int)(*sd))*secsize, s>secsize?secsize:s,1,stdout);
             s-=secsize; sd+=16;
         }
+    }
+}
+
+void changemime(int argc, char **argv)
+{
+    char *data=readfileall(argv[1]);
+    FSZ_Inode *in=NULL;
+    if(argc>=4)
+        in = locate(data,0,argv[3]);
+    if(in==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
+    if(argc<5) {
+        printf("%c%c%c%c/%s\n",
+            in->filetype[0],in->filetype[1],in->filetype[2],in->filetype[3],in->mimetype);
+    } else {
+        char *c=argv[4];
+        while(*c!=0&&*c!='/')c++;
+        if(in->filetype[3]==':') { printf("mkfs: Unable to change mime type of special inode\n"); exit(2); }
+        if(*c!='/') { printf("mkfs: bad mime type\n"); exit(2); } else c++;
+        memcpy(in->filetype,argv[4],4);
+        memcpy(in->mimetype,c,strlen(c)<56?strlen(c):55);
+        in->checksum=crc32_calc((char*)in->filetype,secsize-8);
+        //write out new image
+        f=fopen(argv[1],"wb");
+        fwrite(data,read_size,1,f);
+        fclose(f);
     }
 }
 
@@ -683,6 +772,7 @@ int main(int argc, char **argv)
     memcpy(path+i,"../bin/",8); i+=8; path[i]=0;
     diskname=malloc(i+16); sprintf(diskname,"%sdisk.dd",path);
     stage1=malloc(i+16); sprintf(stage1,"%s/../loader/mbr.bin",path);
+    sysfile=malloc(i+16); sprintf(sysfile,"%ssys.part",path);
     espfile=malloc(i+16); sprintf(espfile,"%sesp.part",path);
     usrfile=malloc(i+16); sprintf(usrfile,"%susr.part",path);
     varfile=malloc(i+16); sprintf(varfile,"%svar.part",path);
@@ -691,8 +781,10 @@ int main(int argc, char **argv)
     //parse arguments
     if(argv[1]==NULL||!strcmp(argv[1],"help")) {
         printf("FS/Z mkfs utility\n"
+            "./mkfs (imagetoread) initrdrom (romfile)\n"
             "./mkfs (imagetoread) union (path) (members...)\n"
             "./mkfs (imagetoread) symlink (path) (target)\n"
+            "./mkfs (imagetoread) mime (path) (mimetype)\n"
             "./mkfs (imagetoread) cat (path)\n"
             "./mkfs (imagetoread) ls (path)\n"
             "./mkfs (imagetocreate) (createfromdir)\n"
@@ -711,6 +803,9 @@ int main(int argc, char **argv)
         } else
         if(!strcmp(argv[2],"symlink") && argc>3) {
             addsymlink(argc,argv);
+        } else
+        if(!strcmp(argv[2],"mime") && argc>3) {
+            changemime(argc,argv);
         } else
         if(!strcmp(argv[2],"cat") && argc>2) {
             cat(argc,argv);

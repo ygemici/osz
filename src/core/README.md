@@ -18,7 +18,7 @@ Files
 in [(platform)/start.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). If you are interested in how
 OS/Z is booted, you should read the [documentation on booting](https://github.com/bztsrc/osz/blob/master/docs/boot.md).
 
-`env.c` - environment parser. You can pass key=value pairs to core in [FS0:\BOOTBOOT\CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG). For a complete list of boot options, read the [manual](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
+`env.c` - environment parser. You can pass key=value pairs to core in [FS0:\BOOTBOOT\CONFIG](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config). For a complete list of boot options, read the [manual](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 
 `font.h` - PC Screen Font version 2 format.
 

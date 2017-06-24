@@ -35,7 +35,7 @@
  *       0-16G user      RAM identity mapped[3] (0x0000000000000000)
  *
  *   [1] see loader/bootboot.h
- *   [2] see etc/CONFIG and env.h. Plain ascii key=value pairs,
+ *   [2] see etc/sys/config and env.h. Plain ascii key=value pairs,
  *       separated by newline characters.
  *   [3] when main() calls sys_enable(), user task will be mapped
  *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.

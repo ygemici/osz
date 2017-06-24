@@ -46,9 +46,9 @@ fsz_initrd:
 .nocore:    mov         esi, nocore
             jmp         .err
 @@:         ; it has inlined data?
-            add         esi, 1024                   ; FSZ_Inode.inlinedata
+.again:     add         esi, 1024                   ; FSZ_Inode.inlinedata
             cmp         dword [esi], 'FSDR'
-            je          .srchlib
+            je          .srchdir
             ; no, locate the data
             mov         eax, dword [esi-1024+448]   ; FSZ_Inode.sec
             shl         eax, 12
@@ -56,39 +56,10 @@ fsz_initrd:
             add         esi, eax
             cmp         dword [esi], 'FSDR'
             jne         .nolib
-.srchlib:   ; find lib/
+.srchdir:   ; find lib/ or etc/
             mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
-            mov         eax, 'lib/'                 ; don't allow other
+            mov         eax, dword [edi]
 @@:         add         esi, 128                    ; directories than
-            cmp         dword [esi+17], eax         ; lib/
-            je          @f
-            dec         ecx
-            jnz         @b
-            jmp         .nolib
-            ; found, get it's inode
-@@:
-            mov         eax, dword [esi]
-            shl         eax, 12
-            mov         esi, dword [bootboot.initrd_ptr]
-            add         esi, eax
-            cmp         dword [esi], 'FSIN'
-            jne         .nolib
-            ; it has inlined data?
-            add         esi, 1024                   ; FSZ_Inode.inlinedata
-            cmp         dword [esi], 'FSDR'
-            je          .srchsys
-            ; no, locate the data
-            mov         eax, dword [esi-1024+448]   ; FSZ_Inode.sec
-            shl         eax, 12
-            mov         esi, dword [bootboot.initrd_ptr]
-            add         esi, eax
-            cmp         dword [esi], 'FSDR'
-            jne         .nolib
-
-.srchsys:   ; find sys in sys/
-            mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
-            mov         eax, 'sys/'
-@@:         add         esi, 128
             cmp         dword [esi+17], eax
             je          @f
             dec         ecx
@@ -102,6 +73,12 @@ fsz_initrd:
             add         esi, eax
             cmp         dword [esi], 'FSIN'
             jne         .nolib
+
+            ;this is not bullet proof
+            add         edi, 4
+            cmp         byte [edi+3], '/'
+            je          .again
+            
             ; it has inlined data?
             add         esi, 1024                   ; FSZ_Inode.inlinedata
             cmp         dword [esi], 'FSDR'
@@ -114,11 +91,11 @@ fsz_initrd:
             cmp         dword [esi], 'FSDR'
             jne         .nolib
 
-.srchcore:  ; find core in lib/sys. This filename part is configurable
+.srchcore:  ; find filename
             mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
             ;filename, 8 characters supported
-            mov         eax, dword [kernel+8]
-            mov         edx, dword [kernel+12]
+            mov         eax, dword [edi]
+            mov         edx, dword [edi+4]
 @@:         add         esi, 128
             cmp         dword [esi+21], edx
             jne         .not
@@ -140,8 +117,16 @@ fsz_initrd:
             shl         eax, 12
             mov         esi, dword [bootboot.initrd_ptr]
             add         esi, eax
-
-            ; core's sector directory at esi, file size in ecx
+            ; inline
+            cmp         ecx, 4096-1024
+            ja          @f
+            add         esi, 1024
+            ret
+            ; direct data block
+@@:         cmp         ecx, 4096
+            ja          @f
+            ret
+@@:         ; sector directory at esi, file size in ecx
             mov         eax, dword [esi]    ; first FSZ_SectorList.sec
             shl         eax, 12
             mov         esi, dword [bootboot.initrd_ptr]

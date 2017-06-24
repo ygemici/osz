@@ -42,7 +42,6 @@ extern uint64_t ncache;
 extern cachedir_t *cache;
 
 extern void cache_dir(char*name,ino_t inode);
-extern void cache_init();
 #if DEBUG
 extern void cache_dump();
 #endif

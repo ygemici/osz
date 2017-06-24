@@ -38,7 +38,7 @@ After that it initializes subsystems (or system [services](https://github.com/bz
  4. loads additional, non-critical services by `service_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `net`, `sound` and `init` service daemon.
  5. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
-That `sys_enable()` function switches to the first device driver task, and starts executing it. The scheduler, 
+That `sys_enable()` function switches to the "FS" task, and starts executing it. When it blocks, the scheduler, 
 `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) will
 choose drivers and services one by one until all blocks. Note that preemption is not enabled at this point. 
 
@@ -52,7 +52,9 @@ in IRQ Routing Table so that ISR will know to whom to send the message for a spe
 
  1. use `irqXX()` function. That will assign IRQ XX.
  2. autodetected from system tables.
- 3. using SYS_setirq syscall at driver's initialization code.
+ 3. using `setirq()` libc call at driver's initialization code.
+
+In driver's `_init()` function, it may register devices in "FS" task with `mknod()` calls.
 
 When `sys_ready()` gets called, it will enable IRQs which has entries in IRT. It will also enable timer IRQ and with that
 enables pre-emption.
@@ -61,7 +63,7 @@ User land
 ---------
 
 The first real 100% userspace process is started by [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c).
-If rescueshell was requested in [BOOTBOOT/CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
+If rescueshell was requested in [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
 instead of services. Those services are classic UNIX daemons, among others the user session service that provides a login prompt.
 
 ### Executables

@@ -7,6 +7,7 @@
  * @brief Filesystem drivers for initial ramdisk.
  * 
  */
+extern UINTN core_len;
 
 #ifdef _FS_Z_H_
 /**
@@ -20,9 +21,7 @@ unsigned char *fsz_initrd(unsigned char *initrd_p, char *kernel)
     if(initrd_p==NULL || CompareMem(sb->magic,FSZ_MAGIC,4) || kernel==NULL){
         return NULL;
     }
-    // Make sure only files in lib/ will be loaded
-    CopyMem(kernel,"lib/",4);
-    DBG(L" * FS/Z rootdir inode %d @%lx\n",sb->rootdirfid,in);
+    DBG(L" * FS/Z %s\n",a2u(kernel));
     // Get the inode of lib/sys/core
     int i;
     char *s,*e;
@@ -61,15 +60,19 @@ again:
     } else {
         i=0;
     }
-    DBG(L" * Kernel=%s inode %d @%lx\n",a2u(kernel),i,i?initrd_p+i*FSZ_SECSIZE:0);
     if(i!=0) {
         // fid -> inode ptr -> data ptr
         FSZ_Inode *in=(FSZ_Inode *)(initrd_p+i*FSZ_SECSIZE);
         if(!CompareMem(in->magic,FSZ_IN_MAGIC,4)){
-            Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(initrd_p + in->sec * FSZ_SECSIZE);
-            if(!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG))
+            core_len=in->size;
+            //inline
+            if(in->size<FSZ_SECSIZE-1024)
+                return (initrd_p+i*FSZ_SECSIZE+1024);
+            //direct
+            if(in->size<FSZ_SECSIZE)
                 return (initrd_p + in->sec * FSZ_SECSIZE);
             else
+                //sector directory
                 return (initrd_p + (unsigned int)(((FSZ_SectorList *)(initrd_p+in->sec*FSZ_SECSIZE))->fid) * FSZ_SECSIZE);
         }
     }
@@ -92,6 +95,7 @@ unsigned char *cpio_initrd(unsigned char *initrd_p, char *kernel)
         int ns=oct2bin(ptr+8*6+11,6);
         int fs=oct2bin(ptr+8*6+11+6,11);
         if(!CompareMem(ptr+9*6+2*11,kernel,k+1)){
+            core_len=fs;
             return (unsigned char*)(ptr+9*6+2*11+ns);
         }
         ptr+=(76+ns+fs);
@@ -113,6 +117,7 @@ unsigned char *tar_initrd(unsigned char *initrd_p, char *kernel)
     while(!CompareMem(ptr+257,"ustar",5)){
         int fs=oct2bin(ptr+0x7c,11);
         if(!CompareMem(ptr,kernel,k+1)){
+            core_len=fs;
             return (unsigned char*)(ptr+512);
         }
         ptr+=(((fs+511)/512)+1)*512;

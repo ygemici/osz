@@ -81,7 +81,7 @@ Boot process
 4. iterates on filesystem drivers, and loads kernel from initrd.
 5. if filesystem is not recognized, scans for the first ELF executable in initrd.
 6. parses ELF program header and symbols to get link addresses.
-7. maps framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/CONFIG) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
+7. maps framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
 8. sets up stack, registers and jumps to [ELF's entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S).
 
 Machine state
@@ -117,7 +117,7 @@ You can locate your initrd in memory using the [bootboot structure](https://gith
 The boot time and a platform independent memory map is also provided in bootboot structure.
 The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer.
 
-[Environment](https://github.com/bztsrc/osz/blob/master/etc/CONFIG) is passed to your kernel as newline separated "key=value" pairs.
+[Environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config) is passed to your kernel as newline separated "key=value" pairs.
 
 Filesystem drivers
 ------------------
@@ -257,7 +257,7 @@ tar -czf ../INITRD *
 ```
 
 2. Create FS0:\BOOTBOOT directory on boot partition, and copy the archive you've created
-            into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG)
+            into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config)
             there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there.
             It cannot be larger than 4095 bytes (1 page minus 1 byte) long. Temporary variables will be appended at the end.
 

@@ -12,7 +12,7 @@ and recompile.
 Debug messages
 --------------
 
-If you want to see debug messages during boot, you can use the `debug` boot option in [FS0:\BOOTBOOT\CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG). For available flags see [boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
+If you want to see debug messages during boot, you can use the `debug` boot option in [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config). For available flags see [boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 It is not really necessary as with `DEBUG = 1` the syslog is also sent to the serial line, and it has all the necessary information.
 
 Debugging with GDB
@@ -86,24 +86,33 @@ Debugging with Internal Debugger
 --------------------------------
 
 <img align="left" style="padding-right:10px;" height="64" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg2.png?raw=true" alt="OS/Z Internal Debugger">
-You can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine or send a Break through
+You can press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Esc</kbd> inside the virtual machine or send a <kbd>Break</kbd> through
 serial line to invoke the internal debugger.
+
+You can invoke it from your code at any given point as well with
+
+```c
+/* insert a breakpoint into C code */
+breakpoint;
+/* insert a bochs breakpoint into C code */
+breakbochs;
+```
 
 ### Interfaces
 
-The debugger is shown on framebuffer and accepts keyboard strokes.
-
-
-<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internal Debugger" title="OS/Z Internal Debugger">
-<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png?raw=true" alt="OS/Z Internal Debugger Line Console" title="OS/Z Internal Debugger Line Console">
-<img height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png?raw=true" alt="OS/Z Internal Debugger Text User Interface" title="OS/Z Internal Debugger Text User Interface">
+The internal debugger is shown on framebuffer and accepts keyboard strokes.
 
 It also has a serial connection with 115200,8N1. By default assumes serial console is a line oriented editor and printer. To enable video terminal mode, type
 ```
 dbg> tui
 ```
 
-You can get help any time by pressing <kbd>F1</kbd> either on keyboard or serial terminal, or by `help` command.
+
+<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg3.png?raw=true" alt="OS/Z Internal Debugger" title="OS/Z Internal Debugger">
+<img align="left" style="padding-right:10px;" height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbg9.png?raw=true" alt="OS/Z Internal Debugger Line Console" title="OS/Z Internal Debugger Line Console">
+<img height="180" src="https://github.com/bztsrc/osz/blob/master/docs/oszdbgA.png?raw=true" alt="OS/Z Internal Debugger Text User Interface" title="OS/Z Internal Debugger Text User Interface">
+
+You can get help any time by pressing <kbd>F1</kbd> either on keyboard or serial terminal, or by typing `help`.
 
 ### Checking pid
 
@@ -111,7 +120,7 @@ It's on the right bottom corner of the screen.
 
 In line console mode, it's shown before the `dbg>` prompt.
 
-Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> to switch task.
+Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> to switch tasks.
 
 ### Panels (tabs)
 
@@ -151,7 +160,8 @@ Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd>
 
 ### Debugger commands
 
-It's enough to enter commands until it's obvious, in most cases that's the first letter only.
+It's enough to enter commands until they became obvious, in most cases that's the first letter only. I've used uppercase letters
+to indicate that.
 
 | Command  | Description |
 | -------- | ----------- |

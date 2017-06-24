@@ -26,6 +26,11 @@
  */
 #include <osZ.h>
 
+//failsafe
+#ifndef SYS_getinode
+#define SYS_getinode 1
+#endif
+
 /* structure to hold file descriptors. It's filld by real time linker */
 typedef struct {
     ino_t rootdir;

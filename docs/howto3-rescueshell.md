@@ -10,7 +10,7 @@ and [debug](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md), whi
 Activating Rescue Shell
 -----------------------
 
-You'll have to enable rescue shell in [FS0:\BOOTBOOT\CONFIG](https://github.com/bztsrc/osz/blob/master/etc/CONFIG) by setting `rescueshell=true`. When you boot, OS/Z won't start the `init` subsystem to initialize user services, rather it will drop you
+You'll have to enable rescue shell in [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config) by setting `rescueshell=true`. When you boot, OS/Z won't start the `init` subsystem to initialize user services, rather it will drop you
 in a root shell.
 
 Available Commands

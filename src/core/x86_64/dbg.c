@@ -1333,10 +1333,11 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
 virt_t dbg_getaddr(char *cmd, size_t size)
 {
     OSZ_tcb *tcb = (OSZ_tcb*)0;
-    uint64_t base = 0,ret = 0, ts=0;
+    uint64_t base = 0,ret = 0, ts=0, ind=0;
+    if(*cmd=='*') { cmd++; ind=1; }
     char *s=cmd;
     if(*cmd<'0'||*cmd>'9') {
-        while((uint64_t)cmd < (uint64_t)s+size && *cmd != ' ' && *cmd != '-' && *cmd != '+') cmd++;
+        while((uint64_t)cmd < (uint64_t)s+size && *cmd!=0 && *cmd != ' ' && *cmd != '-' && *cmd != '+') cmd++;
         /* translate registers */
         ts = (uint64_t)cmd-(uint64_t)s;
         if(ts==3 && s[0]=='c' && s[1]=='r' && s[2]=='2') base = cr2; else
@@ -1362,7 +1363,15 @@ virt_t dbg_getaddr(char *cmd, size_t size)
     /* parse displacement */
     while(*cmd==' '||*cmd=='-'||*cmd=='+') cmd++;
     env_hex((unsigned char*)cmd, (uint64_t*)&ret, 0, 0);
-    return (*(cmd-1)=='-'?base-ret:base+ret);
+    if(*(cmd-1)=='-') {
+        base-=ret;
+    } else {
+        base+=ret;
+    }
+    if(ind) {
+        base=*((uint64_t*)base);
+    }
+    return base;
 }
 
 #define SINGLESTEP_NONE 0

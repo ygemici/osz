@@ -689,6 +689,7 @@ prot_realmodefunc:
             USE32
 prot_readsectorfunc:
             push        eax
+            push        ecx
             push        edx
             push        esi
             push        edi
@@ -716,6 +717,7 @@ prot_readsectorfunc:
             pop         edi
 @@:         pop         esi
             pop         edx
+            pop         ecx
             pop         eax
             ret
 
@@ -819,12 +821,25 @@ protmode_start:
             je          @f
 .nogpt:     mov         si, nogpt
             jmp         prot_diefunc
-@@:
+@@:         mov         edi, 0B000h
+            mov         ebx, edi
+            mov         ecx, 896
+            repnz       movsd
+            mov         esi, ebx
             mov         ecx, dword [esi+80]     ;number of entries
             mov         ebx, dword [esi+84]     ;size of one entry
             add         esi, 512
             mov         edx, esi                ;first entry
-            ; look for EFI System Partition
+            mov         dword [gpt_ent], ebx
+            mov         dword [gpt_num], ecx
+            mov         dword [gpt_ptr], edx
+            ; look for EFI System Partition or bootable partition
+.nextgpt:   mov         esi, dword [gpt_ptr]
+            mov         ebx, dword [gpt_ent]
+            add         dword [gpt_ptr], ebx
+            dec         dword [gpt_num]
+            jz          .nogpt
+            mov         ecx, dword [gpt_num]
             mov         eax, 0C12A7328h
 @@:         cmp         dword [esi], eax        ;GUID match?
             je          .loadesp
@@ -833,7 +848,7 @@ protmode_start:
             add         esi, ebx
             dec         ecx
             jnz         @b
-            ;no ESP nor bootable partition, use the first one
+            ; no ESP nor bootable partition, try the first one
             mov         esi, edx
 
             ; load ESP at free memory hole found
@@ -841,21 +856,30 @@ protmode_start:
             mov         eax, dword [esi+32]     ;first sector
             mov         edx, dword [esi+36]
             or          edx, edx
-            jnz         .nogpt
+            jnz         .nextgpt
             or          ecx, ecx
-            jz          .nogpt
+            jz          .nextgpt
             or          eax, eax
-            jz          .nogpt
+            jz          .nextgpt            
             mov         dword [bpb_sec], eax
             ;load BPB
             mov         edi, dword [bootboot.initrd_ptr]
             prot_readsector
-            cmp         dword [edi + bpb.fst2], 'FAT3'
+            ;was it a bootable FS/Z partition?
+            cmp         dword [edi+512], 'FS/Z'
+            jne         @f
+            mov         dword [init_sec], eax
+            sub         ecx, eax
+            shl         ecx, 9
+            mov         dword [bootboot.initrd_size], ecx
+            jmp         .loadinitrd
+            ;no, parse fat on EFI System Partition
+@@:         cmp         dword [edi + bpb.fst2], 'FAT3'
             je          @f
             cmp         dword [edi + bpb.fst], 'FAT1'
-            jne         .nogpt
+            jne         .nextgpt
 @@:         cmp         word [edi + bpb.bps], 512
-            jne         .nogpt
+            jne         .nextgpt
             ;calculations
             xor         eax, eax
             xor         ebx, ebx
@@ -914,9 +938,11 @@ protmode_start:
             cmp         word [esi+8], '  '
             je          .foundroot
 @@:         add         esi, 32
+            cmp         byte [esi], 0
+            jz          .nextgpt
             dec         ecx
             jnz         .nextroot
-            jmp         .nogpt
+            jmp         .nextgpt
 .foundroot: xor         eax, eax
             cmp         byte [fattype], 0
             jz          @f
@@ -1000,105 +1026,12 @@ protmode_start:
             mov         dword [init_sec], eax
 
 .notinit:   add         esi, 32
+            cmp         byte [esi], 0
+            jz          .loadinitrd
             dec         ecx
             jnz         .nextdir
 
-            ;do we have an environment configuration?
-            mov         ebx, 9000h
-            cmp         byte [ebx], 0
-            jz          .noconf
-
-            ;parse
-            push        ebx
-            DBG32       dbg_env
-            pop         esi
-            jmp         .getnext
-
-.nextvar:   cmp         word[esi], '//'
-            jne         @f
-            add         esi, 2
-.skipcom:   lodsb
-            cmp         al, 10
-            je          .getnext
-            cmp         al, 13
-            je          .getnext
-            or          al, al
-            jz          .parseend
-            cmp         esi, 0A000h
-            ja          .parseend
-            jmp         .skipcom
-@@:         cmp         word[esi], '/*'
-            jne         @f
-.skipcom2:  inc         esi
-            cmp         word [esi-2], '*/'
-            je          .getnext
-            cmp         byte [esi], 0
-            jz          .parseend
-            cmp         esi, 0A000h
-            ja          .parseend
-            jmp         .skipcom2
-
-@@:         cmp         dword[esi], 'widt'
-            jne         @f
-            cmp         word[esi+4], 'h='
-            jne         @f
-            add         esi, 6
-            call        prot_getval
-            mov         dword [reqwidth], eax
-            jmp         .getnext
-@@:         cmp         dword[esi], 'heig'
-            jne         @f
-            cmp         word[esi+4], 'ht'
-            jne         @f
-            cmp         byte[esi+6], '='
-            jne         @f
-            add         esi, 7
-            call        prot_getval
-            mov         dword [reqheight], eax
-            jmp         .getnext
-@@:         cmp         dword[esi], 'kern'
-            jne         @f
-            cmp         word[esi+4], 'el'
-            jne         @f
-            cmp         byte[esi+6], '='
-            jne         @f
-            add         esi, 7
-            mov         edi, kernel
-.copy:      lodsb
-            or          al, al
-            jz          .copyend
-            cmp         al, ' '
-            jz          .copyend
-            cmp         al, 13
-            jbe         .copyend
-            cmp         esi, 0A000h
-            ja          .copyend
-            cmp         edi, loader_end-1
-            jae         .copyend
-            stosb
-            jmp         .copy
-.copyend:   xor         al, al
-            stosb
-            jmp         .getnext
-@@:
-            inc         esi
-.getnext:   cmp         esi, 0A000h
-            jae         .parseend
-            cmp         byte [esi], 0
-            je          .parseend
-            cmp         byte [esi], ' '
-            je          @b
-            cmp         byte [esi], 13
-            jbe         @b
-            jmp         .nextvar
-.noconf:    mov         edi, ebx
-            mov         ecx, 1024
-            mov         eax, 0A0A0A0Ah
-            repnz       stosd
-            mov         dword [ebx+0], '// N'
-            mov         dword [ebx+4], '/A\n'
-.parseend:
-
+.loadinitrd:
             ; load INITRD
             mov         esi, nord
             cmp         dword [init_sec], 0
@@ -1200,9 +1133,130 @@ protmode_start:
             dec         cx
             jnz         .nextfree
 @@:
+            ;do we have an environment configuration?
+            mov         ebx, 9000h
+            cmp         byte [ebx], 0
+            jnz         .parsecfg
+
+            DBG32       dbg_env2
+            ;-----load /etc/sys/config------
+            mov         edx, fsdrivers
+.nextfs1:   xor         ebx, ebx
+            mov         bx, word [edx]
+            or          bx, bx
+            jz          .errfs1
+            mov         esi, dword [bootboot.initrd_ptr]
+            mov         ecx, dword [bootboot.initrd_size]
+            add         ecx, esi
+            mov         edi, cfgfile
+            push        edx
+            call        ebx
+            pop         edx
+            or          ecx, ecx
+            jnz         .fscfg
+            add         edx, 2
+            jmp         .nextfs1
+.fscfg:     mov         edi, 9000h
+            add         ecx, 3
+            repnz       movsd
+.errfs1:
+            ;do we have an environment configuration?
+            mov         ebx, 9000h
+            cmp         byte [ebx], 0
+            jz          .noconf
+
+            ;parse
+.parsecfg:  push        ebx
+            DBG32       dbg_env
+            pop         esi
+            jmp         .getnext
+
+.nextvar:   cmp         word[esi], '//'
+            jne         @f
+            add         esi, 2
+.skipcom:   lodsb
+            cmp         al, 10
+            je          .getnext
+            cmp         al, 13
+            je          .getnext
+            or          al, al
+            jz          .parseend
+            cmp         esi, 0A000h
+            ja          .parseend
+            jmp         .skipcom
+@@:         cmp         word[esi], '/*'
+            jne         @f
+.skipcom2:  inc         esi
+            cmp         word [esi-2], '*/'
+            je          .getnext
+            cmp         byte [esi], 0
+            jz          .parseend
+            cmp         esi, 0A000h
+            ja          .parseend
+            jmp         .skipcom2
+
+@@:         cmp         dword[esi], 'widt'
+            jne         @f
+            cmp         word[esi+4], 'h='
+            jne         @f
+            add         esi, 6
+            call        prot_getval
+            mov         dword [reqwidth], eax
+            jmp         .getnext
+@@:         cmp         dword[esi], 'heig'
+            jne         @f
+            cmp         word[esi+4], 'ht'
+            jne         @f
+            cmp         byte[esi+6], '='
+            jne         @f
+            add         esi, 7
+            call        prot_getval
+            mov         dword [reqheight], eax
+            jmp         .getnext
+@@:         cmp         dword[esi], 'kern'
+            jne         @f
+            cmp         word[esi+4], 'el'
+            jne         @f
+            cmp         byte[esi+6], '='
+            jne         @f
+            add         esi, 7
+            mov         edi, kernel
+.copy:      lodsb
+            or          al, al
+            jz          .copyend
+            cmp         al, ' '
+            jz          .copyend
+            cmp         al, 13
+            jbe         .copyend
+            cmp         esi, 0A000h
+            ja          .copyend
+            cmp         edi, loader_end-1
+            jae         .copyend
+            stosb
+            jmp         .copy
+.copyend:   xor         al, al
+            stosb
+            jmp         .getnext
+@@:
+            inc         esi
+.getnext:   cmp         esi, 0A000h
+            jae         .parseend
+            cmp         byte [esi], 0
+            je          .parseend
+            cmp         byte [esi], ' '
+            je          @b
+            cmp         byte [esi], 13
+            jbe         @b
+            jmp         .nextvar
+.noconf:    mov         edi, ebx
+            mov         ecx, 1024
+            mov         eax, 0A0A0A0Ah
+            repnz       stosd
+            mov         dword [ebx+0], '// N'
+            mov         dword [ebx+4], '/A\n'
+.parseend:
 
             ;-----load /lib/sys/core------
-            ; *_initrd
             mov         edx, fsdrivers
 .nextfs:    xor         ebx, ebx
             mov         bx, word [edx]
@@ -1578,7 +1632,10 @@ bpb_sec:    dd          0 ;ESP's first sector
 root_sec:   dd          0 ;root directory's first sector
 data_sec:   dd          0 ;first data sector
 clu_sec:    dd          0 ;sector per cluster
-init_sec:   dd          0
+init_sec:   dd          0 ;initrd first sector
+gpt_ptr:    dd          0
+gpt_num:    dd          0
+gpt_ent:    dd          0
 lbapacket:              ;lba packet for BIOS
 .size:      dw          10h
 .count:     dw          8
@@ -1598,6 +1655,7 @@ dbg_mem     db          " * E820 Memory Map",10,13,0
 dbg_systab  db          " * System tables",10,13,0
 dbg_time    db          " * System time",10,13,0
 dbg_env     db          " * Environment",10,13,0
+dbg_env2    db          " * Alternative environment",10,13,0
 dbg_initrd  db          " * Initrd loaded",10,13,0
 dbg_gzinitrd db         " * Gzip compressed initrd",10,13,0
 dbg_elf     db          " * Parsing ELF64",10,13,0
@@ -1618,6 +1676,7 @@ nocore:     db          "Kernel not found in initrd",0
 badcore:    db          "Kernel is not an executable ELF64 for x86_64",0
 novbe:      db          "VESA VBE error, no framebuffer",0
 nogzip:     db          "Unable to uncompress",0
+cfgfile:    db          "etc/sys/config",0,0,0
 kernel:     db          "lib/sys/core"
             db          (128-($-kernel)) dup 0
 ;-----------padding to be multiple of 512----------
