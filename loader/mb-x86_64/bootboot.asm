@@ -1116,6 +1116,9 @@ protmode_start:
             ; exclude initrd area from free mmap
             mov         edx, dword [bootboot.initrd_ptr]
             add         edx, dword [bootboot.initrd_size]
+            add         edx, 4095
+            shr         edx, 12
+            shl         edx, 12
             mov         esi, bootboot.mmap
             mov         cx, 248
             ;  +---------------------+    free

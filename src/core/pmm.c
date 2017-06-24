@@ -273,6 +273,11 @@ void pmm_init()
             );
 #endif
         if(MMapEnt_IsFree(entry)) {
+            //failsafe, make it page aligned
+            if(entry->ptr & (__PAGESIZE-1)) {
+                entry->size -= (entry->ptr & (__PAGESIZE-1)) & 0xFFFFFFFFFFFFF0ULL;
+                entry->ptr = ((entry->ptr+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
+            }
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
             // bootboot.initrd_ptr should already be excluded, but be sure, failsafe
@@ -287,16 +292,18 @@ void pmm_init()
             if((MMapEnt_Ptr(entry)<=bootboot.initrd_ptr && MMapEnt_Ptr(entry)+MMapEnt_Size(entry)>bootboot.initrd_ptr)||
                (MMapEnt_Ptr(entry)<e && MMapEnt_Ptr(entry)+MMapEnt_Size(entry)>=e)) {
                 // begin
-                if(bootboot.initrd_ptr-MMapEnt_Ptr(entry)>__PAGESIZE) {
+                if(bootboot.initrd_ptr>MMapEnt_Ptr(entry)+__PAGESIZE) {
                     fmem->base = MMapEnt_Ptr(entry);
                     fmem->size = (bootboot.initrd_ptr-MMapEnt_Ptr(entry))/__PAGESIZE;
+                    pmm.size++;
                     pmm.totalpages += fmem->size;
                     fmem++;
                 }
                 // end
-                if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry)-e>__PAGESIZE) {
+                if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry)>e+__PAGESIZE) {
                     fmem->base = bootboot.initrd_ptr+bootboot.initrd_size;
                     fmem->size = (MMapEnt_Ptr(entry)+MMapEnt_Size(entry)-e)/__PAGESIZE;
+                    pmm.size++;
                     pmm.totalpages += fmem->size;
                     fmem++;
                 }

@@ -41,6 +41,8 @@ typedef struct {
 } _fd_t;
 
 public _fd_t _fd = { 0,0,0,0,NULL };
+public uint64_t _bogomips = 1000;
+public uint64_t _alarmstep = 1000;
 
 /* Make PATH be the root directory (the starting point for absolute paths).
    This call is restricted to the super-user.  */

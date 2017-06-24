@@ -6,6 +6,7 @@ CMD = gensyms
 else
 CMD = all
 endif
+export O
 
 drivers: $(DRVS)
 

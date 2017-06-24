@@ -166,17 +166,8 @@ xchg %bx,%bx
     /* usec < alarmstep? */
     cmpq    alarmstep, %rsi
     ja      3f
-    /* loops = usec*bogomips/1000000 */
-    movq    %rsi, %rax
-    xorq    %rdx, %rdx
-    movq    bogomips, %rcx
-    mulq    %rcx
-    movq    $1000000, %rcx
-    divq    %rcx
-5:  decq    %rax
-    orq     %rax, %rax
-    jnz     5b
-    jmp     9f
+    movq    alarmstep, %rsi
+    jmp     3f
 
     /* uint64_t rand() */
 2:  cmpb    $SYS_rand, %al
@@ -253,7 +244,8 @@ isr_tmrcalibrate:
     xorq    %rbx, %rbx
     xorq    %rcx, %rcx
     sti
-1:  incq    %rcx
+1:  pause
+    incq    %rcx
     orq     %rbx, %rbx
     jz      1b
     cli

@@ -285,7 +285,22 @@ usleep:
     movq    %rdi, %rax
     movq    $1000000,%rcx
     divq    %rcx
-    movq    %rax, %rdi
+    /* sec != 0? */
+    orq     %rdx, %rdx
+    jnz     1f
+    /* usec < alarmstep? */
+    cmpq    _alarmstep@GOTPCREL(%rip), %rsi
+    ja      1f
+    /* loops = usec*bogomips/1000000 */
+    movq    _bogomips@GOTPCREL(%rip), %rbx
+    mulq    %rbx
+    divq    %rcx
+2:  pause
+    decq    %rax
+    orq     %rax, %rax
+    jnz     2b
+    ret
+1:  movq    %rax, %rdi
     movq    %rdx, %rsi
     xorq    %rax, %rax
     movb    $SYS_alarm, %al

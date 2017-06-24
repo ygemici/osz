@@ -36,6 +36,8 @@ extern uint8_t sys_fault;
 extern uint8_t scrptr;
 extern uint64_t fstab;
 extern uint64_t fstab_size;
+extern uint64_t alarmstep;
+extern uint64_t bogomips;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -686,6 +688,10 @@ bool_t elf_rtlink()
                     if( ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_DRV ||
                         ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_SRV) {
                         k=0;
+                        if(!kmemcmp(strtable + s->st_name,"_bogomips",10) && s->st_size==8)
+                            {k=8; *objptr=bogomips;}
+                        if(!kmemcmp(strtable + s->st_name,"_alarmstep",11) && s->st_size==8)
+                            {k=8; *objptr=alarmstep;}
                         if(!kmemcmp(strtable + s->st_name,"_initrd_ptr",12) && s->st_size==8)
                             {k=8; *objptr=BUF_ADDRESS;}
                         if(!kmemcmp(strtable + s->st_name,"_initrd_size",13) && s->st_size==8)

@@ -1,5 +1,5 @@
 include ../Config
-NOINITRD = 0
+NOINITRD = 1
 INITRD = ../bin/ESP/BOOTBOOT/INITRD
 ESPFILE = ../bin/esp.part
 SYSFILE = ../bin/sys.part
