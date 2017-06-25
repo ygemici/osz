@@ -86,6 +86,8 @@ again:
             size=((size+__SLOTSIZE-1)/__SLOTSIZE)*__SLOTSIZE;
             while(size>0) {
                 paging[i] = (uint64_t)phys + (access | PG_SLOT);
+                __asm__ __volatile__ ( "invlpg (%0)" : : "b"(bss) : "memory" );
+                bss  += __SLOTSIZE;
                 phys += __SLOTSIZE;
                 size -= __SLOTSIZE;
                 tcb->linkmem += __SLOTSIZE/__PAGESIZE;
@@ -103,6 +105,8 @@ again:
     size=((size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
     while(size>0) {
         paging[i] = (uint64_t)phys + access;
+        __asm__ __volatile__ ( "invlpg (%0)" : : "b"(bss) : "memory" );
+        bss  += __PAGESIZE;
         phys += __PAGESIZE;
         size -= __PAGESIZE;
         tcb->linkmem++;
@@ -143,7 +147,9 @@ again:
                 pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), __SLOTSIZE/__PAGESIZE);
                 paging[i] = 0;
                 tcb->linkmem -= __SLOTSIZE/__PAGESIZE;
+                __asm__ __volatile__ ( "invlpg (%0)" : : "b"(bss) : "memory" );
             }
+            bss  += __SLOTSIZE;
             size -= __SLOTSIZE;
             i++; if(i>511) goto again;
         }
@@ -156,7 +162,9 @@ again:
             pmm_free((phy_t)(paging[i]&~(__PAGESIZE-1+(1UL<<63))), 1);
             paging[i] = 0;
             tcb->linkmem--;
+            __asm__ __volatile__ ( "invlpg (%0)" : : "b"(bss) : "memory" );
         }
+        bss  += __PAGESIZE;
         size -= __PAGESIZE;
         i++; if(i>511) goto again;
     }

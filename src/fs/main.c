@@ -50,10 +50,9 @@ dbg_printf("parse fstab\n");
 
 public void mountfs()
 {
-dbg_printf("mountfs1\n");
 cache_dump();
-dbg_printf("mountfs2\n");
-    parse_fstab();
+vfs_dump();
+//    parse_fstab();
 }
 
 void task_init(int argc, char **argv)
@@ -64,5 +63,4 @@ void task_init(int argc, char **argv)
     vfs_init();
     /* initialize dev directory, and memory "block devices" */
     devfs_init();
-cache_dump();
 }

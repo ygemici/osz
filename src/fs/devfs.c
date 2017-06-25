@@ -122,7 +122,6 @@ void devfs_init()
     inode.superblock.fs=_vfs_getfs("devfs");
     inode.superblock.entries = devdir;
     cache_dir("/dev",vfs_inode(&inode));
-cache_dump();
 
     // subdirectory /dev/vol/
     memzero((void*)&inode,sizeof(inode_t));
@@ -132,7 +131,6 @@ cache_dump();
     in=vfs_inode(&inode);
     dev_link(devdir,"vol/",in);
     cache_dir("/dev/vol",in);
-cache_dump();
 
     // subdirectory /dev/uuid/
     memzero((void*)&inode,sizeof(inode_t));
@@ -142,5 +140,4 @@ cache_dump();
     in=vfs_inode(&inode);
     dev_link(devdir,"uuid/",in);
     cache_dir("/dev/uuid",in);
-cache_dump();
 }

@@ -77,7 +77,7 @@ ino_t vfs_inode(const inode_t *inode)
     if(!inodes || errno)
         abort();
     memcpy((void*)&inodes[ninodes-1], (void*)inode, sizeof(inode_t));
-dbg_printf("vfs_inode=%d\n",ninodes-1);
+//dbg_printf("vfs_inode=%d\n",ninodes-1);
     return ninodes-1;
 }
 
@@ -95,6 +95,7 @@ void vfs_init()
     inode.type=VFS_INODE_TYPE_SUPERBLOCK;
     /* this is another chicken and egg scenario. We don't have ramdisk device yet */
     inode.superblock.storage = VFS_INODE_RAMDISK;
+    vfs_inode(&inode);
 }
 
 #if DEBUG

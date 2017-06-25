@@ -142,7 +142,7 @@ isr_syscall0:
     /* is destination SRV_CORE? */
 1:  orq     %rbx, %rbx
     jnz     4f
-xchg %bx,%bx
+
     /*** public syscalls ***/
     /* shortcut to seterr syscall */
     cmpb    $SYS_seterr, %al
@@ -188,7 +188,7 @@ xchg %bx,%bx
     movq    srand+24, %rbx
     jmp     9f
 
-    /*** drivers tasks only ***/
+    /*** driver tasks only ***/
 2:  cmpb    $PRI_DRV, tcb_priority
     jne     3f
     /* shortcut to ack syscall */
@@ -204,6 +204,7 @@ xchg %bx,%bx
     /* enable the given irq */
     call    isr_enableirq
     jmp     9f
+
     /* syscall or message send */
 3:  movq    %rdx, %rcx
     movq    %rsi, %rdx

@@ -139,7 +139,7 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
     uint64_t q,sh,sf;
     int i,j,k,l,fc=0,cnt=0,ocmi=0,ocmj=0;
     void *fp, *sp, *lp, *end;
-    allocmap_t *am;
+    allocmap_t *am;       //allocation map
     chunkmap_t *ncm=NULL; //new chunk map
     chunkmap_t *ocm=NULL; //old chunk map
     uint64_t maxchunks = (ALLOCSIZE-8)/sizeof(chunkmap_t);
