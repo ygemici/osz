@@ -1,5 +1,6 @@
-# auto detected values at boot time
-none		/tmp     	tmpfs	rw		0 1
+/dev/mem    	/        	auto	ro		0 1
+none        	/dev     	devfs	ro		0 1
+none        	/tmp     	tmpfs	rw		0 1
 /dev/vol/efi  	/boot    	vfat	ro,wheel:rw	0 2
 /dev/vol/home 	/home    	auto	users:rw	0 2
 /dev/vol/usr  	/usr     	auto	ro,wheel:rw	0 2

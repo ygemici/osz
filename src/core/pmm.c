@@ -64,6 +64,7 @@ void* pmm_alloc()
 {
     OSZ_pmm_entry *fmem = pmm.entries;
     int i;
+    uint64_t b;
     // run-time asserts
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
@@ -80,6 +81,7 @@ void* pmm_alloc()
             } else {
                 kmemset((char *)fmem->base, 0, __PAGESIZE);
             }
+            b=fmem->base;
             fmem->base+=__PAGESIZE;
             fmem->size--;
             if(fmem->size==0) {
@@ -90,7 +92,12 @@ void* pmm_alloc()
                 pmm.size--;
             }
             pmm.freepages--;
-            return (void*)(fmem->base - __PAGESIZE);
+#if DEBUG
+            if(debug&DBG_PMM)
+                kprintf("pmm_alloc=%x pid %x\n",b,
+                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((OSZ_tcb*)0)->pid:0);
+#endif
+            return (void*)b;
         }
         fmem++;
     }
@@ -153,6 +160,11 @@ void* pmm_allocslot()
             } else {
                 kmemset((char *)b, 0, __SLOTSIZE);
             }
+#if DEBUG
+            if(debug&DBG_PMM)
+                kprintf("pmm_allocslot=%x pid %x\n",b,
+                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((OSZ_tcb*)0)->pid:0);
+#endif
             return (void*)b;
         }
         fmem++;
@@ -175,6 +187,10 @@ void pmm_free(phy_t base, size_t numpages)
     srand[(numpages+0)%4] ^= (uint64_t)base;
     srand[(numpages+2)%4] ^= (uint64_t)base;
     kentropy();
+#if DEBUG
+    if(debug&DBG_PMM)
+        kprintf("pmm_free(%x,%d) pid %x\n",base,numpages,((OSZ_tcb*)0)->pid);
+#endif
     /* check for continuous regions */
     for(i=0;i<pmm.size;i++) {
         /* add to the beginning */
@@ -233,37 +249,14 @@ void pmm_init()
     pmm.bss_end = (uint8_t*)&pmm_entries + (uint64_t)(__PAGESIZE * nrphymax);
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
-    while(num>0) {
-        kentropy();
-        if(MMapEnt_IsFree(entry) &&
-           (uint)(MMapEnt_Size(entry)/__PAGESIZE)>=(uint)nrphymax) {
-            // map free physical pages to pmm.entries
-            for(i=0;(uint)i<(uint)nrphymax;i++)
-                kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
-                    (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
-                    PG_CORE_NOCACHE);
-            // "preallocate" the memory for pmm.entries
-            entry->ptr +=(uint64_t)((uint)nrphymax*__PAGESIZE);
-            entry->size-=(uint64_t)((uint)nrphymax*__PAGESIZE);
-            break;
-        }
-        num--;
-        entry++;
-    }
-
-    // iterate through memory map again but this time
-    // record free areas in pmm.entries
-    num = (bootboot.size-128)/16;
-    entry = &bootboot.mmap;
-    pmm.totalpages = 0;
 #if DEBUG
     if(debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
 #endif
+    i=false;
     while(num>0) {
-        srand[(entry->ptr/__PAGESIZE+num)%4] += entry->size + 
-            1000*bootboot.datetime[7] - 100*bootboot.datetime[6] + bootboot.datetime[5];
-        srand[(entry->ptr/__PAGESIZE+entry->size)%4] *= 16807;
+        srand[(entry->ptr/__PAGESIZE + entry->size +
+            1000*bootboot.datetime[7] + 100*bootboot.datetime[6] + bootboot.datetime[5])%4] *= 16807;
         kentropy();
 #if DEBUG
         if(debug&DBG_MEMMAP)
@@ -272,14 +265,46 @@ void pmm_init()
                 MMapEnt_Ptr(entry), MMapEnt_Size(entry)
             );
 #endif
-        if(MMapEnt_IsFree(entry)) {
+        if(MMapEnt_IsFree(entry) &&
+           (uint)(MMapEnt_Size(entry)/__PAGESIZE)>=(uint)nrphymax) {
             //failsafe, make it page aligned
             if(entry->ptr & (__PAGESIZE-1)) {
-                entry->size -= (entry->ptr & (__PAGESIZE-1)) & 0xFFFFFFFFFFFFF0ULL;
-                entry->ptr = ((entry->ptr+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
+                entry->size -= (__PAGESIZE-(entry->ptr & (__PAGESIZE-1))) & 0xFFFFFFFFFFFFF0ULL;
+                entry->ptr = ((entry->ptr+__PAGESIZE)/__PAGESIZE)*__PAGESIZE;
             }
+            //get upper bound for free memory
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
+            if(!i) {
+                // map free physical pages to pmm.entries
+                for(i=0;(uint)i<(uint)nrphymax;i++)
+                    kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
+                        (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
+                        PG_CORE_NOCACHE);
+                // "preallocate" the memory for pmm.entries
+                entry->ptr +=(uint64_t)((uint)nrphymax*__PAGESIZE);
+                entry->size-=(uint64_t)((uint)nrphymax*__PAGESIZE);
+                i=true;
+            }
+        }
+        num--;
+        entry++;
+    }
+    // memory check, -1 for rounding errors
+    if(m/1024/1024 < PHYMEM_MIN-1)
+        kpanic("Not enough memory. At least %d Mb of RAM required, only %d Mb free.", PHYMEM_MIN, m/1024/1024);
+
+    // iterate through memory map again but this time
+    // record free areas in pmm.entries
+    num = (bootboot.size-128)/16;
+    entry = &bootboot.mmap;
+    pmm.totalpages = 0;
+    while(num>0) {
+        srand[(entry->ptr/__PAGESIZE+num)%4] += entry->size + 
+            1000*bootboot.datetime[7] - 100*bootboot.datetime[6] + bootboot.datetime[5];
+        srand[(entry->ptr/__PAGESIZE+entry->size)%4] *= 16807;
+        kentropy();
+        if(MMapEnt_IsFree(entry)) {
             // bootboot.initrd_ptr should already be excluded, but be sure, failsafe
             // a: +------------+    initrd at begining of area
             //    ######
@@ -323,9 +348,6 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
-    // memory check, -1 for rounding errors
-    if(m/1024/1024 < PHYMEM_MIN-1)
-        kpanic("Not enough memory. At least %d Mb of RAM required, only %d Mb free.", PHYMEM_MIN, m/1024/1024);
 
     // ok, now we can allocate bss memory for core
 

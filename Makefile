@@ -75,7 +75,8 @@ clean:
 
 debug:
 ifeq ($(DEBUG),1)
-	qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+ssse3,+avx,+x2apic -serial stdio
+	@#qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+ssse3,+avx,+x2apic -serial stdio
+	qemu-system-x86_64 -s -S -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -serial mon:stdio
 else
 	@echo Compiled without debugging symbols! Set DEBUG = 1 in Config and recompile.
 endif

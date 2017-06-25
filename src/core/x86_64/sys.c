@@ -136,6 +136,7 @@ __inline__ void sys_enable()
         (uint64_t)(services[-SRV_FS]*__PAGESIZE),
         PG_CORE_NOCACHE);
 
+    syslog_early("Initializing");
     // fake an interrupt handler return to force first task switch
     __asm__ __volatile__ (
         // switch to first task's address space
@@ -161,8 +162,6 @@ void sys_init()
     kmemcpy(&fn[0], "lib/sys/", 8);
 
     /*** Platform specific initialization ***/
-    syslog_early("Device drivers");
-
     /* create idle task */
     OSZ_tcb *tcb = task_new("idle", PRI_IDLE);
     // modify TCB for idle task. Don't add to scheduler queue, normally it will never be scheduled
@@ -173,6 +172,7 @@ void sys_init()
     idle_mapping = tcb->memroot;
     idle_first = true;
 
+    syslog_early("Device drivers");
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
 
@@ -212,6 +212,7 @@ void sys_init()
         // ...enumarate other system buses
 */
     }
+    syslog_early("Services");
 }
 
 /*** Called when the "idle" task first scheduled ***/

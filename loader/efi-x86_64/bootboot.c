@@ -218,7 +218,7 @@ GetLFB()
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
     EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
-    UINTN i, imax, SizeOfInfo, nativeMode, selectedMode=9999, sw=0, sh=0;
+    UINTN i, imax, SizeOfInfo, nativeMode, selectedMode=9999, sw=0, sh=0, valid;
 
     //GOP
     status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void**)&gop);
@@ -240,21 +240,38 @@ GetLFB()
     for (i = 0; i < imax; i++) {
         status = uefi_call_wrapper(gop->QueryMode, 4, gop, i, &SizeOfInfo, &info);
         // failsafe
-        if (EFI_ERROR(status) || (
-           info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
-           info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor &&
-          (info->PixelFormat != PixelBitMask || info->PixelInformation.ReservedMask!=0)))
+        if (EFI_ERROR(status))
             continue;
+        valid=0;
         // get the mode for the closest resolution
-        if( info->HorizontalResolution >= (unsigned int)reqwidth && 
-            info->VerticalResolution >= (unsigned int)reqheight &&
-            (selectedMode==9999||(info->HorizontalResolution<sw && info->VerticalResolution < sh))) {
-                selectedMode = i;
-                sw = info->HorizontalResolution;
-                sh = info->VerticalResolution;
+        if((info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor ||
+            info->PixelFormat == PixelBlueGreenRedReserved8BitPerColor
+// there's a bug in TianoCore, it reports bad masks in PixelInformation, so we don't use PixelBitMask
+//          || (info->PixelFormat == PixelBitMask)
+           )){
+            if(info->HorizontalResolution >= (unsigned int)reqwidth && 
+               info->VerticalResolution >= (unsigned int)reqheight &&
+               (selectedMode==9999||(info->HorizontalResolution<sw && info->VerticalResolution < sh))) {
+                    selectedMode = i;
+                    sw = info->HorizontalResolution;
+                    sh = info->VerticalResolution;
+            }
+            valid=1;
         }
-        DBG(L"    %c%d %d x %d\n", i==selectedMode?'+':(i==nativeMode?'-':' '),
-            i, info->HorizontalResolution, info->VerticalResolution);
+        // make gcc happy
+        if(valid){}
+        DBG(L"    %c%2d %4d x %4d, %d%c ", i==selectedMode?'+':(i==nativeMode?'-':' '),
+            i, info->HorizontalResolution, info->VerticalResolution, info->PixelFormat,valid?' ':'?');
+        DBG(L"r:%x g:%x b:%x\n",
+                info->PixelFormat==PixelRedGreenBlueReserved8BitPerColor?0xff:(
+                info->PixelFormat==PixelBlueGreenRedReserved8BitPerColor?0xff0000:(
+                info->PixelFormat==PixelBitMask?info->PixelInformation.RedMask:0)),
+                info->PixelFormat==PixelRedGreenBlueReserved8BitPerColor ||
+                info->PixelFormat==PixelBlueGreenRedReserved8BitPerColor?0xff00:(
+                info->PixelFormat==PixelBitMask?info->PixelInformation.GreenMask:0),
+                info->PixelFormat==PixelRedGreenBlueReserved8BitPerColor?0xff0000:(
+                info->PixelFormat==PixelBlueGreenRedReserved8BitPerColor?0xff:(
+                info->PixelFormat==PixelBitMask?info->PixelInformation.BlueMask:0)));
     }
     // if we have found a new, better mode
     if(selectedMode != 9999 && selectedMode != nativeMode) {
@@ -273,11 +290,13 @@ GetLFB()
         (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.BlueMask==0)? FB_ARGB : (
             gop->Mode->Info->PixelFormat==PixelRedGreenBlueReserved8BitPerColor ||
             (gop->Mode->Info->PixelFormat==PixelBitMask && gop->Mode->Info->PixelInformation.RedMask==0)? FB_ABGR : (
-                gop->Mode->Info->PixelInformation.BlueMask==8? FB_RGBA : FB_BGRA
+                gop->Mode->Info->PixelInformation.BlueMask==0xFF00? FB_RGBA : FB_BGRA
         ));
-    DBG(L" * Screen %d x %d, scanline %d, fb @%lx %d bytes, mode %d\n",
+    DBG(L" * Screen %d x %d, scanline %d, fb @%lx %d bytes, type %d %s\n",
         bootboot->fb_width, bootboot->fb_height, bootboot->fb_scanline,
-        bootboot->fb_ptr, bootboot->fb_size, gop->Mode->Mode);
+        bootboot->fb_ptr, bootboot->fb_size, gop->Mode->Info->PixelFormat, 
+            bootboot->fb_type==FB_ARGB?L"ARGB":(bootboot->fb_type==FB_ABGR?L"ABGR":(
+            bootboot->fb_type==FB_RGBA?L"RGBA":L"BGRA")));
     return EFI_SUCCESS;
 }
 
@@ -498,17 +517,20 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
             mement=NextMemoryDescriptor(mement,desc_size)) {
                 if(mement==NULL || (mement->PhysicalStart==0 && mement->NumberOfPages==0))
                     break;
-            // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
-            for(ptr=(CHAR8 *)mement->PhysicalStart;
-                ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
-                ptr+=512) {
-                if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
-                    CopyMem(&initrd_len,ptr+16,4);
-                    initrd_ptr=ptr+32;
-                    status=EFI_SUCCESS;
-                    goto foundinrom;
+                // skip free and ACPI memory
+                if(mement->Type==7||mement->Type==9||mement->Type==10)
+                    continue;
+                // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
+                for(ptr=(CHAR8 *)mement->PhysicalStart;
+                    ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
+                    ptr+=512) {
+                    if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
+                        CopyMem(&initrd_len,ptr+16,4);
+                        initrd_ptr=ptr+32;
+                        status=EFI_SUCCESS;
+                        goto foundinrom;
+                    }
                 }
-            }
         }
 foundinrom:
         uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)memory_map, (memory_map_size+PAGESIZE-1)/PAGESIZE);
@@ -532,7 +554,7 @@ foundinrom:
     }
     // if even that failed, look for a partition
     if(status!=EFI_SUCCESS || initrd_len==0){
-        DBG(L" * Locate root fs in GPT%s\n",L"");
+        DBG(L" * Locate initrd in GPT%s\n",L"");
         status = uefi_call_wrapper(BS->LocateHandle, 5, ByProtocol, &bioGuid, NULL, &handle_size, handles);
         if (status!=EFI_BUFFER_TOO_SMALL || handle_size==0) {
             return report(EFI_OUT_OF_RESOURCES,L"LocateHandle getSize");
@@ -623,17 +645,24 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         DBG(L" * Initrd loaded @%lx %d bytes\n",initrd_ptr,initrd_len);
         kne=env_ptr=NULL;
         // if there's an environment file, load it
-        if(loaded_image!=NULL) {
-            if(LoadFile(configfile,&env_ptr,&env_len)!=EFI_SUCCESS)
-                env_ptr=NULL;
+        if(loaded_image!=NULL && LoadFile(configfile,&env_ptr,&env_len)!=EFI_SUCCESS) {
+            env_ptr=NULL;
         }
         if(env_ptr==NULL) {
             DBG(L" * Alternative environment%s\n",L"");
-            core_len=0; j=0;
-            while(env_ptr==NULL && fsdrivers[j]!=NULL) {
-                env_ptr=(UINT8*)(*fsdrivers[j++])((unsigned char*)initrd_ptr,cfgname);
+            core_len=0; j=0; ptr=NULL;
+            while(ptr==NULL && fsdrivers[j]!=NULL) {
+                ptr=(UINT8*)(*fsdrivers[j++])((unsigned char*)initrd_ptr,cfgname);
             }
-            env_len=core_len; core_len=0;
+            if(core_len>0) {
+                uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
+                if(env_ptr==NULL)
+                    return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+                ZeroMem((void*)env_ptr,PAGESIZE);
+                CopyMem((void*)env_ptr,ptr,core_len);
+                env_len=core_len;
+            }
+            core_len=0;
         }
         if(env_ptr!=NULL) {
             ParseEnvironment(env_ptr,env_len, argc, argv);

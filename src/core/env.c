@@ -112,12 +112,9 @@ unsigned char *env_display(unsigned char *s)
     while(*s==' '||*s=='\t')
         s++;
     if(s[0]=='m' && s[1]=='c')  display = DSP_MONO_COLOR;
-    if(s[0]=='M' && s[1]=='C')  display = DSP_MONO_COLOR;
     if(s[0]=='s' && s[1]=='m')  display = DSP_STEREO_MONO;
-    if(s[0]=='S' && s[1]=='M')  display = DSP_STEREO_MONO;
     if(s[0]=='a' && s[1]=='n')  display = DSP_STEREO_MONO;  //anaglyph
     if(s[0]=='s' && s[1]=='c')  display = DSP_STEREO_COLOR;
-    if(s[0]=='S' && s[1]=='C')  display = DSP_STEREO_COLOR;
     if(s[0]=='r' && s[1]=='e')  display = DSP_STEREO_COLOR; //real 3D
     while(*s!=0 && *s!='\n')
         s++;
@@ -152,36 +149,26 @@ unsigned char *env_debug(unsigned char *s)
         if(*s==' '||*s=='\t'||*s==',')
             { s++; continue; }
         // terminators
-        if(((s[0]=='f'||s[0]=='F')&&(s[1]=='a'||s[1]=='A')) ||
-           ((s[0]=='n'||s[0]=='N')&&(s[1]=='o'||s[1]=='O'))) {
+        if((s[0]=='f'&&s[1]=='a') ||
+           (s[0]=='n'&&s[1]=='o')) {
             debug = 0;
             break;
         }
         // debug flags
         if(s[0]=='m' && s[1]=='m')              debug |= DBG_MEMMAP;
-        if(s[0]=='M' && s[1]=='M')              debug |= DBG_MEMMAP;
         if(s[0]=='t' && s[1]=='a')              debug |= DBG_TASKS;
-        if(s[0]=='T' && s[1]=='A')              debug |= DBG_TASKS;
         if(s[0]=='e' && s[1]=='l')              debug |= DBG_ELF;
-        if(s[0]=='E' && s[1]=='L')              debug |= DBG_ELF;
         if(s[0]=='r' && (s[1]=='i'||s[2]=='i')) debug |= DBG_RTIMPORT;
-        if(s[0]=='R' && (s[1]=='I'||s[2]=='I')) debug |= DBG_RTIMPORT;
         if(s[0]=='r' && (s[1]=='e'||s[2]=='e')) debug |= DBG_RTEXPORT;
-        if(s[0]=='R' && (s[1]=='E'||s[2]=='E')) debug |= DBG_RTEXPORT;
         if(s[0]=='i' && s[1]=='r')              debug |= DBG_IRQ;
-        if(s[0]=='I' && s[1]=='R')              debug |= DBG_IRQ;
         if(s[0]=='d' && s[1]=='e')              debug |= DBG_DEVICES;
-        if(s[0]=='D' && s[1]=='E')              debug |= DBG_DEVICES;
         if(s[0]=='s' && s[1]=='c')              debug |= DBG_SCHED;
-        if(s[0]=='S' && s[1]=='C')              debug |= DBG_SCHED;
         if(s[0]=='m' && s[1]=='s')              debug |= DBG_MSG;
-        if(s[0]=='M' && s[1]=='S')              debug |= DBG_MSG;
         if(s[0]=='l' && s[1]=='o')              debug |= DBG_LOG;
-        if(s[0]=='L' && s[1]=='O')              debug |= DBG_LOG;
+        if(s[0]=='p' && s[1]=='m')              debug |= DBG_PMM;
+        if(s[0]=='v' && s[1]=='m')              debug |= DBG_PMM;
         if(s[0]=='m' && s[1]=='a')              debug |= DBG_MALLOC;
-        if(s[0]=='M' && s[1]=='A')              debug |= DBG_MALLOC;
         if(s[0]=='t' && s[1]=='e')              debug |= DBG_TESTS;
-        if(s[0]=='T' && s[1]=='E')              debug |= DBG_TESTS;
         s++;
     }
     return s;

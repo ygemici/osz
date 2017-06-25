@@ -54,7 +54,7 @@ License
 The boot loader and the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol are Public Domain.
 All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) filesystem) licensed under CC-by-nc-sa-4.0:
 
- Copyright 2017 [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) bztsrc@github
+ Copyright 2017 bzt (bztsrc@github) [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
  
 **You are free to**:
 

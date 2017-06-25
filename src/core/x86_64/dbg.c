@@ -275,9 +275,8 @@ void dbg_tcb()
         if(dbg_tui)
             dbg_settheme();
         t=(tcb->state==tcb_state_running?0:ticks[TICKS_LO]-tcb->blktime) + tcb->blkcnt;
-        kprintf("user ticks: %9d, system ticks: %9d, blocked ticks: %9d\n", tcb->billcnt, tcb->syscnt, t);
-        kprintf("blocked since: %9d, next in alarm queue: %4x, alarm at: %d.%d\n", tcb->blktime,
-            tcb->alarm, tcb->alarmsec, tcb->alarmns);
+        kprintf("user ticks: %9d, blocked ticks: %9d, blocked since: %9d\n", tcb->billcnt, t, tcb->blktime);
+        kprintf("next in alarm queue: %4x, alarm at: %d.%d\n", tcb->alarm, tcb->alarmsec, tcb->alarmns);
         kprintf("next task in queue: %4x, previous task in queue: %4x\n", tcb->next, tcb->prev);
         kprintf("\n");
     }
@@ -485,7 +484,7 @@ void dbg_code(uint64_t rip, uint64_t rs, int *idx)
         fg = dbg_theme[2];
         if(dbg_tui)
             dbg_settheme();
-        kprintf(sys_fault?"  * not mapped %d *\n":"  * end *\n", sys_fault);
+        kprintf(sys_fault?"  * not mapped *\n":"  * end *\n");
         fg = dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
@@ -654,7 +653,7 @@ again:
             fg = dbg_theme[2];
             if(dbg_tui)
                 dbg_settheme();
-            kprintf(" * not mapped %d *", sys_fault);
+            kprintf(" * not mapped *");
             fg = dbg_theme[3];
             if(dbg_tui)
                 dbg_settheme();
@@ -737,7 +736,7 @@ void dbg_data(uint64_t ptr)
             fg = dbg_theme[2];
             if(dbg_tui)
                 dbg_settheme();
-            kprintf(" * not mapped %d *", sys_fault);
+            kprintf(" * not mapped *");
             fg = dbg_theme[3];
             if(dbg_tui)
                 dbg_settheme();
@@ -875,19 +874,19 @@ void dbg_data(uint64_t ptr)
     if(!dbg_full) {
         kmap((uint64_t)&tmp2map, tcb->memroot, PG_CORE_NOCACHE);
         d=(o>>(12+9+9+9))&0x1FF;
-        if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();}
+        if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();else dbg_putchar('!');}
         kprintf("\n  PML4 %8x ",paging[d]);
         dbg_pagingflags(paging[d]);
         if(paging[d]&1) {
             kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
             d=(o>>(12+9+9))&0x1FF;
-            if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();}
+            if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();else dbg_putchar('!');}
             kprintf(" %4d      PDPE %8x ",d,paging[d]);
             dbg_pagingflags(paging[d]);
             if(paging[d]&1){
                 kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
                 d=(o>>(12+9))&0x1FF;
-                if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();}
+                if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();else dbg_putchar('!');}
                 kprintf(" %4d\n  PDE  %8x ",d,paging[d]);
                 dbg_pagingflags(paging[d]);
                 if(paging[d]&1){
@@ -897,7 +896,7 @@ void dbg_data(uint64_t ptr)
                     } else {
                         kmap((uint64_t)&tmp2map, paging[d], PG_CORE_NOCACHE);
                         d=(o>>(12))&0x1FF;
-                        if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();}
+                        if((paging[d]&1)==0) {fg = dbg_theme[2];if(dbg_tui) dbg_settheme();else dbg_putchar('!');}
                         kprintf(" %4d      PTE  %8x ",d,paging[d]);
                         dbg_pagingflags(paging[d]);
                         d=o&(__PAGESIZE-1);
@@ -1239,10 +1238,12 @@ void dbg_sysinfo()
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf(" acpi: %8x, smbi: %8x, uefi: %8x\n mp:   %8x,",
+        kprintf("   acpi: %8x,   smbi: %8x,   uefi: %8x\n     mp: %8x,",
             systables[0], systables[1], systables[2], systables[3]);
-        kprintf(" apic: %8x, dsdt: %8x\n\n",
+        kprintf("   apic: %8x,   dsdt: %8x\n",
             systables[4], systables[5]);
+        kprintf(" ioapic: %8x,   hpet: %8x\n\n",
+            systables[7], systables[8]);
     
         fg=dbg_theme[4];
         if(dbg_tui)
@@ -1487,6 +1488,12 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
     dbg_isshft = false;
     dbg_indump = true;
 
+    if(dbg_start+32<rip) {
+        dbg_start=rip;
+        do {
+            dbg_start--;
+        } while(dbg_start>dbg_start-15 && disasm(dbg_start,NULL) != rip);
+    }
     dbg_mqptr = *((uint64_t*)MQ_ADDRESS) - 1;
     if(dbg_mqptr==0)
         dbg_mqptr = *((uint64_t*)(MQ_ADDRESS+16)) - 1;

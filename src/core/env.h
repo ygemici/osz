@@ -56,8 +56,10 @@ extern uint64_t pathmax;    // maximum length of path in bytes
 #define DBG_SCHED    (1<<7) // sc 128
 #define DBG_MSG      (1<<8) // ms 256
 #define DBG_LOG      (1<<9) // lo 512
-#define DBG_MALLOC   (1<<10)// ma 1024
-#define DBG_TESTS    (1<<11)// te 2048
+#define DBG_PMM      (1<<10)// pm 1024
+#define DBG_VMM      (1<<11)// vm 2048
+#define DBG_MALLOC   (1<<12)// ma 4096
+#define DBG_TESTS    (1<<13)// te 8192
 
 /* display options */
 #define DSP_MONO_COLOR   0  // mc flat 2D color

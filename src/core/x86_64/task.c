@@ -113,11 +113,12 @@ OSZ_tcb *task_new(char *cmdline, uint8_t prio)
     paging[i--] = 1;                                 // argc
     stack_ptr = ptr + i*8;
     tcb->rsp = tcb->cmdline = TEXT_ADDRESS - __PAGESIZE + (i+1)*8;
+//for(;i<512;i++) kprintf("%4x: %8x\n",((uint64_t)&paging[i])&0xFFFF,paging[i]);
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
 #if DEBUG
-    if(debug&DBG_TASKS||debug==DBG_ELF)
-        kprintf("Task %x %s\n",self/__PAGESIZE,cmdline);
+    if(debug&DBG_TASKS)
+        kprintf("Task %x memroot %x stack %x %s\n",self/__PAGESIZE,tcb->memroot,ptr,cmdline);
 #endif
     return tcb;
 }

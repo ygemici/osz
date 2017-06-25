@@ -96,6 +96,8 @@ You can invoke it from your code at any given point as well with
 breakpoint;
 /* insert a bochs breakpoint into C code */
 breakbochs;
+/* insert a gdb breakpoint into C code. In gdb use "set $pc+=2" */
+breakgdb;
 ```
 
 ### Interfaces
@@ -120,7 +122,7 @@ It's on the right bottom corner of the screen.
 
 In line console mode, it's shown before the `dbg>` prompt.
 
-Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> to switch tasks.
+Within the debugger, use `dbg> p pid` or <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> keys to switch tasks.
 
 ### Panels (tabs)
 

@@ -46,11 +46,8 @@ unsigned char *envarch_cs(unsigned char *s)
         s++;
     clocksource=0;
     if(s[0]=='h' && s[1]=='p')  clocksource=TMR_HPET; // HPET
-    if(s[0]=='H' && s[1]=='P')  clocksource=TMR_HPET; // HPET
     if(s[0]=='p' && s[1]=='i')  clocksource=TMR_PIT;  // PIT
-    if(s[0]=='P' && s[1]=='I')  clocksource=TMR_PIT;  // PIT
     if(s[0]=='r' && s[1]=='t')  clocksource=TMR_RTC;  // RTC
-    if(s[0]=='R' && s[1]=='T')  clocksource=TMR_RTC;  // RTC
     while(*s!=0 && *s!='\n')
         s++;
     return s;

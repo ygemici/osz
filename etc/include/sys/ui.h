@@ -31,5 +31,5 @@
 #define SYS_setcursor	( 24)
 #define SYS_keypress	( 27)
 #define SYS_keyrelease	( 30)
-#define SYS_pointer	( 34)
+#define SYS_pointer	( 35)
 

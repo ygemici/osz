@@ -137,7 +137,7 @@ void bzt_free(uint64_t *arena, void *ptr)
 void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
 {
     uint64_t q,sh,sf;
-    int i,j,k,l,fc=0,cnt=0,ocmi,ocmj;
+    int i,j,k,l,fc=0,cnt=0,ocmi=0,ocmj=0;
     void *fp, *sp, *lp, *end;
     allocmap_t *am;
     chunkmap_t *ncm=NULL; //new chunk map

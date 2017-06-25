@@ -56,7 +56,7 @@ void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t acce
     if(access & 2)
         access |= (1UL<<63);
 #if DEBUG
-    if(debug&DBG_MALLOC)
+    if(debug&DBG_VMM)
         kprintf("    vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
 #endif
 again:
@@ -124,7 +124,7 @@ void vmm_unmapbss(OSZ_tcb *tcb, virt_t bss, size_t size)
     bss &= ~(__PAGESIZE-1);
     size=((size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
 #if DEBUG
-    if(debug&DBG_MALLOC)
+    if(debug&DBG_VMM)
         kprintf("    vmm_unmapbss(%x,%x,%d)\n", tcb->memroot, bss, size);
 #endif
 again:

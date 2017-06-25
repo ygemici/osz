@@ -343,8 +343,9 @@ void kprintf_scrollscr()
             // restore color
             fg = oldfg;
             kx = fx; ky--;
-            // wait for user input
-            kwaitkey();
+            // wait for user input. Turn off pause if user presses Esc
+            if(kwaitkey()==1)
+                scry=-1;
             // clear the last row
             for(y=0;y<font->height;y++){
                 line=tmp;
@@ -399,9 +400,6 @@ void kprintf_clearline()
 {
     OSZ_font *font = (OSZ_font*)&_binary_font_start;
     int x,y, line, tmp = ky*font->height*bootboot.fb_scanline;
-#if DEBUG
-    if(dbg_indump) return;
-#endif
     // clear the row
     for(y=0;y<font->height;y++){
         line=tmp;
@@ -548,8 +546,6 @@ newline:        kx=fx;
 #endif
                     kprintf_scrollscr();
                 }
-                if(scry==-1)
-                    kprintf_clearline();
 #if DEBUG
                 if(dbg_tui)
                     dbg_setpos();
@@ -557,7 +553,11 @@ newline:        kx=fx;
                     dbg_putchar(13);
                     dbg_putchar(10);
                 }
+                if(scry==-1 && !dbg_indump)
+#else
+                if(scry==-1)
 #endif
+                    kprintf_clearline();
             }
         }
         fmt++;

@@ -31,16 +31,19 @@
 #define SYS_getinode 1
 #endif
 
+/* it's on a read-only page in TCB */
+extern ino_t _rootdir;
+extern void _chroot(ino_t inode);
+
 /* structure to hold file descriptors. It's filld by real time linker */
 typedef struct {
-    ino_t rootdir;
     ino_t cwdir;
     uint64_t of;
     uint64_t lf;
     ino_t *fd;
 } _fd_t;
 
-public _fd_t _fd = { 0,0,0,0,NULL };
+public _fd_t _fd = { 0,0,0,NULL };
 public uint64_t _bogomips = 1000;
 public uint64_t _alarmstep = 1000;
 
@@ -48,13 +51,13 @@ public uint64_t _alarmstep = 1000;
    This call is restricted to the super-user.  */
 public ino_t chroot(const char *path)
 {
-    _fd.rootdir = (ino_t)mq_call(SRV_FS, SYS_getinode, 0, path);
-    return _fd.rootdir;
+    _chroot((ino_t)mq_call(SRV_FS, SYS_getinode, 0, path));
+    return _rootdir;
 }
 
 /* Change the process's working directory to PATH.  */
 public ino_t chdir(const char *path)
 {
-    _fd.cwdir = (ino_t)mq_call(SRV_FS, SYS_getinode, _fd.rootdir, path);
+    _fd.cwdir = (ino_t)mq_call(SRV_FS, SYS_getinode, _rootdir, path);
     return _fd.cwdir;
 }

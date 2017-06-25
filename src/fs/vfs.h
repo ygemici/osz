@@ -127,6 +127,7 @@ extern openfile_t *files;
 
 extern void mknod();
 extern ino_t getinode(ino_t parent,const char *path);
+extern uint16_t _vfs_getfs(char *name);
 extern uint16_t _vfs_regfs(const fsdrv_t *fs);
 extern ino_t vfs_inode(const inode_t *inode);
 #if DEBUG

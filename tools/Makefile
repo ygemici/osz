@@ -55,6 +55,10 @@ else
 endif
 	@# populate with static files
 	@cp -r ../etc/etc ../bin/initrd || true
+ifeq ($(NOINITRD),1)
+	@echo "/dev/disk0p2	/        	fsz	rw		0 1" >../bin/initrd/etc/fstab
+	@cat ../etc/etc/fstab | grep -v "/dev/mem" >>../bin/initrd/etc/fstab
+endif
 	@cp -r ../etc/root ../bin/initrd || true
 ifeq ($(NOINITRD),1)
 ifneq ("$(wildcard ../loader/bootboot.bin)","")

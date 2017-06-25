@@ -74,7 +74,7 @@ void service_init(int subsystem, char *fn)
         sched_add(tcb);
 
         services[-subsystem] = tcb->pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-subsystem,cmd,tcb->pid);
+        syslog_early(" %s -%d pid %x",cmd,-subsystem,tcb->pid);
     } else {
         syslog_early("WARNING task check failed for /%s", fn);
     }
@@ -141,7 +141,7 @@ void fs_init()
         sched_add(tcb);
 
         services[-SRV_FS] = tcb->pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_FS,"FS",tcb->pid);
+        syslog_early(" %s -%d pid %x","FS",-SRV_FS,tcb->pid);
     } else {
         kpanic("task check failed for /sbin/fs");
     }
@@ -170,7 +170,7 @@ void ui_init()
         sched_add(tcb);
 
         services[-SRV_UI] = tcb->pid;
-        syslog_early("Service -%d \"%s\" registered as %x",-SRV_UI,"UI",tcb->pid);
+        syslog_early(" %s -%d pid %x","UI",-SRV_UI,tcb->pid);
 
         // allocate and map screen buffer A
         virt_t bss=BUF_ADDRESS;

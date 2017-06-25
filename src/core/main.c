@@ -1,7 +1,7 @@
 /*
  * core/main.c
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -45,7 +45,7 @@
 
 char __attribute__ ((section (".data"))) osver[] =
     OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"
-    "Use is subject to license terms. Copyright bzt (bztsrc@github), CC-by-nc-sa\n\n";
+    "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *

@@ -55,6 +55,13 @@ void devfs_init()
 {
     ino_t in;
     inode_t inode;
+
+    fsdrv_t devdrv = {
+        "devfs",
+        "Device list",
+        NULL
+    };
+    _vfs_regfs(&devdrv);
     /* add it here, because there's no better place */
     fsdrv_t tmpdrv = {
         "tmpfs",
@@ -95,7 +102,7 @@ void devfs_init()
     inode.blkdev.startsec = (uint64_t)_initrd_ptr;
     inode.blkdev.size = (_initrd_size+__PAGESIZE-1)/__PAGESIZE;
     inode.blkdev.blksize = __PAGESIZE;
-    dev_link(devdir,"root",vfs_inode(&inode));
+    dev_link(devdir,"mem",vfs_inode(&inode));
 
     //VFS_INODE_RNDDEV
     memzero((void*)&inode,sizeof(inode_t));
@@ -111,9 +118,11 @@ void devfs_init()
     //This is basically a list /dev/
     memzero((void*)&inode,sizeof(inode_t));
     inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_DIRECTORY;
-    inode.directory.entries = devdir;
+    inode.type=VFS_INODE_TYPE_SUPERBLOCK;
+    inode.superblock.fs=_vfs_getfs("devfs");
+    inode.superblock.entries = devdir;
     cache_dir("/dev",vfs_inode(&inode));
+cache_dump();
 
     // subdirectory /dev/vol/
     memzero((void*)&inode,sizeof(inode_t));
@@ -123,6 +132,7 @@ void devfs_init()
     in=vfs_inode(&inode);
     dev_link(devdir,"vol/",in);
     cache_dir("/dev/vol",in);
+cache_dump();
 
     // subdirectory /dev/uuid/
     memzero((void*)&inode,sizeof(inode_t));
@@ -132,4 +142,5 @@ void devfs_init()
     in=vfs_inode(&inode);
     dev_link(devdir,"uuid/",in);
     cache_dir("/dev/uuid",in);
+cache_dump();
 }

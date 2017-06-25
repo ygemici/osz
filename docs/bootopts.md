@@ -57,10 +57,12 @@ This can be a numeric value, or a comma separated list of flags.
 | 128   | sc   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
 | 256   | ms   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
 | 512   | lo   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
-| 1024	| ma   | DBG_MALLOC | debug [memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
-| 2048  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test/main.c) instead of [init](https://github.com/bztsrc/osz/blob/master/docs/services.md) task |
+| 1024  | pm   | DBG_PMM | debug [physical memory manager](https://github.com/bztsrc/osz/blob/master/src/core/pmm.c) |
+| 2048  | vm   | DBG_VMM | debug [virtual memory manager](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/vmm.c) |
+| 4096  | ma   | DBG_MALLOC | debug [libc memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
+| 8192  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test/main.c) instead of [init](https://github.com/bztsrc/osz/blob/master/docs/services.md) task |
 
-Most of these only available when compiled with debug. Normally you can only use a few: DBG_ELF, DBG_DEVICES, DBG_LOG and DBG_MSG.
+Most of these only available when compiled with debug. Normally you can only use three to troubleshoot boot: DBG_DEVICES, DBG_LOG and DBG_MSG.
 
 Clock Source
 ------------

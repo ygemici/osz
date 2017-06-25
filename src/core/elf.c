@@ -87,8 +87,10 @@ void *elf_load(char *fn)
     srand[(i+2)%4] *= 16807;
     srand[(i+3)%4] ^= (uint64_t)elf;
 
+#if DEBUG
     if(debug&DBG_ELF)
         kprintf("  loadelf %s %x (%d pages) @%d\n",fn,elf,size,ret);
+#endif
     // valid elf for this platform?
     if(elf==NULL || kmemcmp(elf->e_ident,ELFMAG,SELFMAG) ||
         elf->e_ident[EI_CLASS]!=ELFCLASS64 ||
@@ -138,8 +140,10 @@ void *elf_load(char *fn)
  */
 __inline__ void elf_loadso(char *fn)
 {
+#if DEBUG
     if(debug&DBG_ELF)
         kprintf("  ");
+#endif
     elf_load(fn);
 }
 
@@ -750,9 +754,11 @@ bool_t elf_rtlink()
 #endif
                         // save virtual address
                         uint64_t *ptr = (uint64_t *)r->offs;
-                        // soecial case, it's in the TCB
+                        // soecial cases, they're in the TCB
                         if(!kmemcmp(strtable + s->st_name, "errno", 6))
                             offs = tcb_errno;
+                        if(!kmemcmp(strtable + s->st_name, "_rootdir", 9))
+                            offs = tcb_rootdir;
                         *ptr = offs;
                         r->offs = 0;
                     }

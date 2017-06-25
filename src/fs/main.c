@@ -40,8 +40,9 @@ extern void devfs_init();
 
 void parse_fstab()
 {
+dbg_printf("parse fstab\n");
 #if DEBUG
-    vfs_dump();
+//    vfs_dump();
 
     dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
 #endif
@@ -49,7 +50,9 @@ void parse_fstab()
 
 public void mountfs()
 {
+dbg_printf("mountfs1\n");
 cache_dump();
+dbg_printf("mountfs2\n");
     parse_fstab();
 }
 

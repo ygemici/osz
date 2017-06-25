@@ -40,6 +40,7 @@
 .global dl
 .global yield
 .global seterr
+.global _chroot
 .global setirq
 .global mmap
 .global munmap
@@ -218,6 +219,17 @@ seterr:
 myseterr:
     xorq    %rax, %rax
     movb    $SYS_seterr, %al
+    syscall
+    ret
+
+/**
+ * Set chroot variable (which is read-only, no direct access)
+ *
+ * void _chroot(ino_t inode)
+ */
+_chroot:
+    xorq    %rax, %rax
+    movb    $SYS_chroot, %al
     syscall
     ret
 

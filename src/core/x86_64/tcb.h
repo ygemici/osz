@@ -35,7 +35,8 @@
 #define tcb_fx  128
 #define tcb_pid 640
 #define tcb_memroot 648
-#define tcb_billcnt 656
+#define tcb_rootdir 656
+#define tcb_billcnt 664
 #define tcb_excerr 680
 #define tcb_serial 816
 
@@ -65,8 +66,8 @@ typedef struct {
     uint8_t fx[512];    // media registers save area at      tcb+ 128
     pid_t pid;          // task's pid at                     tcb+ 640
     uint64_t memroot;   // memory mapping root at            tcb+ 648
-    uint64_t billcnt;   // ticks task spent in ring 3        tcb+ 656
-    uint64_t syscnt;    // ticks task spent in ring 0        tcb+ 664
+    uint64_t rootdir;   // inode of root directory           tcb+ 656
+    uint64_t billcnt;   // ticks task spent                  tcb+ 664
     uint64_t cpu;       // APIC ID of executor cpu           tcb+ 672
     uint64_t excerr;    // exception error code              tcb+ 680
     pid_t sendto;       // destination task                  tcb+ 688

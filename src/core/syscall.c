@@ -117,6 +117,14 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_time:
             return ticks[TICKS_TS];
 
+        case SYS_chroot:
+            if(task_allowed(tcb, "chroot", A_WRITE)) {
+                tcb->rootdir = arg0;
+            } else {
+                tcb->errno = EACCES;
+            }
+            break;
+
         case SYS_setirq:
             /* set irq handler, only device drivers allowed to do so */
             if(tcb->priority == PRI_DRV) {

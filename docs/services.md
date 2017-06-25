@@ -50,7 +50,7 @@ FS
 The file system service. It's a big database server, that emulates all layers as files.
 OS/Z shares [Plan 9](https://en.wikipedia.org/wiki/Plan_9_from_Bell_Labs)'s famous "everything is a file" approach.
 This process has the initrd mapped in it's bss segment, and uses free memory as a disk cache. On boot, the file system
-drivers are loaded into it's address space as shared libraries. It has a couple built-in file systems, like "sysfs".
+drivers are loaded into it's address space as shared libraries. It has a couple built-in file systems, like "devfs".
 
 Typical functions: printf(), fopen(), fread(), fclose(), mount().
 

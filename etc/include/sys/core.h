@@ -58,6 +58,7 @@
 #define SYS_sync 25
 #define SYS_rand 26
 #define SYS_srand 27
+#define SYS_chroot 28
 
 #define SYS_recv 0xFFFF     // receive message
 

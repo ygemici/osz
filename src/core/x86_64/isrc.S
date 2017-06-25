@@ -261,6 +261,10 @@ isr_tmrcalibrate:
  * handle timers, driver independent code. Called by PIT, RTC or HPET code in isrs.S
  */
 isr_timer:
+/* housekeeping */
+    /* tcb->billcnt++; */
+    incq    tcb_billcnt
+
 /* global clocksource */
     /* uint128_t ticks[TICKS_LO]++ */
     movq    $ticks, %rbx
@@ -291,15 +295,6 @@ isr_timer:
 
     call    kprintf_putfps
 1:
-
-/* housekeeping */
-    /* if(tcb->rip > 0) tcb->billcnt++; else tcb->syscnt++; */
-    movb    __PAGESIZE-33, %al
-    cmpb    $0xFF, %al
-    jne     1f
-    incq    tcb_billcnt+8
-    jmp     9f
-1:  incq    tcb_billcnt
 
 /* preemption */
     /* never preempt real-time and driver tasks */

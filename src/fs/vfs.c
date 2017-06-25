@@ -62,7 +62,7 @@ public uint16_t _vfs_regfs(const fsdrv_t *fs)
     return nfsdrvs-1;
 }
 
-uint16_t vfs_getfs(char *name)
+uint16_t _vfs_getfs(char *name)
 {
     int i;
     for(i=0;i<nfsdrvs;i++)
@@ -93,12 +93,8 @@ void vfs_init()
     //keep it memory at all times
     inode.nlink=1;
     inode.type=VFS_INODE_TYPE_SUPERBLOCK;
-    inode.superblock.fs=vfs_getfs("fsz");
     /* this is another chicken and egg scenario. We don't have ramdisk device yet */
     inode.superblock.storage = VFS_INODE_RAMDISK;
-    cache_dir("/",vfs_inode(&inode));
-
-    getinode(0,"/etc");
 }
 
 #if DEBUG

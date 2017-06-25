@@ -32,8 +32,8 @@
 #define SYS_mknod	( 25)
 #define SYS_mountfs	( 26)
 #define SYS_ioctl	( 27)
-#define SYS_stat	( 29)
-#define SYS_dup2	( 32)
-#define SYS_getinode	( 33)
-#define SYS_read	( 34)
+#define SYS_stat	( 30)
+#define SYS_dup2	( 33)
+#define SYS_getinode	( 34)
+#define SYS_read	( 35)
 
