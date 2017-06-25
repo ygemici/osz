@@ -437,6 +437,13 @@ int createdisk()
     setint(uuid[0],loader+0x1B8);
 
     // generate partitioning tables
+    
+    // NOTE: on systems that does not support GPT, OS/Z uses MBR types 0x30-0x33
+    // 1st part: hardware dependent (most likely 0xC, /boot)
+    // 2nd part: OS/Z system (0x30, /usr)
+    // 3rd part: OS/Z public (0x31, /var)
+    // 4th part: OS/Z private (0x32, /home)
+
     // MBR, GPT record
     setint(1,loader+0x1C0);                     //start CHS
     loader[0x1C2]=0xEE;                         //type
@@ -490,7 +497,7 @@ int createdisk()
         p+=128;
     }
 
-    // GPT, OS/Z System Partition (mounted at /) OPTIONAL
+    // GPT, OS/Z System Partition (mounted at /) OPTIONAL MBR type 0x30
     if(rs>0) {
         memcpy(p,"OS/Z",4);                      //entrytype, magic
         setint(256,p+4);                         //version 1.0, no flags
@@ -505,7 +512,7 @@ int createdisk()
         memcpy(p+64,L"OS/Z System",22);          //name
         p+=128;
     }
-    // GPT, OS/Z System Partition (mounted at /usr)
+    // GPT, OS/Z System Partition (mounted at /usr) MBR type 0x30
     memcpy(p,"OS/Z",4);                          //entrytype, magic
     setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"usr",3);                        //mount point
@@ -518,7 +525,7 @@ int createdisk()
     memcpy(p+64,L"OS/Z System",22);              //name
     p+=128;
 
-    // GPT, OS/Z Public Data Partition (mounted at /var)
+    // GPT, OS/Z Public Data Partition (mounted at /var) MBR type 0x31
     memcpy(p,"OS/Z",4);                          //entrytype, magic
     setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"var",3);                        //mount point
@@ -531,7 +538,7 @@ int createdisk()
     memcpy(p+64,L"OS/Z Public Data",32);         //name
     p+=128;
 
-    // GPT, OS/Z Home Partition (mounted at /home)
+    // GPT, OS/Z Home Partition (mounted at /home) MBR type 0x32
     memcpy(p,"OS/Z",4);                          //entrytype, magic
     setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"home",4);                       //mount point
@@ -544,7 +551,7 @@ int createdisk()
     memcpy(p+64,L"OS/Z Private Data",34);        //name
     p+=128;
 
-    // GPT, OS/Z Swap Partition (mounted at /dev/swap)
+    // GPT, OS/Z Swap Partition (mounted at /dev/swap) MBR type 0x33
     memcpy(p,"OS/Z",4);                          //entrytype, magic
     setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"swap",4);                       //mount point
