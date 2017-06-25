@@ -68,8 +68,9 @@ ifneq ("$(wildcard ../loader/bootboot.bin)","")
 endif
 	@./mkfs.o $(SYSFILE) ../bin/initrd
 else
-	@./mkfs.o $(INITRD) ../bin/initrd
-	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+	@./mkfs.o $(INITRD) ../bin/initrd && gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
+	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H newc -o 2>/dev/null | gzip > ../$(INITRD)
 	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H hpodc -o 2>/dev/null | gzip > ../$(INITRD)
 	@#cd ../bin/initrd && tar -czf ../$(INITRD) *
 	@#./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom

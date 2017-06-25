@@ -30,6 +30,7 @@
 
 dataseg uint64_t fs_size;
 
+/* helper functions for cpio */
 int oct2bin(unsigned char *str,int size)
 {
     int s=0;
@@ -40,6 +41,20 @@ int oct2bin(unsigned char *str,int size)
         c++;
     }
     return s;
+}
+
+int hex2bin(unsigned char *str, int size)
+{
+    int v=0;
+    while(size-->0){
+        v <<= 4;
+        if(*str>='0' && *str<='9')
+            v += (int)((unsigned char)(*str)-'0');
+        else if(*str >= 'A' && *str <= 'F')
+            v += (int)((unsigned char)(*str)-'A'+10);
+        str++;
+    }
+    return v;
 }
 
 /**
@@ -117,20 +132,35 @@ again:
         }
     }
     unsigned char *ptr=(unsigned char*)bootboot.initrd_ptr;
+    int ns,fs;
     i=kstrlen(fn);
     /* CPIO */
-    while(!kmemcmp(ptr,"070707",6)){
-        int ns=oct2bin(ptr+8*6+11,6);
-        int fs=oct2bin(ptr+8*6+11+6,11);
-        if(!kmemcmp(ptr+9*6+2*11,fn,i+1)){
-            fs_size=fs;
-            return (unsigned char*)(ptr+9*6+2*11+ns);
+    if(!kmemcmp(ptr,"07070",5) && (ptr[5]=='1'||ptr[5]=='2'||ptr[5]=='7')){
+        while(!kmemcmp(ptr,"07070",5)){
+            if(ptr[5]=='7') {
+                // hpodc archive
+                ns=oct2bin(ptr+8*6+11,6);
+                fs=oct2bin(ptr+8*6+11+6,11);
+                if(!kmemcmp(ptr+9*6+2*11,fn,i+1)){
+                    fs_size=fs;
+                    return (unsigned char*)(ptr+9*6+2*11+ns);
+                }
+                ptr+=(76+ns+fs);
+            } else {
+                // newc and crc archive
+                fs=hex2bin(ptr+8*6+6,8);
+                ns=hex2bin(ptr+8*11+6,8);
+                if(!kmemcmp(ptr+110,fn,i+1)){
+                    fs_size=fs;
+                    return (unsigned char*)(ptr+((110+ns+3)/4)*4);
+                }
+                ptr+=((110+ns+3)/4)*4 + ((fs+3)/4)*4;
+            }
         }
-        ptr+=(76+ns+fs);
     }
     /* USTAR */
     while(!kmemcmp(ptr+257,"ustar",5)){
-        int fs=oct2bin(ptr+0x7c,11);
+        fs=oct2bin(ptr+0x7c,11);
         if(!kmemcmp(ptr,fn,i+1)){
             fs_size=fs;
             return (unsigned char*)(ptr+512);

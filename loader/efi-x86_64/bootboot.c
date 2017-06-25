@@ -7,6 +7,10 @@
  * @brief Booting code for EFI
  *
  */
+
+//#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
+#define DBG(fmt, ...)
+
 #include <elf.h>
 #include <efi.h>
 #include <efilib.h>
@@ -16,8 +20,7 @@
 #include "../bootboot.h"
 #include "tinf.h"
 
-//#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
-#define DBG(fmt, ...)
+#include "fs.h"
 
 extern EFI_GUID GraphicsOutputProtocol;
 extern EFI_GUID LoadedImageProtocol;
@@ -87,12 +90,9 @@ typedef struct {
 
 #define PAGESIZE 4096
 
-UINT8 *env_ptr;
-UINTN env_len;
-UINT8 *initrd_ptr;
-UINTN initrd_len;
-UINT8 *core_ptr;
-UINTN core_len;
+file_t env;
+file_t initrd;
+file_t core;
 BOOTBOOT *bootboot;
 UINT64 *paging;
 UINT64 entrypoint;
@@ -148,7 +148,20 @@ int oct2bin(unsigned char *str,int size)
     }
     return s;
 }
-#include "fs.h"
+
+int hex2bin(unsigned char *str, int size)
+{
+    int v=0;
+    while(size-->0){
+        v <<= 4;
+        if(*str>='0' && *str<='9')
+            v += (int)((unsigned char)(*str)-'0');
+        else if(*str >= 'A' && *str <= 'F')
+            v += (int)((unsigned char)(*str)-'A'+10);
+        str++;
+    }
+    return v;
+}
 
 /**
  * Parse FS0:\BOOTBOOT\CONFIG or /etc/sys/config
@@ -358,59 +371,57 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
  * Locate and load the elf kernel in initrd
  */
 EFI_STATUS
-LoadCore(UINT8 *initrd_ptr)
+LoadCore()
 {
     int i=0;
-    UINT8 *ptr;
 
-    core_ptr=ptr=NULL;
-    core_len=0;
-    while(ptr==NULL && fsdrivers[i]!=NULL) {
-        ptr=(UINT8*)(*fsdrivers[i++])((unsigned char*)initrd_ptr,kernelname);
+    core.ptr=NULL;
+    core.ptr=0;
+    while(core.ptr==NULL && fsdrivers[i]!=NULL) {
+        core=(*fsdrivers[i++])((unsigned char*)initrd.ptr,kernelname);
     }
     // if every driver failed, try brute force, scan for the first elf
-    if(ptr==NULL) {
-        i=initrd_len;
-        ptr=initrd_ptr;
+    if(core.ptr==NULL) {
+        i=initrd.size;
+        core.ptr=initrd.ptr;
         while(i-->0) {
-            Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ptr);
+            Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(core.ptr);
             if((!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||!CompareMem(ehdr->e_ident,"OS/Z",4))&&
                 ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
                 ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
                 ehdr->e_phnum>0){
                     break;
                 }
-            ptr++;
+            core.ptr++;
         }
-        ptr=NULL;
+        core.ptr=NULL;
     }
 
-    DBG(L" * Parsing ELF64 @%lx\n",ptr);
-    if(ptr!=NULL) {
+    DBG(L" * Parsing ELF64 @%lx\n",core.ptr);
+    if(core.ptr!=NULL) {
         // Parse ELF64
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ptr);
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(core.ptr);
         if((CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)&&CompareMem(ehdr->e_ident,"OS/Z",4))||
             ehdr->e_ident[EI_CLASS]!=ELFCLASS64||
             ehdr->e_ident[EI_DATA]!=ELFDATA2LSB||
             ehdr->e_phnum==0){
-                return report(EFI_LOAD_ERROR,L"Kernel is not an executable ELF64 for x86_64");
+                return report(EFI_LOAD_ERROR,L"Kernel is not a valid ELF64");
             }
         // Check program header
         Elf64_Phdr *phdr=(Elf64_Phdr *)((UINT8 *)ehdr+ehdr->e_phoff);
         for(i=0;i<ehdr->e_phnum;i++){
             if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
-                core_len = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+                core.size = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                 // is core page aligned?
-                if((UINT64)ptr&(PAGESIZE-1)){
-                    uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, core_len/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&core_ptr);
-                    if (core_ptr == NULL)
+                if((UINT64)ehdr&(PAGESIZE-1)){
+                    uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, core.size/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&core.ptr);
+                    if (core.ptr == NULL)
                         return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
-                    CopyMem(core_ptr,ptr,phdr->p_filesz);
-                } else
-                    core_ptr = (UINT8 *)ehdr;
+                    CopyMem(core.ptr,ehdr,phdr->p_filesz);
+                }
                 entrypoint=ehdr->e_entry;
                 DBG(L" * Entry point @%lx, text @%lx %d bytes @%lx\n",entrypoint, 
-                    core_ptr, core_len, (entrypoint/PAGESIZE)*PAGESIZE+core_len);
+                    core.ptr, core.size, (entrypoint/PAGESIZE)*PAGESIZE+core.size);
                 return EFI_SUCCESS;
             }
             phdr=(Elf64_Phdr *)((UINT8 *)phdr+ehdr->e_phentsize);
@@ -441,10 +452,10 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     UINT32 desc_version=0;
     UINT64 lba_s=0,lba_e=0;
     MMapEnt *mmapent, *last=NULL;
+    file_t ret={NULL,0};
     CHAR16 **argv, *initrdfile, *configfile, *help=
         L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended to the\n  environment. If INITRD not found, it will use the first bootable partition\n  in GPT. If CONFIG not found, it will look for /etc/sys/config inside\n  the INITRD (or partition).\n\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
-    CHAR8 *ptr;
 
     // Initialize UEFI Library
     InitializeLib(image, systab);
@@ -487,23 +498,23 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 
     // locate InitRD in ROM
     DBG(L" * Locate initrd in Option ROMs%s\n",L"");
-    RomTable = NULL; initrd_ptr = NULL; initrd_len = 0;
+    RomTable = NULL; initrd.ptr = NULL; initrd.size = 0;
     status=EFI_LOAD_ERROR;
     // first, try RomTable
     LibGetSystemConfigurationTable(&RomTableGuid,(void *)&(RomTable));
     if(RomTable!=NULL) {
         for (i=0;i<RomTable->PciOptionRomCount;i++) {
-            ptr=(CHAR8*)RomTable->PciOptionRomDescriptors[i].RomAddress;
-            if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
-                CopyMem(&initrd_len,ptr+16,4);
-                initrd_ptr=ptr+32;
+            ret.ptr=(UINT8*)RomTable->PciOptionRomDescriptors[i].RomAddress;
+            if(ret.ptr[0]==0x55 && ret.ptr[1]==0xAA && !CompareMem(ret.ptr+8,(const CHAR8 *)"INITRD",6)) {
+                CopyMem(&initrd.size,ret.ptr+16,4);
+                initrd.ptr=ret.ptr+32;
                 status=EFI_SUCCESS;
                 break;
             }
         }
     }
     //if not found, scan memory
-    if(EFI_ERROR(status) || initrd_ptr==NULL){
+    if(EFI_ERROR(status) || initrd.ptr==NULL){
         status = uefi_call_wrapper(BS->GetMemoryMap, 5,
             &memory_map_size, memory_map, NULL, &desc_size, NULL);
         if (status!=EFI_BUFFER_TOO_SMALL || memory_map_size==0) {
@@ -528,12 +539,12 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
                 if(mement->Type==7||mement->Type==9||mement->Type==10)
                     continue;
                 // according to spec, EFI Option ROMs must start on 512 bytes boundary, not 2048
-                for(ptr=(CHAR8 *)mement->PhysicalStart;
-                    ptr<(CHAR8 *)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
-                    ptr+=512) {
-                    if(ptr[0]==0x55 && ptr[1]==0xAA && !CompareMem(ptr+8,(const CHAR8 *)"INITRD",6)) {
-                        CopyMem(&initrd_len,ptr+16,4);
-                        initrd_ptr=ptr+32;
+                for(ret.ptr=(UINT8*)mement->PhysicalStart;
+                    ret.ptr<(UINT8*)mement->PhysicalStart+mement->NumberOfPages*PAGESIZE;
+                    ret.ptr+=512) {
+                    if(ret.ptr[0]==0x55 && ret.ptr[1]==0xAA && !CompareMem(ret.ptr+8,(const CHAR8 *)"INITRD",6)) {
+                        CopyMem(&initrd.size,ret.ptr+16,4);
+                        initrd.ptr=ret.ptr+32;
                         status=EFI_SUCCESS;
                         goto foundinrom;
                     }
@@ -544,7 +555,7 @@ foundinrom:
     }
 
     // fall back to INITRD on filesystem
-    if(EFI_ERROR(status) || initrd_ptr==NULL){
+    if(EFI_ERROR(status) || initrd.ptr==NULL){
         DBG(L" * Locate initrd in %s\n",initrdfile);
         // Initialize FS with the DeviceHandler from loaded image protocol
         status = uefi_call_wrapper(BS->HandleProtocol,
@@ -556,11 +567,11 @@ foundinrom:
             status=EFI_LOAD_ERROR;
             RootDir = LibOpenRoot(loaded_image->DeviceHandle);
             // load ramdisk
-            status=LoadFile(initrdfile,&initrd_ptr, &initrd_len);
+            status=LoadFile(initrdfile,&initrd.ptr, &initrd.size);
         }
     }
     // if even that failed, look for a partition
-    if(status!=EFI_SUCCESS || initrd_len==0){
+    if(status!=EFI_SUCCESS || initrd.size==0){
         DBG(L" * Locate initrd in GPT%s\n",L"");
         status = uefi_call_wrapper(BS->LocateHandle, 5, ByProtocol, &bioGuid, NULL, &handle_size, handles);
         if (status!=EFI_BUFFER_TOO_SMALL || handle_size==0) {
@@ -569,8 +580,8 @@ foundinrom:
         uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (handle_size+PAGESIZE-1)/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&handles);
         if(handles==NULL)
             return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
-        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&initrd_ptr);
-        if (initrd_ptr == NULL)
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&initrd.ptr);
+        if (initrd.ptr == NULL)
             return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
         lba_s=lba_e=0;
         status = uefi_call_wrapper(BS->LocateHandle, 5, ByProtocol, &bioGuid, NULL, &handle_size, handles);
@@ -579,43 +590,44 @@ foundinrom:
             status = uefi_call_wrapper(BS->HandleProtocol, 3, handles[i], &bioGuid, (void **) &bio);
             if(status!=EFI_SUCCESS || bio==NULL || bio->Media->BlockSize==0)
                 continue;
-            status=bio->ReadBlocks(bio, bio->Media->MediaId, 1, PAGESIZE, initrd_ptr);
-            if(status!=EFI_SUCCESS || CompareMem(initrd_ptr,EFI_PTAB_HEADER_ID,8))
+            status=bio->ReadBlocks(bio, bio->Media->MediaId, 1, PAGESIZE, initrd.ptr);
+            if(status!=EFI_SUCCESS || CompareMem(initrd.ptr,EFI_PTAB_HEADER_ID,8))
                 continue;
-            gptHdr = (EFI_PARTITION_TABLE_HEADER*)initrd_ptr;
-            ptr= initrd_ptr + (gptHdr->PartitionEntryLBA-1) * bio->Media->BlockSize;
+            gptHdr = (EFI_PARTITION_TABLE_HEADER*)initrd.ptr;
+            ret.ptr= (UINT8*)(initrd.ptr + (gptHdr->PartitionEntryLBA-1) * bio->Media->BlockSize);
             for(j=0;j<27 && j<gptHdr->NumberOfPartitionEntries;j++) {
-                gptEnt=(EFI_PARTITION_ENTRY*)ptr;
-                if((ptr[0]==0 && ptr[1]==0 && ptr[2]==0 && ptr[3]==0) || gptEnt->EndingLBA==0)
+                gptEnt=(EFI_PARTITION_ENTRY*)ret.ptr;
+                if((ret.ptr[0]==0 && ret.ptr[1]==0 && ret.ptr[2]==0 && ret.ptr[3]==0) || gptEnt->EndingLBA==0)
                     break;
                 if(gptEnt->Attributes & EFI_PART_USED_BY_OS) {
                     lba_s=gptEnt->StartingLBA; lba_e=gptEnt->EndingLBA;
-                    initrd_len = (((lba_e-lba_s)*bio->Media->BlockSize + PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+                    initrd.size = (((lba_e-lba_s)*bio->Media->BlockSize + PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                     status=EFI_SUCCESS;
                     goto partok;
                 }
-                ptr+=gptHdr->SizeOfPartitionEntry;
+                ret.ptr+=gptHdr->SizeOfPartitionEntry;
             }
         }
+        return report(EFI_LOAD_ERROR,L"No boot partition");
 partok:
-        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, 1);
-        if(initrd_len>0 && bio!=NULL) {
-            uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, initrd_len/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&initrd_ptr);
-            if (initrd_ptr == NULL)
+        uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd.ptr, 1);
+        if(initrd.size>0 && bio!=NULL) {
+            uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, initrd.size/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&initrd.ptr);
+            if (initrd.ptr == NULL)
                 return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
-            status=bio->ReadBlocks(bio, bio->Media->MediaId, lba_s, initrd_len, initrd_ptr);            
+            status=bio->ReadBlocks(bio, bio->Media->MediaId, lba_s, initrd.size, initrd.ptr);            
         } else
             status=EFI_LOAD_ERROR;
     }
-    if(status==EFI_SUCCESS && initrd_len>0){
+    if(status==EFI_SUCCESS && initrd.size>0){
         //check if initrd is gzipped
-        if(initrd_ptr[0]==0x1f && initrd_ptr[1]==0x8b){
+        if(initrd.ptr[0]==0x1f && initrd.ptr[1]==0x8b){
             unsigned char *addr,f;
             int len=0, r;
             TINF_DATA d;
-            DBG(L" * Gzip compressed initrd @%lx %d bytes\n",initrd_ptr,initrd_len);
+            DBG(L" * Gzip compressed initrd @%lx %d bytes\n",initrd.ptr,initrd.size);
             // skip gzip header
-            addr=initrd_ptr+2;
+            addr=initrd.ptr+2;
             if(*addr++!=8) goto gzerr;
             f=*addr++; addr+=6;
             if(f&4) { r=*addr++; r+=(*addr++ << 8); addr+=r; }
@@ -624,7 +636,7 @@ partok:
             if(f&2) addr+=2;
             d.source = addr;
             // allocate destination buffer
-            CopyMem(&len,initrd_ptr+initrd_len-4,4);
+            CopyMem(&len,initrd.ptr+initrd.size-4,4);
             uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, (len+PAGESIZE-1)/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&addr);
             if(addr==NULL)
                 return report(EFI_OUT_OF_RESOURCES,L"AllocatePages\n");
@@ -642,47 +654,45 @@ partok:
             if (r != TINF_DONE) {
 gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             }
-            // swap initrd_ptr with the uncompressed buffer
+            // swap initrd.ptr with the uncompressed buffer
             // if it's not page aligned, we came from ROM, no FreePages
-            if(((UINT64)initrd_ptr&(PAGESIZE-1))==0)
-                uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd_ptr, (initrd_len+PAGESIZE-1)/PAGESIZE);
-            initrd_ptr=addr;
-            initrd_len=len;
+            if(((UINT64)initrd.ptr&(PAGESIZE-1))==0)
+                uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)initrd.ptr, (initrd.size+PAGESIZE-1)/PAGESIZE);
+            initrd.ptr=addr;
+            initrd.size=len;
         }
-        DBG(L" * Initrd loaded @%lx %d bytes\n",initrd_ptr,initrd_len);
-        kne=env_ptr=NULL;
+        DBG(L" * Initrd loaded @%lx %d bytes\n",initrd.ptr,initrd.size);
+        kne=env.ptr=NULL;
         // if there's an environment file, load it
-        if(loaded_image!=NULL && LoadFile(configfile,&env_ptr,&env_len)!=EFI_SUCCESS) {
-            env_ptr=NULL;
+        if(loaded_image!=NULL && LoadFile(configfile,&env.ptr,&env.size)!=EFI_SUCCESS) {
+            env.ptr=NULL;
         }
-        if(env_ptr==NULL) {
-            DBG(L" * Alternative environment%s\n",L"");
-            core_len=0; j=0; ptr=NULL;
-            while(ptr==NULL && fsdrivers[j]!=NULL) {
-                ptr=(UINT8*)(*fsdrivers[j++])((unsigned char*)initrd_ptr,cfgname);
+        if(env.ptr==NULL) {
+            j=0; ret.ptr=NULL; ret.size=0;
+            while(ret.ptr==NULL && fsdrivers[j]!=NULL) {
+                ret=(*fsdrivers[j++])((unsigned char*)initrd.ptr,cfgname);
             }
-            if(core_len>0) {
-                if(core_len>PAGESIZE-1)
-                    core_len=PAGESIZE-1;
-                uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
-                if(env_ptr==NULL)
+            if(ret.ptr!=NULL) {
+                if(ret.size>PAGESIZE-1)
+                    ret.size=PAGESIZE-1;
+                uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env.ptr);
+                if(env.ptr==NULL)
                     return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
-                ZeroMem((void*)env_ptr,PAGESIZE);
-                CopyMem((void*)env_ptr,ptr,core_len);
-                env_len=core_len;
+                ZeroMem((void*)env.ptr,PAGESIZE);
+                CopyMem((void*)env.ptr,ret.ptr,ret.size);
+                env.size=ret.size;
             }
-            core_len=0;
         }
-        if(env_ptr!=NULL) {
-            ParseEnvironment(env_ptr,env_len, argc, argv);
+        if(env.ptr!=NULL) {
+            ParseEnvironment(env.ptr,env.size, argc, argv);
         } else {
-            env_len=0;
-            uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
-            if (env_ptr == NULL) {
+            env.size=0;
+            uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env.ptr);
+            if (env.ptr == NULL) {
                 return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
             }
-            ZeroMem((void*)env_ptr,PAGESIZE);
-            CopyMem((void*)env_ptr,"// N/A",8);
+            ZeroMem((void*)env.ptr,PAGESIZE);
+            CopyMem((void*)env.ptr,"// N/A",8);
         }
 
         // get linear frame buffer
@@ -695,8 +705,8 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         bootboot->loader_type=LOADER_UEFI;
         bootboot->size=128;
         bootboot->pagesize=PAGESIZE;
-        CopyMem((void *)&(bootboot->initrd_ptr),&initrd_ptr,8);
-        bootboot->initrd_size=((initrd_len+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+        CopyMem((void *)&(bootboot->initrd_ptr),&initrd.ptr,8);
+        bootboot->initrd_size=((initrd.size+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
         CopyMem((void *)&(bootboot->x86_64.efi_ptr),&systab,8);
 
         // System tables and structures
@@ -705,17 +715,17 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         LibGetSystemConfigurationTable(&MpsTableGuid,(void *)&(bootboot->x86_64.mp_ptr));
 
         // FIX ACPI table pointer on TianoCore...
-        ptr = (CHAR8 *)(bootboot->x86_64.acpi_ptr);
-        if(CompareMem(ptr,(const CHAR8 *)"RSDT", 4) && CompareMem(ptr,(const CHAR8 *)"XSDT", 4)) {
+        ret.ptr = (UINT8*)(bootboot->x86_64.acpi_ptr);
+        if(CompareMem(ret.ptr,(const CHAR8 *)"RSDT", 4) && CompareMem(ret.ptr,(const CHAR8 *)"XSDT", 4)) {
             // scan for the real rsd ptr, as AcpiTableGuid returns bad address
             for(i=1;i<256;i++) {
-                if(!CompareMem(ptr+i, (const CHAR8 *)"RSD PTR ", 8)){
-                    ptr+=i;
+                if(!CompareMem(ret.ptr+i, (const CHAR8 *)"RSD PTR ", 8)){
+                    ret.ptr+=i;
                     break;
                 }
             }
             // get ACPI system table
-            ACPI_RSDPTR *rsd = (ACPI_RSDPTR*)ptr;
+            ACPI_RSDPTR *rsd = (ACPI_RSDPTR*)ret.ptr;
             if(rsd->xsdt!=0)
                 bootboot->x86_64.acpi_ptr = rsd->xsdt;
             else
@@ -741,7 +751,7 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             bootboot->timezone>=0?L"+":L"",bootboot->timezone/60,bootboot->timezone%60,
             t.Daylight?L"summertime":L"");
         // get lib/sys/core and parse
-        status=LoadCore(initrd_ptr);
+        status=LoadCore();
         if (EFI_ERROR(status))
             return status;
         if(kne!=NULL)
@@ -781,9 +791,9 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         paging[2*512+511]=(UINT64)((UINT8 *)paging+3*PAGESIZE+1);
         //4k PT
         paging[3*512+0]=(UINT64)(bootboot)+1;
-        paging[3*512+1]=(UINT64)(env_ptr)+1;
-        for(i=0;i<(core_len/PAGESIZE);i++)
-            paging[3*512+2+i]=(UINT64)((UINT8 *)core_ptr+i*PAGESIZE+1);
+        paging[3*512+1]=(UINT64)(env.ptr)+1;
+        for(i=0;i<(core.size/PAGESIZE);i++)
+            paging[3*512+2+i]=(UINT64)((UINT8 *)core.ptr+i*PAGESIZE+1);
         paging[3*512+511]=(UINT64)((UINT8 *)paging+22*PAGESIZE+1);
         //identity mapping
         //2M PDPE
@@ -819,10 +829,10 @@ get_memory_map:
             if( mement->NumberOfPages==0 ||
                 ((mement->PhysicalStart <= (UINT64)bootboot &&
                     mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)bootboot) ||
-                 (mement->PhysicalStart <= (UINT64)env_ptr &&
-                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)env_ptr) ||
-                 (mement->PhysicalStart <= (UINT64)initrd_ptr &&
-                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)initrd_ptr) ||
+                 (mement->PhysicalStart <= (UINT64)env.ptr &&
+                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)env.ptr) ||
+                 (mement->PhysicalStart <= (UINT64)initrd.ptr &&
+                    mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)initrd.ptr) ||
                  (mement->PhysicalStart <= (UINT64)paging &&
                     mement->PhysicalStart+(mement->NumberOfPages*PAGESIZE) > (UINT64)paging)
                 )) {

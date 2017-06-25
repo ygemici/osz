@@ -29,7 +29,7 @@ if FSZ_SUPPORT eq 1
 ; OUT:  On Success
 ;         esi: pointer to an ELF64 executable, ecx: size in bytes
 ;       On Error
-;         esi: error message, ecx: 0
+;         ecx: 0
 fsz_initrd:
             mov         ebx, ecx
             xor         ecx, ecx
@@ -140,7 +140,7 @@ end if
 ; OUT:  On Success
 ;         esi: pointer to an ELF64 executable, ecx: size in bytes
 ;       On Error
-;         esi: error message, ecx: 0
+;         ecx: 0
 cpio_initrd:
             ; upper bound
             mov         ebx, ecx
@@ -163,8 +163,12 @@ cpio_initrd:
             mov         eax, '0707'
             cmp         dword [esi], eax    ; cpio magic
             jne         .err
-            cmp         word [esi+4], ax    ; cpio magic
+            cmp         word [esi+4], ax    ; hpodc
             je          @f
+            cmp         word [esi+4], '01'  ; newc
+            je          .newc
+            cmp         word [esi+4], '02'  ; crc
+            je          .newc
 .err:       xor         ecx, ecx
             ret
 @@:         mov         eax, esi            ; filename len
@@ -193,6 +197,42 @@ cpio_initrd:
             add         esi, dword [.ns]
             mov         ecx, dword [.fs]    ; ecx=size
             ret
+.newc:      mov         edx, esi            ; filename len
+            add         esi, 8*11+6
+            mov         ecx, 8
+            call        prot_hex2bin
+            mov         dword [.ns], eax
+            mov         esi, edx            ; filesize
+            add         esi, 8*6+6
+            mov         ecx, 8
+            call        prot_hex2bin
+            mov         dword [.fs], eax
+            mov         esi, edx
+            push        esi                 ; name equals?
+            push        edi
+            add         esi, 110
+            mov         ecx, dword [.ks]
+            repz        cmpsb
+            pop         edi
+            pop         esi
+            jz          @f
+            mov         eax, 113            ; no skip this record
+            add         eax, dword [.ns]    ; and check the next one
+            and         al, 0FCh
+            add         esi, eax
+            mov         eax, dword [.fs]
+            add         eax, 3
+            and         al, 0FCh
+            add         esi, eax
+            cmp         dword [esi], '0707' ; cpio magic
+            jne         .err
+            jmp         .newc
+@@:         mov         eax, 113            ; found! esi=data
+            add         eax, dword [.ns]
+            and         al, 0FCh
+            add         esi, eax
+            mov         ecx, dword [.fs]    ; ecx=size
+            ret
 .ks:        dd          0
 .ns:        dd          0
 .fs:        dd          0
@@ -203,7 +243,7 @@ cpio_initrd:
 ; OUT:  On Success
 ;         esi: pointer to an ELF64 executable, ecx: size in bytes
 ;       On Error
-;         esi: error message, ecx: 0
+;         ecx: 0
 tar_initrd:
             ; upper bound
             mov         ebx, ecx

@@ -727,28 +727,29 @@ prot_getval:
             call        prot_dec2bin
             ret
 .hex:       add         esi, 2
+            mov         cx, 8
             call        prot_hex2bin
             ret
 
 prot_hex2bin:
             xor         eax, eax
             xor         ebx, ebx
-            xor         edx, edx
 @@:         mov         bl, byte [esi]
             cmp         bl, '0'
-            jl          @f
+            jb          @f
             cmp         bl, '9'
-            jle         .num
+            jbe         .num
             cmp         bl, 'A'
-            jl          @f
+            jb          @f
             cmp         bl, 'F'
-            jg          @f
+            ja          @f
             sub         bl, 7
 .num:       sub         bl, '0'
             shl         eax, 4
             add         eax, ebx
             inc         esi
-            jmp         @b
+            dec         cx
+            jnz         @b
 @@:         ret
 
 prot_dec2bin:
@@ -1116,7 +1117,6 @@ protmode_start:
             cmp         byte [ebx], 0
             jnz         .parsecfg
 
-            DBG32       dbg_env2
             ;-----load /etc/sys/config------
             mov         edx, fsdrivers
 .nextfs1:   xor         ebx, ebx
@@ -1675,7 +1675,6 @@ dbg_mem     db          " * E820 Memory Map",10,13,0
 dbg_systab  db          " * System tables",10,13,0
 dbg_time    db          " * System time",10,13,0
 dbg_env     db          " * Environment",10,13,0
-dbg_env2    db          " * Alternative environment",10,13,0
 dbg_initrd  db          " * Initrd loaded",10,13,0
 dbg_gzinitrd db         " * Gzip compressed initrd",10,13,0
 dbg_elf     db          " * Parsing ELF64",10,13,0
@@ -1689,11 +1688,11 @@ memerr:     db          "E820 memory map not found",0
 nogzmem:    db          "Inflating: "
 noenmem:    db          "Not enough memory",0
 noacpi:     db          "ACPI not found",0
-nogpt:      db          "Boot partition not found or corrupt",0
+nogpt:      db          "No boot partition",0
 nord:       db          "FS0:\BOOTBOOT\INITRD not found",0
 nolib:      db          "/lib/sys not found in initrd",0
 nocore:     db          "Kernel not found in initrd",0
-badcore:    db          "Kernel is not an executable ELF64 for x86_64",0
+badcore:    db          "Kernel is not a valid ELF64",0
 novbe:      db          "VESA VBE error, no framebuffer",0
 nogzip:     db          "Unable to uncompress",0
 cfgfile:    db          "etc/sys/config",0,0,0
