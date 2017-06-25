@@ -219,34 +219,34 @@ typedef struct {
     FSZ_Inode.sec -> data */
 #define FSZ_IN_FLAG_DIRECT  (0<<0)
 
-/*  data size < sector size * sector size / 8 (2 M)
+/*  data size < sector size * sector size / 16 (1 M)
     FSZ_Inode.sec points to a sector directory,
     which is a sector with up to 512 sector
     addresses
     FSZ_Inode.sec -> sd -> data */
 #define FSZ_IN_FLAG_SD      (1<<0)
 
-/*  data size < sector size * sector size / 8 * sector size / 8 (1 G)
+/*  data size < sector size * sector size / 16 * sector size / 16 (256 M)
     FSZ_Inode.sec points to a sector directory,
-    which is a sector with up to 512 sector
+    which is a sector with up to 256 sector
     directory addresses, which in turn point
-    to 512*512 sector addresses
+    to 256*256 sector addresses
     FSZ_Inode.sec -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD2     (2<<0)
 
-/*  data size < (512 G)
+/*  data size < (64 G)
     FSZ_Inode.sec -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD3     (3<<0)
 
-/*  data size < (256 T)
+/*  data size < (16 T)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD4     (4<<0)
 
-/*  data size < (128 Peta, equals 131072 Terra)
+/*  data size < (4 Peta, equals 4096 Terra)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD5     (5<<0)
 
-/*  data size < (64 Exa, equals 65536 Peta)
+/*  data size < (1 Exa, equals 1024 Peta)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD6     (6<<0)
 
@@ -254,31 +254,36 @@ typedef struct {
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> sd -> data */
 #define FSZ_IN_FLAG_SD7     (7<<0)
 
-/*  data size < (32 Zetta, equals 32768 Exa) */
+/*  data size < (64 Zetta, equals 65536 Exa) */
 #define FSZ_IN_FLAG_SD8     (8<<0)
 
 /*  data size < (16 Yotta, equals 16384 Zetta) */
 #define FSZ_IN_FLAG_SD9     (9<<0)
 
+/*  inlined sector list
+    FSZ_Inode.sec points to itself, FSZ_SectorList entries inlined.
+    FSZ_Inode.sec -> FSZ_Inode.sec -> sl -> data */
+#define FSZ_IN_FLAG_SECLIST  (0x80<<0)
+
 /*  any data size
-    FSZ_Inode.sec points to a sector with FSZ_SectorList entries
+    FSZ_Inode.sec points to a sector with FSZ_SectorList entries.
     FSZ_Inode.sec -> sl -> data */
-#define FSZ_IN_FLAG_SECLIST (0x80<<0)
+#define FSZ_IN_FLAG_SECLIST0 (0x81<<0)
 
 /*  indirect sector list
     FSZ_Inode.sec points to a sector directory with FSZ_SectorLists
     FSZ_Inode.sec -> sd-> sl -> data */
-#define FSZ_IN_FLAG_SECLIST1 (0x81<<0)
+#define FSZ_IN_FLAG_SECLIST1 (0x82<<0)
 
 /*  double-indirect sector list
     FSZ_Inode.sec points to a sector directory pointing to
     sector directories with FSZ_SectorLists
     FSZ_Inode.sec -> sd-> sd -> sl -> data */
-#define FSZ_IN_FLAG_SECLIST2 (0x82<<0)
+#define FSZ_IN_FLAG_SECLIST2 (0x83<<0)
 
 /*  triple-indirect sector list
     FSZ_Inode.sec -> sd-> sd -> sd -> sl -> data */
-#define FSZ_IN_FLAG_SECLIST3 (0x83<<0)
+#define FSZ_IN_FLAG_SECLIST3 (0x84<<0)
 
 /*********************************************************
  *                      Directory                        *

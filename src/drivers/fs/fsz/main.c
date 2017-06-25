@@ -28,19 +28,26 @@
 #include <osZ.h>
 #include <vfs.h>
 #include <fsZ.h>
+#include <crc32.h>
 
-bool_t fszdetect(void *blk)
+bool_t detect(void *blk)
 {
-    return true;
+    return
+     !memcmp(((FSZ_SuperBlock *)blk)->magic, FSZ_MAGIC,4) &&
+     !memcmp(((FSZ_SuperBlock *)blk)->magic2,FSZ_MAGIC,4) &&
+     ((FSZ_SuperBlock *)blk)->checksum ==
+        crc32_calc((char*)&((FSZ_SuperBlock *)blk)->magic,
+            (uint64_t)&((FSZ_SuperBlock *)blk)->checksum -
+            (uint64_t)&((FSZ_SuperBlock *)blk)->magic);
 }
 
 void _init()
 {
-    fsdrv_t fszdrv = {
+    fsdrv_t drv = {
         "fsz",
         "FS/Z",
-        fszdetect
+        detect
     };
     //uint16_t id = 
-    _vfs_regfs(&fszdrv);
+    _vfs_regfs(&drv);
 }

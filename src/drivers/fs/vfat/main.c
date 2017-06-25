@@ -27,20 +27,24 @@
 
 #include <osZ.h>
 #include <vfs.h>
-#include <fsZ.h>
 
-bool_t vfatdetect(void *blk)
+bool_t detect(void *blk)
 {
-    return true;
+    return
+     ((uint8_t*)blk)[510]==0x55 && ((uint8_t*)blk)[511]==0xAA &&
+     /* FAT12 / FAT16 */
+     (!memcmp(blk+54, "FAT1", 4)||
+     /* FAT32 */
+      !memcmp(blk+84, "FAT3", 4));
 }
 
 void _init()
 {
-    fsdrv_t vfatdrv = {
+    fsdrv_t drv = {
         "vfat",
         "FAT12/16/32",
-        vfatdetect
+        detect
     };
     //uint16_t id = 
-    _vfs_regfs(&vfatdrv);
+    _vfs_regfs(&drv);
 }

@@ -208,7 +208,7 @@ void add_file(char *name, char *datafile)
             }
             for(i=inode+2;j>0;j--){
                 memcpy(ptr,&i,4);
-                i++; ptr+=8;
+                i++; ptr+=16;
             }
             size+=secsize;
             in->flags=FSZ_IN_FLAG_SD;
@@ -220,9 +220,9 @@ void add_file(char *name, char *datafile)
     }
     // detect file type
     if(!strncmp(data+1,"ELF",3))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"executable",10);}
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"executable",10);}
     if(!strcmp(name+strlen(name)-3,".so"))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"sharedlib",9);}
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"sharedlib",9);}
     else
     // this is a simple creator, should use libmagic. But this
     // is enough for our purposes, so don't introduce a dependency
@@ -235,39 +235,39 @@ void add_file(char *name, char *datafile)
        !strcmp(name+strlen(name)-8,"hostname")||
        !strcmp(name+strlen(name)-7,"profile")||
        !strcmp(name+strlen(name)-7,"release")
-      ) {memset(in->mimetype,0,52);memcpy(in->mimetype,"plain",5);
+      ) {memset(in->mimetype,0,56);memcpy(in->mimetype,"plain",5);
          memcpy(in->filetype,"text",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".htm")||
        !strcmp(name+strlen(name)-5,".html")
       )
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"html",4);
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"html",4);
          memcpy(in->filetype,"text",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".svg"))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"svg",3);
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"svg",3);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".gif"))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"gif",3);
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"gif",3);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".png"))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"png",3);
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"png",3);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".jpg"))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"jpeg",4);
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"jpeg",4);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".bmp"))
-        {memset(in->mimetype,0,52);memcpy(in->mimetype,"bitmap",6);
+        {memset(in->mimetype,0,56);memcpy(in->mimetype,"bitmap",6);
          memcpy(in->filetype,"imag",4);
         }
 

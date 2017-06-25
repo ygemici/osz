@@ -1,5 +1,5 @@
 /*
- * drivers/fs/gpt/main.c
+ * drivers/fs/pax/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief GUID Partition Table driver
+ * @brief Filesystem in pax archive driver
  */
 
 #include <osZ.h>
@@ -30,14 +30,20 @@
 
 bool_t detect(void *blk)
 {
-    return !memcmp(blk+512, "EFI PART", 8);
+    return
+     /* CPIO */
+    (!memcmp(blk,"070701",6) ||
+     !memcmp(blk,"070702",6) ||
+     !memcmp(blk,"070707",6) ||
+     /* USTAR */
+     !memcmp(blk+257,"ustar",5));
 }
 
 void _init()
 {
     fsdrv_t drv = {
-        "gpt",
-        "GUID Partition Table",
+        "paxfs",
+        "Archive",
         detect
     };
     //uint16_t id = 
