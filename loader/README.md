@@ -92,7 +92,7 @@ symbol table is provided. A fully compatible loader should map these
 where the ELF kernel wants them):
 
 ```
-    -512M framebuffer                   (0xFFFFFFFFE0000000)
+   -64M framebuffer                     (0xFFFFFFFFFC000000)
     -2M core        bootboot structure  (0xFFFFFFFFFFE00000)
         -2M+1page   environment         (0xFFFFFFFFFFE01000)
         -2M+2page.. kernel text segment (0xFFFFFFFFFFE02000)
@@ -200,7 +200,7 @@ strip -s -K fb -K bootboot -K environment kernel
 A minimal linker script would be:
 
 ```c
-FBUF_ADDRESS = 0xffffffffe0000000;
+FBUF_ADDRESS = 0xfffffffffc000000;
 CORE_ADDRESS = 0xffffffffffe00000;
 ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)

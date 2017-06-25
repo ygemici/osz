@@ -10,7 +10,7 @@ The compatible loader is loaded by the firmware, presumeably from ROM. It does t
  1. initialize hardware and framebuffer
  2. locate initrd on boot partition (or in ROM)
  3. locate `lib/sys/core` inside initrd
- 4. map it's elf segments at -2M..0 and framebuffer at -512M..-4M
+ 4. map it's elf segments at -2M..0 and framebuffer at -64M..-4M
  5. transfer control to core
 
 Currently both x86_64 [BIOS](https://github.com/bztsrc/osz/blob/master/loader/mb-x86_64/bootboot.asm) and [UEFI](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/bootboot.c) boot supported by the same disk image.

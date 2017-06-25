@@ -70,36 +70,36 @@ extern char *sprintf(char *dst,char* fmt, ...);
 extern void sched_dump();
 
 // variables
-uint8_t __attribute__ ((section (".data"))) dbg_enabled;
-uint8_t __attribute__ ((section (".data"))) dbg_tab;
-uint8_t __attribute__ ((section (".data"))) dbg_inst;
-uint8_t __attribute__ ((section (".data"))) dbg_full;
-uint8_t __attribute__ ((section (".data"))) dbg_unit;
-uint8_t __attribute__ ((section (".data"))) dbg_numbrk;
-uint8_t __attribute__ ((section (".data"))) dbg_iskbd;
-uint8_t __attribute__ ((section (".data"))) dbg_isshft;
-uint8_t __attribute__ ((section (".data"))) dbg_indump;
-uint8_t __attribute__ ((section (".data"))) dbg_tui;
-uint64_t __attribute__ ((section (".data"))) dbg_scr;
-uint64_t __attribute__ ((section (".data"))) dbg_mqptr;
-uint64_t __attribute__ ((section (".data"))) cr2;
-uint64_t __attribute__ ((section (".data"))) cr3;
-uint64_t __attribute__ ((section (".data"))) dr6;
-uint64_t __attribute__ ((section (".data"))) oldist1;
-uint64_t __attribute__ ((section (".data"))) dbg_logpos;
-char __attribute__ ((section (".data"))) dbg_instruction[128];
-virt_t __attribute__ ((section (".data"))) dbg_comment;
-virt_t __attribute__ ((section (".data"))) dbg_next;
-virt_t __attribute__ ((section (".data"))) dbg_start;
-virt_t __attribute__ ((section (".data"))) dbg_lastrip;
-virt_t __attribute__ ((section (".data"))) dbg_origrip;
-char __attribute__ ((section (".data"))) *dbg_err;
-uint32_t __attribute__ ((section (".data"))) *dbg_theme;
-uint32_t __attribute__ ((section (".data"))) theme_panic[] = {0x100000,0x400000,0x800000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
-uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000020,0x000040,0x101080,0x3e32a2,0x7c71da,0x867ade} ;
-//uint32_t __attribute__ ((section (".data"))) theme_debug[] = {0x000010,0x000020,0x000040,0x1b3c9c,0x4b6ccc,0x6b8cec} ;
-char __attribute__ ((section (".data"))) *brk = "BRK? ?? set at ????????????????h";
-char __attribute__ ((section (".data"))) cmdhist[512];
+dataseg uint8_t dbg_enabled;
+dataseg uint8_t dbg_tab;
+dataseg uint8_t dbg_inst;
+dataseg uint8_t dbg_full;
+dataseg uint8_t dbg_unit;
+dataseg uint8_t dbg_numbrk;
+dataseg uint8_t dbg_iskbd;
+dataseg uint8_t dbg_isshft;
+dataseg uint8_t dbg_indump;
+dataseg uint8_t dbg_tui;
+dataseg uint64_t dbg_scr;
+dataseg uint64_t dbg_mqptr;
+dataseg uint64_t cr2;
+dataseg uint64_t cr3;
+dataseg uint64_t dr6;
+dataseg uint64_t oldist1;
+dataseg uint64_t dbg_logpos;
+dataseg char dbg_instruction[128];
+dataseg virt_t dbg_comment;
+dataseg virt_t dbg_next;
+dataseg virt_t dbg_start;
+dataseg virt_t dbg_lastrip;
+dataseg virt_t dbg_origrip;
+dataseg char *dbg_err;
+dataseg uint32_t *dbg_theme;
+dataseg uint32_t theme_panic[] = {0x100000,0x400000,0x800000,0x9c3c1b,0xcc6c4b,0xec8c6b} ;
+dataseg uint32_t theme_debug[] = {0x000020,0x000040,0x101080,0x3e32a2,0x7c71da,0x867ade} ;
+//uint32_t theme_debug[] = {0x000010,0x000020,0x000040,0x1b3c9c,0x4b6ccc,0x6b8cec} ;
+dataseg char *brk = "BRK? ?? set at ????????????????h";
+dataseg char cmdhist[512];
 
 // different kind of tabs
 enum {
@@ -115,7 +115,7 @@ enum {
 };
 
 // priority queue names
-char __attribute__ ((section (".data"))) *prio[] = {
+dataseg char *prio[] = {
     "SYSTEM   ",
     "RealTime ",
     "Driver   ",

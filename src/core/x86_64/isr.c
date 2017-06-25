@@ -55,35 +55,35 @@ extern void pit_init();
 extern void rtc_init();
 
 /* safe stack for interrupt routines */
-uint64_t __attribute__ ((section (".data"))) *safestack;
+dataseg uint64_t *safestack;
 
 /* current fps counter */
-uint64_t __attribute__ ((section (".data"))) isr_currfps;
-uint64_t __attribute__ ((section (".data"))) isr_lastfps;
+dataseg uint64_t isr_currfps;
+dataseg uint64_t isr_lastfps;
 /* alarm queue stuff */
-uint64_t __attribute__ ((section (".data"))) tmrfreq;
-uint8_t  __attribute__ ((section (".data"))) tmrirq;
-uint64_t __attribute__ ((section (".data"))) qdiv;
-uint64_t __attribute__ ((section (".data"))) fpsdiv;
-uint64_t __attribute__ ((section (".data"))) alarmstep;
+dataseg uint64_t tmrfreq;
+dataseg uint8_t  tmrirq;
+dataseg uint64_t qdiv;
+dataseg uint64_t fpsdiv;
+dataseg uint64_t alarmstep;
 // counters
-uint64_t __attribute__ ((section (".data"))) seccnt;
-uint64_t __attribute__ ((section (".data"))) qcnt;
+dataseg uint64_t seccnt;
+dataseg uint64_t qcnt;
 /* next task to schedule */
-uint64_t __attribute__ ((section (".data"))) isr_next;
+dataseg uint64_t isr_next;
 
 /* allocated memory */
-uint64_t __attribute__ ((section (".data"))) *idt;
+dataseg uint64_t *idt;
 /* irq routing */
-pid_t __attribute__ ((section (".data"))) *irq_routing_table;
-uint16_t __attribute__ ((section (".data"))) isr_maxirq;
+dataseg pid_t *irq_routing_table;
+dataseg uint16_t isr_maxirq;
 
-uint64_t __attribute__ ((section (".data"))) bogomips;
+dataseg uint64_t bogomips;
 
 /* timer ticks */
-uint64_t __attribute__ ((section (".data"))) ticks[4];
+dataseg uint64_t ticks[4];
 /* random seed */
-uint64_t __attribute__ ((section (".data"))) srand[4];
+dataseg uint64_t srand[4];
 
 /**
  *  get UTC system timestamp from a BCD local date
@@ -146,7 +146,7 @@ void isr_init()
     isr_next = 0;
 
     /*** CPU Control Block (TSS64 in kernel bss) ***/
-    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(), PG_CORE_NOCACHE);
+    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(1), PG_CORE_NOCACHE);
     ccb.magic = OSZ_CCB_MAGICH;
     //usr stack (userspace, first page)
     ccb.ist1 = __PAGESIZE;

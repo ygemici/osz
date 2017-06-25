@@ -37,12 +37,11 @@
 #endif
 #include <syscall.h>
 
-#define FBUF_ADDRESS  0xffffffffe0000000
-#define TMPQ_ADDRESS  0xffffffffffc00000
-#define CORE_ADDRESS  0xffffffffffe02000
+#define FBUF_ADDRESS  0xfffffffffc000000           //framebuffer address
+#define TMPQ_ADDRESS  0xffffffffffc00000           //temporarily mapped message queue
+#define CORE_ADDRESS  0xffffffffffe02000           //core text segment
 
 #define TCB_ADDRESS    0
-#define FILE_ADDRESS   (BSS_ADDRESS-__SLOTSIZE)    // 4G-2M list of open files
 #define BUF_ADDRESS    (0x00007fff00000000)        //128T-4G data, slot alloced buffers
 #define SBSS_ADDRESS   (0xFFFF800000000000)        //shared memory, see bztalloc.c
 
@@ -133,8 +132,8 @@ extern void env_init();
 /** Initialize Physical Memory Manager */
 extern void pmm_init();
 
-/** Allocate a physical memory page */
-extern void *pmm_alloc();
+/** Allocate continous physical memory */
+extern void *pmm_alloc(int pages);
 
 /** Allocate a physical memory slot (2M) */
 extern void *pmm_allocslot();

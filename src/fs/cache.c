@@ -54,7 +54,7 @@ void cache_dump()
     int i;
     dbg_printf("Directory cache %x %d:\n",cachedir,ncachedir);
     for(i=0;i<ncachedir;i++)
-        dbg_printf("%3d. %5d %x %s\n",i,cachedir[i].inode,&cachedir[i].name,cachedir[i].name);
+        dbg_printf("%3d. %5d %s\n",i,cachedir[i].inode,cachedir[i].name);
 /*
     dbg_printf("\nBlock cache %x %d:\n",cache,ncache);
     for(i=0;i<ncache;i++)

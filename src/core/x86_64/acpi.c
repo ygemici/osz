@@ -30,16 +30,16 @@
 #include "isr.h"
 
 /* poweroff stuff, autodetected */
-uint32_t __attribute__ ((section (".data"))) SLP_EN;
-uint32_t __attribute__ ((section (".data"))) SLP_TYPa;
-uint32_t __attribute__ ((section (".data"))) PM1a_CNT;
-uint32_t __attribute__ ((section (".data"))) SLP_TYPb;
-uint32_t __attribute__ ((section (".data"))) PM1b_CNT;
-uint32_t __attribute__ ((section (".data"))) PM1_CNT_LEN;
-uint32_t __attribute__ ((section (".data"))) ACPI_ENABLE;
-uint32_t __attribute__ ((section (".data"))) SCI_EN;
-uint32_t __attribute__ ((section (".data"))) SCI_INT;
-uint32_t __attribute__ ((section (".data"))) SMI_CMD;
+dataseg uint32_t SLP_EN;
+dataseg uint32_t SLP_TYPa;
+dataseg uint32_t PM1a_CNT;
+dataseg uint32_t SLP_TYPb;
+dataseg uint32_t PM1b_CNT;
+dataseg uint32_t PM1_CNT_LEN;
+dataseg uint32_t ACPI_ENABLE;
+dataseg uint32_t SCI_EN;
+dataseg uint32_t SCI_INT;
+dataseg uint32_t SMI_CMD;
 
 /**
  * pre-parse ACPI tables. Detect IOAPIC and HPET address, called by isr_init()

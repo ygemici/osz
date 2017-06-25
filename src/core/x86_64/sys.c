@@ -38,7 +38,6 @@ extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern uint64_t pt;
 extern OSZ_rela *relas;
-extern phy_t pdpe;
 extern char *syslog_buf;
 
 extern void kprintf_center(int w, int h);
@@ -51,15 +50,15 @@ extern void dbg_putchar(int c);
 #endif
 
 /* device drivers map */
-char __attribute__ ((section (".data"))) *drvs;
-char __attribute__ ((section (".data"))) *drvs_end;
-phy_t __attribute__ ((section (".data"))) screen[2];
-char __attribute__ ((section (".data"))) fn[256];
-uint8_t __attribute__ ((section (".data"))) sys_fault;
-uint8_t __attribute__ ((section (".data"))) idle_first;
+dataseg char *drvs;
+dataseg char *drvs_end;
+dataseg phy_t screen[2];
+dataseg char fn[256];
+dataseg uint8_t sys_fault;
+dataseg uint8_t idle_first;
 
 /* system tables */
-uint64_t __attribute__ ((section (".data"))) systables[8];
+dataseg uint64_t systables[8];
 
 /**
  *  reboot computer

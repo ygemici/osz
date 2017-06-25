@@ -400,7 +400,14 @@ LoadCore(UINT8 *initrd_ptr)
         for(i=0;i<ehdr->e_phnum;i++){
             if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
                 core_len = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
-                core_ptr = (UINT8 *)ehdr;
+                // is core page aligned?
+                if((UINT64)ptr&(PAGESIZE-1)){
+                    uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, core_len/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&core_ptr);
+                    if (core_ptr == NULL)
+                        return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+                    CopyMem(core_ptr,ptr,phdr->p_filesz);
+                } else
+                    core_ptr = (UINT8 *)ehdr;
                 entrypoint=ehdr->e_entry;
                 DBG(L" * Entry point @%lx, text @%lx %d bytes @%lx\n",entrypoint, 
                     core_ptr, core_len, (entrypoint/PAGESIZE)*PAGESIZE+core_len);
@@ -655,6 +662,8 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
                 ptr=(UINT8*)(*fsdrivers[j++])((unsigned char*)initrd_ptr,cfgname);
             }
             if(core_len>0) {
+                if(core_len>PAGESIZE-1)
+                    core_len=PAGESIZE-1;
                 uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env_ptr);
                 if(env_ptr==NULL)
                     return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
@@ -767,8 +776,8 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         //4k PDPE
         paging[512+511]=(UINT64)((UINT8 *)paging+2*PAGESIZE+1);
         //4k PDE
-        for(i=0;i<255;i++)
-            paging[2*512+256+i]=(UINT64)(((UINT8 *)(bootboot->fb_ptr)+(i<<21))+0x81);   //map framebuffer
+        for(i=0;i<31;i++)
+            paging[2*512+480+i]=(UINT64)(((UINT8 *)(bootboot->fb_ptr)+(i<<21))+0x81);   //map framebuffer
         paging[2*512+511]=(UINT64)((UINT8 *)paging+3*PAGESIZE+1);
         //4k PT
         paging[3*512+0]=(UINT64)(bootboot)+1;
@@ -862,7 +871,7 @@ get_memory_map:
             "movq $0x544f4f42544f4f42,%%rax;"    // boot magic 'BOOTBOOT'
             "movq $0xffffffffffe00000,%%rbx;"    // bootboot virtual address
             "movq $0xffffffffffe01000,%%rcx;"    // environment virtual address
-            "movq $0xffffffffe0000000,%%rdx;"    // framebuffer virtual address
+            "movq $0xfffffffffc000000,%%rdx;"    // framebuffer virtual address
             "retq"
             : : "a"(entrypoint): "memory" );
     }

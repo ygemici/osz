@@ -26,22 +26,22 @@
  */
 
 /*** parsed values ***/
-uint64_t __attribute__ ((section (".data"))) nrphymax;
-uint64_t __attribute__ ((section (".data"))) nrmqmax;
-uint64_t __attribute__ ((section (".data"))) nrlogmax;
-uint64_t __attribute__ ((section (".data"))) clocksource;
-uint64_t __attribute__ ((section (".data"))) fps;
-uint64_t __attribute__ ((section (".data"))) debug;
-uint64_t __attribute__ ((section (".data"))) display;
-uint64_t __attribute__ ((section (".data"))) quantum;
-uint64_t __attribute__ ((section (".data"))) keymap;
-uint64_t __attribute__ ((section (".data"))) pathmax;
-uint8_t __attribute__ ((section (".data"))) identity;
-uint8_t __attribute__ ((section (".data"))) syslog;
-uint8_t __attribute__ ((section (".data"))) networking;
-uint8_t __attribute__ ((section (".data"))) sound;
-uint8_t __attribute__ ((section (".data"))) rescueshell;
-uint8_t __attribute__ ((section (".data"))) lefthanded;
+dataseg uint64_t nrphymax;
+dataseg uint64_t nrmqmax;
+dataseg uint64_t nrlogmax;
+dataseg uint64_t clocksource;
+dataseg uint64_t fps;
+dataseg uint64_t debug;
+dataseg uint64_t display;
+dataseg uint64_t quantum;
+dataseg uint64_t keymap;
+dataseg uint64_t pathmax;
+dataseg uint8_t identity;
+dataseg uint8_t syslog;
+dataseg uint8_t networking;
+dataseg uint8_t sound;
+dataseg uint8_t rescueshell;
+dataseg uint8_t lefthanded;
 
 /*** for overriding default or autodetected values ***/
 // architecrue specific

@@ -25,7 +25,7 @@
  * @brief Virtual Memory Manager, on-demand paging
  */
 
-phy_t __attribute__ ((section (".data"))) pdpe;
+dataseg phy_t pdpe;
 
 /**
  * Page fault handler, called by isrs.S
@@ -64,7 +64,7 @@ again:
     //PML4E
     i=(bss>>(12+9+9+9))&0x1FF;
     if((paging[i]&~(__PAGESIZE-1))==0) {
-        paging[i]=(uint64_t)pmm_alloc() + access;
+        paging[i]=(uint64_t)pmm_alloc(1) + access;
         tcb->allocmem++;
     }
     pdpe=(phy_t)(paging[i] & ~(__PAGESIZE-1));
@@ -73,7 +73,7 @@ again:
     i=(bss>>(12+9+9))&0x1FF;
     pdpe+=i*8;
     if((paging[i]&~(__PAGESIZE-1))==0) {
-        paging[i]=(uint64_t)pmm_alloc() + access;
+        paging[i]=(uint64_t)pmm_alloc(1) + access;
         tcb->allocmem++;
     }
     kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE);
@@ -95,7 +95,7 @@ again:
             }
             return;
         }
-        paging[i]=(uint64_t)pmm_alloc() + access;
+        paging[i]=(uint64_t)pmm_alloc(1) + access;
         tcb->allocmem++;
     }
     kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE);

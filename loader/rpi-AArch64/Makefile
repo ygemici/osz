@@ -1,6 +1,6 @@
 all:
 	@echo "  src		rpi-AArch64 (Raspberry Pi 3+)"
-	@gcc -c bootboot.S -o bootboot.o
+	@gcc -c boot.S -o bootboot.o
 	@objcopy -O binary bootboot.o ../kernel.img
 	@rm bootboot.o
 

@@ -233,6 +233,7 @@ kmemset:
 2:  ret
 
 kmemcmp:
+    movb    $0, sys_fault
     pushq   %rdi
     xorq    %rax, %rax
     incl    %edx

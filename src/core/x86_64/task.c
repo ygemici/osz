@@ -27,10 +27,10 @@
 
 extern uint64_t *syslog_buf;
 
-phy_t __attribute__ ((section (".data"))) idle_mapping;
-phy_t __attribute__ ((section (".data"))) core_mapping;
-phy_t __attribute__ ((section (".data"))) identity_mapping;
-phy_t __attribute__ ((section (".data"))) *stack_ptr;
+dataseg phy_t idle_mapping;
+dataseg phy_t core_mapping;
+dataseg phy_t identity_mapping;
+dataseg phy_t *stack_ptr;
 
 /**
  * create a task, allocate memory for it and init TCB
@@ -47,7 +47,7 @@ OSZ_tcb *task_new(char *cmdline, uint8_t prio)
         nrmqmax=1;
 
     /* allocate TCB */
-    ptr=pmm_alloc();
+    ptr=pmm_alloc(1);
     kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE);
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->state = tcb_state_running;
@@ -64,23 +64,23 @@ OSZ_tcb *task_new(char *cmdline, uint8_t prio)
 
     /* allocate memory mappings */
     // PML4
-    ptr=pmm_alloc();
+    ptr=pmm_alloc(1);
     tcb->memroot = (uint64_t)ptr;
     kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDPE
-    ptr=pmm_alloc();
+    ptr=pmm_alloc(1);
     paging[0]=(uint64_t)ptr+PG_USER_RW;
     paging[511]=(core_mapping&~(__PAGESIZE-1))+PG_CORE;
     kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PDE
-    ptr=pmm_alloc();
+    ptr=pmm_alloc(1);
     paging[0]=(uint64_t)ptr+PG_USER_RW;
     kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
     // PT text
-    ptr=pmm_alloc();
+    ptr=pmm_alloc(1);
     //pt=(uint64_t)ptr;
     paging[0]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
-    ptr2=pmm_alloc();
+    ptr2=pmm_alloc(1);
     paging[1]=(uint64_t)ptr2+PG_USER_RW;
     kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
     // map TCB
@@ -88,11 +88,11 @@ OSZ_tcb *task_new(char *cmdline, uint8_t prio)
     paging[0]=(self+PG_USER_RO)|((uint64_t)1<<63);
     // allocate message queue
     for(i=0;i<nrmqmax;i++) {
-        ptr=pmm_alloc();
+        ptr=pmm_alloc(1);
         paging[i+(MQ_ADDRESS/__PAGESIZE)]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     }
     // allocate stack
-    ptr=pmm_alloc();
+    ptr=pmm_alloc(1);
     paging[511]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
     // we don't need the table any longer, so we can use it to map the
     // message queue header for initialization

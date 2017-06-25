@@ -161,7 +161,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             /* data inlined in inode? */
             if(data != NULL && ((phy_t)data & (__PAGESIZE-1))!=0) {
                 /* copy to a new empty page */
-                tmp = (phy_t)pmm_alloc();
+                tmp = (phy_t)pmm_alloc(1);
                 tcb->allocmem++;
                 tcb->linkmem--;
                 kmap((virt_t)&tmpmap, (phy_t)data & ~(__PAGESIZE-1), PG_CORE_NOCACHE);
@@ -196,7 +196,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             } else {
                 arg1=(arg1+__PAGESIZE-1)/__PAGESIZE;
                 for(i=0;i<arg1;i++) {
-                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(), __PAGESIZE, j);
+                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(1), __PAGESIZE, j);
                     tcb->allocmem++;
                     arg0+=__PAGESIZE;
                 }

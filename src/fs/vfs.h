@@ -44,12 +44,13 @@
 #define VFS_INODE_ZERODEV           1
 #define VFS_INODE_RAMDISK           2
 #define VFS_INODE_RNDDEV            3
-#define VFS_INODE_DEVFS             4
+#define VFS_INODE_NULLDEV           4
 
 #define VFS_BLKDEV_MEMFS            0
 #define VFS_MEMFS_ZERO_DEVICE       0
 #define VFS_MEMFS_RAMDISK_DEVICE    1
 #define VFS_MEMFS_RANDOM_DEVICE     2
+#define VFS_MEMFS_NULL_DEVICE       3
 
 #ifndef _AS
 typedef struct {

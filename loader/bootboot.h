@@ -93,13 +93,13 @@ typedef struct {
       uint64_t unused2;
     } x86_64;
     struct {
+      uint64_t atags_ptr;
       uint64_t unused0;
       uint64_t unused1;
       uint64_t unused2;
       uint64_t unused3;
       uint64_t unused4;
       uint64_t unused5;
-      uint64_t unused6;
     } AArch64;
   };
 

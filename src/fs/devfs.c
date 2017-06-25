@@ -53,7 +53,7 @@ void dev_link(FSZ_DirEnt *entries, char *name, ino_t inode)
 
 void devfs_init()
 {
-    ino_t in;
+//    ino_t in;
     inode_t inode;
 
     fsdrv_t devdrv = {
@@ -115,14 +115,25 @@ void devfs_init()
     inode.blkdev.blksize = __PAGESIZE;
     dev_link(devdir,"random",vfs_inode(&inode));
 
+    //VFS_INODE_NULLDEV
+    memzero((void*)&inode,sizeof(inode_t));
+    inode.nlink=1;
+    inode.type=VFS_INODE_TYPE_BLKDEV;
+    inode.blkdev.drivertask = VFS_BLKDEV_MEMFS;
+    inode.blkdev.device = VFS_MEMFS_NULL_DEVICE;
+    inode.blkdev.startsec = 0;
+    inode.blkdev.size = 0;
+    inode.blkdev.blksize = __PAGESIZE;
+    dev_link(devdir,"null",vfs_inode(&inode));
+
     //This is basically a list /dev/
     memzero((void*)&inode,sizeof(inode_t));
     inode.nlink=1;
     inode.type=VFS_INODE_TYPE_SUPERBLOCK;
     inode.superblock.fs=_vfs_getfs("devfs");
     inode.superblock.entries = devdir;
-    cache_dir("/dev",vfs_inode(&inode));
-
+    vfs_inode(&inode);
+/*
     // subdirectory /dev/vol/
     memzero((void*)&inode,sizeof(inode_t));
     inode.nlink=1;
@@ -130,7 +141,6 @@ void devfs_init()
     inode.directory.entries = devvoldir;
     in=vfs_inode(&inode);
     dev_link(devdir,"vol/",in);
-    cache_dir("/dev/vol",in);
 
     // subdirectory /dev/uuid/
     memzero((void*)&inode,sizeof(inode_t));
@@ -139,5 +149,5 @@ void devfs_init()
     inode.directory.entries = devuuiddir;
     in=vfs_inode(&inode);
     dev_link(devdir,"uuid/",in);
-    cache_dir("/dev/uuid",in);
+*/
 }

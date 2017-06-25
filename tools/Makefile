@@ -1,5 +1,7 @@
-include ../Config
+#setting this to 1 will create a partition for root fs instead of initrd file
 NOINITRD = 1
+
+include ../Config
 INITRD = ../bin/ESP/BOOTBOOT/INITRD
 ESPFILE = ../bin/esp.part
 SYSFILE = ../bin/sys.part
@@ -31,7 +33,7 @@ imgclean:
 esp: initrd
 	@echo "  mkfs		boot (ESP)"
 ifneq ($(NOINITRD),1)
-	@cp -f ../etc/etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
+	@#cp -f ../etc/etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.bin)","")
 	@cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
 endif
@@ -68,6 +70,8 @@ endif
 else
 	@./mkfs.o $(INITRD) ../bin/initrd
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H hpodc -o 2>/dev/null | gzip > ../$(INITRD)
+	@#cd ../bin/initrd && tar -czf ../$(INITRD) *
 	@#./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
 endif
 

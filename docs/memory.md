@@ -20,8 +20,8 @@ User Tasks
 
 | Virtual Address  | Scope   | Description |
 | ---------------- | ------- | ----------- |
-| -2^56 .. -512M-1 | global  | global [shared memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) space (user accessible, read/write) |
-| -512M .. 0       | global  | core memory (supervisor only) |
+| -2^56 .. -64M-1  | global  | global [shared memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) space (user accessible, read/write) |
+|  -64M .. 0       | global  | core memory (supervisor only) |
 |     0 .. 4096    | local   | Task Control Block (read-only) |
 |  4096 .. x       | local   | Message Queue (read/write, growing upwards) |
 |     x .. 2M-1    | local   | local stack (read/write, growing downwards) |
@@ -63,7 +63,7 @@ mapped to every task's address space.
 
 | Virtual Address | Description |
 | --------------- | ----------- |
-| -512M .. -4M-1  | Framebuffer mapped (for kprintf and kpanic) |
+|  -64M .. -4M-1  | Framebuffer mapped (for kprintf and kpanic) |
 |   -4M .. -2M-1  | Temorarily mapped message queue |
 |   -2M .. x      | [Core text segment](https://github.com/bztsrc/osz/tree/master/src/core/main.c) and bss (growing upwards) |
 |     x .. 0      | Core stack (growing downwards) |

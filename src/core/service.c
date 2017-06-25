@@ -34,14 +34,14 @@ extern phy_t pdpe;
 extern void task_mapsyslog();
 
 /* pids of services. Negative pids are service ids and looked up in this */
-pid_t  __attribute__ ((section (".data"))) services[NUMSRV];
+dataseg pid_t  services[NUMSRV];
 
 /* needs screen pointer mapping */
-uint8_t __attribute__ ((section (".data"))) scrptr = 0;
+dataseg uint8_t scrptr = 0;
 
 /* location of fstab in mapped initrd */
-uint64_t __attribute__ ((section (".data"))) fstab;
-uint64_t __attribute__ ((section (".data"))) fstab_size;
+dataseg uint64_t fstab;
+dataseg uint64_t fstab_size;
 
 /**
  * Initialize a non-special system service
@@ -67,7 +67,7 @@ void service_init(int subsystem, char *fn)
     // dynamic linker
     if(elf_rtlink()) {
         // map the first page in bss
-        vmm_mapbss(tcb, BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+        vmm_mapbss(tcb, BSS_ADDRESS, (phy_t)pmm_alloc(1), __PAGESIZE, PG_USER_RW);
         tcb->allocmem++;
 
         // add to queue so that scheduler will know about this task
@@ -131,7 +131,7 @@ void fs_init()
     // dynamic linker
     if(elf_rtlink()) {
         // map the first page in bss
-        vmm_mapbss(tcb, BSS_ADDRESS, (phy_t)pmm_alloc(), __PAGESIZE, PG_USER_RW);
+        vmm_mapbss(tcb, BSS_ADDRESS, (phy_t)pmm_alloc(1), __PAGESIZE, PG_USER_RW);
         tcb->allocmem++;
 
         // map initrd in "fs" task's memory

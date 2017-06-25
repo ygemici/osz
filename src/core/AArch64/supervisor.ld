@@ -1,19 +1,10 @@
-/* user space addresses */
-TCB_ADDRESS   = 0;
-MQ_ADDRESS    = 4096;
-TEXT_ADDRESS  = 0x0000000000200000;
-BSS_ADDRESS   = 0x0000000100000000;
-STACK_ADDRESS = 0x0000800000000000;
 /* kernel space addresses */
-FBUF_ADDRESS  = 0xffffffffe0000000;
 CORE_ADDRESS  = 0xffffffffffe00000;
 
 ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
 SECTIONS
 {
-    . = FBUF_ADDRESS;
-        fb = .;
     /* make sure it starts with bootboot */
     . = CORE_ADDRESS;
         bootboot = .;

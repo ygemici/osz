@@ -37,10 +37,9 @@
 #include "isr.h"
 #include "../core.h"
 
-#ifndef OSZ_CORE
 #define task_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "r"(m) : "%rax");
-#define breakpoint __asm__ __volatile__("xchg %%bx, %%bx":::)
-#endif
+#define breakpoint __asm__ __volatile__("xchg %%bx, %%bx")
+#define dataseg __attribute__ ((section (".data")))
 
 /* VMM access bits */
 #define PG_CORE 0b00011

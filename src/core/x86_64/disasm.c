@@ -137,7 +137,7 @@ typedef struct {
     void *ext;
 } instdesc;
 
-char __attribute__ ((section (".data"))) *grp1[] = {
+dataseg char *grp1[] = {
     "add",
     "or",
     "adc",
@@ -148,7 +148,7 @@ char __attribute__ ((section (".data"))) *grp1[] = {
     "cmp"
 };
 
-char __attribute__ ((section (".data"))) *grp2[] = {
+dataseg char *grp2[] = {
     "rol",
     "ror",
     "rcl",
@@ -159,7 +159,7 @@ char __attribute__ ((section (".data"))) *grp2[] = {
     "sar"
 };
 
-instdesc __attribute__ ((section (".data"))) grp3[] = {
+dataseg instdesc grp3[] = {
     { "test",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
     { "test",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
     { "not",    DA_NONE+DA_MODRM, DA_E, 0 },
@@ -170,7 +170,7 @@ instdesc __attribute__ ((section (".data"))) grp3[] = {
     { "idiv",   DA_NONE+DA_MODRM, DA2_I_E, 0 },
 };
 
-instdesc __attribute__ ((section (".data"))) grp4[] = {
+dataseg instdesc grp4[] = {
     { "inc",    DA_BYTE+DA_MODRM, DA_E, 0 },
     { "dec",    DA_BYTE+DA_MODRM, DA_E, 0 },
     { "",       DA_NONE+DA_MODRM, 0, 0 },
@@ -181,7 +181,7 @@ instdesc __attribute__ ((section (".data"))) grp4[] = {
     { "",       DA_NONE+DA_MODRM, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) grp5[] = {
+dataseg instdesc grp5[] = {
     { "inc",    DA_LONG+DA_MODRM, DA_E, 0 },
     { "dec",    DA_LONG+DA_MODRM, DA_E, 0 },
     { "call",   DA_QUAD+DA_MODRM, DA_EInd, 0 },
@@ -192,7 +192,7 @@ instdesc __attribute__ ((section (".data"))) grp5[] = {
     { "",       DA_NONE+DA_MODRM, 0, 0 }
 };
 
-char __attribute__ ((section (".data"))) *grp6[] = {
+dataseg char *grp6[] = {
     "sldt",
     "str",
     "lldt",
@@ -203,7 +203,7 @@ char __attribute__ ((section (".data"))) *grp6[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *inst0f00[] = {
+dataseg char *inst0f00[] = {
     "invplg",
     "swapgs",
     "rdtscp",
@@ -214,7 +214,7 @@ char __attribute__ ((section (".data"))) *inst0f00[] = {
     ""
 };
 
-instdesc __attribute__ ((section (".data"))) grp7[] = {
+dataseg instdesc grp7[] = {
     { "sgdt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
     { "sidt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
     { "lgdt",   DA_NONE+DA_MODRM, DA_Rw, 0 },
@@ -225,7 +225,7 @@ instdesc __attribute__ ((section (".data"))) grp7[] = {
     { NULL,     DA_NONE+DA_MODRM, DA_Rw, inst0f00 }
 };
 
-char __attribute__ ((section (".data"))) *grp8[] = {
+dataseg char *grp8[] = {
     "",
     "",
     "",
@@ -236,7 +236,7 @@ char __attribute__ ((section (".data"))) *grp8[] = {
     "btc"
 };
 
-char __attribute__ ((section (".data"))) *grp9[] = {
+dataseg char *grp9[] = {
     "",
     "cmpxchg8b",
     "",
@@ -247,7 +247,7 @@ char __attribute__ ((section (".data"))) *grp9[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *grpA[] = {
+dataseg char *grpA[] = {
     "",
     "cmpxchg8b",
     "",
@@ -258,7 +258,7 @@ char __attribute__ ((section (".data"))) *grpA[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *grpB[] = {
+dataseg char *grpB[] = {
     "xstorerng",
     "xcryptecb",
     "xcryptcbc",
@@ -269,7 +269,7 @@ char __attribute__ ((section (".data"))) *grpB[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *inst0f71[] = {
+dataseg char *inst0f71[] = {
     "",
     "",
     "psrlw",
@@ -280,7 +280,7 @@ char __attribute__ ((section (".data"))) *inst0f71[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *inst0f72[] = {
+dataseg char *inst0f72[] = {
     "",
     "",
     "psrld",
@@ -291,7 +291,7 @@ char __attribute__ ((section (".data"))) *inst0f72[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *inst0f73[] = {
+dataseg char *inst0f73[] = {
     "",
     "psrlq",
     "psrldq",
@@ -301,7 +301,7 @@ char __attribute__ ((section (".data"))) *inst0f73[] = {
     "pslldq"
 };
 
-char __attribute__ ((section (".data"))) *inst0fae[] = {
+dataseg char *inst0fae[] = {
     "sfence",
     "clflush",
     "",
@@ -312,7 +312,7 @@ char __attribute__ ((section (".data"))) *inst0fae[] = {
     ""
 };
 
-instdesc __attribute__ ((section (".data"))) inst0f0[] = {
+dataseg instdesc inst0f0[] = {
     { NULL,     DA_NONE+DA_MODRM, DA_Ew, grp6 },
     { NULL,     DA_NONE+DA_MODRM, DA_Ew, grp7 },
     { "lar",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -332,7 +332,7 @@ instdesc __attribute__ ((section (".data"))) inst0f0[] = {
     { "",       DA_NONE, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0f2[] = {
+dataseg instdesc inst0f2[] = {
     { "mov",    DA_LONG+DA_MODRM, DA2_CR_E, 0 },
     { "mov",    DA_LONG+DA_MODRM, DA2_DR_E, 0 },
     { "mov",    DA_LONG+DA_MODRM, DA2_E_CR, 0 },
@@ -352,7 +352,7 @@ instdesc __attribute__ ((section (".data"))) inst0f2[] = {
     { "",       DA_NONE, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0f3[] = {
+dataseg instdesc inst0f3[] = {
     { "wrmsr",  DA_NONE, 0, 0 },
     { "rdtsc",  DA_NONE, 0, 0 },
     { "rdmsr",  DA_NONE, 0, 0 },
@@ -372,7 +372,7 @@ instdesc __attribute__ ((section (".data"))) inst0f3[] = {
     { "",       DA_NONE, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0f7[] = {
+dataseg instdesc inst0f7[] = {
     { "",       DA_NONE, 0, 0 },
     { NULL,     DA_NONE, 0, inst0f71 },
     { "",       DA_NONE, 0, 0 },
@@ -393,7 +393,7 @@ instdesc __attribute__ ((section (".data"))) inst0f7[] = {
     { "",       DA_NONE, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0f8[] = {
+dataseg instdesc inst0f8[] = {
     { "jo",     DA_NONE, DA_Dl, 0 },
     { "jno",    DA_NONE, DA_Dl, 0 },
     { "jb",     DA_NONE, DA_Dl, 0 },
@@ -413,7 +413,7 @@ instdesc __attribute__ ((section (".data"))) inst0f8[] = {
     { "jnle",   DA_NONE, DA_Dl, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0f9[] = {
+dataseg instdesc inst0f9[] = {
     { "seto",   DA_NONE+DA_MODRM, DA_Eb, 0 },
     { "setno",  DA_NONE+DA_MODRM, DA_Eb, 0 },
     { "setb",   DA_NONE+DA_MODRM, DA_Eb, 0 },
@@ -433,7 +433,7 @@ instdesc __attribute__ ((section (".data"))) inst0f9[] = {
     { "setnle", DA_NONE+DA_MODRM, DA_Eb, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0fa[] = {
+dataseg instdesc inst0fa[] = {
     { "push",   DA_QUAD, DA_Si, 0 },
     { "pop",    DA_QUAD, DA_Si, 0 },
     { "cpuid",  DA_NONE, 0, 0 },
@@ -453,7 +453,7 @@ instdesc __attribute__ ((section (".data"))) inst0fa[] = {
     { "imul",   DA_LONG+DA_MODRM, DA2_E_R, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0fb[] = {
+dataseg instdesc inst0fb[] = {
     { "cmpxchg",DA_BYTE+DA_MODRM, DA2_R_E, 0 },
     { "cmpxchg",DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "lss",    DA_LONG+DA_MODRM, DA2_E_R, 0 },
@@ -473,7 +473,7 @@ instdesc __attribute__ ((section (".data"))) inst0fb[] = {
     { "movsw",  DA_LONG+DA_MODRM, DA2_Ew_R, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst0fc[] = {
+dataseg instdesc inst0fc[] = {
     { "xadd",   DA_BYTE+DA_MODRM, DA2_R_E, 0 },
     { "xadd",   DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "",       DA_NONE, 0, 0 },
@@ -493,7 +493,7 @@ instdesc __attribute__ ((section (".data"))) inst0fc[] = {
     { "bswap",  DA_LONG, DA_Ril, 0 }
 };
 
-char __attribute__ ((section (".data"))) *esc92[] = {
+dataseg char *esc92[] = {
     "fnop",
     "",
     "",
@@ -504,7 +504,7 @@ char __attribute__ ((section (".data"))) *esc92[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *esc94[] = {
+dataseg char *esc94[] = {
     "fchs",
     "fabs",
     "",
@@ -515,7 +515,7 @@ char __attribute__ ((section (".data"))) *esc94[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *esc95[] = {
+dataseg char *esc95[] = {
     "fld1",
     "fldl2t",
     "fldl2e",
@@ -526,7 +526,7 @@ char __attribute__ ((section (".data"))) *esc95[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *esc96[] = {
+dataseg char *esc96[] = {
     "f2xm1",
     "fyl2x",
     "fptan",
@@ -537,7 +537,7 @@ char __attribute__ ((section (".data"))) *esc96[] = {
     "fincstp"
 };
 
-char __attribute__ ((section (".data"))) *esc97[] = {
+dataseg char *esc97[] = {
     "fprem",
     "fyl2xp1",
     "fsqrt",
@@ -548,7 +548,7 @@ char __attribute__ ((section (".data"))) *esc97[] = {
     "fcos"
 };
 
-char __attribute__ ((section (".data"))) *esca5[] = {
+dataseg char *esca5[] = {
     "",
     "fucompp",
     "",
@@ -559,7 +559,7 @@ char __attribute__ ((section (".data"))) *esca5[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *escb4[] = {
+dataseg char *escb4[] = {
     "fneni",
     "fndisi",
     "fnclex",
@@ -570,7 +570,7 @@ char __attribute__ ((section (".data"))) *escb4[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *esce3[] = {
+dataseg char *esce3[] = {
     "",
     "fcompp",
     "",
@@ -581,7 +581,7 @@ char __attribute__ ((section (".data"))) *esce3[] = {
     ""
 };
 
-char __attribute__ ((section (".data"))) *escf4[] = {
+dataseg char *escf4[] = {
     "fnstsw",
     "",
     "",
@@ -592,7 +592,7 @@ char __attribute__ ((section (".data"))) *escf4[] = {
     ""
 };
 
-instdesc __attribute__ ((section (".data"))) esc8[] = {
+dataseg instdesc esc8[] = {
     { "fadd",   DA_SNGL, DA2_STI_ST, 0 },
     { "fmul",   DA_SNGL, DA2_STI_ST, 0 },
     { "fcom",   DA_SNGL, DA2_STI_ST, 0 },
@@ -603,7 +603,7 @@ instdesc __attribute__ ((section (".data"))) esc8[] = {
     { "fdivr",  DA_SNGL, DA2_STI_ST, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) esc9[] = {
+dataseg instdesc esc9[] = {
     { "fld",    DA_SNGL, DA_STI, 0 },
     { "",       DA_NONE, DA_STI, "fxch" },
     { "fst",    DA_SNGL, DA_X, esc92 },
@@ -614,7 +614,7 @@ instdesc __attribute__ ((section (".data"))) esc9[] = {
     { "fnstcw", DA_NONE, DA_X, esc97 }
 };
 
-instdesc __attribute__ ((section (".data"))) esca[] = {
+dataseg instdesc esca[] = {
     { "fiadd",  DA_LONG, 0, 0 },
     { "fimul",  DA_LONG, 0, 0 },
     { "ficom",  DA_LONG, 0, 0 },
@@ -626,7 +626,7 @@ instdesc __attribute__ ((section (".data"))) esca[] = {
 
 };
 
-instdesc __attribute__ ((section (".data"))) escb[] = {
+dataseg instdesc escb[] = {
     { "fild",   DA_LONG, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "fist",   DA_LONG, 0, 0 },
@@ -637,7 +637,7 @@ instdesc __attribute__ ((section (".data"))) escb[] = {
     { "fstp",   DA_EXTR, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) escc[] = {
+dataseg instdesc escc[] = {
     { "fadd",   DA_DBLR, DA2_STI_ST, 0 },
     { "fmul",   DA_DBLR, DA2_STI_ST, 0 },
     { "fcom",   DA_DBLR, DA2_STI_ST, 0 },
@@ -648,7 +648,7 @@ instdesc __attribute__ ((section (".data"))) escc[] = {
     { "fdivr",  DA_DBLR, DA2_STI_ST, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) escd[] = {
+dataseg instdesc escd[] = {
     { "fld",    DA_DBLR, DA_STI, "ffree" },
     { "",       DA_NONE, 0, 0 },
     { "fst",    DA_DBLR, DA_STI, 0 },
@@ -659,7 +659,7 @@ instdesc __attribute__ ((section (".data"))) escd[] = {
     { "fnstsw", DA_NONE, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) esce[] = {
+dataseg instdesc esce[] = {
     { "fiadd",  DA_WORD, DA2_ST_STI, "faddp" },
     { "fimul",  DA_WORD, DA2_ST_STI, "fmulp" },
     { "ficom",  DA_WORD, 0, 0 },
@@ -670,7 +670,7 @@ instdesc __attribute__ ((section (".data"))) esce[] = {
     { "fidivr", DA_WORD, DA2_ST_STI, "fdivp" }
 };
 
-instdesc __attribute__ ((section (".data"))) escf[] = {
+dataseg instdesc escf[] = {
     { "fild",   DA_WORD, 0, 0 },
     { "",       DA_NONE, 0, 0 },
     { "fist",   DA_WORD, 0, 0 },
@@ -681,7 +681,7 @@ instdesc __attribute__ ((section (".data"))) escf[] = {
     { "fistp",  DA_QUAD, 0, 0 }
 };
 
-instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
+dataseg instdesc inst_tbl[] = {
     { "add",    DA_BYTE+DA_MODRM, DA2_R_E, 0 },     /*00*/
     { "add",    DA_LONG+DA_MODRM, DA2_R_E, 0 },
     { "add",    DA_BYTE+DA_MODRM, DA2_E_R, 0 },
@@ -971,7 +971,7 @@ instdesc __attribute__ ((section (".data"))) inst_tbl[] = {
     { NULL,     DA_NONE+DA_MODRM, 0, grp5 }
 };
 
-instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
+dataseg instdesc *inst_tbl0f[] = {
     inst0f0,
     0,
     inst0f2,
@@ -990,7 +990,7 @@ instdesc __attribute__ ((section (".data"))) *inst_tbl0f[] = {
     0
 };
 
-char __attribute__ ((section (".data"))) *sizestr[7] = {
+dataseg char *sizestr[7] = {
     "byte",
     "word",
     "dword",
@@ -1000,26 +1000,26 @@ char __attribute__ ((section (".data"))) *sizestr[7] = {
     "extend"
 };
 
-char __attribute__ ((section (".data"))) *regs[4][16] = {
+dataseg char *regs[4][16] = {
     { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh", "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b", "r15b"},
     { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di", "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w"},
     { "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "r8d", "r9d", "r10d", "r11d", "r12d", "r13d", "r14d", "r15d"},
     { "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8",  "r9",  "r10", "r11", "r12", "r13", "r14", "r15" }
 };
 
-char __attribute__ ((section (".data"))) *sregs[8] = {
+dataseg char *sregs[8] = {
     "es", "cs", "ss", "ds", "fs", "gs", "?", "?"
 };
-char __attribute__ ((section (".data"))) *unkmnemonic = "???";
+dataseg char *unkmnemonic = "???";
 
 // address resolve
-uint8_t __attribute__ ((section (".data"))) addr_reg;
-uint8_t __attribute__ ((section (".data"))) addr_scale;
-uint64_t __attribute__ ((section (".data"))) addr_disp;
-uint8_t __attribute__ ((section (".data"))) addr_seg;
-uint8_t __attribute__ ((section (".data"))) addr_saddr;
-char __attribute__ ((section (".data"))) *addr_base;
-char __attribute__ ((section (".data"))) *addr_idx;
+dataseg uint8_t addr_reg;
+dataseg uint8_t addr_scale;
+dataseg uint64_t addr_disp;
+dataseg uint8_t addr_seg;
+dataseg uint8_t addr_saddr;
+dataseg char *addr_base;
+dataseg char *addr_idx;
 
 char *disasm_prtaddr(char *str, virt_t addr, uint8_t mode, uint8_t size, uint8_t reg)
 {

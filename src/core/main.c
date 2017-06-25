@@ -25,7 +25,7 @@
  * @brief Core, boot environment
  *
  *   Memory map
- *       -512M framebuffer for kprintf          (0xFFFFFFFFE0000000)
+ *        -64M framebuffer for kprintf          (0xFFFFFFFFFC000000)
  *         -2M core      bootboot[1] struct     (0xFFFFFFFFFFE00000)
  *         -2M + 1page   environment[2]         (0xFFFFFFFFFFE01000)
  *         -2M + 2page.. core text segment v    (0xFFFFFFFFFFE02000)
@@ -38,12 +38,12 @@
  *   [2] see etc/sys/config and env.h. Plain ascii key=value pairs,
  *       separated by newline characters.
  *   [3] when main() calls sys_enable(), user task will be mapped
- *       instead into 0 - 2^56 and shared memory in -2^56 - -512M.
+ *       instead into 0 - 2^56 and shared memory in -2^56 - -64M.
  */
 
 #include "env.h"
 
-char __attribute__ ((section (".data"))) osver[] =
+dataseg char osver[] =
     OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"
     "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
 

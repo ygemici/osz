@@ -37,7 +37,7 @@
 extern pid_t isr_next;
 
 /* pointer to PDE for TMPQ_ADDRESS */
-phy_t __attribute__ ((section (".data"))) *mq_mapping;
+dataseg phy_t *mq_mapping;
 
 /**
  * send a message with scalar values. Note msg_send() sends a buffer, it's a macro.
@@ -114,12 +114,12 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         // limit check
         if(msghdr->mq_buffstart/__PAGESIZE + bs >= nrmqmax + 1 + msghdr->mq_buffsize)
             msghdr->mq_buffstart = (nrmqmax + 1)*__PAGESIZE;
-        // core memory cannot be sent in range -512M..0
+        // core memory cannot be sent in range -64M..0
         if((int64_t)p < 0 && (uint64_t)p > FBUF_ADDRESS) {
             srctcb->errno = EACCES;
             return false;
         }
-        // not mapping shared memory (not in the range -2^56..-512M).
+        // not mapping shared memory (not in the range -2^56..-64M).
         if((int64_t)p > 0) {
             // check size. Buffers over 1M must be sent in shared memory
             if(arg1 > (__SLOTSIZE/2)) {

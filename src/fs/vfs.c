@@ -83,19 +83,12 @@ ino_t vfs_inode(const inode_t *inode)
 
 void vfs_init()
 {
-    inode_t inode;
     pathtmp=(char*)malloc(_pathmax<512?512:_pathmax);
     if(!pathtmp || errno)
         abort();
 
-    //VFS_INODE_ROOT
-    memzero((void*)&inode,sizeof(inode_t));
-    //keep it memory at all times
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_SUPERBLOCK;
-    /* this is another chicken and egg scenario. We don't have ramdisk device yet */
-    inode.superblock.storage = VFS_INODE_RAMDISK;
-    vfs_inode(&inode);
+    //VFS_INODE_ROOT, reserve space for it at the first inode
+    ninodes=1;
 }
 
 #if DEBUG

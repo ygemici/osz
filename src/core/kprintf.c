@@ -29,26 +29,26 @@
 #include "env.h"
 
 /* re-entrant counter */
-char __attribute__ ((section (".data"))) reent;
+dataseg char reent;
 /* for temporary strings */
-char __attribute__ ((section (".data"))) tmpstr[33];
+dataseg char tmpstr[33];
 /* first position in line, used by carridge return */
-int __attribute__ ((section (".data"))) fx;
+dataseg int fx;
 /* current cursor position */
-int __attribute__ ((section (".data"))) kx;
-int __attribute__ ((section (".data"))) ky;
+dataseg int kx;
+dataseg int ky;
 /* maximum coordinates */
-int __attribute__ ((section (".data"))) maxx;
-int __attribute__ ((section (".data"))) maxy;
+dataseg int maxx;
+dataseg int maxy;
 /* scrolled lines counter */
-int __attribute__ ((section (".data"))) scry;
+dataseg int scry;
 
 /* colors */
-uint32_t __attribute__ ((section (".data"))) fg;
-uint32_t __attribute__ ((section (".data"))) bg;
+dataseg uint32_t fg;
+dataseg uint32_t bg;
 
-/* argument */
-uint8_t __attribute__ ((section (".data"))) cnt;
+/* argument counter */
+dataseg uint8_t cnt;
 
 /* string constants and ascii arts */
 char kpanicprefix[] = "OS/Z panic: ";

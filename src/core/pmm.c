@@ -38,9 +38,9 @@ extern char *syslog_buf;
 extern char *syslog_ptr;
 
 /* Main scructure */
-OSZ_pmm __attribute__ ((section (".data"))) pmm;
+dataseg OSZ_pmm pmm;
 /* pointer to tmpmap in PT */
-void __attribute__ ((section (".data"))) *kmap_tmp;
+dataseg void *kmap_tmp;
 
 #if DEBUG
 void pmm_dump()
@@ -57,10 +57,10 @@ void pmm_dump()
 #endif
 
 /**
- * allocate a physical page
+ * allocate continous physical memory
  * returns physical address
  */
-void* pmm_alloc()
+void* pmm_alloc(int pages)
 {
     OSZ_pmm_entry *fmem = pmm.entries;
     int i;
@@ -69,21 +69,15 @@ void* pmm_alloc()
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
     for(i=0;i<pmm.size;i++) {
-        if(fmem->size>0) {
+        if(fmem->size>=pages) {
             /* add entropy */
-            srand[(i+0)%4] ^= (uint64_t)fmem->base;
+            srand[(i+0)%4] ^= (uint64_t)fmem->base/__PAGESIZE;
             srand[(i+2)%4] ^= (uint64_t)fmem->base;
             kentropy();
             /* allocate page */
-            if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
-                kmap((virt_t)&tmp2map, fmem->base, PG_CORE_NOCACHE);
-                kmemset((char *)&tmp2map, 0, __PAGESIZE);
-            } else {
-                kmemset((char *)fmem->base, 0, __PAGESIZE);
-            }
             b=fmem->base;
-            fmem->base+=__PAGESIZE;
-            fmem->size--;
+            fmem->base+=pages*__PAGESIZE;
+            fmem->size-=pages;
             if(fmem->size==0) {
                 for(;i<pmm.size-1;i++) {
                     pmm.entries[i].base = pmm.entries[i+1].base;
@@ -91,10 +85,18 @@ void* pmm_alloc()
                 }
                 pmm.size--;
             }
-            pmm.freepages--;
+            pmm.freepages-=pages;
+            if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
+                for(i=0;i<pages;i++) {
+                    kmap((virt_t)&tmp2map, b + i*__PAGESIZE, PG_CORE_NOCACHE);
+                    kmemset((char *)&tmp2map, 0, __PAGESIZE);
+                }
+            } else {
+                kmemset((char *)b, 0, pages * __PAGESIZE);
+            }
 #if DEBUG
             if(debug&DBG_PMM)
-                kprintf("pmm_alloc=%x pid %x\n",b,
+                kprintf("pmm_alloc(%d)=%x pid %x\n",pages,b,
                     *((uint32_t*)0) == OSZ_TCB_MAGICH?((OSZ_tcb*)0)->pid:0);
 #endif
             return (void*)b;
@@ -102,8 +104,12 @@ void* pmm_alloc()
         fmem++;
     }
     // out of memory, should never happen during boot
-    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH)
+    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH) {
+#if DEBUG
+        pmm_dump();
+#endif
         kpanic("pmm_alloc: Out of physical RAM");
+    //}
     return NULL;
 }
 
@@ -171,8 +177,12 @@ void* pmm_allocslot()
     }
 panic:
     // out of memory, should never happen during boot
-    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH)
+    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH) {
+#if DEBUG
+        pmm_dump();
+#endif
         kpanic("pmm_allocslot: Out of physical RAM");
+    //}
     return NULL;
 }
 
@@ -260,9 +270,9 @@ void pmm_init()
         kentropy();
 #if DEBUG
         if(debug&DBG_MEMMAP)
-            kprintf("  %s %8x %9d\n",
+            kprintf("  %s %8x %8x %9d\n",
                 MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
-                MMapEnt_Ptr(entry), MMapEnt_Size(entry)
+                MMapEnt_Ptr(entry), MMapEnt_Ptr(entry)+MMapEnt_Size(entry), MMapEnt_Size(entry)
             );
 #endif
         if(MMapEnt_IsFree(entry) &&
@@ -389,8 +399,9 @@ void* kalloc(int pages)
         pages=1;
     if(pages>512)
         pages=512;
+    /* we allow non continous pages */
     while(pages-->0){
-        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(),PG_CORE);
+        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE);
         pmm.bss_end += __PAGESIZE;
     }
     return bss;

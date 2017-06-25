@@ -1058,13 +1058,12 @@ protmode_start:
             jnz         @b
 
             mov         esi, dword [bootboot.initrd_ptr]
-            mov         ebx, esi
 .initrdrom:
+            mov         edi, dword [bootboot.initrd_ptr]
+            mov         dword [bpb_sec], edi
             cmp         word [esi], 08b1fh
             jne         .noinflate
             DBG32       dbg_gzinitrd
-            mov         edi, dword [bootboot.initrd_ptr]
-            push        edi
             mov         ebx, esi
             mov         eax, dword [bootboot.initrd_size]
             add         ebx, eax
@@ -1110,32 +1109,8 @@ protmode_start:
             jz          @f
             add         esi, 2
 @@:         call        tinf_uncompress
-            pop         ebx
 .noinflate:
 
-            ; exclude initrd area from free mmap
-            mov         edx, dword [bootboot.initrd_ptr]
-            add         edx, dword [bootboot.initrd_size]
-            add         edx, 4095
-            shr         edx, 12
-            shl         edx, 12
-            mov         esi, bootboot.mmap
-            mov         cx, 248
-            ;  +---------------------+    free
-            ;  #######                    initrd (ebx..edx)
-.nextfree:  cmp         dword [esi], ebx
-            jne         .notini
-            ; ptr = initr_ptr+initrd_size
-            mov         dword [esi], edx
-            sub         edx, ebx
-            and         dl, 0F0h
-            ; size -= initrd_size
-            sub         dword [esi+8], edx
-            jmp         @f
-.notini:    add         esi, 16
-            dec         cx
-            jnz         .nextfree
-@@:
             ;do we have an environment configuration?
             mov         ebx, 9000h
             cmp         byte [ebx], 0
@@ -1161,6 +1136,7 @@ protmode_start:
             jmp         .nextfs1
 .fscfg:     mov         edi, 9000h
             add         ecx, 3
+            shr         ecx, 2
             repnz       movsd
 .errfs1:
             ;do we have an environment configuration?
@@ -1329,9 +1305,50 @@ protmode_start:
             jne         .nextph
             ;got it
             mov         dword [core_ptr], ebx
-            mov         eax, dword [esi+32]         ; p_filesz
-            mov         dword [core_len], eax
+            mov         ecx, dword [esi+32]         ; p_filesz
+            mov         dword [core_len], ecx
 
+            mov         edx, dword [bootboot.initrd_ptr]
+            add         edx, dword [bootboot.initrd_size]
+            add         edx, 4095
+            shr         edx, 12
+            shl         edx, 12
+
+            ; is core page aligned?
+            mov         eax, ebx
+            and         eax, 0FFFh
+            or          eax, eax
+            jz          .aligned
+            mov         esi, ebx
+            mov         edi, edx
+            mov         dword [core_ptr], edx
+            add         edx, ecx
+            add         edx, 4095
+            shr         edx, 12
+            shl         edx, 12
+            add         ecx, 3
+            shr         ecx, 2
+            repnz       movsd
+
+            ; exclude initrd area from free mmap
+.aligned:   mov         esi, bootboot.mmap
+            mov         ebx, dword [bpb_sec]
+            mov         cx, 248
+            ;  +---------------------+    free
+            ;  #######                    initrd (ebx..edx)
+.nextfree:  cmp         dword [esi], ebx
+            jne         .notini
+            ; ptr = initr_ptr+initrd_size
+            mov         dword [esi], edx
+            sub         edx, ebx
+            and         dl, 0F0h
+            ; size -= initrd_size
+            sub         dword [esi+8], edx
+            jmp         @f
+.notini:    add         esi, 16
+            dec         cx
+            jnz         .nextfree
+@@:
             ; ------- set video resolution -------
             prot_realmode
 
@@ -1478,10 +1495,10 @@ protmode_start:
             mov         edi, 0B000h
             mov         dword [edi+4096-8], 0C001h
             ;4K PDE
-            mov         edi, 0C000h+2048
+            mov         edi, 0C000h+3840
             mov         eax, dword[bootboot.fb_ptr] ;map framebuffer
             mov         al,81h
-            mov         ecx, 255
+            mov         ecx, 31
 @@:         stosd
             add         edi, 4
             add         eax, 2*1024*1024
@@ -1596,7 +1613,7 @@ longmode_init:
             mov         rax, 'BOOTBOOT'             ; magic
             mov         rbx, 0FFFFFFFFFFE00000h     ; bootboot virtual address
             mov         rcx, 0FFFFFFFFFFE01000h     ; environment virtual address
-            mov         rdx, 0FFFFFFFFE0000000h     ; framebuffer virtual address
+            mov         rdx, 0FFFFFFFFFC000000h     ; framebuffer virtual address
             ;call _start() at qword[entrypoint]
             jmp         qword[entrypoint]
             nop

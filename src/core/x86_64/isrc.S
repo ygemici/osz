@@ -113,7 +113,7 @@ isr_syscall0:
     /* tcp->rsp, save stack pointer and switch to core stack */
     movq    %rsp, __PAGESIZE-16
     movq    safestack, %rsp
-    addq    512, %rsp
+    addq    $512, %rsp
 
     /* rbx: destination pid, ax: function */
     movq    %rax, %rbx

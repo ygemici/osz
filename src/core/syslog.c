@@ -45,8 +45,8 @@ extern char *sprintf_puthex(char *dst, int64_t c);
 extern void dbg_putchar(int c);
 #endif
 
-char __attribute__ ((section (".data"))) *syslog_buf;
-char __attribute__ ((section (".data"))) *syslog_ptr;
+dataseg char *syslog_buf;
+dataseg char *syslog_ptr;
 
 /**
  * early RFC5424 compatible logger

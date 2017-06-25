@@ -45,17 +45,22 @@ extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
    above 4G. This way we can have 512 relocation records in a page */
 
 /* memory allocated for relocation addresses */
-OSZ_rela __attribute__ ((section (".data"))) *relas;
+dataseg OSZ_rela *relas;
 
 /* dynsym */
-unsigned char __attribute__ ((section (".data"))) *nosym = (unsigned char*)"(no symbol)";
-unsigned char __attribute__ ((section (".data"))) *mqsym = (unsigned char*)"(mq)";
-unsigned char __attribute__ ((section (".data"))) *lssym = (unsigned char*)"(local stack)";
+dataseg unsigned char *nosym = (unsigned char*)"(no symbol)";
+dataseg unsigned char *mqsym = (unsigned char*)"(mq)";
+dataseg unsigned char *lssym = (unsigned char*)"(local stack)";
 #if DEBUG
 extern OSZ_ccb ccb;
-virt_t __attribute__ ((section (".data"))) lastsym;
+dataseg virt_t lastsym;
 #endif
-
+/* page aligned elfs */
+typedef struct {
+    Elf64_Ehdr *ptr;
+    char name[56];
+} elfcache_t;
+dataseg elfcache_t *alignedelf = NULL;
 
 /**
  * load an ELF64 binary into text segment starting at 2M
@@ -70,7 +75,23 @@ void *elf_load(char *fn)
     OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
     /* locate elf on initrd */
-    Elf64_Ehdr *elf=(Elf64_Ehdr *)fs_locate(fn);
+    Elf64_Ehdr *elf=NULL;
+    elfcache_t *ec=alignedelf;
+    if(alignedelf!=NULL) { while(ec->ptr) { if(!kstrcmp(ec->name,fn)) { elf=ec->ptr; break; } ec++; } }
+    if(elf==NULL) {
+        elf=(Elf64_Ehdr *)fs_locate(fn);
+        if(((virt_t)elf)&(__PAGESIZE-1)) {
+            if(alignedelf==NULL) {
+                alignedelf=kalloc(1);
+                kmemset(alignedelf,0,__PAGESIZE);
+            }
+            ec=alignedelf;
+            while(ec->ptr) { if(!kstrcmp(ec->name,fn)) { elf=ec->ptr; break; } ec++; }
+            ec->ptr=(Elf64_Ehdr *)pmm_alloc((fs_size+__PAGESIZE-1)/__PAGESIZE);
+            kmemcpy(ec->ptr,elf,fs_size);
+            elf=ec->ptr;
+        }
+    }
     /* get program headers */
     Elf64_Phdr *phdr_c=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff);
     Elf64_Phdr *phdr_d=(Elf64_Phdr *)((uint8_t *)elf+elf->e_phoff+1*elf->e_phentsize);
@@ -124,7 +145,7 @@ void *elf_load(char *fn)
     /* GNU ld bug workaround: keep symtab and strtab */
     size++;
     while(size--) {
-        void *pm = pmm_alloc();
+        void *pm = pmm_alloc(1);
         kmemcpy(pm,(char *)elf + (i-ret)*__PAGESIZE,__PAGESIZE);
         paging[i]=((uint64_t)(pm) + PG_USER_RW)|((uint64_t)1<<63);
         tcb->allocmem++;
