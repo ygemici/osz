@@ -82,7 +82,7 @@ extern uint8_t __bss_start;           // start of bss segment
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern phy_t idle_mapping;            // memory mapping for "idle" task
-extern OSZ_pmm pmm;                   // Physical Memory Manager data
+extern pmm_t pmm;                     // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
 
 /* see etc/include/syscall.h */
@@ -95,7 +95,7 @@ extern uint64_t fs_size;
 typedef struct {
     uint64_t offs;
     char *sym;
-} OSZ_rela;
+} rela_t;
 
 extern uint64_t srand[4];
 extern uint64_t ticks[4];
@@ -142,10 +142,10 @@ extern void *pmm_allocslot();
 extern void pmm_free(phy_t base, size_t numpages);
 
 /** Map a specific memory area into task's bss */
-extern void vmm_mapbss(OSZ_tcb *tcb,virt_t bss, phy_t phys, size_t size, uint64_t access);
+extern void vmm_mapbss(tcb_t *tcb,virt_t bss, phy_t phys, size_t size, uint64_t access);
 
 /** Unmap task's bss */
-extern void vmm_unmapbss(OSZ_tcb *tcb,virt_t bss, size_t size);
+extern void vmm_unmapbss(tcb_t *tcb,virt_t bss, size_t size);
 
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
@@ -229,32 +229,32 @@ extern void kentropy();
 
 // ----- Tasks -----
 /** Allocate and initialize process structures */
-extern OSZ_tcb *task_new(char *cmdline, uint8_t prio);
+extern tcb_t *task_new(char *cmdline, uint8_t prio);
 
 /** Sanity check process data */
-extern bool_t task_check(OSZ_tcb *tcb, phy_t *paging);
+extern bool_t task_check(tcb_t *tcb, phy_t *paging);
 
 /** Check access for a group */
-extern bool_t task_allowed(OSZ_tcb *tcb, char *grp, uint8_t access);
+extern bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access);
 
 // ----- Scheduler -----
 /** Add task to scheduling */
-extern void sched_add(OSZ_tcb *tcb);
+extern void sched_add(tcb_t *tcb);
 
 /** Remove task from scheduling */
-extern void sched_remove(OSZ_tcb *tcb);
+extern void sched_remove(tcb_t *tcb);
 
 /** Block a task */
-extern void sched_block(OSZ_tcb *tcb);
+extern void sched_block(tcb_t *tcb);
 
 /** Unblock a task */
-extern void sched_awake(OSZ_tcb *tcb);
+extern void sched_awake(tcb_t *tcb);
 
 /** suspend a task until given time */
-void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec);
+void sched_alarm(tcb_t *tcb, uint64_t sec, uint64_t nsec);
 
 /** Hybernate a task */
-extern void sched_sleep(OSZ_tcb *tcb);
+extern void sched_sleep(tcb_t *tcb);
 
 /** Return next task's memroot phy address */
 extern phy_t sched_pick();

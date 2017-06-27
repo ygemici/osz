@@ -35,7 +35,7 @@
 #include "../../lib/libc/strings.h"
 
 /* external resources */
-extern OSZ_ccb ccb;                   // CPU Control Block
+extern ccb_t ccb;                   // CPU Control Block
 
 extern uint64_t isr_getts(char *p,int16_t timezone);
 extern uint64_t isr_currfps;
@@ -48,7 +48,7 @@ extern phy_t screen[2];
  */
 uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     phy_t *paging = (phy_t*)&tmpmap;
     phy_t *paging2 = (phy_t*)&tmp2map;
     void *data;

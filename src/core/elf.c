@@ -45,14 +45,14 @@ extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
    above 4G. This way we can have 512 relocation records in a page */
 
 /* memory allocated for relocation addresses */
-dataseg OSZ_rela *relas;
+dataseg rela_t *relas;
 
 /* dynsym */
 dataseg unsigned char *nosym = (unsigned char*)"(no symbol)";
 dataseg unsigned char *mqsym = (unsigned char*)"(mq)";
 dataseg unsigned char *lssym = (unsigned char*)"(local stack)";
 #if DEBUG
-extern OSZ_ccb ccb;
+extern ccb_t ccb;
 dataseg virt_t lastsym;
 #endif
 /* page aligned elfs */
@@ -72,7 +72,7 @@ void *elf_load(char *fn)
         return NULL;
     // this is so early, we don't have initrd in fs task' bss yet.
     // so we have to rely on identity mapping to locate the files
-    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
+    tcb_t *tcb = (tcb_t*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap;
     /* locate elf on initrd */
     Elf64_Ehdr *elf=NULL;
@@ -486,14 +486,14 @@ void elf_neededso(int libc)
  * Fill in GOT entries. Relies on identity mapping
  *  - tmpmap: the text segment's PT mapped,
  *  - pmm.bss_end: current task's TCB mapped,
- *  - relas: array of OSZ_rela items alloceted with kalloc()
+ *  - relas: array of rela_t items alloceted with kalloc()
  *  - stack_ptr: physical address of task's stack
  */
 bool_t elf_rtlink()
 {
     int i, j, k, n = 0, vs=kstrlen((char*)&osver);
-    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
-    OSZ_rela *rel = relas;
+    tcb_t *tcb = (tcb_t*)(pmm.bss_end);
+    rela_t *rel = relas;
     uint64_t *paging = (uint64_t *)&tmpmap, *objptr;
 
     /*** collect addresses to relocate ***/
@@ -573,7 +573,7 @@ bool_t elf_rtlink()
             for(i = 0; i < reladsz / relaent; i++){
                 kentropy();
                 // failsafe
-                if(n >= 2*__PAGESIZE/sizeof(OSZ_rela))
+                if(n >= 2*__PAGESIZE/sizeof(rela_t))
                     break;
                 s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(relad->r_info) * syment);
                 if(s!=NULL && *(strtable + s->st_name)!=0) {
@@ -597,7 +597,7 @@ bool_t elf_rtlink()
             /* GOT plt entries */
             for(i = 0; i < relasz / relaent; i++){
                 // failsafe
-                if(n >= 2*__PAGESIZE/sizeof(OSZ_rela))
+                if(n >= 2*__PAGESIZE/sizeof(rela_t))
                     break;
                 s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(rela->r_info) * syment);
                 /* get the physical address and sym from stringtable */
@@ -677,7 +677,7 @@ bool_t elf_rtlink()
                     kprintf("    %x %s:", offs, strtable + s->st_name);
 #endif
                 // parse irqX() symbols to fill up irq_routing_table
-                if(((OSZ_tcb*)(pmm.bss_end))->priority == PRI_DRV) {
+                if(((tcb_t*)(pmm.bss_end))->priority == PRI_DRV) {
                     if(!kmemcmp(strtable + s->st_name,"irq",3)) {
                         //function, and at least one number
                         if(ELF64_ST_TYPE(s->st_info)==STT_FUNC &&
@@ -702,7 +702,7 @@ bool_t elf_rtlink()
                                 k = *((uint64_t*)((char*)ehdr + s->st_value));
                             }
                         }
-                        isr_installirq(k, ((OSZ_tcb*)(pmm.bss_end))->memroot);
+                        isr_installirq(k, ((tcb_t*)(pmm.bss_end))->memroot);
                     }
                 }
                 if(ELF64_ST_TYPE(s->st_info)==STT_OBJECT &&
@@ -710,8 +710,8 @@ bool_t elf_rtlink()
                    ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT) {
                     objptr = (uint64_t*)((paging[j+s->st_value/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + s->st_value%__PAGESIZE);
                     // export data to drivers and services
-                    if( ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_DRV ||
-                        ((OSZ_tcb*)(pmm.bss_end))->priority == PRI_SRV) {
+                    if( ((tcb_t*)(pmm.bss_end))->priority == PRI_DRV ||
+                        ((tcb_t*)(pmm.bss_end))->priority == PRI_SRV) {
                         k=0;
                         if(!kmemcmp(strtable + s->st_name,"_bogomips",10) && s->st_size==8)
                             {k=8; *objptr=bogomips;}
@@ -753,13 +753,13 @@ bool_t elf_rtlink()
                             {k=8; *objptr=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
                         if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
                             syslog_early("pid %x: exporting %s on page boundary",
-                                ((OSZ_tcb*)(pmm.bss_end))->pid,strtable + s->st_name);
+                                ((tcb_t*)(pmm.bss_end))->pid,strtable + s->st_name);
                     }
                     // export data to user processes
                     if(!kmemcmp(strtable + s->st_name,"_osver",7) && s->st_size > vs) {
                         if((s->st_value%__PAGESIZE)+vs>__PAGESIZE)
                             syslog_early("pid %x: exporting %s on page boundary",
-                                ((OSZ_tcb*)(pmm.bss_end))->pid,strtable + s->st_name);
+                                ((tcb_t*)(pmm.bss_end))->pid,strtable + s->st_name);
                         kmemcpy(objptr,&osver,vs+1);
                     }
 //kprintf("obj ref: %x %d %x %x %s\n",objptr,s->st_size,s->st_value,*objptr,strtable + s->st_name);
@@ -767,7 +767,7 @@ bool_t elf_rtlink()
                 // look up in relas array which addresses require
                 // this symbol's virtual address
                 for(k=0;k<n;k++){
-                    OSZ_rela *r = (OSZ_rela*)((char *)relas + k*sizeof(OSZ_rela));
+                    rela_t *r = (rela_t*)((char *)relas + k*sizeof(rela_t));
                     if(r->offs != 0 && !kmemcmp(r->sym, strtable + s->st_name, kstrlen(r->sym)+1)) {
 #if DEBUG
                         if(debug&DBG_RTEXPORT)
@@ -795,9 +795,9 @@ bool_t elf_rtlink()
     }
     // check if we have resolved all references
     for(i=0;i<n;i++){
-        OSZ_rela *r = (OSZ_rela*)((char *)relas + i*sizeof(OSZ_rela));
+        rela_t *r = (rela_t*)((char *)relas + i*sizeof(rela_t));
         if(r->offs!=0) {
-            kpanic("pid %x: shared library missing for %s()", ((OSZ_tcb*)(pmm.bss_end))->pid, r->sym);
+            kpanic("pid %x: shared library missing for %s()", ((tcb_t*)(pmm.bss_end))->pid, r->sym);
         }
     }
 

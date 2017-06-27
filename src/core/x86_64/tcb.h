@@ -65,8 +65,8 @@ typedef struct {
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128
     pid_t pid;          // task's pid at                     tcb+ 640
-    uint64_t memroot;   // memory mapping root at            tcb+ 648
-    uint64_t rootdir;   // inode of root directory           tcb+ 656
+    phy_t memroot;      // memory mapping root at            tcb+ 648
+    fid_t rootdir;      // inode of root directory           tcb+ 656
     uint64_t billcnt;   // ticks task spent                  tcb+ 664
     uint64_t cpu;       // APIC ID of executor cpu           tcb+ 672
     uint64_t excerr;    // exception error code              tcb+ 680
@@ -101,9 +101,9 @@ typedef struct {
     uint64_t rflags;
     uint64_t rsp;
     uint64_t ss;
-} __attribute__((packed)) OSZ_tcb;
+} __attribute__((packed)) tcb_t;
 
 // compile time upper bound check
-c_assert(sizeof(OSZ_tcb) == __PAGESIZE);
+c_assert(sizeof(tcb_t) == __PAGESIZE);
 
 #endif

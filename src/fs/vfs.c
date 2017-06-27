@@ -36,24 +36,14 @@ uint16_t nfsdrvs = 0;
 fsdrv_t *fsdrvs = NULL;
 
 /* files and directories */
-uint64_t ninodes = 0;
-inode_t *inodes = NULL;
+uint64_t nfcbs = 0;
+fcb_t *fcbs = NULL;
 
 /* open files, returned by lsof */
 uint64_t nfiles = 0;
 openfile_t *files = NULL;
 
-public ino_t getinode(ino_t parent,const char *path)
-{
-    if(parent>ninodes)
-        parent=0;
-    if(path==NULL||path[0]==0)
-        return parent;
-    dbg_printf("parent: %d '%s'\n", inodes[parent].cachedir, cachedir[inodes[parent].cachedir].name);
-    return 0;
-}
-
-public uint16_t _vfs_regfs(const fsdrv_t *fs)
+public uint16_t _fs_reg(const fsdrv_t *fs)
 {
     fsdrvs=(fsdrv_t*)realloc(fsdrvs,++nfsdrvs*sizeof(fsdrv_t));
     if(!fsdrvs || errno)
@@ -62,7 +52,7 @@ public uint16_t _vfs_regfs(const fsdrv_t *fs)
     return nfsdrvs-1;
 }
 
-uint16_t _vfs_getfs(char *name)
+uint16_t _fs_get(char *name)
 {
     int i;
     for(i=0;i<nfsdrvs;i++)
@@ -71,14 +61,13 @@ uint16_t _vfs_getfs(char *name)
     return 0;
 }
 
-ino_t vfs_inode(const inode_t *inode)
+fid_t fcb_add(const fcb_t *fcb)
 {
-    inodes=(inode_t*)realloc(inodes,++ninodes*sizeof(inode_t));
-    if(!inodes || errno)
+    fcbs=(fcb_t*)realloc(fcbs,++nfcbs*sizeof(fcb_t));
+    if(!fcbs || errno)
         abort();
-    memcpy((void*)&inodes[ninodes-1], (void*)inode, sizeof(inode_t));
-//dbg_printf("vfs_inode=%d\n",ninodes-1);
-    return ninodes-1;
+    memcpy((void*)&fcbs[nfcbs-1], (void*)fcb, sizeof(fcb_t));
+    return nfcbs-1;
 }
 
 void vfs_init()
@@ -87,8 +76,9 @@ void vfs_init()
     if(!pathtmp || errno)
         abort();
 
-    //VFS_INODE_ROOT, reserve space for it at the first inode
-    ninodes=1;
+    //VFS_INODE_ROOT, reserve space for it at the first FCB
+    //uninitialized rootdir and cwd will point here
+    nfcbs=1;
 }
 
 #if DEBUG
@@ -99,25 +89,14 @@ void vfs_dump()
     for(i=0;i<nfsdrvs;i++)
         dbg_printf("%3d. '%s' %s %x\n",i,fsdrvs[i].name,fsdrvs[i].desc,fsdrvs[i].detect);
 
-    dbg_printf("\nInodes %d:\n",ninodes);
-    for(i=0;i<ninodes;i++) {
-        dbg_printf("%3d. %x ",i,inodes[i].type);
-        switch(inodes[i].type) {
-            case VFS_INODE_TYPE_SUPERBLOCK:
-                dbg_printf("superblock %x %s storage inode %5d\n",
-                    inodes[i].superblock.fs,fsdrvs[inodes[i].superblock.fs].name,inodes[i].superblock.storage);
-                break;
-            case VFS_INODE_TYPE_DIRECTORY:
-                dbg_printf("directory %x\n",
-                    inodes[i].directory.entries);
-                break;
-            case VFS_INODE_TYPE_BLKDEV:
-                dbg_printf("blkdev pid %x dev %x start %x sec %d size %d\n",
-                    inodes[i].blkdev.drivertask,inodes[i].blkdev.device,inodes[i].blkdev.startsec,
-                    inodes[i].blkdev.blksize,inodes[i].blkdev.size);
-                break;
-            case VFS_INODE_TYPE_CHRDEV:
-                dbg_printf("chrdev pid %x dev %x\n",inodes[i].blkdev.drivertask,inodes[i].blkdev.device);
+    dbg_printf("\nFile Control Blocks %d:\n",nfcbs);
+    for(i=0;i<nfcbs;i++) {
+        dbg_printf("%3d. %x ",i,fcbs[i].type);
+        switch(fcbs[i].type) {
+            case VFS_FCB_TYPE_DEVICE:
+                dbg_printf("device pid %x dev %x start %x sec %d size %d\n",
+                    fcbs[i].dev.drivertask,fcbs[i].dev.device,fcbs[i].dev.startsec,
+                    fcbs[i].dev.blksize,fcbs[i].dev.size);
                 break;
             default:
                 dbg_printf("unknown type?\n");
@@ -126,7 +105,7 @@ void vfs_dump()
 
     dbg_printf("\nOpen files %d:\n",nfiles);
     for(i=0;i<nfiles;i++)
-        dbg_printf("%3d. pid %x inode %5d seek %d\n",i,files[i].pid,files[i].inode,files[i].pos);
+        dbg_printf("%3d. pid %x fid %5d seek %d\n",i,files[i].pid,files[i].fid,files[i].pos);
 
     dbg_printf("\n");
 }

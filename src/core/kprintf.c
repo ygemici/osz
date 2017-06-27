@@ -115,7 +115,7 @@ void kprintf_center(int w, int h)
 void kprintf_init()
 {
     int x, y, line, offs = 0;
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     // clear screen
     for(y=0;y<bootboot.fb_height;y++){
         line=offs;
@@ -159,7 +159,7 @@ void kprintf_init()
  */
 void kprintf_putlogo()
 {
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     int offs =
         ((ky * font->height - font->height/2) * bootboot.fb_scanline) +
         (kx * (font->width+1) * 4);
@@ -188,7 +188,7 @@ void kprintf_putlogo()
  */
 void kprintf_putchar(int c)
 {
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     unsigned char *glyph = (unsigned char*)&_binary_font_start +
      font->headersize +
      (c>0&&c<font->numglyph?c:0)*font->bytesperglyph;
@@ -317,7 +317,7 @@ void kprintf_putfps()
  */
 void kprintf_scrollscr()
 {
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     int offs = 0, tmp = (maxy-1)*font->height*bootboot.fb_scanline;
     int x,y, line, shift=font->height*bootboot.fb_scanline;
     int w = maxx*(font->width+1)/2;
@@ -376,7 +376,7 @@ void kprintf_scrollscr()
  */
 void kprintf_fade()
 {
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     int offs = 0;
     int x,y, line;
     int w = maxx*(font->width+1)/2;
@@ -398,7 +398,7 @@ void kprintf_fade()
  */
 void kprintf_clearline()
 {
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     int x,y, line, tmp = ky*font->height*bootboot.fb_scanline;
     // clear the row
     for(y=0;y<font->height;y++){

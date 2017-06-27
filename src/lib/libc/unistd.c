@@ -37,10 +37,10 @@ extern void _chroot(ino_t inode);
 
 /* structure to hold file descriptors. It's filld by real time linker */
 typedef struct {
-    ino_t cwdir;
-    uint64_t of;
-    uint64_t lf;
-    ino_t *fd;
+    fid_t cwdir;
+    fid_t of;
+    fid_t lf;
+    fid_t *fd;
 } _fd_t;
 
 public _fd_t _fd = { 0,0,0,NULL };
@@ -49,15 +49,15 @@ public uint64_t _alarmstep = 1000;
 
 /* Make PATH be the root directory (the starting point for absolute paths).
    This call is restricted to the super-user.  */
-public ino_t chroot(const char *path)
+public fid_t chroot(const char *path)
 {
-    _chroot((ino_t)mq_call(SRV_FS, SYS_getinode, 0, path));
+//    _chroot((fid_t)mq_call(SRV_FS, SYS_getinode, 0, path));
     return _rootdir;
 }
 
 /* Change the process's working directory to PATH.  */
-public ino_t chdir(const char *path)
+public fid_t chdir(const char *path)
 {
-    _fd.cwdir = (ino_t)mq_call(SRV_FS, SYS_getinode, _rootdir, path);
+//    _fd.cwdir = (fid_t)mq_call(SRV_FS, SYS_getinode, _rootdir, path);
     return _fd.cwdir;
 }

@@ -47,8 +47,8 @@ extern int fx;
 extern int maxx;
 extern int maxy;
 extern int scry;
-extern OSZ_ccb ccb;
-extern OSZ_pmm pmm;
+extern ccb_t ccb;
+extern pmm_t pmm;
 extern uint64_t *safestack;
 extern uint8_t sys_fault;
 extern uint64_t lastsym;
@@ -238,7 +238,7 @@ void dbg_setpos()
 // dump a Task Control Block
 void dbg_tcb()
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     char *states[] = { "hybernated", "blocked", "running" };
     char *errn[] = { "SUCCESS", "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", "E2BIG", "ENOEXEC",
         "EBADF", "ECHILD", "EAGAIN", "ENOMEM", "EACCES", "EFAULT", "ENOTBLK", "EBUSY", "EEXIST", "EXDEV",
@@ -350,7 +350,7 @@ void dbg_tcb()
 
 uint64_t dbg_getrip(int *idx)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     uint64_t i, *rsp=(uint64_t*)(tcb->rsp), *o;
     int j=0;
     uchar *symstr;
@@ -416,7 +416,7 @@ uint64_t dbg_getrip(int *idx)
 // disassembly instructions and dump registers, stack
 void dbg_code(uint64_t rip, uint64_t rs, int *idx)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     uchar *symstr;
     virt_t ptr, dmp, lastsymsave;
     int i=0;
@@ -714,7 +714,7 @@ again:
 // dump memory in bytes, words, double words or quad words
 void dbg_data(uint64_t ptr)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     int i,j;
     uint64_t o=ptr,d;
     uchar *symstr;
@@ -911,7 +911,7 @@ void dbg_data(uint64_t ptr)
 // list messages in Task Message Queue
 void dbg_msg()
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     uint64_t m, i, t, args;
 
     fg=dbg_theme[4];
@@ -1062,7 +1062,7 @@ void dbg_msg()
 // dump CPU Control Block and priority queues
 void dbg_queues()
 {
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
+    tcb_t *tcbq = (tcb_t*)&tmp3map;
     int i, j;
     pid_t n;
 
@@ -1132,15 +1132,15 @@ void dbg_queues()
             ccb.hd_blocked, j);
         kprintf("timerq head: %4x, awake at %d.%d\n",
             ccb.hd_timerq,
-            ccb.hd_timerq?((OSZ_tcb*)&tmpalarm)->alarmsec:0, 
-            ccb.hd_timerq?((OSZ_tcb*)&tmpalarm)->alarmns:0);
+            ccb.hd_timerq?((tcb_t*)&tmpalarm)->alarmsec:0, 
+            ccb.hd_timerq?((tcb_t*)&tmpalarm)->alarmns:0);
     }
 }
 
 // show info on Physical Memory
 void dbg_ram()
 {
-    OSZ_pmm_entry *fmem = pmm.entries;
+    pmm_entry_t *fmem = pmm.entries;
     int i = pmm.size;
  
     fg=dbg_theme[4];
@@ -1264,8 +1264,8 @@ void dbg_sysinfo()
 // switch to the previous task
 void dbg_switchprev(virt_t *rip, virt_t *rsp)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
+    tcb_t *tcb = (tcb_t*)0;
+    tcb_t *tcbq = (tcb_t*)&tmp3map;
     pid_t p = tcb->prev;
     int i;
 
@@ -1304,8 +1304,8 @@ void dbg_switchprev(virt_t *rip, virt_t *rsp)
 // switch to the next task
 void dbg_switchnext(virt_t *rip, virt_t *rsp)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
+    tcb_t *tcb = (tcb_t*)0;
+    tcb_t *tcbq = (tcb_t*)&tmp3map;
     pid_t n = tcb->next;
     int i;
     if(n == 0) {
@@ -1333,7 +1333,7 @@ void dbg_switchnext(virt_t *rip, virt_t *rsp)
 
 virt_t dbg_getaddr(char *cmd, size_t size)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
+    tcb_t *tcb = (tcb_t*)0;
     uint64_t base = 0,ret = 0, ts=0, ind=0;
     if(*cmd=='*') { cmd++; ind=1; }
     char *s=cmd;
@@ -1381,16 +1381,16 @@ virt_t dbg_getaddr(char *cmd, size_t size)
 
 void dbg_singlestep(uint8_t enable)
 {
-    OSZ_tcb *tcb=(OSZ_tcb*)&tmp3map;
+    tcb_t *tcb=(tcb_t*)&tmp3map;
     int i;
     pid_t n;
     // enable locally
     if(enable) {
         *((uint64_t*)(ccb.ist3+ISR_STACK-24)) |= (1<<8);
-        ((OSZ_tcb*)0)->rflags |= (1<<8);
+        ((tcb_t*)0)->rflags |= (1<<8);
     } else {
         *((uint64_t*)(ccb.ist3+ISR_STACK-24)) &= ~(1<<8);
-        ((OSZ_tcb*)0)->rflags &= ~(1<<8);
+        ((tcb_t*)0)->rflags &= ~(1<<8);
     }
     // enable globally or clear all flags
     if(enable!=SINGLESTEP_LOCAL) {
@@ -1457,10 +1457,10 @@ void dbg_init()
  */
 void dbg_enable(virt_t rip, virt_t rsp, char *reason)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *tcbq = (OSZ_tcb*)&tmp3map;
+    tcb_t *tcb = (tcb_t*)0;
+    tcb_t *tcbq = (tcb_t*)&tmp3map;
     uint64_t scancode = 0, offs, line, x, y;
-    OSZ_font *font = (OSZ_font*)&_binary_font_start;
+    font_t *font = (font_t*)&_binary_font_start;
     char *tabs[] = { "Code", "Data", "Messages", "TCB", "CCB", "RAM", "Sysinfo", "Syslog" };
     char cmd[64], c;
     int cmdidx=0,cmdlast=0,currhist=sizeof(cmdhist),dbg_bt=0;

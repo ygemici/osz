@@ -32,13 +32,13 @@ extern uint8_t pmm_entries;
 /* kernel variables */
 extern uint64_t isr_entropy[4];
 /* memory pointers to allocate */
-extern OSZ_rela *relas;
+extern rela_t *relas;
 extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 
 /* Main scructure */
-dataseg OSZ_pmm pmm;
+dataseg pmm_t pmm;
 /* pointer to tmpmap in PT */
 dataseg void *kmap_tmp;
 
@@ -46,7 +46,7 @@ dataseg void *kmap_tmp;
 void pmm_dump()
 {
     int i;
-    OSZ_pmm_entry *fmem = pmm.entries;
+    pmm_entry_t *fmem = pmm.entries;
     kprintf("pmm size: %d, free: %d, total: %d ", pmm.size, pmm.freepages, pmm.totalpages);
     kprintf("bss: %x - %x\n",pmm.bss,pmm.bss_end);
     for(i=0;i<pmm.size;i++) {
@@ -62,7 +62,7 @@ void pmm_dump()
  */
 void* pmm_alloc(int pages)
 {
-    OSZ_pmm_entry *fmem = pmm.entries;
+    pmm_entry_t *fmem = pmm.entries;
     int i;
     uint64_t b;
     // run-time asserts
@@ -97,7 +97,7 @@ void* pmm_alloc(int pages)
 #if DEBUG
             if(debug&DBG_PMM)
                 kprintf("pmm_alloc(%d)=%x pid %x\n",pages,b,
-                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((OSZ_tcb*)0)->pid:0);
+                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((tcb_t*)0)->pid:0);
 #endif
             return (void*)b;
         }
@@ -119,7 +119,7 @@ void* pmm_alloc(int pages)
  */
 void* pmm_allocslot()
 {
-    OSZ_pmm_entry *fmem = pmm.entries;
+    pmm_entry_t *fmem = pmm.entries;
     int i,j;
     uint64_t p,b,s;
 
@@ -132,7 +132,7 @@ void* pmm_allocslot()
             kentropy();
             /* split the memory fragment in two */
             if(b!=fmem->base) {
-                if((pmm.size+1)*sizeof(OSZ_pmm_entry)>(uint64_t)(__PAGESIZE * nrphymax))
+                if((pmm.size+1)*sizeof(pmm_entry_t)>(uint64_t)(__PAGESIZE * nrphymax))
                     goto panic;
                 for(j=pmm.size;j>i;j--) {
                     pmm.entries[j].base = pmm.entries[j-1].base;
@@ -169,7 +169,7 @@ void* pmm_allocslot()
 #if DEBUG
             if(debug&DBG_PMM)
                 kprintf("pmm_allocslot=%x pid %x\n",b,
-                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((OSZ_tcb*)0)->pid:0);
+                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((tcb_t*)0)->pid:0);
 #endif
             return (void*)b;
         }
@@ -199,7 +199,7 @@ void pmm_free(phy_t base, size_t numpages)
     kentropy();
 #if DEBUG
     if(debug&DBG_PMM)
-        kprintf("pmm_free(%x,%d) pid %x\n",base,numpages,((OSZ_tcb*)0)->pid);
+        kprintf("pmm_free(%x,%d) pid %x\n",base,numpages,((tcb_t*)0)->pid);
 #endif
     /* check for continuous regions */
     for(i=0;i<pmm.size;i++) {
@@ -232,7 +232,7 @@ void pmm_init()
     // memory map provided by the loader
     MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
     // our new free pages directory, pmm.entries
-    OSZ_pmm_entry *fmem;
+    pmm_entry_t *fmem;
     uint num = (bootboot.size-128)/16;
     uint i;
     uint64_t m = 0, e=bootboot.initrd_ptr+((bootboot.initrd_size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
@@ -254,7 +254,7 @@ void pmm_init()
     kmap_tmp = kmap_init();
 
     // buffers
-    pmm.entries = fmem = (OSZ_pmm_entry*)(&pmm_entries);
+    pmm.entries = fmem = (pmm_entry_t*)(&pmm_entries);
     pmm.bss     = (uint8_t*)&__bss_start;
     pmm.bss_end = (uint8_t*)&pmm_entries + (uint64_t)(__PAGESIZE * nrphymax);
     // this is a chicken and egg scenario. We need free memory to
@@ -363,7 +363,7 @@ void pmm_init()
 
     // These are compile time configurable buffer sizes,
     // but that's ok, sized to the needs of this source
-    relas = (OSZ_rela*)kalloc(2);
+    relas = (rela_t*)kalloc(2);
     //allocate stack for ISRs and syscall
     safestack = kalloc(1);
     //allocate syslog buffer

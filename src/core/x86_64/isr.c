@@ -34,12 +34,12 @@
 c_assert(ISR_NUMIRQ < 224);
 
 /* external resources */
-extern OSZ_ccb ccb;                   // CPU Control Block
+extern ccb_t ccb;                   // CPU Control Block
 
 /* from isrs.S */
 extern void isr_exc00divzero();
 extern void isr_irq0();
-extern void isr_inithw(uint64_t *idt, OSZ_ccb *tss);
+extern void isr_inithw(uint64_t *idt, ccb_t *tss);
 extern void isr_enableirq(uint8_t irq);
 extern void isr_disableirq(uint8_t irq);
 extern void isr_irqtmr();
@@ -310,7 +310,7 @@ int isr_installirq(uint8_t irq, phy_t memroot)
  */
 void excabort(uint64_t excno, uint64_t rip, uint64_t rsp)
 {
-    kpanic("---- exception %d errcode %d ----",excno,((OSZ_tcb*)0)->excerr);
+    kpanic("---- exception %d errcode %d ----",excno,((tcb_t*)0)->excerr);
 }
 
 /*** exception specific code ***/

@@ -49,5 +49,5 @@ void _init()
         detect
     };
     //uint16_t id = 
-    _vfs_regfs(&drv);
+    _fs_reg(&drv);
 }

@@ -72,6 +72,14 @@
 #ifndef _AS
 #include <stdint.h>
 
+typedef struct {
+	uint32_t Data1;
+	uint16_t Data2;
+	uint16_t Data3;
+	uint8_t Data4[8];
+} __attribute__((packed)) uuid_t;
+#define UUID_ACCESS(a) (a.Data4[7])
+
 typedef unsigned char uchar;
 typedef unsigned int uint;
 typedef uint8_t bool_t;
@@ -79,10 +87,10 @@ typedef uint64_t size_t;
 typedef uint64_t fid_t;
 typedef uint64_t ino_t;
 typedef uint64_t dev_t;
-typedef uint64_t gid_t;
+typedef uuid_t gid_t;
 typedef uint64_t mode_t;
 typedef uint32_t nlink_t;
-typedef uint64_t uid_t;
+typedef uuid_t uid_t;
 typedef uint64_t off_t;
 typedef uint64_t pid_t;
 typedef uint64_t id_t;
@@ -105,14 +113,6 @@ typedef void (*sighandler_t) (int);
 typedef uint64_t evt_t;
 typedef uint64_t phy_t;
 typedef uint64_t virt_t;
-
-typedef struct {
-	uint32_t Data1;
-	uint16_t Data2;
-	uint16_t Data3;
-	uint8_t Data4[8];
-} __attribute__((packed)) uuid_t;
-#define UUID_ACCESS(a) (a.Data4[7])
 
 // type returned by syscalls mq_call() and mq_recv()
 typedef struct {

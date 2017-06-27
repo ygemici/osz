@@ -52,7 +52,7 @@ void service_init(int subsystem, char *fn)
     while(cmd[0]!='/')
         cmd++;
     cmd++;
-    OSZ_tcb *tcb = task_new(cmd, PRI_SRV);
+    tcb_t *tcb = task_new(cmd, PRI_SRV);
     // map executable
     if(elf_load(fn) == (void*)(-1)) {
         syslog_early("WARNING unable to load ELF from %s", fn);
@@ -92,7 +92,7 @@ void fs_init()
     fstab = (uint64_t)fs_locate("etc/fstab");
     fstab_size=fs_size;
     char fn[256];
-    OSZ_tcb *tcb = task_new("FS", PRI_SRV);
+    tcb_t *tcb = task_new("FS", PRI_SRV);
     // map file system dispatcher
     if(elf_load("sbin/fs") == (void*)(-1)) {
         kpanic("unable to load ELF from /sbin/fs");
@@ -153,7 +153,7 @@ void fs_init()
 void ui_init()
 {
     int i;
-    OSZ_tcb *tcb = task_new("UI", PRI_SRV);
+    tcb_t *tcb = task_new("UI", PRI_SRV);
 
     // map user interface code
     if(elf_load("sbin/ui") == (void*)(-1)) {
@@ -205,7 +205,7 @@ void drv_init(char *driver)
     driver[i]=0;
 
     // create a new task...
-    OSZ_tcb *tcb = task_new(drvname, PRI_DRV);
+    tcb_t *tcb = task_new(drvname, PRI_DRV);
     driver[i]='.';
     // ...start with driver event dispatcher
     if(elf_load("lib/sys/drv") == (void*)(-1)) {

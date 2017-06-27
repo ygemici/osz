@@ -31,13 +31,12 @@
 #include "pci.h"
 
 /* external resources */
-extern OSZ_ccb ccb;                   // CPU Control Block
+extern ccb_t ccb;                   // CPU Control Block
 extern uint32_t fg;
 extern char rebootprefix[];
 extern char poweroffprefix[];
 extern char poweroffsuffix[];
 extern uint64_t pt;
-extern OSZ_rela *relas;
 extern char *syslog_buf;
 
 extern void kprintf_center(int w, int h);
@@ -121,8 +120,8 @@ void sys_disable()
  */
 __inline__ void sys_enable()
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)0;
-    OSZ_tcb *fstcb = (OSZ_tcb*)(&tmpmap);
+    tcb_t *tcb = (tcb_t*)0;
+    tcb_t *fstcb = (tcb_t*)(&tmpmap);
 
 #if DEBUG
     // initialize debugger, it can be used only with task mappings
@@ -162,7 +161,7 @@ void sys_init()
 
     /*** Platform specific initialization ***/
     /* create idle task */
-    OSZ_tcb *tcb = task_new("idle", PRI_IDLE);
+    tcb_t *tcb = task_new("idle", PRI_IDLE);
     // modify TCB for idle task. Don't add to scheduler queue, normally it will never be scheduled
     //start executing a special function.
     tcb->rip = (uint64_t)&idle;

@@ -44,8 +44,8 @@ dataseg phy_t *mq_mapping;
  */
 uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
 {
-    OSZ_tcb *srctcb = (OSZ_tcb*)(0);
-    OSZ_tcb *dsttcb = (OSZ_tcb*)(&tmpmap);
+    tcb_t *srctcb = (tcb_t*)(0);
+    tcb_t *dsttcb = (tcb_t*)(&tmpmap);
     msghdr_t *msghdr = (msghdr_t*)(TMPQ_ADDRESS + MQ_ADDRESS);
     uint64_t *paging = (uint64_t*)(&tmp2map);
     // don't use EVT_SENDER() here, would loose sign. This can be

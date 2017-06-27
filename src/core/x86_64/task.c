@@ -35,9 +35,9 @@ dataseg phy_t *stack_ptr;
 /**
  * create a task, allocate memory for it and init TCB
  */
-OSZ_tcb *task_new(char *cmdline, uint8_t prio)
+tcb_t *task_new(char *cmdline, uint8_t prio)
 {
-    OSZ_tcb *tcb = (OSZ_tcb*)(pmm.bss_end);
+    tcb_t *tcb = (tcb_t*)(pmm.bss_end);
     uint64_t *paging = (uint64_t *)&tmpmap, self;
     void *ptr, *ptr2;
     uint i;
@@ -126,7 +126,7 @@ OSZ_tcb *task_new(char *cmdline, uint8_t prio)
 /**
  * Check task address space consistency
  */
-bool_t task_check(OSZ_tcb *tcb, phy_t *paging)
+bool_t task_check(tcb_t *tcb, phy_t *paging)
 {
     return true;
 }
@@ -134,7 +134,7 @@ bool_t task_check(OSZ_tcb *tcb, phy_t *paging)
 /**
  * check if current task has a specific Access Control Entry
  */
-bool_t task_allowed(OSZ_tcb *tcb, char *grp, uint8_t access)
+bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
 {
     char *g;
     int i,j;

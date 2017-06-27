@@ -41,6 +41,6 @@ typedef struct {
     uint32_t height;
     uint32_t width;
     uint8_t glyphs;
-} __attribute__((packed)) OSZ_font;
+} __attribute__((packed)) font_t;
 
 extern unsigned char _binary_font_start;

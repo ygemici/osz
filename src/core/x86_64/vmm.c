@@ -42,7 +42,7 @@ void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
 /**
  * map memory into task's address space
  */
-void vmm_mapbss(OSZ_tcb *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access)
+void vmm_mapbss(tcb_t *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access)
 {
     if(size==0)
         return;
@@ -117,7 +117,7 @@ again:
 /**
  * unmap memory from task's address space
  */
-void vmm_unmapbss(OSZ_tcb *tcb, virt_t bss, size_t size)
+void vmm_unmapbss(tcb_t *tcb, virt_t bss, size_t size)
 {
     if(size==0)
         return;

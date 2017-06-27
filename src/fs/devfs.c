@@ -40,12 +40,12 @@ public void mknod()
 {
 }
 
-void dev_link(FSZ_DirEnt *entries, char *name, ino_t inode)
+void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
 {
     FSZ_DirEntHeader *hdr = (FSZ_DirEntHeader *)entries;
     hdr->numentries++;
     entries += hdr->numentries;
-    entries->fid = inode;
+    entries->fid = fid;
     entries->length = mblen(name,FILENAME_MAX);
     memcpy(entries->name,name,strnlen(name,FILENAME_MAX));
     hdr->checksum=crc32_calc((char*)hdr+sizeof(FSZ_DirEntHeader),hdr->numentries*sizeof(FSZ_DirEnt));
@@ -53,22 +53,21 @@ void dev_link(FSZ_DirEnt *entries, char *name, ino_t inode)
 
 void devfs_init()
 {
-//    ino_t in;
-    inode_t inode;
+    fcb_t fcb;
 
     fsdrv_t devdrv = {
         "devfs",
         "Device list",
         NULL
     };
-    _vfs_regfs(&devdrv);
+    _fs_reg(&devdrv);
     /* add it here, because there's no better place */
     fsdrv_t tmpdrv = {
         "tmpfs",
         "Memory disk",
         NULL
     };
-    _vfs_regfs(&tmpdrv);
+    _fs_reg(&tmpdrv);
 
     //allocate memory for /dev/
     devdir=(FSZ_DirEnt*)malloc(__PAGESIZE);
@@ -84,70 +83,42 @@ void devfs_init()
         abort();
     memcpy((void*)devuuiddir,FSZ_DIR_MAGIC,4);
 
-    //VFS_INODE_ZERODEV
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_BLKDEV;
-    inode.blkdev.drivertask = VFS_BLKDEV_MEMFS;
-    inode.blkdev.device = VFS_MEMFS_ZERO_DEVICE;
-    inode.blkdev.blksize = __PAGESIZE;
-    dev_link(devdir,"zero",vfs_inode(&inode));
+    //VFS_FCB_ZERODEV
+    memzero((void*)&fcb,sizeof(fcb_t));
+    fcb.nlink=1;
+    fcb.type=VFS_FCB_TYPE_DEVICE;
+    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
+    fcb.dev.device = VFS_MEMFS_ZERO_DEVICE;
+    fcb.dev.blksize = __PAGESIZE;
+    dev_link(devdir,"zero",fcb_add(&fcb));
 
-    //VFS_INODE_RAMDISK
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_BLKDEV;
-    inode.blkdev.drivertask = VFS_BLKDEV_MEMFS;
-    inode.blkdev.device = VFS_MEMFS_RAMDISK_DEVICE;
-    inode.blkdev.startsec = (uint64_t)_initrd_ptr;
-    inode.blkdev.size = (_initrd_size+__PAGESIZE-1)/__PAGESIZE;
-    inode.blkdev.blksize = __PAGESIZE;
-    dev_link(devdir,"mem",vfs_inode(&inode));
+    //VFS_FCB_RAMDISK
+    memzero((void*)&fcb,sizeof(fcb_t));
+    fcb.nlink=1;
+    fcb.type=VFS_FCB_TYPE_DEVICE;
+    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
+    fcb.dev.device = VFS_MEMFS_RAMDISK_DEVICE;
+    fcb.dev.startsec = (uint64_t)_initrd_ptr;
+    fcb.dev.size = (_initrd_size+__PAGESIZE-1)/__PAGESIZE;
+    fcb.dev.blksize = __PAGESIZE;
+    dev_link(devdir,"mem",fcb_add(&fcb));
 
-    //VFS_INODE_RNDDEV
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_BLKDEV;
-    inode.blkdev.drivertask = VFS_BLKDEV_MEMFS;
-    inode.blkdev.device = VFS_MEMFS_RANDOM_DEVICE;
-    inode.blkdev.startsec = 0;
-    inode.blkdev.size = 0;
-    inode.blkdev.blksize = __PAGESIZE;
-    dev_link(devdir,"random",vfs_inode(&inode));
+    //VFS_FCB_RNDDEV
+    memzero((void*)&fcb,sizeof(fcb_t));
+    fcb.nlink=1;
+    fcb.type=VFS_FCB_TYPE_DEVICE;
+    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
+    fcb.dev.device = VFS_MEMFS_RANDOM_DEVICE;
+    fcb.dev.blksize = __PAGESIZE;
+    dev_link(devdir,"random",fcb_add(&fcb));
 
-    //VFS_INODE_NULLDEV
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_BLKDEV;
-    inode.blkdev.drivertask = VFS_BLKDEV_MEMFS;
-    inode.blkdev.device = VFS_MEMFS_NULL_DEVICE;
-    inode.blkdev.startsec = 0;
-    inode.blkdev.size = 0;
-    inode.blkdev.blksize = __PAGESIZE;
-    dev_link(devdir,"null",vfs_inode(&inode));
+    //VFS_FCB_NULLDEV
+    memzero((void*)&fcb,sizeof(fcb_t));
+    fcb.nlink=1;
+    fcb.type=VFS_FCB_TYPE_DEVICE;
+    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
+    fcb.dev.device = VFS_MEMFS_NULL_DEVICE;
+    fcb.dev.blksize = __PAGESIZE;
+    dev_link(devdir,"null",fcb_add(&fcb));
 
-    //This is basically a list /dev/
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_SUPERBLOCK;
-    inode.superblock.fs=_vfs_getfs("devfs");
-    inode.superblock.entries = devdir;
-    vfs_inode(&inode);
-/*
-    // subdirectory /dev/vol/
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_DIRECTORY;
-    inode.directory.entries = devvoldir;
-    in=vfs_inode(&inode);
-    dev_link(devdir,"vol/",in);
-
-    // subdirectory /dev/uuid/
-    memzero((void*)&inode,sizeof(inode_t));
-    inode.nlink=1;
-    inode.type=VFS_INODE_TYPE_DIRECTORY;
-    inode.directory.entries = devuuiddir;
-    in=vfs_inode(&inode);
-    dev_link(devdir,"uuid/",in);
-*/
 }

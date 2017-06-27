@@ -31,22 +31,19 @@
 #include <osZ.h>
 #include <fsZ.h>
 
-#define VFS_INODE_TYPE_PIPE         0
-#define VFS_INODE_TYPE_SUPERBLOCK   1
-#define VFS_INODE_TYPE_DIRECTORY    2
-#define VFS_INODE_TYPE_FILE         3
-#define VFS_INODE_TYPE_BLKDEV       4
-#define VFS_INODE_TYPE_CHRDEV       5
+#define VFS_FCB_TYPE_FILE           0
+#define VFS_FCB_TYPE_PIPE           1
+#define VFS_FCB_TYPE_DEVICE         2
 
-#define VFS_INODE_FLAG_DIRTY        (1<<0)
+#define VFS_FCB_FLAG_DIRTY          (1<<0)
 
-#define VFS_INODE_ROOT              0
-#define VFS_INODE_ZERODEV           1
-#define VFS_INODE_RAMDISK           2
-#define VFS_INODE_RNDDEV            3
-#define VFS_INODE_NULLDEV           4
+#define VFS_FCB_ROOT                0
+#define VFS_FCB_ZERODEV             1
+#define VFS_FCB_RAMDISK             2
+#define VFS_FCB_RNDDEV              3
+#define VFS_FCB_NULLDEV             4
 
-#define VFS_BLKDEV_MEMFS            0
+#define VFS_DEVICE_MEMFS            0
 #define VFS_MEMFS_ZERO_DEVICE       0
 #define VFS_MEMFS_RAMDISK_DEVICE    1
 #define VFS_MEMFS_RANDOM_DEVICE     2
@@ -60,23 +57,24 @@ typedef struct {
 } fsdrv_t;
 
 typedef struct {
+    uint16_t flags;
+    uint16_t mode;
+    uint16_t fs;
+    uint16_t len;
+    gid_t *grp;
+    char *path;
+    fid_t fid;
+} mount_t;
+
+//fcb types
+typedef struct {
+    fid_t fid[2];
+    uint64_t flags;
 } pipe_t;
 
 typedef struct {
-    // first is FSZ_DirEntHeader, root directory
-    FSZ_DirEnt *entries;
-    ino_t storage;
-    uint16_t flags;
-    uint16_t fs;
-} superblock_t;
-
-typedef struct {
-    // first is FSZ_DirEntHeader
-    FSZ_DirEnt *entries;
-} directory_t;
-
-typedef struct {
     void *data;
+    fpos_t size;
 } file_t;
 
 typedef struct {
@@ -85,52 +83,42 @@ typedef struct {
     blksize_t blksize;
     blkcnt_t size;
     fpos_t startsec;
-} blkdev_t;
-
-typedef struct {
-    pid_t drivertask;   //major
-    dev_t device;       //minor
-} chrdev_t;
+    uint64_t cacheidx;
+} device_t;
 
 typedef struct {
     nlink_t nlink;
-    ino_t next;
-    ino_t prev;
     uint64_t cachedir;
-    uint32_t type;
+    uint8_t type;
     union {
         pipe_t pipe;
-        superblock_t superblock;
-        directory_t directory;
         file_t file;
-        blkdev_t blkdev;
-        chrdev_t chrdev;
+        device_t dev;
     };
-} inode_t;
+} fcb_t;
 
 typedef struct {
-    pid_t pid;
-    fpos_t pos;
-    ino_t inode;
+    pid_t pid;  //owner task
+    fpos_t pos; //seek position
+    fid_t fid;  //fcb index
 } openfile_t;
 
 /* filesystem parsers */
 extern uint16_t nfsdrvs;
 extern fsdrv_t *fsdrvs;
 
-/* files and directories */
-extern uint64_t ninodes;
-extern inode_t *inodes;
+/* file control blocks */
+extern uint64_t nfcb;
+extern fcb_t *fcbs;
 
 /* open files, returned by lsof */
 extern uint64_t nfiles;
 extern openfile_t *files;
 
 extern void mknod();
-extern ino_t getinode(ino_t parent,const char *path);
-extern uint16_t _vfs_getfs(char *name);
-extern uint16_t _vfs_regfs(const fsdrv_t *fs);
-extern ino_t vfs_inode(const inode_t *inode);
+extern uint16_t _fs_get(char *name);
+extern uint16_t _fs_reg(const fsdrv_t *fs);
+extern fid_t fcb_add(const fcb_t *fcb);
 #if DEBUG
 extern void vfs_dump();
 #endif

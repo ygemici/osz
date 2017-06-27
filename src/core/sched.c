@@ -27,7 +27,7 @@
 
 #include "env.h"
 
-extern OSZ_ccb ccb;             //CPU Control Block (platform specific)
+extern ccb_t ccb;             //CPU Control Block (platform specific)
 extern uint64_t isr_next;       //next task to map when isr finishes
 extern uint8_t idle_first;      //flag to indicate first idle schedule
 
@@ -35,26 +35,26 @@ extern uint8_t idle_first;      //flag to indicate first idle schedule
  * get and map a TCB. You can also pass a TCB as input for
  * performance reasons. Also, kmap(tmpmap) is pre-cached.
  */
-OSZ_tcb *sched_get_tcb(pid_t task)
+tcb_t *sched_get_tcb(pid_t task)
 {
     // active tcb
     if(task==0)
-        return (OSZ_tcb*)0;
+        return (tcb_t*)0;
     // last mapped or last used tcb
     if((uint64_t)task==(uint64_t)(&tmpmap) ||
        (uint64_t)task==(uint64_t)(&tmp2map) ||
        (uint64_t)task==(uint64_t)(&tmpalarm) ||
        (uint64_t)task==(uint64_t)pmm.bss_end)
-        return (OSZ_tcb*)(task);
+        return (tcb_t*)(task);
     // map a new tcb
     kmap((uint64_t)&tmpmap, (uint64_t)(task * __PAGESIZE), PG_CORE_NOCACHE);
-    return (OSZ_tcb*)(&tmpmap);
+    return (tcb_t*)(&tmpmap);
 }
 
 #if DEBUG
 void sched_dump()
 {
-    OSZ_tcb *tcb, *curr = (OSZ_tcb*)0;
+    tcb_t *tcb, *curr = (tcb_t*)0;
     int i;
     pid_t p;
     for(i=PRI_SYS; i<=PRI_IDLE; i++) {
@@ -101,9 +101,9 @@ void sched_dump()
  * note that isr_timer() consumes tasks from timer queue this is only called if sleep time is
  * bigger than alarmstep, shorter usleeps are implemented as busy loops in isr_syscall0 in isrc.S 
  */
-void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
+void sched_alarm(tcb_t *tcb, uint64_t sec, uint64_t nsec)
 {
-    OSZ_tcb *tcba = (OSZ_tcb*)&tmpalarm;
+    tcb_t *tcba = (tcb_t*)&tmpalarm;
     /* if alarm time is in the past, make sure it's running and return */
     if(ticks[TICKS_TS]>sec || (ticks[TICKS_TS]==sec && ticks[TICKS_NTS]>nsec)) {
         sched_awake(tcb);
@@ -129,7 +129,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
     } else {
         /* walk through ccb.hd_timerq queue */
         do {
-            OSZ_tcb *t = sched_get_tcb(next);
+            tcb_t *t = sched_get_tcb(next);
             /* first task that has to be awaken later than us? */
             if(t->alarmsec>sec || (t->alarmsec==sec && t->alarmns>nsec)){
                 if(prev) {
@@ -155,7 +155,7 @@ void sched_alarm(OSZ_tcb *tcb, uint64_t sec, uint64_t nsec)
  * write out task's pages to swap, only keep it's TCB in blocked queue
  *  tcb_state_blocked -> tcb_state_hybernated
  */
-void sched_hybernate(OSZ_tcb *tcb)
+void sched_hybernate(tcb_t *tcb)
 {
 #if DEBUG
     if(debug&DBG_SCHED)
@@ -169,7 +169,7 @@ void sched_hybernate(OSZ_tcb *tcb)
  * awake a hybernated or blocked task
  *  tcb_state_blocked -> tcb_state_running
  */
-void sched_awake(OSZ_tcb *tcb)
+void sched_awake(tcb_t *tcb)
 {
     pid_t pid = tcb->pid, next = tcb->next, prev = tcb->prev;
 #if DEBUG
@@ -205,7 +205,7 @@ void sched_awake(OSZ_tcb *tcb)
 /**
  * add a task to an active queue, according to it's priority.
  */
-void sched_add(OSZ_tcb *tcb)
+void sched_add(tcb_t *tcb)
 {
     pid_t pid = tcb->pid;
 #if DEBUG
@@ -225,7 +225,7 @@ void sched_add(OSZ_tcb *tcb)
 /**
  * remove a task from active queue.
  */
-void sched_remove(OSZ_tcb *tcb)
+void sched_remove(tcb_t *tcb)
 {
     pid_t next = tcb->next, prev = tcb->prev;
 #if DEBUG
@@ -253,7 +253,7 @@ void sched_remove(OSZ_tcb *tcb)
  * move a TCB from active queue to blocked queue
  *  tcb_state_running -> txb_state_blocked
  */
-void sched_block(OSZ_tcb *tcb)
+void sched_block(tcb_t *tcb)
 {
     /* never block the idle task */
     if(tcb->memroot == idle_mapping)
@@ -286,7 +286,7 @@ void sched_block(OSZ_tcb *tcb)
  */
 phy_t sched_pick()
 {
-    OSZ_tcb *tcb, *curr = (OSZ_tcb*)0;
+    tcb_t *tcb, *curr = (tcb_t*)0;
     int i, nonempty = false;
 again:
     /* iterate on priority queues. Note that this does not depend

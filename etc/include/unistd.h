@@ -57,10 +57,10 @@ extern void usleep(uint64_t usec);
 
 /* Make PATH be the root directory (the starting point for absolute paths).
    This call is restricted to the super-user.  */
-extern ino_t chroot (const char *__path);
+extern fid_t chroot (const char *__path);
 
 /* Change the process's working directory to PATH.  */
-extern ino_t chdir (const char *path);
+extern fid_t chdir (const char *path);
 
 /*** unimplemented ***/
 #if 0

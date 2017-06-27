@@ -58,8 +58,8 @@ typedef struct {
     pid_t hd_blocked;   // blocked queue head
     pid_t hd_active[8]; // priority queues (heads of active tasks)
     pid_t cr_active[8]; // priority queues (current tasks)
-} __attribute__((packed)) OSZ_ccb;
+} __attribute__((packed)) ccb_t;
 
-c_assert(sizeof(OSZ_ccb) <= __PAGESIZE);
+c_assert(sizeof(ccb_t) <= __PAGESIZE);
 
 #endif

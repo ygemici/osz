@@ -28,7 +28,7 @@
 
 #define CACHEDIRNAME 56
 typedef struct {
-    ino_t inode;
+    fid_t fid;
     char name[CACHEDIRNAME];
 } cachedir_t;
 
@@ -36,12 +36,28 @@ extern uint64_t ncachedir;
 extern cachedir_t *cachedir;
 
 typedef struct {
+    fpos_t pos;
+    void *cache;
+} cacheidx_t;
+
+typedef struct {
+    pid_t drivertask;   //major
+    dev_t device;       //minor
+    size_t idxlen;
+    cacheidx_t *idx;
 } cache_t;
+
+typedef struct {
+    size_t len;
+    void *blks;
+} cacheblk_t;
+#define CBLK_IDX(bs) (bs==512?0:(bs==1024?1:(bs==2048?2:(bs==4096?3:(bs==8192?4:(bs==16384?5:(bs=32768?6:7)))))))
 
 extern uint64_t ncache;
 extern cachedir_t *cache;
+extern cacheblk_t cacheblk[];
 
-extern void cache_dir(char*name,ino_t inode);
+extern void cache_dir(char*name,fid_t fid);
 #if DEBUG
 extern void cache_dump();
 #endif

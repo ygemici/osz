@@ -31,14 +31,14 @@
 typedef struct {
     uint64_t base;
     uint64_t size;
-} OSZ_pmm_entry;
+} pmm_entry_t;
 
 typedef struct {
     uint32_t magic;
     uint32_t size;
     uint64_t totalpages;
     uint64_t freepages;
-    OSZ_pmm_entry *entries;
+    pmm_entry_t *entries;
     void *bss;
     void *bss_end;
-} __attribute__((packed)) OSZ_pmm;
+} __attribute__((packed)) pmm_t;
