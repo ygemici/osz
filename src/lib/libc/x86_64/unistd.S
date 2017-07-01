@@ -1,5 +1,5 @@
 /*
- * lib/libc/x86_64/syscall.S
+ * lib/libc/x86_64/unistd.S
  *
  * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Low level library implementation to interact with the kernel, see etc/include/syscall.h
+ * @brief Low level library implementation to interact with the kernel, see etc/include/unistd.h
  */
 
 #define _AS 1
@@ -344,16 +344,16 @@ rand:
     ret
 
 /**
- * Abort execution and generate a core-dump.
+ * Exit process.
  *
- * void _exit(code) 
+ * void _exit(status)
  */
 _exit:
     xorq    %rax, %rax
     xorq    %rsi, %rsi
     movb    $SYS_exit, %al
     syscall
-    /* fall into abort code is something really bad happened */
+    /* fall into abort code. If we return something really bad happened */
 /**
  * Abort execution and generate a core-dump.
  *

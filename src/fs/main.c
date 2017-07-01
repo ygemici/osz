@@ -35,24 +35,20 @@ public uint64_t _fstab_size;
 public uint32_t _pathmax;
 
 extern void cache_init();
-extern void vfs_init();
 extern void devfs_init();
 
 void parse_fstab()
 {
-dbg_printf("parse fstab\n");
 #if DEBUG
-//    vfs_dump();
-
     dbg_printf("fstab: %x %d\n%s\n",_fstab_ptr,_fstab_size,_fstab_ptr);
 #endif
 }
 
 public void mountfs()
 {
-cache_dump();
+//cache_dump();
+    parse_fstab();
 vfs_dump();
-//    parse_fstab();
 }
 
 void task_init(int argc, char **argv)
@@ -60,7 +56,10 @@ void task_init(int argc, char **argv)
     /* allocate directory and block caches */
     cache_init();
     /* add root directory. first inode must be the root */
-    vfs_init();
+    //VFS_INODE_ROOT, reserve space for it at the first FCB
+    //uninitialized rootdir and cwd will point here
+    nfcbs=1;
+
     /* initialize dev directory, and memory "block devices" */
     devfs_init();
 }

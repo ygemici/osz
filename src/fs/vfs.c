@@ -29,7 +29,6 @@
 #include "cache.h"
 
 extern uint64_t _pathmax;
-char *pathtmp;
 
 /* filesystem parsers */
 uint16_t nfsdrvs = 0;
@@ -43,6 +42,9 @@ fcb_t *fcbs = NULL;
 uint64_t nfiles = 0;
 openfile_t *files = NULL;
 
+/**
+ * Register a filesystem parser
+ */
 public uint16_t _fs_reg(const fsdrv_t *fs)
 {
     fsdrvs=(fsdrv_t*)realloc(fsdrvs,++nfsdrvs*sizeof(fsdrv_t));
@@ -52,6 +54,9 @@ public uint16_t _fs_reg(const fsdrv_t *fs)
     return nfsdrvs-1;
 }
 
+/**
+ * return filesystem parser
+ */
 uint16_t _fs_get(char *name)
 {
     int i;
@@ -61,24 +66,23 @@ uint16_t _fs_get(char *name)
     return 0;
 }
 
+/**
+ * add a file to fcb list
+ */
 fid_t fcb_add(const fcb_t *fcb)
 {
+/*
+    uint64_t i;
+    for(i=0;i<nfcbs;i++) {
+        if(fcbs[i].path!=NULL && !strcmp(fcbs[i].path,fcb->path))
+            return i;
+    }
+*/
     fcbs=(fcb_t*)realloc(fcbs,++nfcbs*sizeof(fcb_t));
     if(!fcbs || errno)
         abort();
     memcpy((void*)&fcbs[nfcbs-1], (void*)fcb, sizeof(fcb_t));
     return nfcbs-1;
-}
-
-void vfs_init()
-{
-    pathtmp=(char*)malloc(_pathmax<512?512:_pathmax);
-    if(!pathtmp || errno)
-        abort();
-
-    //VFS_INODE_ROOT, reserve space for it at the first FCB
-    //uninitialized rootdir and cwd will point here
-    nfcbs=1;
 }
 
 #if DEBUG
@@ -93,13 +97,23 @@ void vfs_dump()
     for(i=0;i<nfcbs;i++) {
         dbg_printf("%3d. %x ",i,fcbs[i].type);
         switch(fcbs[i].type) {
+            case VFS_FCB_TYPE_FILE:
+                dbg_printf("file %s\n",fcbs[i].path);
+                break;
+            case VFS_FCB_TYPE_PIPE:
+                dbg_printf("pipe %s\n",fcbs[i].path);
+                break;
             case VFS_FCB_TYPE_DEVICE:
-                dbg_printf("device pid %x dev %x start %x sec %d size %d\n",
+                dbg_printf("device pid %x dev %x start %x sec %d size %d",
                     fcbs[i].dev.drivertask,fcbs[i].dev.device,fcbs[i].dev.startsec,
                     fcbs[i].dev.blksize,fcbs[i].dev.size);
+                dbg_printf(" %s\n",fcbs[i].path);
+                break;
+            case VFS_FCB_TYPE_DIRECTORY:
+                dbg_printf("directory %s\n",fcbs[i].path);
                 break;
             default:
-                dbg_printf("unknown type?\n");
+                dbg_printf("unknown type? %s\n",fcbs[i].path);
         }
     }
 

@@ -1,16 +1,17 @@
-/dev/mem    	/        	auto	ro		0 1
-none        	/dev     	devfs	ro		0 1
-none        	/tmp     	tmpfs	rw		0 1
-/dev/vol/esp  	/boot    	vfat	ro,wheel:rw	0 2
-/dev/vol/home 	/home    	auto	users:rw	0 2
-/dev/vol/usr  	/usr     	auto	ro,wheel:rw	0 2
-/dev/vol/var  	/var     	auto	rw		0 2
-/dev/vol/swap 	/dev/swap	swapfs	ro,fs:rw	0 2
+#device     	mountpoint	opt/access	passno
+/dev/mem    	/        	ro		1
+devfs       	/dev     	ro		1
+tmpfs       	/tmp     	rw		1
+/dev/vol/esp  	/boot    	ro,wheel:rw	2
+/dev/vol/home 	/home    	users:rw	2
+/dev/vol/usr  	/usr     	ro,wheel:rw	2
+/dev/vol/var  	/var     	rw		2
+/dev/vol/swap 	/dev/swap	ro,fs:rw	2
 
 # auto mount (not mounted on boot)
-/dev/disk1   	/mnt     	auto	rw		0 0
-/dev/disk2   	/mnt     	auto	rw		0 0
-/dev/cdrom0  	/mnt     	auto	ro		0 0
-/dev/usbdisk0	/mnt     	auto	rw		0 0
-/dev/usbdisk1	/mnt     	auto	rw		0 0
-/dev/usbdisk2	/mnt     	auto	rw		0 0
+/dev/disk1   	/mnt     	rw		0
+/dev/disk2   	/mnt     	rw		0
+/dev/cdrom0  	/mnt     	ro		0
+/dev/usbdisk0	/mnt     	rw		0
+/dev/usbdisk1	/mnt     	rw		0
+/dev/usbdisk2	/mnt     	rw		0

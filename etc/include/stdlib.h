@@ -95,7 +95,7 @@ extern int atexit (void (*func) (void));
 /* Call all functions registered with `atexit' and `on_exit',
    in the reverse of the order in which they were registered,
    perform stdio cleanup, and terminate program execution with STATUS.  */
-extern void exit (int __status) __attribute__ ((__noreturn__));
+extern void exit (int status) __attribute__ ((__noreturn__));
 
 /* Abort execution and generate a core-dump.  */
 extern void abort (void)  __attribute__ ((__noreturn__));
@@ -119,11 +119,11 @@ extern ldiv_t ldiv (long int numer, long int denom);
 extern lldiv_t lldiv (long long int numer, long long int denom);
 
 /* Do a binary search for KEY in BASE, which consists of NMEMB elements
-   of SIZE bytes each, using COMPAR to perform the comparisons.  */
+   of SIZE bytes each, using CMP to perform the comparisons.  */
 extern void *bsearch (void *key, void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *));
 
 /* Sort NMEMB elements of BASE, of SIZE bytes each,
-   using COMPAR to perform the comparisons.  */
+   using CMP to perform the comparisons.  */
 extern void qsort (void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *));
 
 /*** unimplemented ***/

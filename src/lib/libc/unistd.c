@@ -27,8 +27,8 @@
 #include <osZ.h>
 
 //failsafe
-#ifndef SYS_getinode
-#define SYS_getinode 1
+#ifndef SYS_getfcb
+#define SYS_getfcb 1
 #endif
 
 /* it's on a read-only page in TCB */
@@ -47,17 +47,21 @@ public _fd_t _fd = { 0,0,0,NULL };
 public uint64_t _bogomips = 1000;
 public uint64_t _alarmstep = 1000;
 
-/* Make PATH be the root directory (the starting point for absolute paths).
-   This call is restricted to the super-user.  */
+/**
+ * Make PATH be the root directory (the starting point for absolute paths).
+ * This call is restricted to the super-user.
+ */
 public fid_t chroot(const char *path)
 {
-//    _chroot((fid_t)mq_call(SRV_FS, SYS_getinode, 0, path));
+//    _chroot((fid_t)mq_call(SRV_FS, SYS_getfcb, 0, path));
     return _rootdir;
 }
 
-/* Change the process's working directory to PATH.  */
+/**
+ * Change the process's working directory to PATH.
+ */
 public fid_t chdir(const char *path)
 {
-//    _fd.cwdir = (fid_t)mq_call(SRV_FS, SYS_getinode, _rootdir, path);
+//    _fd.cwdir = (fid_t)mq_call(SRV_FS, SYS_getfcb, _rootdir, path);
     return _fd.cwdir;
 }

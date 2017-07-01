@@ -34,6 +34,7 @@
 #define VFS_FCB_TYPE_FILE           0
 #define VFS_FCB_TYPE_PIPE           1
 #define VFS_FCB_TYPE_DEVICE         2
+#define VFS_FCB_TYPE_DIRECTORY      3
 
 #define VFS_FCB_FLAG_DIRTY          (1<<0)
 
@@ -42,12 +43,14 @@
 #define VFS_FCB_RAMDISK             2
 #define VFS_FCB_RNDDEV              3
 #define VFS_FCB_NULLDEV             4
+#define VFS_FCB_TMPDEV              5
 
 #define VFS_DEVICE_MEMFS            0
 #define VFS_MEMFS_ZERO_DEVICE       0
 #define VFS_MEMFS_RAMDISK_DEVICE    1
 #define VFS_MEMFS_RANDOM_DEVICE     2
 #define VFS_MEMFS_NULL_DEVICE       3
+#define VFS_MEMFS_TMPFS_DEVICE      4
 
 #ifndef _AS
 typedef struct {
@@ -62,7 +65,6 @@ typedef struct {
     uint16_t fs;
     uint16_t len;
     gid_t *grp;
-    char *path;
     fid_t fid;
 } mount_t;
 
@@ -73,8 +75,10 @@ typedef struct {
 } pipe_t;
 
 typedef struct {
-    void *data;
+    uint64_t mount;
+    ino_t inode;
     fpos_t size;
+    void *data;
 } file_t;
 
 typedef struct {
@@ -87,13 +91,17 @@ typedef struct {
 } device_t;
 
 typedef struct {
+} directory_t;
+
+typedef struct {
+    char *path;
     nlink_t nlink;
-    uint64_t cachedir;
     uint8_t type;
     union {
         pipe_t pipe;
         file_t file;
         device_t dev;
+        directory_t directory;
     };
 } fcb_t;
 
@@ -108,7 +116,7 @@ extern uint16_t nfsdrvs;
 extern fsdrv_t *fsdrvs;
 
 /* file control blocks */
-extern uint64_t nfcb;
+extern uint64_t nfcbs;
 extern fcb_t *fcbs;
 
 /* open files, returned by lsof */

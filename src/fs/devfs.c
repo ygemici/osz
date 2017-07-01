@@ -86,39 +86,58 @@ void devfs_init()
     //VFS_FCB_ZERODEV
     memzero((void*)&fcb,sizeof(fcb_t));
     fcb.nlink=1;
+    fcb.path=malloc(10);
+    strcpy(fcb.path,"/dev/zero");
     fcb.type=VFS_FCB_TYPE_DEVICE;
     fcb.dev.drivertask = VFS_DEVICE_MEMFS;
     fcb.dev.device = VFS_MEMFS_ZERO_DEVICE;
     fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,"zero",fcb_add(&fcb));
+    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
 
     //VFS_FCB_RAMDISK
     memzero((void*)&fcb,sizeof(fcb_t));
     fcb.nlink=1;
+    fcb.path=malloc(9);
+    strcpy(fcb.path,"/dev/mem");
     fcb.type=VFS_FCB_TYPE_DEVICE;
     fcb.dev.drivertask = VFS_DEVICE_MEMFS;
     fcb.dev.device = VFS_MEMFS_RAMDISK_DEVICE;
     fcb.dev.startsec = (uint64_t)_initrd_ptr;
     fcb.dev.size = (_initrd_size+__PAGESIZE-1)/__PAGESIZE;
     fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,"mem",fcb_add(&fcb));
+    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
 
     //VFS_FCB_RNDDEV
     memzero((void*)&fcb,sizeof(fcb_t));
     fcb.nlink=1;
+    fcb.path=malloc(12);
+    strcpy(fcb.path,"/dev/random");
     fcb.type=VFS_FCB_TYPE_DEVICE;
     fcb.dev.drivertask = VFS_DEVICE_MEMFS;
     fcb.dev.device = VFS_MEMFS_RANDOM_DEVICE;
     fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,"random",fcb_add(&fcb));
+    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
 
     //VFS_FCB_NULLDEV
     memzero((void*)&fcb,sizeof(fcb_t));
     fcb.nlink=1;
+    fcb.path=malloc(10);
+    strcpy(fcb.path,"/dev/null");
     fcb.type=VFS_FCB_TYPE_DEVICE;
     fcb.dev.drivertask = VFS_DEVICE_MEMFS;
     fcb.dev.device = VFS_MEMFS_NULL_DEVICE;
     fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,"null",fcb_add(&fcb));
+    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
+
+    //VFS_FCB_TMPDEV
+    memzero((void*)&fcb,sizeof(fcb_t));
+    fcb.nlink=1;
+    fcb.path=malloc(9);
+    strcpy(fcb.path,"/dev/tmp");
+    fcb.type=VFS_FCB_TYPE_DEVICE;
+    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
+    fcb.dev.device = VFS_MEMFS_TMPFS_DEVICE;
+    fcb.dev.blksize = __PAGESIZE;
+    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
 
 }

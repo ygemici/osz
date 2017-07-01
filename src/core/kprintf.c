@@ -242,13 +242,7 @@ void kprintf_dumpascii(int64_t c)
             (uchar)tmpstr[i]>=127)
             tmpstr[i]='.';
     tmpstr[cnt]=0;
-#if DEBUG
-    dbg_indump = true;
-#endif
     kprintf(&tmpstr[0]);
-#if DEBUG
-    dbg_indump = false;
-#endif
 }
 
 /**
@@ -400,6 +394,10 @@ void kprintf_clearline()
 {
     font_t *font = (font_t*)&_binary_font_start;
     int x,y, line, tmp = ky*font->height*bootboot.fb_scanline;
+#if DEBUG
+    if(dbg_indump)
+        return;
+#endif
     // clear the row
     for(y=0;y<font->height;y++){
         line=tmp;
@@ -425,7 +423,6 @@ void kprintf_unicodetable()
             kx++;
         }
 #if DEBUG
-        dbg_indump = false;
         kprintf("\n");
 #else
         ky++;

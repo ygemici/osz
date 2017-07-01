@@ -31,8 +31,18 @@
 public uint32_t _debug;
 #endif
 
+extern void _exit(int status);
+
+typedef void (*atexit_t)(void);
+
+public int atexit_num = 0;
+public atexit_t *atexit_hooks = NULL;
+
 /* NOTE: that memory allocation functions are macros, see stdlib.h */
 
+/**
+ * Helper functions to number convert.
+ */
 unsigned char *stdlib_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
     if(*s=='0' && *(s+1)=='x')
@@ -95,7 +105,7 @@ long long atoll(char *c)
 }
 
 /* Do a binary search for KEY in BASE, which consists of NMEMB elements
-   of SIZE bytes each, using COMPAR to perform the comparisons.  */
+   of SIZE bytes each, using CMP to perform the comparisons.  */
 void *bsearch(void *key, void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *))
 {
     uint64_t s=0, e=nmemb;
@@ -110,3 +120,36 @@ void *bsearch(void *key, void *base, size_t nmemb, size_t size, int (*cmp)(void 
     return NULL;
 }
 
+/**
+ *  Register a function to be called when `exit' is called.
+ */
+int atexit (void (*func) (void))
+{
+    /* POSIX allows multiple registrations. OS/Z don't. */
+    int i;
+    for(i=0;i<atexit_num;i++)
+        if(atexit_hooks[i] == func)
+            return 1;
+    atexit_hooks = realloc(atexit_hooks, (atexit_num+1)*sizeof(atexit_t));
+    if(!atexit_hooks || errno)
+        return errno;
+    atexit_hooks[atexit_num++] = func;
+    return SUCCESS;
+}
+
+/**
+ *  Call all functions registered with `atexit',
+ *  in the reverse of the order in which they were registered,
+ *  perform stdio cleanup, and terminate program execution with STATUS.
+ */
+void exit(int status)
+{
+    int i;
+    /* call atexit handlers in reverse order */
+    if(atexit_num>0)
+        for(i=atexit_num;i>=0;--i)
+            (*atexit_hooks[i])();
+    _exit(status);
+    /* make gcc happy */
+    while(1);
+}
