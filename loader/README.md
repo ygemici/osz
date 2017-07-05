@@ -91,7 +91,7 @@ Machine state
 -------------
 
 When the kernel gains control, the memory mapping looks like this (unless symbol table is provided.
-A fully compatible level 2 loader should map these where the ELF kernel wants them):
+A fully compatible level 2 loader should map these where the ELF symbols tell to):
 
 ```
    -64M framebuffer                       (0xFFFFFFFFFC000000)
