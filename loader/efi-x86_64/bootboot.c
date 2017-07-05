@@ -175,6 +175,17 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
         len=PAGESIZE-1;
     }
     cfg[len]=0;
+    if(argc>2){
+        ptr=cfg+len;
+        for(i=3;i<argc && ptr+StrLen(argv[i])<cfg+PAGESIZE;i++) {
+            CopyMem(ptr,argv[i],StrLen(argv[i]));
+            ptr += StrLen(argv[i]);
+            *ptr = '\n';
+            ptr++;
+        }
+        *ptr = 0;
+        ptr=cfg-1;
+    }
     DBG(L" * Environment @%lx %d bytes\n",cfg,len);
     while(ptr<cfg+len) {
         ptr++;
@@ -189,12 +200,10 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
             ptr--;
             continue;
         }
-        if(!CompareMem(ptr,(const CHAR8 *)"width=",6)){
-            ptr+=6;
-            reqwidth=atoi(ptr);
-        }
-        if(!CompareMem(ptr,(const CHAR8 *)"height=",7)){
+        if(!CompareMem(ptr,(const CHAR8 *)"screen=",7)){
             ptr+=7;
+            reqwidth=atoi(ptr);
+            while(ptr<cfg+len && *ptr!=0 && *(ptr-1)!='x') ptr++;
             reqheight=atoi(ptr);
         }
         if(!CompareMem(ptr,(const CHAR8 *)"kernel=",7)){
@@ -207,16 +216,6 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
             *ptr=0;
             ptr++;
         }
-    }
-    if(argc>2){
-        ptr=cfg+len;
-        for(i=3;i<argc && ptr+StrLen(argv[i])<cfg+PAGESIZE;i++) {
-            CopyMem(ptr,argv[i],StrLen(argv[i]));
-            ptr += StrLen(argv[i]);
-            *ptr = '\n';
-            ptr++;
-        }
-        *ptr = 0;
     }
     return EFI_SUCCESS;
 }

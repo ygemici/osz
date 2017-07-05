@@ -27,6 +27,7 @@
 
 #define _AS 1
 #include <osZ.h>
+#include <sys/driver.h>
 
 /* linker stuff */
 .type _init, STT_FUNC

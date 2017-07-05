@@ -10,7 +10,7 @@ disabled (so as timer), and when the IRQ handler gets called it could cause trou
 Supported devices
 -----------------
 
- * VESA2.0 VGA, GOP, UGA (set up by loader, 32 bit frame buffer)
+ * VESA2.0 VGA, GOP, UGA (set up by [loader](https://github.com/bztsrc/osz/blob/master/loader), 32 bit frame buffer)
  * x86_64 syscall, NX protection
  * PIC / IOAPIC + APIC, x2APIC, see [ISRs](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh)
  * PIT, RTC
@@ -30,13 +30,11 @@ under these directories each driver has exactly one sub-directory. The compiled
 driver will be placed in `lib/sys/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
 to `lib/sys/input/ps2.so`.
 
-The resemblance of classes with [PCI device classes](http://pci-ids.ucw.cz/read/PD) is not a coincidence.
-
-Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have drivers, they
+Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have separate drivers, they
 are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
 switch among them, you'll have to edit `ISR_CTRL` define in [isr.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.h) and recompile.
 
-Timers are also built into the core, but you can switch among HPET, PIT and RTC with a boot time configurable environment variable.
+Timers are also built into the core, but you can switch among HPET, PIT and RTC with a boot time configurable [environment variable](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 
 Files
 -----

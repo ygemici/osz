@@ -721,16 +721,6 @@ prot_readsectorfunc:
             pop         eax
             ret
 
-prot_getval:
-            cmp         word[esi],'0x'
-            je          .hex
-            call        prot_dec2bin
-            ret
-.hex:       add         esi, 2
-            mov         cx, 8
-            call        prot_hex2bin
-            ret
-
 prot_hex2bin:
             xor         eax, eax
             xor         ebx, ebx
@@ -1174,22 +1164,17 @@ protmode_start:
             ja          .parseend
             jmp         .skipcom2
 
-@@:         cmp         dword[esi], 'widt'
+@@:         cmp         dword[esi], 'scre'
             jne         @f
-            cmp         word[esi+4], 'h='
-            jne         @f
-            add         esi, 6
-            call        prot_getval
-            mov         dword [reqwidth], eax
-            jmp         .getnext
-@@:         cmp         dword[esi], 'heig'
-            jne         @f
-            cmp         word[esi+4], 'ht'
+            cmp         word[esi+4], 'en'
             jne         @f
             cmp         byte[esi+6], '='
             jne         @f
             add         esi, 7
-            call        prot_getval
+            call        prot_dec2bin
+            mov         dword [reqwidth], eax
+            inc         esi
+            call        prot_dec2bin
             mov         dword [reqheight], eax
             jmp         .getnext
 @@:         cmp         dword[esi], 'kern'
@@ -1437,9 +1422,9 @@ protmode_start:
             jne         .nextmode
             ;check min height
             mov         ax, word [reqheight]
-            cmp         ax, 400
+            cmp         ax, 480
             ja          @f
-            mov         ax, 400
+            mov         ax, 480
 @@:         cmp         word [0A000h+814h], ax
             jb          .nextmode
             ;match? go no further
@@ -1583,7 +1568,7 @@ protmode_start:
             or          al, 80h
             out         70h, al
 
-            mov         eax, 11101000b  ;Set PAE, MCE, PGE and DBG
+            mov         eax, 1101000b  ;Set PAE, MCE, PGE
             mov         cr4, eax
             mov         eax, 0A000h
             mov         cr3, eax

@@ -26,6 +26,7 @@
  */
 #include <osZ.h>
 #include "vfs.h"
+#include "devfs.h"
 #include "cache.h"
 
 extern uint64_t _pathmax;
@@ -33,6 +34,10 @@ extern uint64_t _pathmax;
 /* filesystem parsers */
 uint16_t nfsdrvs = 0;
 fsdrv_t *fsdrvs = NULL;
+
+/* mount points */
+uint64_t nmounts = 0;
+mount_t *mounts = NULL;
 
 /* files and directories */
 uint64_t nfcbs = 0;
@@ -85,6 +90,17 @@ fid_t fcb_add(const fcb_t *fcb)
     return nfcbs-1;
 }
 
+/**
+ * parse /etc/fstab and build file system mount points
+ */
+void vfs_fstab(char *ptr, size_t size)
+{
+#if DEBUG
+    dbg_printf("fstab: %x %d\n%s\n",ptr,size,ptr);
+#endif
+}
+
+
 #if DEBUG
 void vfs_dump()
 {
@@ -92,6 +108,10 @@ void vfs_dump()
     dbg_printf("Filesystems %d:\n",nfsdrvs);
     for(i=0;i<nfsdrvs;i++)
         dbg_printf("%3d. '%s' %s %x\n",i,fsdrvs[i].name,fsdrvs[i].desc,fsdrvs[i].detect);
+
+    dbg_printf("\nMounts %d:\n",nmounts);
+    for(i=0;i<nmounts;i++)
+        dbg_printf("%3d. '%s' %s %x\n",i,devdir[mounts[i].fs_spec].name,fsdrvs[mounts[i].fs_type].name,mounts[i].fs_file);
 
     dbg_printf("\nFile Control Blocks %d:\n",nfcbs);
     for(i=0;i<nfcbs;i++) {
@@ -102,12 +122,6 @@ void vfs_dump()
                 break;
             case VFS_FCB_TYPE_PIPE:
                 dbg_printf("pipe %s\n",fcbs[i].path);
-                break;
-            case VFS_FCB_TYPE_DEVICE:
-                dbg_printf("device pid %x dev %x start %x sec %d size %d",
-                    fcbs[i].dev.drivertask,fcbs[i].dev.device,fcbs[i].dev.startsec,
-                    fcbs[i].dev.blksize,fcbs[i].dev.size);
-                dbg_printf(" %s\n",fcbs[i].path);
                 break;
             case VFS_FCB_TYPE_DIRECTORY:
                 dbg_printf("directory %s\n",fcbs[i].path);

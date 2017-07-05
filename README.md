@@ -7,7 +7,7 @@ OS/Z - an operating system for hackers
 <a href="http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383">Support</a><br><br>
 
 OS/Z is a hobby OS project. As such it's primary goal is not
-everyday use. Instead it demostrates different concepts
+everyday use. Instead it demostrates different concepts to POSIX
 for those who like hacking with hobby OSes, like the good fellows on [OSDEV](http://forum.osdev.org/). It's aim is
 to be small, and to handle enormous amounts of data in
 a user friendly way. To achieve that goal, I've eliminated
@@ -25,7 +25,7 @@ Features
  - Microkernel architecture with an effective [messaging system](https://github.com/bztsrc/osz/tree/master/docs/messages.md)
  - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from MBR, VBR, ROM BIOS, GRUB or UEFI.
  - [Higher half kernel](https://github.com/bztsrc/osz/tree/master/docs/memory.md) mapping, full 64 bit support
- - It's [filesystem](https://github.com/bztsrc/osz/tree/master/docs/fs.md) can handle YotaBytes of data (unimagineable as of writing)
+ - It's [filesystem](https://github.com/bztsrc/osz/tree/master/docs/fs.md) can handle YottaBytes of data (unimagineable as of writing)
  - ELF64 object format support
  - UNICODE support with UTF-8
 
@@ -36,6 +36,7 @@ Hardware Requirements
  - 32 Mb RAM
  - 800 x 600 / ARGB display
  - x86_64 processor with SSSE3
+ - [Supported devices](https://github.com/bztsrc/osz/tree/master/docs/drivers.md)
 
 Testing
 -------

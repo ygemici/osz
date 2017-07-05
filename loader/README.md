@@ -56,7 +56,7 @@ Glossary
 * _environment file_: a one page long utf-8 file on boot partition at
   BOOTBOOT\CONFIG or (when initrd is on the partition) /etc/sys/config,
   with "key=value" pairs (separated by newlines). The protocol
-  only specifies three of the keys: "width" and "height" for screen size,
+  only specifies two of the keys: "screen" for screen size,
   and "kernel" for the name of the ELF executable inside the initrd.
 
 * _initrd_: initial ramdisk image in ROM or on boot partition at
@@ -272,8 +272,7 @@ tar -czf ../INITRD *
 // BOOTBOOT Options
 
 // --- Loader specific ---
-width=800
-height=600
+screen=800x600
 kernel=lib/sys/core
 
 // --- Kernel specific, you're choosing ---

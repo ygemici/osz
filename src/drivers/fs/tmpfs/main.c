@@ -1,5 +1,5 @@
 /*
- * fs/main.c
+ * drivers/fs/tmpfs/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,37 +22,24 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief File System Service
+ * @brief Ramdisk driver for tmp fs
  */
+
 #include <osZ.h>
-#include "cache.h"
-#include "vfs.h"
+#include <vfs.h>
 
-public uint8_t *_initrd_ptr;
-public uint64_t _initrd_size;
-public char *_fstab_ptr;
-public size_t _fstab_size;
-public uint32_t _pathmax;
-
-/* should be in cache.h and devfs.h, but nobody else allowed to call them */
-extern void cache_init();
-extern void devfs_init();
-extern void devfs_dump();
-
-public void mountfs()
+bool_t detect(void *blk)
 {
-devfs_dump();
-//cache_dump();
-    vfs_fstab(_fstab_ptr, _fstab_size);
-vfs_dump();
+    return false;
 }
 
-void task_init(int argc, char **argv)
+void _init()
 {
-    /* allocate directory and block caches */
-    cache_init();
-    /* initialize dev directory, and in memory "block devices" */
-    devfs_init();
-    /* reserve space for root directory. uninitialized chroot and cwd will point here */
-    //nfcbs=1;
+    fsdrv_t drv = {
+        "tmpfs",
+        "Ramdisk",
+        detect
+    };
+    //uint16_t id = 
+    _fs_reg(&drv);
 }

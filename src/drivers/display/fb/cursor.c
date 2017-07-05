@@ -1,4 +1,5 @@
 #include <osZ.h>
+#include <sys/driver.h>
 
 extern virt_t _cursor_ptr;
 extern uint32_t _cursor_w;

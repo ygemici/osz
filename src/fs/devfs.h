@@ -1,5 +1,5 @@
 /*
- * fs/main.c
+ * fs/devfs.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,37 +22,30 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief File System Service
+ * @brief Device fs definitions
  */
 #include <osZ.h>
-#include "cache.h"
-#include "vfs.h"
 
-public uint8_t *_initrd_ptr;
-public uint64_t _initrd_size;
-public char *_fstab_ptr;
-public size_t _fstab_size;
-public uint32_t _pathmax;
+#define VFS_DEVICE_MEMFS            0
+#define VFS_MEMFS_ZERO_DEVICE       0
+#define VFS_MEMFS_RAMDISK_DEVICE    1
+#define VFS_MEMFS_RANDOM_DEVICE     2
+#define VFS_MEMFS_NULL_DEVICE       3
+#define VFS_MEMFS_TMPFS_DEVICE      4
 
-/* should be in cache.h and devfs.h, but nobody else allowed to call them */
-extern void cache_init();
-extern void devfs_init();
+typedef struct {
+    char name[16];
+    pid_t drivertask;   //major
+    dev_t device;       //minor
+    blksize_t blksize;
+    blkcnt_t size;
+    fpos_t startsec;
+    uint64_t cacheidx;
+} device_t;
+
+extern uint64_t ndevdir;
+extern device_t *devdir;
+
+#if DEBUG
 extern void devfs_dump();
-
-public void mountfs()
-{
-devfs_dump();
-//cache_dump();
-    vfs_fstab(_fstab_ptr, _fstab_size);
-vfs_dump();
-}
-
-void task_init(int argc, char **argv)
-{
-    /* allocate directory and block caches */
-    cache_init();
-    /* initialize dev directory, and in memory "block devices" */
-    devfs_init();
-    /* reserve space for root directory. uninitialized chroot and cwd will point here */
-    //nfcbs=1;
-}
+#endif

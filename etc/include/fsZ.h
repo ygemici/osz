@@ -70,15 +70,16 @@ typedef struct {
     uint64_t    journalend;         // 664 logical sector inside journal file where buffer ends
     uint64_t    journalend_hi;
     uint8_t     encrypt[20];        // 680 encryption mask for AES or zero
-    uint16_t    maxmounts;          // 700 number of maximum mounts allowed to next fsck
-    uint16_t    currmounts;         // 702 current mount counter
-    uint32_t    owneruuid[4];       // 704 owner UUID
-    uint64_t    createdate;         // 720 creation timestamp UTC
-    uint64_t    lastmountdate;      // 728
-    uint64_t    lastcheckdate;      // 736
-    uint64_t    lastdefragdate;     // 744
-    uint32_t    logsec;             // 752 logical sector size, 0=2048,1=4096(default),2=8192...
-    uint32_t    physec;             // 756 how many physical sector gives up a logical one
+    uint32_t    enchash;            // 700 password Castagnoli CRC32, to avoid decryption with bad passwords
+    uint16_t    maxmounts;          // 704 number of maximum mounts allowed to next fsck
+    uint16_t    currmounts;         // 706 current mount counter
+    uint16_t    logsec;             // 708 logical sector size, 0=2048,1=4096(default),2=8192...
+    uint16_t    physec;             // 710 how many physical sector gives up a logical one
+    uint64_t    createdate;         // 712 creation timestamp UTC
+    uint64_t    lastmountdate;      // 720
+    uint64_t    lastcheckdate;      // 728
+    uint64_t    lastdefragdate;     // 736
+    uint32_t    owneruuid[4];       // 744 owner UUID
     uint8_t     reserved[256];
     uint8_t     magic2[4];          //1016
     uint32_t    checksum;           //1020 Castagnoli CRC32 of bytes at 512-1020
@@ -142,26 +143,25 @@ typedef struct {
     FSZ_Access  owner;
 } __attribute__((packed)) FSZ_Version;
 
-// if inode.fid == inode.sec => inline data
 //sizeof = 4096
 typedef struct {
     uint8_t     magic[4];       //   0 magic 'FSIN'
     uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to end of the sector
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
-    uint8_t     mimetype[56];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
-    uint8_t     encrypt[20];    //  68 AES encryption key mask or zero
+    uint8_t     mimetype[52];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
+    uint8_t     encrypt[20];    //  64 AES encryption key mask or zero
+    uint32_t    enchash;        //  84 password Castagnoli CRC32, to avoid decryption with bad passwords
     uint64_t    createdate;     //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
     uint64_t    lastaccess;     //  96
     uint64_t    metalabel;      // 104 sector offset into meta labels file
     uint64_t    metalabel_hi;
     uint64_t    numlinks;       // 120 number of references to this inode
-    // FSZ_Version oldversions[5];
-    uint8_t     version5[64];   // 128 previous versions if enabled
-    uint8_t     version4[64];   // 192 all the same format as the current
-    uint8_t     version3[64];   // 256 see FSZ_Version structure above
-    uint8_t     version2[64];   // 320
-    uint8_t     version1[64];   // 384
-    // FSZ_Version current;
+    FSZ_Version version5;       // 128 previous oldest version (if versioning enabled)
+    FSZ_Version version4;       // 192 all the same format as the current
+    FSZ_Version version3;       // 256 see FSZ_Version structure above
+    FSZ_Version version2;       // 320
+    FSZ_Version version1;       // 384
+    // FSZ_Version current; I haven't used struct here to save typing when referencing
     uint64_t        sec;        // 448 current (or only) version
     uint64_t        sec_hi;
     uint64_t        size;       // 464 file size
@@ -169,14 +169,19 @@ typedef struct {
     uint64_t        modifydate; // 480
     uint32_t        filechksum; // 488 Castagnoli CRC32 of data
     uint32_t        flags;      // 492 see FSZ_IN_FLAG_*
+    //owner is the last in FSZ_Version to followed by ACL.
+    //so first entry in ACL is the control ACE
     FSZ_Access      owner;      // 496
-//if BIGINODE==0
-    FSZ_Access  groups[32];     // 512 List of 32 FSZ_Access entries
-    uint8_t     inlinedata[FSZ_SECSIZE-1024];
-//else
-//  FSZ_Access  groups[96];     // 512 List of 96 FSZ_Access entries
-//  uint8_t     inlinedata[FSZ_SECSIZE-2048];
-//endif
+    union {
+        struct {
+        FSZ_Access  groups[32]; // 512 List of 32 FSZ_Access entries
+        uint8_t     inlinedata[FSZ_SECSIZE-1024];
+        };
+        struct {
+        FSZ_Access  groups[96]; // 512 List of 96 FSZ_Access entries
+        uint8_t     inlinedata[FSZ_SECSIZE-2048];
+        } big;
+    };
 } __attribute__((packed)) FSZ_Inode;
 
 #define FSZ_IN_MAGIC "FSIN"
@@ -188,25 +193,26 @@ typedef struct {
 #define FILETYPE_REG_AUDIO  "audi"
 #define FILETYPE_REG_APP    "appl"
 // special entities, 4th character always ':'
-#define FILETYPE_DIR        "dir:"  // see below
+#define FILETYPE_DIR        "dir:"  // directory
+#define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths with jokers
+#define FILETYPE_INTERNAL   "int:"  // internal files
 #define FILETYPE_SYMLINK    "url:"  // symbolic link, inlined data is a path
-#define FILETYPE_UNION      "uni:" // directory union, inlined data is a zero separated list of paths with jokers
 // mime types for filesystem specific files
 // for FILETYPE_DIR
-#define MIMETYPE_DIR_ROOT   "fs-root"  // root directory (for recovery)
-// for FILETYPE_REG_APP
-#define MIMETYPE_APP_FREELST "fs-free-sectors" // for free sector list
-#define MIMETYPE_APP_BADLST  "fs-bad-sectors"  // for bad sector list
-#define MIMETYPE_APP_INDEX   "fs-search-index" // search cache
-#define MIMETYPE_APP_META    "fs-meta-labels"  // meta labels
-#define MIMETYPE_APP_JOURNAL "fs-journal-data" // journaling records
+#define MIMETYPE_DIR_ROOT   "fs-root"  // root directory (for recovery it has a special mime type)
+// for FILETYPE_INTERNAL
+#define MIMETYPE_INT_FREELST "fs-free-sectors" // for free sector list
+#define MIMETYPE_INT_BADLST  "fs-bad-sectors"  // for bad sector list
+#define MIMETYPE_INT_META    "fs-meta-labels"  // meta labels
+#define MIMETYPE_INT_INDEX   "fs-search-index" // search cache
+#define MIMETYPE_INT_JOURNAL "fs-journal-data" // journaling records
 
 // logical sector address to data sector translation. These file sizes
 // were calculated with 4096 sector size. That is configurable in the
 // FSZ_SuperBlock if you think 11 sector reads is too much to access
 // data at any arbitrary position in a Yotta magnitude file.
 
-// if even that's not enough, you can use sector lists (extents)
+// if even that's not enough, you can use sector lists (extents) to store file data.
 
 /*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
@@ -260,34 +266,36 @@ typedef struct {
 /*  data size < (16 Yotta, equals 16384 Zetta) */
 #define FSZ_IN_FLAG_SD9     (9<<0)
 
-/*  inlined sector list
+/*  inlined sector list (up to 96 entries)
     FSZ_Inode.sec points to itself, FSZ_SectorList entries inlined.
     FSZ_Inode.sec -> FSZ_Inode.sec -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST  (0x80<<0)
 
-/*  any data size
+/*  normal sector list (up to 128 entries)
     FSZ_Inode.sec points to a sector with FSZ_SectorList entries.
     FSZ_Inode.sec -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST0 (0x81<<0)
 
-/*  indirect sector list
+/*  indirect sector list (up to 32768 entries)
     FSZ_Inode.sec points to a sector directory with FSZ_SectorLists
-    FSZ_Inode.sec -> sd-> sl -> data */
+    FSZ_Inode.sec -> sd -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST1 (0x82<<0)
 
-/*  double-indirect sector list
+/*  double-indirect sector list (up to 8388608 entries)
     FSZ_Inode.sec points to a sector directory pointing to
     sector directories with FSZ_SectorLists
-    FSZ_Inode.sec -> sd-> sd -> sl -> data */
+    FSZ_Inode.sec -> sd -> sd -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST2 (0x83<<0)
 
-/*  triple-indirect sector list
-    FSZ_Inode.sec -> sd-> sd -> sd -> sl -> data */
+/*  triple-indirect sector list (up to 2147483648 entries)
+    FSZ_Inode.sec -> sd -> sd -> sd -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST3 (0x84<<0)
 
 /*********************************************************
  *                      Directory                        *
  *********************************************************/
+// first entry is the header.
+
 //sizeof = 128
 typedef struct {
     uint8_t     magic[4];
@@ -313,6 +321,14 @@ typedef struct {
 } __attribute__((packed)) FSZ_DirEnt;
 
 /*********************************************************
+ *                   Directory union                     *
+ *********************************************************/
+
+/* inlined data is a list of asciiz paths that may contain the '*' joker character.
+ * Terminated by and empty path.*/
+ // Example union for /usr/bin: inlinedata=/bin(zero)/usr/*/bin(zero)(zero)
+
+/*********************************************************
  *                     Meta labels                       *
  *********************************************************/
 
@@ -332,12 +348,12 @@ typedef struct {
  *                    Search index                       *
  *********************************************************/
 
-/* to be specified */
+/* to be specified. Inode lists for search keywords ("search" meta labels) */
 
 /*********************************************************
  *                    Journal data                       *
  *********************************************************/
 
-/* to be specified */
+/* to be specified. Circular buffer of modified sectors */
 
 #endif /* fsZ.h */

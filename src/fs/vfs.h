@@ -33,24 +33,9 @@
 
 #define VFS_FCB_TYPE_FILE           0
 #define VFS_FCB_TYPE_PIPE           1
-#define VFS_FCB_TYPE_DEVICE         2
-#define VFS_FCB_TYPE_DIRECTORY      3
+#define VFS_FCB_TYPE_DIRECTORY      2
 
 #define VFS_FCB_FLAG_DIRTY          (1<<0)
-
-#define VFS_FCB_ROOT                0
-#define VFS_FCB_ZERODEV             1
-#define VFS_FCB_RAMDISK             2
-#define VFS_FCB_RNDDEV              3
-#define VFS_FCB_NULLDEV             4
-#define VFS_FCB_TMPDEV              5
-
-#define VFS_DEVICE_MEMFS            0
-#define VFS_MEMFS_ZERO_DEVICE       0
-#define VFS_MEMFS_RAMDISK_DEVICE    1
-#define VFS_MEMFS_RANDOM_DEVICE     2
-#define VFS_MEMFS_NULL_DEVICE       3
-#define VFS_MEMFS_TMPFS_DEVICE      4
 
 #ifndef _AS
 typedef struct {
@@ -59,13 +44,17 @@ typedef struct {
     bool_t (*detect)(void *blk);
 } fsdrv_t;
 
+#define VFS_MOUNT_FLAG_ASYNC        (1<<0)
+
 typedef struct {
-    uint16_t flags;
-    uint16_t mode;
-    uint16_t fs;
-    uint16_t len;
-    gid_t *grp;
-    fid_t fid;
+    uint64_t fs_spec;   //index to devdir, block special device
+    fid_t fs_file;      //path where it's mounted on, index to fcb
+    uint64_t fs_type;   //index to fsdrvs, autodetected
+    uint16_t fs_flags;  //mount options
+    uint16_t fs_passno; //pass number on mount all
+    uint16_t len;       //number of access entries
+    gid_t *grp;         //access entries
+    uint8_t access;     //access for world
 } mount_t;
 
 //fcb types
@@ -82,15 +71,10 @@ typedef struct {
 } file_t;
 
 typedef struct {
-    pid_t drivertask;   //major
-    dev_t device;       //minor
-    blksize_t blksize;
-    blkcnt_t size;
-    fpos_t startsec;
-    uint64_t cacheidx;
-} device_t;
-
-typedef struct {
+    uint64_t mount;
+    ino_t inode;
+    fpos_t size;
+    FSZ_DirEnt *data;
 } directory_t;
 
 typedef struct {
@@ -100,7 +84,6 @@ typedef struct {
     union {
         pipe_t pipe;
         file_t file;
-        device_t dev;
         directory_t directory;
     };
 } fcb_t;
@@ -115,6 +98,10 @@ typedef struct {
 extern uint16_t nfsdrvs;
 extern fsdrv_t *fsdrvs;
 
+/* mount points */
+extern uint64_t nmounts;
+extern mount_t *mounts;
+
 /* file control blocks */
 extern uint64_t nfcbs;
 extern fcb_t *fcbs;
@@ -123,10 +110,10 @@ extern fcb_t *fcbs;
 extern uint64_t nfiles;
 extern openfile_t *files;
 
-extern void mknod();
 extern uint16_t _fs_get(char *name);
 extern uint16_t _fs_reg(const fsdrv_t *fs);
 extern fid_t fcb_add(const fcb_t *fcb);
+extern void vfs_fstab(char *ptr,size_t size);
 #if DEBUG
 extern void vfs_dump();
 #endif

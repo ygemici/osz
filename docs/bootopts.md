@@ -4,11 +4,11 @@ OS/Z Boot Options
 Configuration file
 ------------------
 
-The boot options are kept on the first bootable partition on the first bootable disk under FS0:\BOOTBOOT\CONFIG. When you're
+The boot options are kept on the first bootable partition on the first bootable disk under `FS0:\BOOTBOOT\CONFIG` or `/etc/sys/config`. When you're
 creating a disk image, the contents of that file are taken from [etc/sys/config](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config).
 
 This file is a plain ASCII file with key=value pairs parsed by [core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c). No whitespaces allowed, and each pair is separated by a newline (0x0A) character.
-The file has to be one page long (4096 bytes on x86_64), and filled up with newlines. You can put comments in it with '//'.
+The file can't be longer than a page (4096 bytes on x86_64). You can put comments in it with '#", '//' and '/*'.
 
 Keys are ASCII names without spaces, values can be decimal and hexadecimal numbers, booleans or strings.
 
@@ -17,8 +17,7 @@ Boot Parameters
 
 | Parameter | Default | Type | Parsed by | Description |
 | --------- | :-----: | ---- | --------- | ----------- |
-| width     | 800    | number | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
-| height    | 600    | number | loader |  -II-  |
+| screen     | 800x600    | numxnum | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
 | kernel    | lib/sys/core | string | loader | the name of kernel executable on initrd |
 | debug     | 0      | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
 | nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |

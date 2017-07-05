@@ -25,6 +25,7 @@
  * @brief User Interface initialization and message dispatch
  */
 #include <osZ.h>
+#include <sys/driver.h>
 
 extern char _binary_logo_start;
 extern void keymap_parse(bool_t alt, char *keymap, size_t len);

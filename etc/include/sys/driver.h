@@ -1,5 +1,5 @@
 /*
- * fs/main.c
+ * sys/driver.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,37 +22,25 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief File System Service
+ * @brief OS/Z Device Driver services
  */
-#include <osZ.h>
-#include "cache.h"
-#include "vfs.h"
 
-public uint8_t *_initrd_ptr;
-public uint64_t _initrd_size;
-public char *_fstab_ptr;
-public size_t _fstab_size;
-public uint32_t _pathmax;
+#ifndef _SYS_DRIVER_H
+#define _SYS_DRIVER_H 1
 
-/* should be in cache.h and devfs.h, but nobody else allowed to call them */
-extern void cache_init();
-extern void devfs_init();
-extern void devfs_dump();
+/*** libc implementation prototypes */
+#ifndef _AS
 
-public void mountfs()
-{
-devfs_dump();
-//cache_dump();
-    vfs_fstab(_fstab_ptr, _fstab_size);
-vfs_dump();
-}
+typedef struct {
+    uint64_t freepages;
+    uint64_t totalpages;
+} meminfo_t;
 
-void task_init(int argc, char **argv)
-{
-    /* allocate directory and block caches */
-    cache_init();
-    /* initialize dev directory, and in memory "block devices" */
-    devfs_init();
-    /* reserve space for root directory. uninitialized chroot and cwd will point here */
-    //nfcbs=1;
-}
+void setirq(int8_t irq);                // set irq message for this task
+meminfo_t meminfo();                    // get memory info
+size_t mapfile(void *bss, char *fn);    // map a file on initrd
+extern uint64_t mknod();                // create an entry in devfs
+
+#endif
+
+#endif /* sys/driver.h */

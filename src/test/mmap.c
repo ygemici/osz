@@ -25,6 +25,7 @@
  * @brief Memory mapping and allocation tests
  */
 #include <osZ.h>
+#include <sys/driver.h>
 
 void mmap_test()
 {

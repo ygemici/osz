@@ -25,19 +25,23 @@
  * @brief Device File System. It's not a real fs, just a fake directory
  */
 #include <osZ.h>
+#include <sys/driver.h>
 #include <crc32.h>
 #include "vfs.h"
 #include "cache.h"
+#include "devfs.h"
 
 extern uint8_t *_initrd_ptr;
 extern uint64_t _initrd_size;
 
-FSZ_DirEnt *devdir;
+uint64_t ndevdir = 0;
+device_t *devdir = NULL;
 FSZ_DirEnt *devvoldir;
 FSZ_DirEnt *devuuiddir;
 
-public void mknod()
+public uint64_t mknod()
 {
+    return ndevdir;
 }
 
 void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
@@ -53,26 +57,20 @@ void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
 
 void devfs_init()
 {
-    fcb_t fcb;
-
     fsdrv_t devdrv = {
         "devfs",
         "Device list",
         NULL
     };
     _fs_reg(&devdrv);
-    /* add it here, because there's no better place */
-    fsdrv_t tmpdrv = {
-        "tmpfs",
-        "Memory disk",
-        NULL
-    };
-    _fs_reg(&tmpdrv);
 
-    //allocate memory for /dev/
-    devdir=(FSZ_DirEnt*)malloc(__PAGESIZE);
+    ndevdir=5;
+    //allocate memory for devfs
+    devdir=(device_t*)malloc(ndevdir*sizeof(device_t));
     if(!devdir || errno)
         abort();
+
+    //allocate memory for dev subdirectories
     memcpy((void*)devdir,FSZ_DIR_MAGIC,4);
     devvoldir=(FSZ_DirEnt*)malloc(__PAGESIZE);
     if(!devvoldir || errno)
@@ -83,61 +81,45 @@ void devfs_init()
         abort();
     memcpy((void*)devuuiddir,FSZ_DIR_MAGIC,4);
 
-    //VFS_FCB_ZERODEV
-    memzero((void*)&fcb,sizeof(fcb_t));
-    fcb.nlink=1;
-    fcb.path=malloc(10);
-    strcpy(fcb.path,"/dev/zero");
-    fcb.type=VFS_FCB_TYPE_DEVICE;
-    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
-    fcb.dev.device = VFS_MEMFS_ZERO_DEVICE;
-    fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
+    strcpy(devdir[0].name,"zero");
+    devdir[0].drivertask = VFS_DEVICE_MEMFS;
+    devdir[0].device = VFS_MEMFS_ZERO_DEVICE;
+    devdir[0].blksize = __PAGESIZE;
 
-    //VFS_FCB_RAMDISK
-    memzero((void*)&fcb,sizeof(fcb_t));
-    fcb.nlink=1;
-    fcb.path=malloc(9);
-    strcpy(fcb.path,"/dev/mem");
-    fcb.type=VFS_FCB_TYPE_DEVICE;
-    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
-    fcb.dev.device = VFS_MEMFS_RAMDISK_DEVICE;
-    fcb.dev.startsec = (uint64_t)_initrd_ptr;
-    fcb.dev.size = (_initrd_size+__PAGESIZE-1)/__PAGESIZE;
-    fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
+    strcpy(devdir[1].name,"mem");
+    devdir[1].drivertask = VFS_DEVICE_MEMFS;
+    devdir[1].device = VFS_MEMFS_RAMDISK_DEVICE;
+    devdir[1].startsec = (uint64_t)_initrd_ptr;
+    devdir[1].size = (_initrd_size+__PAGESIZE-1)/__PAGESIZE;
+    devdir[1].blksize = __PAGESIZE;
 
-    //VFS_FCB_RNDDEV
-    memzero((void*)&fcb,sizeof(fcb_t));
-    fcb.nlink=1;
-    fcb.path=malloc(12);
-    strcpy(fcb.path,"/dev/random");
-    fcb.type=VFS_FCB_TYPE_DEVICE;
-    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
-    fcb.dev.device = VFS_MEMFS_RANDOM_DEVICE;
-    fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
+    strcpy(devdir[2].name,"random");
+    devdir[2].drivertask = VFS_DEVICE_MEMFS;
+    devdir[2].device = VFS_MEMFS_RANDOM_DEVICE;
+    devdir[2].blksize = __PAGESIZE;
 
-    //VFS_FCB_NULLDEV
-    memzero((void*)&fcb,sizeof(fcb_t));
-    fcb.nlink=1;
-    fcb.path=malloc(10);
-    strcpy(fcb.path,"/dev/null");
-    fcb.type=VFS_FCB_TYPE_DEVICE;
-    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
-    fcb.dev.device = VFS_MEMFS_NULL_DEVICE;
-    fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
+    strcpy(devdir[3].name,"null");
+    devdir[3].drivertask = VFS_DEVICE_MEMFS;
+    devdir[3].device = VFS_MEMFS_NULL_DEVICE;
+    devdir[3].blksize = __PAGESIZE;
 
-    //VFS_FCB_TMPDEV
-    memzero((void*)&fcb,sizeof(fcb_t));
-    fcb.nlink=1;
-    fcb.path=malloc(9);
-    strcpy(fcb.path,"/dev/tmp");
-    fcb.type=VFS_FCB_TYPE_DEVICE;
-    fcb.dev.drivertask = VFS_DEVICE_MEMFS;
-    fcb.dev.device = VFS_MEMFS_TMPFS_DEVICE;
-    fcb.dev.blksize = __PAGESIZE;
-    dev_link(devdir,fcb.path+5,fcb_add(&fcb));
+    strcpy(devdir[4].name,"tmp");
+    devdir[4].drivertask = VFS_DEVICE_MEMFS;
+    devdir[4].device = VFS_MEMFS_TMPFS_DEVICE;
+    devdir[4].blksize = __PAGESIZE;
 
 }
+
+#if DEBUG
+void devfs_dump()
+{
+    int i;
+    dbg_printf("Devices %d:\n",ndevdir);
+    for(i=0;i<ndevdir;i++) {
+        dbg_printf("%3d. device pid %x dev %x start %x sec %d",
+            i,devdir[i].drivertask,devdir[i].device,devdir[i].startsec,
+            devdir[i].blksize);
+        dbg_printf(" size %d %s\n",devdir[i].size,devdir[i].name);
+    }
+}
+#endif

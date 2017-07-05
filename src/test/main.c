@@ -25,6 +25,7 @@
  * @brief Application to test services and libraries
  */
 #include <osZ.h>
+#include <sys/driver.h>
 
 void mmap_test();
 void string_test();

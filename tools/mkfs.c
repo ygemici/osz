@@ -354,7 +354,7 @@ void checkcompilation()
     // These numbers MUST match the ones in: etc/include/fsZ.h
     if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 520 ||
         (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 552 ||
-        (uint64_t)(&sb.owneruuid) - (uint64_t)(&sb) != 704 ||
+        (uint64_t)(&sb.owneruuid) - (uint64_t)(&sb) != 744 ||
         (uint64_t)(&sb.magic2) - (uint64_t)(&sb) != 1016 ||
         (uint64_t)(&in.filetype) - (uint64_t)(&in) != 8 ||
         (uint64_t)(&in.version5) - (uint64_t)(&in) != 128 ||
@@ -425,14 +425,6 @@ int createdisk()
             }
         }
     }
-/*
-    // save ESP, we've modified pointers
-    f=fopen(espfile,"wb");
-    if(f) {
-        fwrite(esp,es,1,f);
-        fclose(f);
-    }
-*/
     // WinNT disk id
     setint(uuid[0],loader+0x1B8);
 
@@ -509,7 +501,7 @@ int createdisk()
         setint(((gs+es)/512)+1,p+32);            //startlba
         setint(((gs+es+rs)/512),p+40);           //endlba
         setint(4,p+48);                          //bootable flag
-        memcpy(p+64,L"OS/Z System",22);          //name
+        memcpy(p+64,L"OS/Z Root",22);            //name
         p+=128;
     }
     // GPT, OS/Z System Partition (mounted at /usr) MBR type 0x30
