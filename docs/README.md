@@ -12,10 +12,12 @@ Materials interests for developers.
  * [Scheduler](https://github.com/bztsrc/osz/blob/master/docs/scheduler.md)
  * Using [messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) at different levels (aka. syscalls in OS/Z)
  * How a [keypress](https://github.com/bztsrc/osz/blob/master/docs/keypress.md) is processed
+ * Differences to [POSIX](https://github.com/bztsrc/osz/blob/master/docs/posix.md)
  * [Compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md)
  * [Boot procedure](https://github.com/bztsrc/osz/blob/master/docs/boot.md)
  * [Testing](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md)
  * [Debugging](https://github.com/bztsrc/osz/blob/master/docs/howto2-debug.md)
+ * [Developing](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md)
 
 SysAdmin's Playground
 ---------------------
@@ -26,12 +28,12 @@ Documentation on how to operate OS/Z.
  * [Services](https://github.com/bztsrc/osz/blob/master/docs/services.md)
  * [File System](https://github.com/bztsrc/osz/blob/master/docs/fs.md) and paths
  * [Boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md)
- * Invoking [Rescue Shell](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md)
- * [Install](https://github.com/bztsrc/osz/blob/master/docs/howto4-install.md) OS/Z on a USB stick and package management
+ * Invoking [Rescue Shell](https://github.com/bztsrc/osz/blob/master/docs/howto4-rescueshell.md)
+ * [Install](https://github.com/bztsrc/osz/blob/master/docs/howto5-install.md) OS/Z on a USB stick and package management
 
 User's Guide
 ------------
 
 Information for end users.
 
- * [User Interface](https://github.com/bztsrc/osz/blob/master/docs/howto5-interface.md)
+ * [User Interface](https://github.com/bztsrc/osz/blob/master/docs/howto6-interface.md)

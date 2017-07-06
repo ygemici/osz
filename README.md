@@ -7,7 +7,7 @@ OS/Z - an operating system for hackers
 <a href="http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383">Support</a><br><br>
 
 OS/Z is a hobby OS project. As such it's primary goal is not
-everyday use. Instead it demostrates different concepts to POSIX
+everyday use. Instead it demostrates different concepts to [POSIX](https://github.com/bztsrc/osz/tree/master/docs/posix.md)
 for those who like hacking with hobby OSes, like the good fellows on [OSDEV](http://forum.osdev.org/). It's aim is
 to be small, and to handle enormous amounts of data in
 a user friendly way. To achieve that goal, I've eliminated

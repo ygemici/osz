@@ -250,4 +250,4 @@ sy              show sysinfo
 f               toggle full window mode, show only logs on sysinfo tab
 ```
 
-The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md) is more user than developer oriented as it's about how to use the rescue shell.
+The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md) is about how write device drivers and applications for OS/Z.

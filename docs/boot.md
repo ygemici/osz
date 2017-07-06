@@ -32,54 +32,21 @@ That platform independent code does the following:
 
 After that it initializes subsystems (or system [services](https://github.com/bztsrc/osz/blob/master/docs/services.md)), begining with the critical ones:
 
- 1. first is `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), that loads idle task and [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md).
+ 1. first is `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), that loads idle task
+ and enumerates system buses to locate and load [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md). It will also fill up entries
+in [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md) (IRT).
  2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal system service, save it has the initrd entirely mapped in it's bss segment.
  3. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike the rest.
  4. loads additional, non-critical system services by several `service_init()` calls in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `net`, `sound` and `init` service daemon.
- 5. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
-
-That `sys_enable()` function switches to the "FS" task, and starts executing it. When it blocks, the scheduler, 
-`sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) will
-choose drivers and services one by one until all blocks. Note that preemption is not enabled at this point. 
-
- 6. When the `idle` task first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
-
-Driver Initialization
----------------------
-
-The `sys_init()` function enumerates system buses (ACPI, PCI etc.) to locate devices and loads drivers for them. It will also fill up entries
-in IRQ Routing Table (IRT) so that ISRs will know to whom to send the message for a specific IRQ. IRQs can be assigned three ways to tasks:
-
- 1. use `irqX()` function, where X is a decimal number. That will assign IRQ X.
- 2. using `setirq()` libc call at driver's initialization code.
- 3. or autodetected from system tables.
-
-In driver's `_init()` function, it may register device files in "devfs" with `mknod()` calls.
-If a device driver requires configuration file, it must use `mapfile()` to load that from initrd as filesystems are not mounted yet.
-
-When `sys_ready()` gets called, it will enable IRQs which has entries in IRT. It will also enable timer IRQ and with that
-enables pre-emption. As a last thing, `sys_ready()` will send a message to "FS" task to mount all filesystems in the name
-of "init" task. So FS will notify "init" task when it's done, and with that normal operation will start.
+ 5. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). That `sys_enable()` function switches to the "FS" task, and starts executing it. When it blocks, the scheduler,
+ `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) will choose drivers and services one by one until all blocks. Note that preemption is not enabled at this point. 
+ 6. When the `idle` task first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It will enable IRQs which has entries in IRT.
+ It will also enable timer IRQ and with that enables pre-emption. As a last thing, `sys_ready()` will send a message to "FS" task to mount all filesystems in the name of "init" task.
+ So FS will notify "init" task when it's done, and with that normal operation will start.
 
 User land
 ---------
 
-The first real 100% userspace process is started by [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c).
+The first real 100% userspace process is started by [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c) system service.
 If rescueshell was requested in [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
 instead of user services. Services are classic UNIX daemons, among others the user session service that provides a login prompt.
-
-### Executables
-
-They start at label `_start` defined in [lib/libc/(platform)/crt0.S](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/crt0.S).
-
-### Shared libraries
-
-Similarly to executables, but the entry point is called `_init`. If not defined in the library, fallbacks to [lib/libc/(platform)/init.S](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/init.S).
-When an executable loads several shared libraries, their `_init` will be called one by one before `_start` gets called.
-
-### Services
-
-Service's entry point is also called `_init`, which function must call either `mq_recv()` or `mq_dispatch()`. If not defined otherwise,
-fallbacks to the default in [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c) (also
-used by device drivers). In that case the service must implement `task_init()` to initialize it's structures. Services can use
-shared libraries, in which case the libraries' `_init` will be called one by one before the service's `_init` function.

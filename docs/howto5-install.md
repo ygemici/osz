@@ -1,13 +1,13 @@
-OS/Z - How To Series #4 - Installing
+OS/Z - How To Series #5 - Installing
 ====================================
 
 Preface
 -------
 
-In the last tutorial, we've checked what can we do with the [rescue shell](https://github.com/bztsrc/osz/blob/master/docs/howto3-rescueshell.md).
+In the last tutorial, we've checked what can we do with the [rescue shell](https://github.com/bztsrc/osz/blob/master/docs/howto4-rescueshell.md).
 In this episode we'll take a system administator's approach again, and we'll see how to install OS/Z and how to install packages.
 
-The next tutorial will be end user related, about how to use the [user interface](https://github.com/bztsrc/osz/blob/master/docs/howto5-interface.md).
+The next tutorial will be end user related, about how to use the [user interface](https://github.com/bztsrc/osz/blob/master/docs/howto6-interface.md).
 
 System Install
 --------------
@@ -70,4 +70,4 @@ sys install (package)
 sys remove (package)
 ```
 
-Next time we'll see how to use the [user interface](https://github.com/bztsrc/osz/blob/master/docs/howto5-interface.md).
+Next time we'll see how to use the [user interface](https://github.com/bztsrc/osz/blob/master/docs/howto6-interface.md).
