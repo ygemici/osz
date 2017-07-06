@@ -280,8 +280,9 @@ anythingyouwant=somevalue
 otherstuff=enabled
 
 ```
-        Alternatively you can copy an uncompressed INITRD into the whole partition, leaving FAT filesystem enitrely out,
-        or create an Option ROM out of INITRD (on BIOS there's not much space ~64-96k, but on EFI it can be 16M).
+
+Alternatively you can copy an uncompressed INITRD into the whole partition using your fs only, leaving FAT filesystem enitrely out.
+You can also create an Option ROM out of INITRD (on BIOS there's not much space ~64-96k, but on EFI it can be 16M).
 
 3. copy the BOOTBOOT loader on the boot partition:
 

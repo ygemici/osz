@@ -4,25 +4,22 @@ OS/Z Services
 There are two different kind of services: system services and user services. System services
 must reside on the initial ramdisk, as they are the server counterparts of libc, and they
 cannot be controlled from userspace. User services on the other hand are controlled by the
-init system service, and they can be loaded from external disks as well. The system services
-group is divided into another two fractions: critical and non-critical ones.
+init system service, and they can be loaded from external disks as well.
 
 ### Service hierarchy
 
 ```
-        +-----------------------------+
-ring 0  |              CORE           | (supervisor)
---------+-----------+--------+--------+--------------------------
-ring 3  |  Drivers  |   FS   |   UI   | (critical services)
-        +-----------------------------+
-        | syslog | net | sound | init | (respawnable, non-critical system services)
-        +----------------------+      |
-        | logind | prnd | ...         | (respawnable, user services controlled by init)
-        +-----------------------------+
+        +-------------------------------------------------+
+ring 0  |                     CORE                        | (supervisor)
+--------+---------+----+----+-----------------------------+---------------------
+ring 3  | Drivers | FS | UI | syslog | net | sound | init | (system services)
+        +------------------------------------------+      |
+        | logind | prnd | httpd | ...                     | (user services controlled by init)
+        +-------------------------------------------------+
 
-        +-----------------------------+
-        | identity | sh | sys | ...   | (normal user applications)
-        +-----------------------------+
+        +-------------------------------------------------+
+        | identity | sh | sys | test | ...                | (normal user applications)
+        +-------------------------------------------------+
 ```
 
 CORE
