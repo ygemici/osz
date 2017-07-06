@@ -259,6 +259,10 @@ extern void sched_sleep(tcb_t *tcb);
 /** Return next task's memroot phy address */
 extern phy_t sched_pick();
 
+#if DEBUG
+extern void sched_dump();
+#endif
+
 // ----- Sybsystem Management -----
 /** Load an ELF binary into address space, return physical address */
 extern void *elf_load(char *fn);
@@ -291,8 +295,10 @@ extern uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t ar
 extern uint64_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2,uint64_t arg3, uint64_t arg4, uint64_t arg5);
 
 #if DEBUG
-extern void dbg_init();
+/* enable internal debugger */
 extern void dbg_enable(virt_t rip, virt_t rsp, char *reason);
+/* put a character on serial line */
+extern void dbg_putchar(int c);
 #endif
 
 #endif

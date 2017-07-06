@@ -44,8 +44,9 @@ extern void acpi_init();
 extern void acpi_poweroff();
 extern void pci_init();
 extern void idle();
+extern tcb_t *sched_get_tcb(pid_t task);
 #if DEBUG
-extern void dbg_putchar(int c);
+extern uint8_t dbg_enabled;
 #endif
 
 /* device drivers map */
@@ -124,8 +125,8 @@ __inline__ void sys_enable()
     tcb_t *fstcb = (tcb_t*)(&tmpmap);
 
 #if DEBUG
-    // initialize debugger, it can be used only with task mappings
-    dbg_init();
+    // enable debugger, it can be used only with task mappings
+    dbg_enabled = true;
 #endif
     sys_fault = false;
 
@@ -238,6 +239,8 @@ void sys_ready()
     /* disable scroll pause */
     scry = -1;
 
-    /* notify init service to start */
-    msg_sends(EVT_DEST(SRV_init) | EVT_FUNC(SYS_ack),0,0,0,0,0,0);
+    /* mount filesystems. Make it look like init had sent the message so FS will notify init when it's done */
+    sched_awake(sched_get_tcb(services[-SRV_init]));
+    task_map(sched_pick());
+    msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }

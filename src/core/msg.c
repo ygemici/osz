@@ -78,6 +78,11 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
             srctcb->errno = EPERM;
             return false;
         }
+        // only drivers allowed to send SYS_mknod to FS
+        if(event==SYS_mknod && srctcb->priority!=PRI_DRV) {
+            srctcb->errno = EPERM;
+            return false;
+        }
     }
 
     // map destination task's message queue

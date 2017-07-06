@@ -33,12 +33,8 @@ extern void services_init();
 
 void task_init(int argc, char **argv)
 {
-    /* wait for sys_ready() to send an SYS_ack, meaning all
-     * drivers and subsystems finished with initialization */
+    /* sys_ready() will fake a mountfs call to FS, wait for it's ack */
     mq_recv();
-
-    /* first thing, mount all filesystems */
-    mq_call(SRV_FS, SYS_mountfs);
 
     if(_rescueshell) {
         /* create a TTY window for rescue shell */

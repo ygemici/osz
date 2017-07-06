@@ -84,8 +84,8 @@ extern uint64_t isr_lastfps;
 uint64_t __attribute__ ((section (".data"))) dbg_rip;
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
+extern void dbg_init();
 extern void dbg_setpos();
-extern void dbg_putchar(int c);
 #endif
 
 /**
@@ -152,6 +152,10 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
+#if DEBUG
+    // initialize serial as debug console
+    dbg_init();
+#endif
 }
 
 /**

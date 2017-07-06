@@ -41,10 +41,6 @@ extern char *sprintf_putascii(char *dst, int64_t c);
 extern char *sprintf_putdec(char *dst, int64_t c);
 extern char *sprintf_puthex(char *dst, int64_t c);
 
-#if DEBUG
-extern void dbg_putchar(int c);
-#endif
-
 dataseg char *syslog_buf;
 dataseg char *syslog_ptr;
 

@@ -38,9 +38,9 @@ Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve()
 Drivers
 -------
 
-Each device driver has it's own task. They are allowed to map MMIO into their BSS, and to access I/O address space.
+Each device driver has it's own task. They are allowed to map MMIO into their bss segment, and to access I/O address space.
 Only "FS" task and CORE allowed to send messages to them. There's one exception, the video driver, which receives
-messages from "UI" task and CORE.
+messages from "UI" task, not "FS".
 
 Typical functions: IRQ(), ioctl(), setcursor().
 
@@ -68,27 +68,25 @@ Syslog
 ------
 
 The system logger daemon. Syslog's bss segment is a circular buffer that periodically flushed to disk. On boot,
-CORE is gathering it's logs in a temporary buffer (using syslong_early() function). The size of the buffer can be
+CORE is gathering it's logs in a temporary buffer (using [syslog_early()](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) function). The size of the buffer can be
 [configured](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) with `nrlogmax=4`. That buffer is shared with the "syslog" task. You can turn logging off with the
-boot paramter `syslog=false`. When disabled, the same service can be provided by an alternative non-system service.
+boot paramter `syslog=false`.
 
 Typical functions: syslog(), setlogmask().
 
 Net
 ---
 
-Service that is responsible for handling interfaces and IP routes, and all other networking stuff. You
-can disable networking with the [boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) `networking=false`. When disabled, the same service can be
-provided by an alternative non-system service.
+Service that is responsible for handling interfaces and IP routes, and all other networking stuff. You can disable
+networking with the [boot environment](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) variable `networking=false`.
 
 Typical functions: connect(), accept(), bind(), listen().
 
 Sound
 -----
 
-Service that mixes several audio channels into a single stream. You
-can disable audio as a whole with the [boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) `sound=false`. When disabled, the same service can be
-provided by an alternative non-system service.
+Service that mixes several audio channels into a single stream. It opens sound card device excusively, and offers a mixer device
+for applications instead. You can disable audio as a whole with the [boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) `sound=false`.
 
 Typical functions: speak(), setvolume().
 
@@ -96,10 +94,9 @@ Init
 ----
 
 This service manages all the other, non-system services. Those include user session daemon, mailer daemon, 
-print daemon, web server etc.
-You can command init to avoid user services and start only a rescue shell instead with the boot patamerer `rescueshell=true`.
+print daemon, web server etc. You can command init to start only a rescue shell with the boot environment variable `rescueshell=true`.
 Also, if compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config) and if you set `debug=test`
-[boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md), a special `test` process will be started instead
+[boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md), a special `[test](https://github.com/bztsrc/osz/blob/master/src/test)` process will be started instead
 of `init` that will do system tests.
 
 Typical functions: start(), stop(), restart(), status().

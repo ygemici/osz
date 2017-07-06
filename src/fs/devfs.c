@@ -34,6 +34,8 @@
 extern uint8_t *_initrd_ptr;
 extern uint64_t _initrd_size;
 
+extern pid_t mq_caller;
+
 uint64_t ndevdir = 0;
 device_t *devdir = NULL;
 FSZ_DirEnt *devvoldir;
@@ -41,6 +43,7 @@ FSZ_DirEnt *devuuiddir;
 
 public uint64_t mknod()
 {
+    /* check mq_caller */
     return ndevdir;
 }
 

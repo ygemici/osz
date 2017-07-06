@@ -31,6 +31,11 @@
 #include <tcb.h>
 
 /**
+ * the pid_t of caller
+ */
+public pid_t mq_caller = 0;
+
+/**
  * this is implemented in assembly. Call a function
  */
 extern uint64_t mq_dispatchcall(
@@ -102,10 +107,12 @@ public uint64_t mq_dispatch()
         ) {
             seterr(SUCCESS);
             /* make the call */
+            mq_caller = EVT_SENDER(msg->evt);
             i = mq_dispatchcall(
                   msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5,
                   (virt_t)symfunc->st_value + (virt_t)TEXT_ADDRESS
                 );
+            mq_caller = 0;
         } else {
             seterr(EPERM);
             i = false;

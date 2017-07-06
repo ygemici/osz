@@ -78,7 +78,7 @@ dataseg uint8_t dbg_unit;
 dataseg uint8_t dbg_numbrk;
 dataseg uint8_t dbg_iskbd;
 dataseg uint8_t dbg_isshft;
-dataseg uint8_t dbg_indump;
+dataseg uint8_t dbg_indump = 0;
 dataseg uint8_t dbg_tui;
 dataseg uint64_t dbg_scr;
 dataseg uint64_t dbg_mqptr;
@@ -131,7 +131,9 @@ void dbg_putchar(int c)
     if(c<8 || c>255 || (dbg_indump==2 && (c<' '||c>=127)) || (c>=127&&c<160) || c==173)
         c='.';
     __asm__ __volatile__ (
+        // bochs e9 port hack
         "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
+        // print character on serial
         "movl $10000,%%ecx;movw $0x3fd,%%dx;1:"
         "inb %%dx, %%al;"
         "cmpb $0xff,%%al;je 2f;"
@@ -1425,7 +1427,7 @@ void dbg_singlestep(uint8_t enable)
 void dbg_init()
 {
     int i;
-    dbg_enabled = 1;
+    dbg_enabled = 0;
     dbg_err = NULL;
     dbg_theme = theme_debug;
     dbg_unit = 0;
@@ -1435,6 +1437,7 @@ void dbg_init()
     dbg_inst = 1;
     dbg_full = 0;
     dbg_scr = 0;
+    dbg_indump = 0;
     /* clear history */
     for(i=0;i<sizeof(cmdhist);i++) cmdhist[i]=0;
 
@@ -1448,7 +1451,7 @@ void dbg_init()
         "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //FCR fifo off
         "movb $0x43, %%al;incb %%dl;outb %%al, %%dx;"    //LCR 8N1, break on
         "movb $0x8, %%al;incb %%dl;outb %%al, %%dx;"     //MCR Aux out 2
-        "xorb %%al, %%al;subb $4,%%dl;outb %%al, %%dx;inb %%dx, %%al"   //clear receiver/transmitter
+        "xorb %%al, %%al;subb $4,%%dl;inb %%dx, %%al"   //clear receiver/transmitter
     :::"%rax","%rdx");
 }
 

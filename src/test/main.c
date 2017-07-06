@@ -33,10 +33,22 @@ void stdlib_test();
 void stdio_test();
 void unistd_test();
 
+/* normally we should use getcwd() */
+typedef struct {
+    fid_t cwdir;
+    fid_t of;
+    fid_t lf;
+    fid_t *fd;
+} _fd_t;
+extern _fd_t _fd;
+
 int main(int argc, char**argv)
 {
-    /* wait until sys_ready() sends us an SYS_ack message */
-    mq_recv();
+    /* do we have a current working directory? If no, then we were started as init service */
+    if(!_fd.cwdir) {
+        /* wait until FS sends us an SYS_ack message after the SYS_mountfs call */
+        mq_recv();
+    }
 
     dbg_printf("\n------------------------- TESTS ----------------------------\n");
     //do tests
@@ -44,7 +56,6 @@ int main(int argc, char**argv)
 //    string_test();
     dbg_printf(  "----------------------- TESTS END --------------------------\n\n");
 
-    //do nothing
-    while(1) mq_recv();
+    /* if we are running as init, exiting task will trigger poweroff, exactly what we want. */
     return 0;
 }
