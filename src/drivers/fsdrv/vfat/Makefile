@@ -1,3 +1,3 @@
-TARGET = fs/vfat.so
+TARGET = fsdrv/vfat.so
 
 include ../../Makefile.rules

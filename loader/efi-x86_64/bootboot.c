@@ -103,10 +103,10 @@ unsigned char *kne;
 
 // default environment variables. M$ states that 1024x768 must be supported
 int reqwidth = 1024, reqheight = 768;
-char *kernelname="lib/sys/core";
+char *kernelname="sys/core";
 
 // alternative environment name
-char *cfgname="etc/sys/config";
+char *cfgname="sys/config";
 
 int atoi(unsigned char*c)
 {
@@ -164,7 +164,7 @@ int hex2bin(unsigned char *str, int size)
 }
 
 /**
- * Parse FS0:\BOOTBOOT\CONFIG or /etc/sys/config
+ * Parse FS0:\BOOTBOOT\CONFIG or /sys/config
  */
 EFI_STATUS
 ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
@@ -453,7 +453,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
     MMapEnt *mmapent, *last=NULL;
     file_t ret={NULL,0};
     CHAR16 **argv, *initrdfile, *configfile, *help=
-        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended to the\n  environment. If INITRD not found, it will use the first bootable partition\n  in GPT. If CONFIG not found, it will look for /etc/sys/config inside\n  the INITRD (or partition).\n\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
+        L"SYNOPSIS\n  BOOTBOOT.EFI [ -h | -? | /h | /? ] [ INITRDFILE [ ENVIRONMENTFILE [...] ] ]\n\nDESCRIPTION\n  Bootstraps an operating system via the BOOTBOOT Protocol.\n  If arguments not given, defaults to\n    FS0:\\BOOTBOOT\\INITRD   as ramdisk image and\n    FS0:\\BOOTBOOT\\CONFIG   for boot environment.\n  Additional \"key=value\" command line arguments will be appended to the\n  environment. If INITRD not found, it will use the first bootable partition\n  in GPT. If CONFIG not found, it will look for /sys/config inside the\n  INITRD (or partition).\n\n  As this is a loader, it is not supposed to return control to the shell.\n\n";
     INTN argc;
 
     // Initialize UEFI Library
@@ -749,7 +749,7 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             t.Year,t.Month,t.Day,t.Hour,t.Minute,t.Second,
             bootboot->timezone>=0?L"+":L"",bootboot->timezone/60,bootboot->timezone%60,
             t.Daylight?L"summertime":L"");
-        // get lib/sys/core and parse
+        // get sys/core and parse
         status=LoadCore();
         if (EFI_ERROR(status))
             return status;
@@ -873,7 +873,7 @@ get_memory_map:
             "mov %%rax,%%cr3"
             : : "b"(paging) : "memory" );
 
-        //call _start() in lib/sys/core
+        //call _start() in sys/core
         __asm__ __volatile__ (
             "xorq %%rsp, %%rsp;"
             "pushq %0;"

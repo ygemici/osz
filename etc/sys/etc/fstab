@@ -5,7 +5,6 @@
 /dev/vol/home 	/home    	users:rw	2
 /dev/vol/usr  	/usr     	ro,wheel:rw	2
 /dev/vol/var  	/var     	rw		2
-/dev/vol/swap 	/dev/swap	ro,fs:rw	2
 
 # auto mount (not mounted on boot)
 /dev/disk1   	/mnt     	rw		0

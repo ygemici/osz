@@ -314,10 +314,10 @@ typedef struct {
 
 //sizeof = 128
 typedef struct {
-    uint64_t    fid;
-    uint64_t    fid_hi;
-    uint8_t     length;             // number of UNICODE characters in name
-    uint8_t     name[111];          // zero terminated UTF-8 string
+    uint64_t      fid;
+    uint64_t      fid_hi;
+    uint8_t       length;             // number of UNICODE characters in name
+    unsigned char name[111];          // zero terminated UTF-8 string
 } __attribute__((packed)) FSZ_DirEnt;
 
 /*********************************************************

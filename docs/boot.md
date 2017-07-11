@@ -9,7 +9,7 @@ The compatible loader is loaded by the firmware, presumeably from ROM. It does t
 
  1. initialize hardware and framebuffer
  2. locate initrd on boot partition (or in ROM)
- 3. locate `lib/sys/core` inside initrd
+ 3. locate `sys/core` inside initrd
  4. map it's elf segments at -2M..0 and framebuffer at -64M..-4M
  5. transfer control to core
 
@@ -47,6 +47,6 @@ in [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/docs/howto3-dev
 User land
 ---------
 
-The first real 100% userspace process is started by [sbin/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c) system service.
-If rescueshell was requested in [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
+The first real 100% userspace process is started by [sys/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c) system service.
+If rescueshell was requested in [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
 instead of user services. Services are classic UNIX daemons, among others the user session service that provides a login prompt.

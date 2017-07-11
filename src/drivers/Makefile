@@ -1,4 +1,4 @@
-TARGET = lib/sys/drv
+TARGET = sys/drv
 EXTOBJ = ../../bin/service.o
 LINKER = sharedlib
 

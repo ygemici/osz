@@ -25,10 +25,11 @@
  * @brief Function implementations for unistd.h
  */
 #include <osZ.h>
+#include <sys/stat.h>
 
 //failsafe
-#ifndef SYS_getfcb
-#define SYS_getfcb 1
+#ifndef SYS_vfslocate
+#define SYS_vfslocate 1
 #endif
 
 /* it's on a read-only page in TCB */
@@ -53,7 +54,11 @@ public uint64_t _alarmstep = 1000;
  */
 public fid_t chroot(const char *path)
 {
-//    _chroot((fid_t)mq_call(SRV_FS, SYS_getfcb, 0, path));
+    fid_t f=(fid_t)mq_call(SRV_FS, SYS_vfslocate, 0, path, S_IFDIR);
+    if(f!=-1)
+        _chroot(f);
+    else
+        seterr(ENOENT);
     return _rootdir;
 }
 
@@ -62,6 +67,10 @@ public fid_t chroot(const char *path)
  */
 public fid_t chdir(const char *path)
 {
-//    _fd.cwdir = (fid_t)mq_call(SRV_FS, SYS_getfcb, _rootdir, path);
+    fid_t f=(fid_t)mq_call(SRV_FS, SYS_vfslocate, _rootdir, path, S_IFDIR);
+    if(f!=-1)
+        _fd.cwdir=f;
+    else
+        seterr(ENOENT);
     return _fd.cwdir;
 }

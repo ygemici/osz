@@ -7,7 +7,7 @@ OS/Z Device Drivers Classes
 | display  | Display controller |
 | docking  | Docking station |
 | encrypt  | Encryption controller |
-| fs       | File System Driver |
+| fsdrv    | File System Drivers |
 | generic  | Generic system peripheral |
 | input    | Input device controller |
 | intelligent | Intelligent controller |
@@ -22,7 +22,7 @@ OS/Z Device Drivers Classes
 | wireless | Wireless controller |
 
 Under these directories each driver has exactly one sub-directory. The compiled
-driver will be placed in `lib/sys/(class)/(driver).so`
+driver will be placed in `sys/(class)/(driver).so`
 
 The resemblance with [PCI device classes](http://pci-ids.ucw.cz/read/PD) is not a coincidence.
 

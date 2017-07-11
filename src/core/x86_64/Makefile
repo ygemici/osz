@@ -1,4 +1,4 @@
-include ../../../etc/etc/os-release
+include ../../../etc/sys/etc/os-release
 include ../../../Config
 
 SRCS = $(filter-out dbg.c disasm.c,$(wildcard *.c))
@@ -11,7 +11,7 @@ OBJS = $(TMP:.S=.o)
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DOSZ_ARCH='"$(ARCH)"' -DOSZ_BUILD='$(BUILD)' \
  -Wall -fpic -ffreestanding -nostdinc -I ../../../etc/include -include platform.h -include ../env.h
 
-all: $(OBJS)
+all: isrs.S $(OBJS)
 
 isrs.S: isr.h isrs.sh isr.c
 	@./isrs.sh $(ARCH) 2>/dev/null || true

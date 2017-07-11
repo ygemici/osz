@@ -96,7 +96,7 @@ public uint64_t mq_dispatch()
         /* get work */
         msg = mq_recv();
         func = EVT_FUNC(msg->evt);
-        /* -3: added by elftool to make sure not conflict with IRQ, ack, nack */
+        /* +3 added by elftool to make sure not to conflict with IRQ, ack, nack messages */
         if(func<3) continue;
         func-=3;
         symfunc = (Elf64_Sym*)((virt_t)sym + (virt_t)(func * syment));

@@ -30,33 +30,36 @@
 
 #include <osZ.h>
 #include <fsZ.h>
+#include <sys/stat.h>
+
+#ifndef _AS
+
+// mount point cache is not write-through
+#define VFS_MOUNT_FLAG_ASYNC        (1<<0)
+
+/** structure of mtab */
+typedef struct {
+    dev_t fs_spec;      //index to devdir, block special device
+    char *fs_file;      //path where it's mounted on
+    uint16_t fs_type;   //index to fsdrvs, autodetected
+    uint16_t fs_flags;  //mount options
+    uint16_t len;       //number of access entries
+    gid_t *grp;         //access entries
+    uint8_t access;     //access for world
+} mount_t;
+
+typedef struct {
+    const char *name;
+    const char *desc;
+    bool_t (*detect)(void *blk);
+    ino_t (*locate)(mount_t *mnt, char *path, uint64_t type);
+} fsdrv_t;
 
 #define VFS_FCB_TYPE_FILE           0
 #define VFS_FCB_TYPE_PIPE           1
 #define VFS_FCB_TYPE_DIRECTORY      2
 
 #define VFS_FCB_FLAG_DIRTY          (1<<0)
-
-#ifndef _AS
-typedef struct {
-    const char *name;
-    const char *desc;
-    bool_t (*detect)(void *blk);
-} fsdrv_t;
-
-#define VFS_MOUNT_FLAG_ASYNC        (1<<0)
-
-typedef struct {
-    uint64_t fs_spec;   //index to devdir, block special device
-    fid_t fs_file;      //path where it's mounted on, index to fcb
-    uint64_t fs_type;   //index to fsdrvs, autodetected
-    uint16_t fs_flags;  //mount options
-    uint16_t fs_passno; //pass number on mount all
-    uint16_t len;       //number of access entries
-    gid_t *grp;         //access entries
-    uint8_t access;     //access for world
-} mount_t;
-
 //fcb types
 typedef struct {
     fid_t fid[2];
@@ -99,8 +102,8 @@ extern uint16_t nfsdrvs;
 extern fsdrv_t *fsdrvs;
 
 /* mount points */
-extern uint64_t nmounts;
-extern mount_t *mounts;
+extern uint64_t nmtab;
+extern mount_t *mtab;
 
 /* file control blocks */
 extern uint64_t nfcbs;
@@ -110,6 +113,10 @@ extern fcb_t *fcbs;
 extern uint64_t nfiles;
 extern openfile_t *files;
 
+/* public syscalls */
+extern fid_t vfslocate(fid_t parent, char *path, uint64_t type);
+
+/* private functions */
 extern uint16_t _fs_get(char *name);
 extern uint16_t _fs_reg(const fsdrv_t *fs);
 extern fid_t fcb_add(const fcb_t *fcb);

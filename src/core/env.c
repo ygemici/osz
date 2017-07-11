@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG)
+ * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG or /sys/config)
  */
 
 /*** parsed values ***/
@@ -44,11 +44,12 @@ dataseg uint8_t rescueshell;
 dataseg uint8_t lefthanded;
 
 /*** for overriding default or autodetected values ***/
-// architecrue specific
+// architecture specific variables
 extern void envarch_init();
 extern unsigned char *envarch_parse(unsigned char *env);
 
 /*** value parsing helper functions ***/
+/** parse a hex value */
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
     if(*s=='0' && *(s+1)=='x')
@@ -70,6 +71,7 @@ unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max
     return s;
 }
 
+/** parse a decimal value, fallback to hex with 0x prefix */
 unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
     if(*s=='0' && *(s+1)=='x')
@@ -87,18 +89,21 @@ unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max
     return s;
 }
 
+/** parse a true boolean that defaults to false */
 unsigned char *env_boolt(unsigned char *s, uint8_t *v)
 {
     *v = (*s=='1'||*s=='t'||*s=='T');
     return s+1;
 }
 
+/** parse a false boolean that defaults to true */
 unsigned char *env_boolf(unsigned char *s, uint8_t *v)
 {
     *v = !(*s=='0'||*s=='f'||*s=='F');
     return s+1;
 }
 
+/** parse display configuration */
 unsigned char *env_display(unsigned char *s)
 {
     uint64_t tmp;
@@ -121,6 +126,7 @@ unsigned char *env_display(unsigned char *s)
     return s;
 }
 
+/** parse keyboard map definition */
 unsigned char *env_keymap(unsigned char *s)
 {
     unsigned char *c = (unsigned char *)keymap;
@@ -135,6 +141,7 @@ unsigned char *env_keymap(unsigned char *s)
     return s;
 }
 
+/** parse debug flags */
 unsigned char *env_debug(unsigned char *s)
 {
     uint64_t tmp;

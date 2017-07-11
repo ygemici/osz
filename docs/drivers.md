@@ -27,8 +27,8 @@ Directories
 Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/master/src/drivers), groupped in categories.
 Each [driver class](https://github.com/bztsrc/osz/blob/master/src/drivers/README.md) has one directory, and
 under these directories each driver has exactly one sub-directory. The compiled
-driver will be placed in `lib/sys/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
-to `lib/sys/input/ps2.so`.
+driver will be placed in `sys/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
+to `sys/input/ps2.so`.
 
 Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have separate drivers, they
 are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
@@ -56,7 +56,7 @@ has the following entries:
 | pciXXX:XXX | A PCI vendor and device id pair |
 | (etc) |  |
 
-These informations along with the driver's path will be gathered to `etc/sys/drivers` by
+These informations along with the driver's path will be gathered to `sys/drivers` by
 [tools/drivers.sh](https://github.com/bztsrc/osz/blob/master/tools/drivers.sh). This database
 will be looked up in order to find out which shared object should be loaded for a specific
 device.

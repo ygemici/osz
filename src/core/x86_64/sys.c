@@ -156,9 +156,9 @@ void sys_init()
 {
     // load driver database
     char *c, *f;
-    drvs = (char *)fs_locate("etc/sys/drivers");
+    drvs = (char *)fs_locate("sys/drivers");
     drvs_end = drvs + fs_size;
-    kmemcpy(&fn[0], "lib/sys/", 8);
+    kmemcpy(&fn[0], "sys/", 4);
 
     /*** Platform specific initialization ***/
     /* create idle task */
@@ -179,12 +179,12 @@ void sys_init()
     if(drvs==NULL) {
         // should never happen!
 #if DEBUG
-        kprintf("WARNING missing /etc/sys/drivers\n");
+        kprintf("WARNING missing /sys/drivers\n");
 #endif
-        syslog_early("WARNING missing /etc/sys/drivers\n");
+        syslog_early("WARNING missing /sys/drivers\n");
         // hardcoded legacy devices if driver list not found
-        drv_init("lib/sys/input/ps2.so");
-        drv_init("lib/sys/display/fb.so");
+        drv_init("sys/input/ps2.so");
+        drv_init("sys/display/fb.so");
     } else {
         // load devices which are not coverable by bus enumeration
         for(c=drvs;c<drvs_end;) {
@@ -192,9 +192,9 @@ void sys_init()
             // skip filesystem drivers
             if(f[0]=='*' && f[1]==9 && (f[2]!='f' || f[3]!='s')) {
                 f+=2;
-                if(c-f<255-8) {
-                    kmemcpy(&fn[8], f, c-f);
-                    fn[c-f+8]=0;
+                if(c-f<255-4) {
+                    kmemcpy(&fn[4], f, c-f);
+                    fn[c-f+4]=0;
                     drv_init(fn);
                 }
                 continue;
@@ -217,6 +217,8 @@ void sys_init()
 /*** Called when the "idle" task first scheduled ***/
 void sys_ready()
 {
+    tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
+
     /* reset early kernel console */
     kprintf_reset();
 
@@ -240,7 +242,7 @@ void sys_ready()
     scry = -1;
 
     /* mount filesystems. Make it look like init had sent the message so FS will notify init when it's done */
-    sched_awake(sched_get_tcb(services[-SRV_init]));
-    task_map(sched_pick());
+    sched_awake(tcb);
+    task_map(tcb->memroot);
     msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }

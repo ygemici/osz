@@ -1,6 +1,6 @@
 include ../../../../Config
 
-BINTARGET = ../../../../bin/initrd/lib/sys/$(TARGET)
+BINTARGET = ../../../../bin/initrd/sys/$(TARGET)
 SRCS = $(wildcard *.c)
 SRCS += $(wildcard *.S)
 TMP = $(SRCS:.c=.o)
@@ -8,7 +8,7 @@ OBJS = $(TMP:.S=.o)
 LIBS += -lc
 
 CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_DRIVER=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH) -I../../../lib/libc -I../../../lib/libc/$(ARCH) -I../../../fs
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/initrd/lib -lc
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/initrd/sys/lib -lc
 
 all: $(OBJS) $(EXTOBJS) $(BINTARGET)
 
@@ -19,8 +19,8 @@ all: $(OBJS) $(EXTOBJS) $(BINTARGET)
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 $(BINTARGET):
-	@echo "  src		$(TARGET)"
-	@mkdir -p ../../../../bin/initrd/lib/sys/$(firstword $(subst /, ,$(TARGET)))
+	@echo "  src		sys/$(TARGET)"
+	@mkdir -p ../../../../bin/initrd/sys/$(firstword $(subst /, ,$(TARGET)))
 	@../../../../tools/drivers.sh $(TARGET)
 	$(O)$(CC) $(LDFLAGS) $(EXTOBJS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 

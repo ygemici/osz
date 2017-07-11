@@ -58,6 +58,8 @@ extern cachedir_t *cache;
 extern cacheblk_t cacheblk[];
 
 extern void cache_dir(char*name,fid_t fid);
+extern void *cache_getblock(dev_t dev,blkcnt_t blk);
+
 #if DEBUG
 extern void cache_dump();
 #endif

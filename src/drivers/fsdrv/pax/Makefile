@@ -1,3 +1,3 @@
-TARGET = fs/tmpfs.so
+TARGET = fsdrv/pax.so
 
 include ../../Makefile.rules

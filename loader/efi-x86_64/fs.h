@@ -34,7 +34,7 @@ file_t fsz_initrd(unsigned char *initrd_p, char *kernel)
         return ret;
     }
     DBG(L" * FS/Z %s\n",a2u(kernel));
-    // Get the inode of lib/sys/core
+    // Get the inode
     int i;
     char *s,*e;
     s=e=kernel;

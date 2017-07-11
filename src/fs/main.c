@@ -28,11 +28,11 @@
 #include "cache.h"
 #include "vfs.h"
 
-public uint8_t *_initrd_ptr;
-public uint64_t _initrd_size;
-public char *_fstab_ptr;
-public size_t _fstab_size;
-public uint32_t _pathmax;
+public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory
+public uint64_t _initrd_size=0;     // initrd size in bytes
+public char *_fstab_ptr=NULL;       // pointer to /etc/fstab data
+public size_t _fstab_size=0;        // fstab size
+public uint32_t _pathmax=0;         // maximum length of path
 
 /* should be in cache.h and devfs.h, but nobody else allowed to call them */
 extern void cache_init();

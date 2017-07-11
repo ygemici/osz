@@ -87,36 +87,36 @@ void service_init(int subsystem, char *fn)
  */
 void fs_init()
 {
-    char *s, *f, *drvs = (char *)fs_locate("etc/sys/drivers");
+    char *s, *f, *drvs = (char *)fs_locate("sys/drivers");
     char *drvs_end = drvs + fs_size;
-    fstab = (uint64_t)fs_locate("etc/fstab");
+    fstab = (uint64_t)fs_locate("sys/etc/fstab");
     fstab_size=fs_size;
     char fn[256];
     tcb_t *tcb = task_new("FS", PRI_SRV);
     // map file system dispatcher
-    if(elf_load("sbin/fs") == (void*)(-1)) {
-        kpanic("unable to load ELF from /sbin/fs");
+    if(elf_load("sys/fs") == (void*)(-1)) {
+        kpanic("unable to load ELF from /sys/fs");
     }
     // map libc
-    elf_loadso("lib/libc.so");
+    elf_loadso("sys/lib/libc.so");
 
     // load file system drivers
     if(drvs==NULL) {
         // hardcoded if driver list not found
         // should not happen!
-        syslog_early("/etc/sys/drivers not found");
-        elf_loadso("lib/sys/fs/gpt.so");    // disk
-        elf_loadso("lib/sys/fs/fsz.so");    // initrd and OS/Z partitions
-        elf_loadso("lib/sys/fs/vfat.so");   // EFI boot partition
+        syslog_early("/sys/drivers not found");
+        elf_loadso("sys/fs/gpt.so");    // disk
+        elf_loadso("sys/fs/fsz.so");    // initrd and OS/Z partitions
+        elf_loadso("sys/fs/vfat.so");   // EFI boot partition
     } else {
+        kmemcpy(&fn[0], "sys/", 4);
         for(s=drvs;s<drvs_end;) {
             f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
             if(f[0]=='*' && f[1]==9 && f[2]=='f' && f[3]=='s') {
                 f+=2;
-                if(s-f<255-8) {
-                    kmemcpy(&fn[0], "lib/sys/", 8);
-                    kmemcpy(&fn[8], f, s-f);
-                    fn[s-f+8]=0;
+                if(s-f<255-4) {
+                    kmemcpy(&fn[4], f, s-f);
+                    fn[s-f+4]=0;
                     elf_loadso(fn);
                 }
                 continue;
@@ -143,7 +143,7 @@ void fs_init()
         services[-SRV_FS] = tcb->pid;
         syslog_early(" %s -%d pid %x","FS",-SRV_FS,tcb->pid);
     } else {
-        kpanic("task check failed for /sbin/fs");
+        kpanic("task check failed for /sys/fs");
     }
 }
 
@@ -156,8 +156,8 @@ void ui_init()
     tcb_t *tcb = task_new("UI", PRI_SRV);
 
     // map user interface code
-    if(elf_load("sbin/ui") == (void*)(-1)) {
-        kpanic("unable to load ELF from /sbin/ui");
+    if(elf_load("sys/ui") == (void*)(-1)) {
+        kpanic("unable to load ELF from /sys/ui");
     }
     // map window decoratorator
 //    elf_loadso("lib/ui/decor.so");
@@ -184,7 +184,7 @@ void ui_init()
             bss += __SLOTSIZE;
         }
     } else {
-        kpanic("task check failed for /sbin/ui");
+        kpanic("task check failed for /sys/ui");
     }
 }
 
@@ -208,11 +208,11 @@ void drv_init(char *driver)
     tcb_t *tcb = task_new(drvname, PRI_DRV);
     driver[i]='.';
     // ...start with driver event dispatcher
-    if(elf_load("lib/sys/drv") == (void*)(-1)) {
-        kpanic("unable to load ELF from /lib/sys/drv");
+    if(elf_load("sys/drv") == (void*)(-1)) {
+        kpanic("unable to load ELF from /sys/drv");
     }
     // map libc
-    elf_loadso("lib/libc.so");
+    elf_loadso("sys/lib/libc.so");
     // map the real driver as a shared object
     elf_loadso(driver);
     elf_neededso(1);

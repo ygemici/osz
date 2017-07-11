@@ -314,7 +314,7 @@ bool_t acpi_init()
     if(PM1a_CNT==0)
         return false;
     if(SCI_INT!=0) {
-//        Elf64_Ehdr *ehdr = (Elf64_Ehdr *)drv_init("lib/sys/proc/sci.so");
+//        Elf64_Ehdr *ehdr = (Elf64_Ehdr *)drv_init("sys/proc/sci.so");
 //        ehdr->e_machine = SCI_INT;
     }
 #if DEBUG

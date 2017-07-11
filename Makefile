@@ -27,10 +27,10 @@ loader/bootboot.efi:
 	@make -e --no-print-directory -C loader/efi-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
 
 util: tools
-	@cat etc/etc/os-release | grep -v ^BUILD | grep -v ^ARCH >/tmp/os-release
-	@mv /tmp/os-release etc/etc/os-release
-	@date +'BUILD = "%Y-%m-%d %H:%M:%S UTC"' >>etc/etc/os-release
-	@echo 'ARCH = "$(ARCH)"' >>etc/etc/os-release
+	@cat etc/sys/etc/os-release | grep -v ^BUILD | grep -v ^ARCH >/tmp/os-release
+	@mv /tmp/os-release etc/sys/etc/os-release
+	@date +'BUILD = "%Y-%m-%d %H:%M:%S UTC"' >>etc/sys/etc/os-release
+	@echo 'ARCH = "$(ARCH)"' >>etc/sys/etc/os-release
 	@echo "TOOLS"
 	@make --no-print-directory -e -C tools all | grep -v 'Nothing to be done' || true
 

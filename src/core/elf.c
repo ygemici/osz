@@ -438,7 +438,7 @@ void elf_neededso(int libc)
     uint64_t *paging = (uint64_t *)&tmpmap;
     Elf64_Dyn *d;
     char *strtable;
-    char lib[256]="lib/";
+    char lib[256]="sys/lib/";
 
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
@@ -464,7 +464,7 @@ void elf_neededso(int libc)
                     if(d->d_tag==DT_NEEDED) {
                         if(!kmemcmp(strtable + d->d_un.d_ptr, "libc.so", 8)) {
                             if(!libc)
-                                elf_loadso("lib/libc.so");
+                                elf_loadso("sys/lib/libc.so");
                             libc++;
                         } else {
                             kstrcpy((char*)&lib[4],strtable + d->d_un.d_ptr);

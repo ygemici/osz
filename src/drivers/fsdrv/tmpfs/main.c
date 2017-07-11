@@ -1,5 +1,5 @@
 /*
- * drivers/fs/vfat/main.c
+ * drivers/fs/tmpfs/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Virtual File Allocation Table driver
+ * @brief Ramdisk driver for tmp fs
  */
 
 #include <osZ.h>
@@ -30,20 +30,22 @@
 
 bool_t detect(void *blk)
 {
-    return
-     ((uint8_t*)blk)[510]==0x55 && ((uint8_t*)blk)[511]==0xAA &&
-     /* FAT12 / FAT16 */
-     (!memcmp(blk+54, "FAT1", 4)||
-     /* FAT32 */
-      !memcmp(blk+84, "FAT3", 4));
+    return false;
+}
+
+ino_t locate(mount_t *mnt, char *path, uint64_t type)
+{
+dbg_printf("TMP locate '%s'\n",path);
+    return -1;
 }
 
 void _init()
 {
     fsdrv_t drv = {
-        "vfat",
-        "FAT12/16/32",
-        detect
+        "tmpfs",
+        "Ramdisk",
+        detect,
+        locate
     };
     //uint16_t id = 
     _fs_reg(&drv);

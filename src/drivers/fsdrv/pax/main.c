@@ -1,5 +1,5 @@
 /*
- * drivers/fs/tmpfs/main.c
+ * drivers/fs/pax/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Ramdisk driver for tmp fs
+ * @brief Filesystem in pax archive driver
  */
 
 #include <osZ.h>
@@ -30,15 +30,28 @@
 
 bool_t detect(void *blk)
 {
-    return false;
+    return
+     /* CPIO */
+    (!memcmp(blk,"070701",6) ||
+     !memcmp(blk,"070702",6) ||
+     !memcmp(blk,"070707",6) ||
+     /* USTAR */
+     !memcmp(blk+257,"ustar",5));
+}
+
+ino_t locate(mount_t *mnt, char *path, uint64_t type)
+{
+dbg_printf("PAX locate '%s'\n",path);
+    return -1;
 }
 
 void _init()
 {
     fsdrv_t drv = {
-        "tmpfs",
-        "Ramdisk",
-        detect
+        "paxfs",
+        "Archive",
+        detect,
+        locate
     };
     //uint16_t id = 
     _fs_reg(&drv);

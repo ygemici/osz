@@ -25,6 +25,7 @@
  * @brief Device fs definitions
  */
 #include <osZ.h>
+#include "vfs.h"
 
 #define VFS_DEVICE_MEMFS            0
 #define VFS_MEMFS_ZERO_DEVICE       0
@@ -45,6 +46,8 @@ typedef struct {
 
 extern uint64_t ndevdir;
 extern device_t *devdir;
+
+extern uint64_t devfs_locate(mount_t *mnt, char *file, uint64_t type);
 
 #if DEBUG
 extern void devfs_dump();

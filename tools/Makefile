@@ -1,5 +1,5 @@
 #setting this to 1 will create a partition for root fs instead of initrd file
-NOINITRD = 1
+NOINITRD = 0
 
 include ../Config
 INITRD = ../bin/ESP/BOOTBOOT/INITRD
@@ -33,7 +33,7 @@ imgclean:
 esp: initrd
 	@echo "  mkfs		boot (ESP)"
 ifneq ($(NOINITRD),1)
-	@#cp -f ../etc/etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
+	@cp -f ../etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.bin)","")
 	@cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
 endif
@@ -56,19 +56,27 @@ else
 	@echo "  mkfs		initrd"
 endif
 	@# populate with static files
-	@cp -r ../etc/etc ../bin/initrd || true
+	@cp -r ../etc/sys/etc ../bin/initrd/sys || true
 ifeq ($(NOINITRD),1)
-	@echo "/dev/disk0p2	/        	rw		1" >../bin/initrd/etc/fstab
-	@cat ../etc/etc/fstab | grep -v "/dev/mem" >>../bin/initrd/etc/fstab
+	@cp -f ../etc/sys/config ../bin/initrd/sys 2>/dev/null || true
+	@echo "/dev/disk0p2	/        	rw		1" >../bin/initrd/sys/etc/fstab
+	@cat ../etc/sys/etc/fstab | grep -v "/dev/mem" >>../bin/initrd/sys/etc/fstab
 endif
 	@cp -r ../etc/root ../bin/initrd || true
 ifeq ($(NOINITRD),1)
 ifneq ("$(wildcard ../loader/bootboot.bin)","")
-	@cp ../loader/bootboot.bin ../bin/initrd/lib/sys/loader || true
+	@cp ../loader/bootboot.bin ../bin/initrd/sys/loader || true
 endif
 	@./mkfs.o $(SYSFILE) ../bin/initrd
+	@./mkfs.o $(SYSFILE) union bin/ "/sys/bin/" "/usr/*/bin/"
+	@./mkfs.o $(SYSFILE) union etc/ "/sys/etc/" "/usr/*/etc/"
+	@./mkfs.o $(SYSFILE) union lib/ "/sys/lib/" "/usr/*/lib/"
 else
-	@./mkfs.o $(INITRD) ../bin/initrd && gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+	@./mkfs.o $(INITRD) ../bin/initrd
+	@./mkfs.o $(INITRD) union bin/ "/sys/bin/" "/usr/*/bin/"
+	@./mkfs.o $(INITRD) union etc/ "/sys/etc/" "/usr/*/etc/"
+	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/*/lib/"
+	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
 	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H newc -o 2>/dev/null | gzip > ../$(INITRD)
 	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H hpodc -o 2>/dev/null | gzip > ../$(INITRD)
@@ -80,6 +88,7 @@ usr: $(USRFILE)
 
 $(USRFILE): ../bin/usr
 	@echo "  mkfs		usr"
+	@cp -r ../etc/etc ../bin/usr/core || true
 	@cp -r ../etc/include ../bin/usr/core || true
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
 	@./mkfs.o $(USRFILE) ../bin/usr
@@ -129,23 +138,11 @@ endif
 ifeq ("$(wildcard ../bin/initrd)","")
 	@# to be kept in memory
 	@mkdir ../bin/initrd || true
-	@mkdir ../bin/initrd/bin || true
-	@mkdir ../bin/initrd/etc || true
-	@mkdir ../bin/initrd/etc/sys || true
-	@mkdir ../bin/initrd/lib || true
-	@mkdir ../bin/initrd/lib/sys || true
-	@mkdir ../bin/initrd/root || true
-	@mkdir ../bin/initrd/sbin || true
-ifeq ($(NOINITRD),1)
-	@mkdir ../bin/initrd/dev || true
-	@mkdir ../bin/initrd/home || true
-	@mkdir ../bin/initrd/run || true
-	@# mount points
 	@mkdir ../bin/initrd/sys || true
-	@mkdir ../bin/initrd/usr || true
-	@mkdir ../bin/initrd/var || true
-	@mkdir ../bin/initrd/tmp || true
-endif
+	@mkdir ../bin/initrd/sys/bin || true
+	@mkdir ../bin/initrd/sys/etc || true
+	@mkdir ../bin/initrd/sys/lib || true
+	@mkdir ../bin/initrd/root || true
 endif
 ifeq ("$(wildcard ../bin/usr)","")
 	@mkdir ../bin/usr || true

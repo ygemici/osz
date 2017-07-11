@@ -1,3 +1,3 @@
-TARGET = fs/fsz.so
+TARGET = fsdrv/gpt.so
 
 include ../../Makefile.rules

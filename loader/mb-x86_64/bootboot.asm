@@ -1107,7 +1107,7 @@ protmode_start:
             cmp         byte [ebx], 0
             jnz         .parsecfg
 
-            ;-----load /etc/sys/config------
+            ;-----load /sys/config------
             mov         edx, fsdrivers
 .nextfs1:   xor         ebx, ebx
             mov         bx, word [edx]
@@ -1220,7 +1220,7 @@ protmode_start:
             mov         dword [ebx+4], '/A\n'
 .parseend:
 
-            ;-----load /lib/sys/core------
+            ;-----load /sys/core------
             mov         edx, fsdrivers
 .nextfs:    xor         ebx, ebx
             mov         bx, word [edx]
@@ -1675,13 +1675,13 @@ noenmem:    db          "Not enough memory",0
 noacpi:     db          "ACPI not found",0
 nogpt:      db          "No boot partition",0
 nord:       db          "FS0:\BOOTBOOT\INITRD not found",0
-nolib:      db          "/lib/sys not found in initrd",0
+nolib:      db          "/sys not found in initrd",0
 nocore:     db          "Kernel not found in initrd",0
 badcore:    db          "Kernel is not a valid ELF64",0
 novbe:      db          "VESA VBE error, no framebuffer",0
 nogzip:     db          "Unable to uncompress",0
-cfgfile:    db          "etc/sys/config",0,0,0
-kernel:     db          "lib/sys/core"
+cfgfile:    db          "sys/config",0,0,0
+kernel:     db          "sys/core"
             db          (128-($-kernel)) dup 0
 ;-----------padding to be multiple of 512----------
             db          (511-($-loader+511) mod 512) dup 0

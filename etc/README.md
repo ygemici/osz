@@ -3,9 +3,10 @@ Additional assets
 
 Skeletons for directories
 
-- *etc* classic UNIX etc directory
+- *etc* classic UNIX etc directory, will be mounted as /usr/core/etc
 - *include* C header files, will be mounted as /usr/core/include
 - *root* the root user's home
+- *sys* system files, sys/etc will be included in initrd
 
 Files
 

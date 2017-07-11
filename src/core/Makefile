@@ -1,6 +1,6 @@
-include ../../etc/etc/os-release
+include ../../etc/sys/etc/os-release
 include ../../Config
-TARGET = lib/sys/core
+TARGET = sys/core
 
 BINTARGET = ../../bin/initrd/$(TARGET)
 SRCS = $(wildcard *.c)
@@ -19,7 +19,7 @@ endif
 
 all: $(OBJS) $(BINTARGET)
 
-main.o: main.c ../../etc/etc/os-release
+main.o: main.c ../../etc/sys/etc/os-release
 	@#echo "  src		$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 

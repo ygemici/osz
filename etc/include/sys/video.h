@@ -28,11 +28,11 @@
 #ifndef _SYS_VIDEO_H
 #define _SYS_VIDEO_H 1
 
-/*** low level codes in rdi for syscall instruction ***/
-#define VID_flush 1
-#define VID_loadcursor 2
-#define VID_movecursor 3
-#define VID_setcursor 4
+/*** low level codes in rax for syscall instruction ***/
+#define VID_flush 3
+#define VID_loadcursor 4
+#define VID_movecursor 5
+#define VID_setcursor 6
 
 /* video cursor shapes */
 #define VC_none -1

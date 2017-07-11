@@ -339,7 +339,7 @@ output:
                 ELF64_ST_BIND(s->st_info)==STB_GLOBAL && ELF64_ST_VISIBILITY(s->st_other)==STV_DEFAULT && 
                 strcmp(strtable + s->st_name, "mq_dispatch") && strcmp(strtable + s->st_name, "main"))
                 /* +3: make sure not conflicting with IRQ, ack and nack */
-                printf("#define SYS_%s\t%s(%3d)\n",
+                printf("#define SYS_%s\t%s(0x%02x)\n",
                     strtable + s->st_name, strlen(strtable + s->st_name)<4?"\t":"", i+3);
         }
         s++;

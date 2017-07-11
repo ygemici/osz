@@ -33,27 +33,27 @@ TOOLS
   src		elftool.c
 CORE
   gen		x86_64/isrs.S (PIC, numirq 32, idtsz 4096)
-  lnk		lib/sys/core (x86_64)
-  lnk		lib/libc.so (x86_64)
+  lnk		sys/core (x86_64)
+  lnk		sys/lib/libc.so (x86_64)
 BASE
-  src		sbin/ui
-  src		bin/sh
-  src		bin/test
-  src		sbin/sys
-  src		sbin/syslog
-  src		sbin/sound
-  src		sbin/fs
-  src		sbin/net
-  src		sbin/init
+  src		sys/ui
+  src		sys/bin/sh
+  src		sys/bin/test
+  src		sys/bin/sys
+  src		sys/syslog
+  src		sys/sound
+  src		sys/fs
+  src		sys/net
+  src		sys/init
 DRIVERS
-  src		fs/gpt.so
-  src		fs/vfat.so
-  src		fs/fsz.so
-  src		mmedia/sblive.so
-  src		network/ne2k.so
-  src		input/ps2.so
-  src		display/fb.so
-  src		lib/sys/drv
+  src		sys/fsdrv/gpt.so
+  src		sys/fsdrv/pax.so
+  src		sys/fsdrv/vfat.so
+  src		sys/fsdrv/fsz.so
+  src		sys/fsdrv/tmpfs.so
+  src		sys/input/ps2.so
+  src		sys/display/fb.so
+  src		sys/drv
 USERSPACE
 IMAGES
   mkfs		initrd

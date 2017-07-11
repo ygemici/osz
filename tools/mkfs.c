@@ -112,7 +112,6 @@ void add_superblock()
     sb->maxmounts=255;
     sb->currmounts=0;
     memcpy(sb->magic2,FSZ_MAGIC,4);
-    sb->checksum=crc32_calc((char *)sb->magic,180);
     size+=secsize;
 }
 
@@ -411,7 +410,7 @@ int createdisk()
             }
         }
     }
-    // locate stage2 loader /lib/sys/loader on root partition
+    // locate stage2 loader /sys/loader on root partition
     if(!j && rs>0) {
         for(i=0;i<rs-512;i+=512) {
             if((unsigned char)ssp[i+0]==0x55 &&
@@ -614,7 +613,7 @@ int createimage(char *image,char *dir)
 
     //modify the total number of sectors
     ((FSZ_SuperBlock *)fs)->numsec=size/secsize;
-    ((FSZ_SuperBlock *)fs)->checksum=crc32_calc((char *)((FSZ_SuperBlock *)fs)->magic,180);
+    ((FSZ_SuperBlock *)fs)->checksum=crc32_calc((char *)((FSZ_SuperBlock *)fs)->magic,508);
 
     //write out new image
     f=fopen(image,"wb");

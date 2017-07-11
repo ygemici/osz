@@ -52,8 +52,8 @@ int main(int argc, char**argv)
 
     dbg_printf("\n------------------------- TESTS ----------------------------\n");
     //do tests
-    mmap_test();
-//    string_test();
+//    mmap_test();
+    string_test();
     dbg_printf(  "----------------------- TESTS END --------------------------\n\n");
 
     /* if we are running as init, exiting task will trigger poweroff, exactly what we want. */

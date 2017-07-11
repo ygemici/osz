@@ -25,14 +25,15 @@
  * @brief OS/Z system calls for fs service. Include with osZ.h
  */
 
-#define SYS_seek	( 14)
-#define SYS_dup		( 16)
-#define SYS_write	( 18)
-#define SYS_pipe	( 22)
-#define SYS_mknod	( 25)
-#define SYS_mountfs	( 26)
-#define SYS_ioctl	( 27)
-#define SYS_stat	( 30)
-#define SYS_dup2	( 33)
-#define SYS_read	( 34)
+#define SYS_seek	(0x15)
+#define SYS_vfslocate	(0x16)
+#define SYS_dup		(0x18)
+#define SYS_write	(0x1a)
+#define SYS_pipe	(0x1e)
+#define SYS_mknod	(0x21)
+#define SYS_mountfs	(0x22)
+#define SYS_ioctl	(0x23)
+#define SYS_stat	(0x26)
+#define SYS_dup2	(0x29)
+#define SYS_read	(0x2a)
 

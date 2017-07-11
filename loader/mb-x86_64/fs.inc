@@ -56,7 +56,7 @@ fsz_initrd:
             add         esi, eax
             cmp         dword [esi], 'FSDR'
             jne         .nolib
-.srchdir:   ; find lib/ or etc/
+.srchdir:   ; find sys/
             mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
             mov         eax, dword [edi]
 @@:         add         esi, 128                    ; directories than

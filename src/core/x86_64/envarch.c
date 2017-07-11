@@ -66,7 +66,7 @@ void envarch_init()
     systables[systable_mp_idx] = bootboot.x86_64.mp_ptr;
     systables[systable_apic_idx] = systables[systable_ioapic_idx] = 
     systables[systable_hpet_idx] = 0;
-    systables[systable_dsdt_idx] = (uint64_t)fs_locate("etc/sys/dsdt");
+    systables[systable_dsdt_idx] = (uint64_t)fs_locate("sys/etc/dsdt");
     if(fs_size == 0)
         systables[systable_dsdt_idx] = 0;
 }

@@ -31,13 +31,17 @@
 #include "cache.h"
 #include "devfs.h"
 
+/* ramdisk position and size in memory */
 extern uint8_t *_initrd_ptr;
 extern uint64_t _initrd_size;
 
+/* caller task of public service, see libc/dispatch.c */
 extern pid_t mq_caller;
 
+/* devices */
 uint64_t ndevdir = 0;
 device_t *devdir = NULL;
+/* subdirectories */
 FSZ_DirEnt *devvoldir;
 FSZ_DirEnt *devuuiddir;
 
@@ -47,6 +51,9 @@ public uint64_t mknod()
     return ndevdir;
 }
 
+/**
+ * Link a file in a /dev subdirectory
+ */
 void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
 {
     FSZ_DirEntHeader *hdr = (FSZ_DirEntHeader *)entries;
@@ -58,12 +65,44 @@ void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
     hdr->checksum=crc32_calc((char*)hdr+sizeof(FSZ_DirEntHeader),hdr->numentries*sizeof(FSZ_DirEnt));
 }
 
+/**
+ * locate a in devfs. We don't use mnt here
+ */
+ino_t devfs_locate(mount_t *mnt, char *file, uint64_t type)
+{
+    uint64_t i;
+    if((file==NULL || file[0]==0) || (type!=0 && type!=S_IFBLK && type!=S_IFCHR))
+        return -1;
+    if(!strncmp(file,"vol/",4)) {
+        file+=4;
+        for(i=1;i<=((FSZ_DirEntHeader *)devvoldir)->numentries;i++)
+            if(!strcmp(file,(char*)&devvoldir[i].name))
+                return devvoldir[i].fid;
+    } else
+    if(!strncmp(file,"uuid/",5)) {
+        file+=5;
+        for(i=1;i<=((FSZ_DirEntHeader *)devuuiddir)->numentries;i++)
+            if(!strcmp(file,(char*)&devuuiddir[i].name))
+                return devuuiddir[i].fid;
+    } else {
+        for(i=0;i<ndevdir;i++) {
+            if(!strcmp(file,devdir[i].name))
+                return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * initialize devfs
+ */
 void devfs_init()
 {
     fsdrv_t devdrv = {
         "devfs",
         "Device list",
-        NULL
+        NULL,
+        devfs_locate
     };
     _fs_reg(&devdrv);
 
@@ -110,7 +149,6 @@ void devfs_init()
     devdir[4].drivertask = VFS_DEVICE_MEMFS;
     devdir[4].device = VFS_MEMFS_TMPFS_DEVICE;
     devdir[4].blksize = __PAGESIZE;
-
 }
 
 #if DEBUG

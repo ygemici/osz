@@ -44,7 +44,7 @@ void task_init(int argc, char **argv)
     } else {
         if(_identity) {
             /* start first time turn on's set up task, wait until it returns */
-//            system("/sbin/identity");
+//            system("/sys/bin/identity");
         }
         // load user services
         services_init();

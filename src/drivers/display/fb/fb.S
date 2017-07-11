@@ -173,20 +173,20 @@ showcursor:
     xorq    %r10, %r10
     xorq    %r11, %r11
     movq    cursor_ptr(%rip), %rsi
-    addq    cursor_shape(%rip), %rsi
-    movl    cursor_x(%rip), %r8d
-    movl    cursor_y(%rip), %r9d
-    movw    cursor_w(%rip), %r10w
-    xorq    %r11, %r11
-    incb    %r11b
-    callq   copyarea
-    movq    cursor_ptr(%rip), %rsi
     addq    cursor_shape+8(%rip), %rsi
     movl    cursor_x+4(%rip), %r8d
     movl    cursor_y+4(%rip), %r9d
     movw    cursor_w(%rip), %r10w
     xorq    %r11, %r11
     incb    %r11b
+    incb    %r11b
+    callq   copyarea
+    movq    cursor_ptr(%rip), %rsi
+    addq    cursor_shape(%rip), %rsi
+    movl    cursor_x(%rip), %r8d
+    movl    cursor_y(%rip), %r9d
+    movw    cursor_w(%rip), %r10w
+    xorq    %r11, %r11
     incb    %r11b
     callq   copyarea
     ret

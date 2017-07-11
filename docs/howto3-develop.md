@@ -70,7 +70,7 @@ IRQs can be assigned three ways to tasks:
 
 In driver's `task_init()` function, it may register device files in "devfs" with `mknod()` calls.
 If a device driver requires configuration file, it must use `mapfile()` to load that from initrd as filesystems are not mounted
-when their initialization is called.
+when their initialization called.
 
 Note that you don't have to do any message receive calls, just create public functions for your message types.
 

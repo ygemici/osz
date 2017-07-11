@@ -35,7 +35,7 @@
  *       0-16G user      RAM identity mapped[3] (0x0000000000000000)
  *
  *   [1] see loader/bootboot.h
- *   [2] see etc/sys/config and env.h. Plain ascii key=value pairs,
+ *   [2] see sys/config and env.h. Plain ascii key=value pairs,
  *       separated by newline characters.
  *   [3] when main() calls sys_enable(), user task will be mapped
  *       instead into 0 - 2^56 and shared memory in -2^56 - -64M.
@@ -65,35 +65,35 @@ void main()
 
     // initialize the system, "idle" task and device driver tasks
     sys_init();
-    // initialize "FS" task, special service_init(SRV_FS, "sbin/fs")
+    // initialize "FS" task, special service_init(SRV_FS, "sys/fs")
     fs_init();
 
     /*** step 2: communication ***/
     // initialize "UI" task to handle user input / output
-    // special service_init(SRV_UI, "sbin/ui")
+    // special service_init(SRV_UI, "sys/ui")
     ui_init();
 
     // other means of communication
 /*
     if(syslog) {
         // start "syslog" task so others can log errors
-        service_init(SRV_syslog, "sbin/syslog")
+        service_init(SRV_syslog, "sys/syslog")
     }
     if(networking) {
         // initialize "net" task for ipv4 and ipv6 routing
-        service_init(SRV_net, "sbin/net");
+        service_init(SRV_net, "sys/net");
     }
     if(sound) {
         // initialize "sound" task to handle audio channels
-        service_init(SRV_sound, "sbin/sound");
+        service_init(SRV_sound, "sys/sound");
     }
 */
 
     /*** step 3: stand up and prosper. ***/
 #if DEBUG
-    service_init(SRV_init, debug&DBG_TESTS? "bin/test" : "sbin/init");
+    service_init(SRV_init, debug&DBG_TESTS? "sys/bin/test" : "sys/init");
 #else
-    service_init(SRV_init, "sbin/init");
+    service_init(SRV_init, "sys/init");
 #endif
     // enable system multitasking. That will start by iterating
     // through device driver's initialization routines. Each in different

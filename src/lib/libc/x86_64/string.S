@@ -175,6 +175,7 @@ memcmp:
     jz      1f
     orq     %rsi, %rsi
     jz      1f
+    decb    %al
     movq    %rdx, %rcx
     rep     cmpsb
     jz      1f
@@ -300,6 +301,7 @@ strncpy:
  * int strcmp (char *s1, char *s2);
  */
 strcmp:
+    cld
     xorq    %rax, %rax
     cmpq    %rsi, %rdi
     je      2f
@@ -309,13 +311,16 @@ strcmp:
     orq     %rsi, %rsi
     jz      2f
 1:  lodsb
-    cmpb    %al, (%rdi)
-    jne     2f
+    movb    %al, %ah
+    subb    (%rdi), %al
     incq    %rdi
     or      %al, %al
+    jnz     2f
+    or      %ah, %ah
     jnz     1b
-2:  ret
-
+2:  movsx   %al, %rax
+    ret
+    
 /**
  * Compare N characters of S1 and S2.
  *
@@ -324,30 +329,25 @@ strcmp:
 strncmp:
     cld
     xorq    %rax, %rax
-    orq     %rdx, %rdx
-    jz      3f
     cmpq    %rsi, %rdi
-    je      3f
+    je      2f
     incb    %al
     orq     %rdi, %rdi
-    jz      3f
+    jz      2f
     orq     %rsi, %rsi
-    jz      3f
-    incq    %rdx
-1:  decq    %rdx
-    jz      3f
-    lodsb
+    jz      2f
+1:  lodsb
+    movb    %al, %ah
+    subb    (%rdi), %al
+    incq    %rdi
+    dec     %rdx
+    jz      2f
     or      %al, %al
     jnz     2f
-    cmpb    $0, (%rdi)
-    je      3f
-    incb    %al
-    jmp     3f
-2:  subb    (%rdi), %al
-    incq    %rdi
-    or      %al, %al
-    jz      1b
-3:  ret
+    or      %ah, %ah
+    jnz     1b
+2:  movsx   %al, %rax
+    ret
 
 /**
  * size_t strlen (char *s);

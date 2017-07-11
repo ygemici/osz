@@ -4,8 +4,8 @@ OS/Z Boot Options
 Configuration file
 ------------------
 
-The boot options are kept on the first bootable partition on the first bootable disk under `FS0:\BOOTBOOT\CONFIG` or `/etc/sys/config`. When you're
-creating a disk image, the contents of that file are taken from [etc/sys/config](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config).
+The boot options are kept on the first bootable partition on the first bootable disk under `FS0:\BOOTBOOT\CONFIG` or `/sys/config`. When you're
+creating a disk image, the contents of that file are taken from [etc/sys/config](https://github.com/bztsrc/osz/blob/master/etc/sys/config).
 
 This file is a plain ASCII file with key=value pairs parsed by [core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c). No whitespaces allowed, and each pair is separated by a newline (0x0A) character.
 The file can't be longer than a page (4096 bytes on x86_64). You can put comments in it with '#", '//' and '/*'.
@@ -15,26 +15,27 @@ Keys are ASCII names without spaces, values can be decimal and hexadecimal numbe
 Boot Parameters
 ---------------
 
-| Parameter | Default | Type | Parsed by | Description |
-| --------- | :-----: | ---- | --------- | ----------- |
-| screen     | 800x600    | numxnum | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
-| kernel    | lib/sys/core | string | loader | the name of kernel executable on initrd |
-| debug     | 0      | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
-| nrphymax  | 2      | number | core | the number of pages to store physical RAM fragments (16 bytes each) |
-| nrmqmax   | 1      | number | core | the number of pages for Message Queue (64 bytes each) |
-| nrlogmax  | 8      | number | core | the number of pages for early syslog buffer |
-| quantum   | 100    | number | core | scheduler frequency, a task can allocate CPU continously for 1/(quantum) second. |
-| fps       | 10     | number | ui   | requested frame rate |
-| display   | 0      | number | ui   | selects output mode (see below) |
-| syslog    | true   | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
-| networking | true  | boolean | core | disable networking service |
-| sound     | true   | boolean | core | disable sound service |
-| identity  | false  | boolean | init | force running first time setup to get machine's identity, such as hostname |
-| rescueshell | false | boolean | init | if true, starts `/bin/sh` instead of `/sbin/init` |
-| hpet      | -      | hexdec | core | x86_64 override autodetected HPET address |
-| apic      | -      | hexdec | core | x86_64 override autodetected LAPIC address |
-| ioapic    | -      | hexdec | core | x86_64 override autodetected IOAPIC address |
-| clock     | 0      | number | core | x86_64 override autodetected clock source |
+| Parameter | Default  | Type | Parsed by | Description |
+| --------- | :------: | ---- | --------- | ----------- |
+| screen    | 1024x768 | numxnum | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
+| kernel    | sys/core | string  | loader | the name of kernel executable on initrd |
+| debug     | 0        | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
+| nrphymax  | 2        | number  | core | the number of pages to store physical RAM fragments (16 bytes each) |
+| nrmqmax   | 1        | number  | core | the number of pages for Message Queue (64 bytes each) |
+| nrlogmax  | 8        | number  | core | the number of pages for early syslog buffer |
+| quantum   | 100      | number  | core | scheduler frequency, a task can allocate CPU continously for 1/(quantum) second. |
+| fps       | 10       | number  | ui   | requested frame rate |
+| display   | 0        | number  | ui   | selects output mode (see below) |
+| lefthanded | false   | boolean | ui   | swap pointers |
+| syslog    | true     | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
+| networking | true    | boolean | core | disable networking service |
+| sound     | true     | boolean | core | disable sound service |
+| identity  | false    | boolean | init | force running first time setup to get machine's identity, such as hostname |
+| rescueshell | false  | boolean | init | if true, starts `/bin/sh` instead of user services |
+| hpet      | -        | hexdec  | core | x86_64 override autodetected HPET address |
+| apic      | -        | hexdec  | core | x86_64 override autodetected LAPIC address |
+| ioapic    | -        | hexdec  | core | x86_64 override autodetected IOAPIC address |
+| clock     | 0        | number  | core | x86_64 override autodetected clock source |
 
 The available values for debug parameter and display can be found in [env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
 

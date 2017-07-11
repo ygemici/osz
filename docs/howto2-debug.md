@@ -12,7 +12,7 @@ and recompile.
 Debug messages
 --------------
 
-If you want to see debug messages during boot, you can use the `debug` boot option in [environment](https://github.com/bztsrc/osz/blob/master/etc/etc/sys/config). For available flags see [boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
+If you want to see debug messages during boot, you can use the `debug` boot option in [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config). For available flags see [boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 It is not really necessary as with `DEBUG = 1` the syslog is also sent to the serial line, and it has all the necessary information.
 
 Debugging with GDB

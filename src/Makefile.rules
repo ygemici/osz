@@ -5,7 +5,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
 CFLAGS += -g -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -L../../bin/initrd/lib
+LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -L../../bin/initrd/sys/lib
 ifeq ($(LINKER),sharedlib)
 LDFLAGS += -shared -Bsymbolic -Bshareable
 endif
@@ -23,8 +23,8 @@ $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
 	$(O)$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 ifeq ($(LINKER),sharedlib)
-ifneq ($(TARGET),sbin/sys)
-ifneq ($(TARGET),lib/sys/drv)
+ifneq ($(TARGET),sys/bin/sys)
+ifneq ($(TARGET),sys/drv)
 	@../../tools/elftool.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h
 endif
 endif

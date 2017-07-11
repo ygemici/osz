@@ -9,7 +9,8 @@ are at second level. Note that this does not broke File
 Hieracrchy Standard, and makes easy to keep track of files for
 the package manager. It's pretty much like Applications under MacOSX.
 
-For POSIX compatibility, FS/Z uses directory unions, like /usr/share -> /usr/*/share.
+For POSIX compatibility, FS/Z uses directory unions, like /usr/share -> /usr/*/share
+or /etc -> /sys/etc + /usr/*/etc.
 
 Examples:
 ---------

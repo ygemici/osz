@@ -1,5 +1,5 @@
 /*
- * drivers/fs/fsz/main.c
+ * drivers/fs/vfat/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,31 +22,35 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief FS/Z filesystem driver
+ * @brief Virtual File Allocation Table driver
  */
 
 #include <osZ.h>
 #include <vfs.h>
-#include <fsZ.h>
-#include <crc32.h>
 
 bool_t detect(void *blk)
 {
     return
-     !memcmp(((FSZ_SuperBlock *)blk)->magic, FSZ_MAGIC,4) &&
-     !memcmp(((FSZ_SuperBlock *)blk)->magic2,FSZ_MAGIC,4) &&
-     ((FSZ_SuperBlock *)blk)->checksum ==
-        crc32_calc((char*)&((FSZ_SuperBlock *)blk)->magic,
-            (uint64_t)&((FSZ_SuperBlock *)blk)->checksum -
-            (uint64_t)&((FSZ_SuperBlock *)blk)->magic);
+     ((uint8_t*)blk)[510]==0x55 && ((uint8_t*)blk)[511]==0xAA &&
+     /* FAT12 / FAT16 */
+     (!memcmp(blk+54, "FAT1", 4)||
+     /* FAT32 */
+      !memcmp(blk+84, "FAT3", 4));
+}
+
+ino_t locate(mount_t *mnt, char *path, uint64_t type)
+{
+dbg_printf("FAT locate '%s'\n",path);
+    return -1;
 }
 
 void _init()
 {
     fsdrv_t drv = {
-        "fsz",
-        "FS/Z",
-        detect
+        "vfat",
+        "FAT12/16/32",
+        detect,
+        locate
     };
     //uint16_t id = 
     _fs_reg(&drv);

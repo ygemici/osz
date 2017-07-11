@@ -34,7 +34,7 @@ User Tasks
 Normal userspace tasks do not have any MMIO, only physical RAM can be mapped in their bss segment.
 If two mappings are identical save the TCB and message queue, their tasks belong to the same process.
 
-The maximum number of pending events in a queue is a boot time parameter and can be set in [environment](https://github.com/bztsrc/osz/tree/master/etc/etc/sys/config) with "nrmqmax". It's given
+The maximum number of pending events in a queue is a boot time parameter and can be set in [environment](https://github.com/bztsrc/osz/tree/master/etc/sys/config) with "nrmqmax". It's given
 in pages, so multiply by page size and devide by sizeof(msg_t). Defaults to 1 page, meaning 4096/64 = up to 64 pending events.
 
 Please note that 2^56 (128T) is an architectural limit of x86_64.

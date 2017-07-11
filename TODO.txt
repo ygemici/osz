@@ -1,9 +1,11 @@
  --- Error fixes ---
 ./src/core/syscall.c:186:            /* FIXME: naive implementation, no checks */
  --- Features ---
-./docs/howto3-rescueshell.md:19:TODO: write howto
+./docs/howto4-rescueshell.md:20:TODO: write howto
 ./etc/include/sys/core.h:103:/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
+./src/fs/vfs.c:72:    /* TODO: canonize path */
+./src/fs/cache.c:75:        /* TODO: send an async message to the driver */
 ./src/core/x86_64/pci.c:64:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/disasm.c:1215:            //TODO: esc
 ./src/core/msg.c:115:    /* TODO: use mq_buffstart properly as a circular buffer */

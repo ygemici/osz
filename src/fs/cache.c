@@ -25,7 +25,9 @@
  * @brief Cache implementation
  */
 #include <osZ.h>
+#include "vfs.h"
 #include "cache.h"
+#include "devfs.h"
 
 /* directory cache */
 uint64_t ncachedir = 0;
@@ -50,6 +52,32 @@ void cache_dir(char *name,fid_t fid)
 void cache_init()
 {
 }
+
+void *cache_getblock(dev_t dev,blkcnt_t blk)
+{
+    void *ptr;
+    if(dev>=ndevdir)
+        return NULL;
+    /* built-in device? */
+    if(devdir[dev].drivertask==VFS_DEVICE_MEMFS) {
+        if(blk>=devdir[dev].size)
+            return NULL;
+        switch(devdir[dev].device) {
+            case VFS_MEMFS_ZERO_DEVICE:
+                ptr=(void*)malloc(devdir[dev].blksize);
+                return ptr;
+            break;
+            case VFS_MEMFS_RAMDISK_DEVICE:
+                return (void*)(devdir[dev].startsec+devdir[dev].blksize*blk);
+            break;
+        }
+    } else {
+        /* TODO: send an async message to the driver */
+        //if blk==0 send sync message
+    }
+    return NULL;
+}
+
 
 #if DEBUG
 void cache_dump()

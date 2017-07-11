@@ -37,7 +37,7 @@ Package Install
 
 ### Refresh package list
 
-The available sources are stored in `etc/sys/packages`. To refresh list, issue
+The available sources are stored in `/sys/packages`. To refresh list, issue
 
 ```sh
 sys update

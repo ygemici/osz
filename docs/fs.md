@@ -13,6 +13,13 @@ That would ease the loading of sectors to memory.
 
 For detailed bit level specification and on disk format see [fsZ.h](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h).
 
+Implementations
+---------------
+The filesystem driver is implemented 3 times:
+ 1. in the [bootloader](https://github.com/bztsrc/osz/blob/master/loader), which supports GPT and FAT to locate initrd, and FS/Z, cpio, tar to locate kernel inside the initrd. This is a read-only implementation, that requires defragmented files.
+ 2. in the [core](https://github.com/bztsrc/osz/blob/master/src/core/fs.c), which is used at early boot stage to load various files (like elf image for fs service). Supports FS/Z, cpio and tar. This is also a read-only implementation for defragmented files.
+ 3. as a [filesystem driver](https://github.com/bztsrc/osz/blob/master/src/drivers/fs/fsz) for fs service, which is a fully featured implementation.
+ 
 Fully Qualified File Path
 -------------------------
 
@@ -22,8 +29,9 @@ A fully qualified path looks like:
  (drive):(directory)/(filename);(version)#(offset)
 ```
 
-Drive specifies the media where the filesystem is stored. If not given, `root:` will be substituted, which points to the
-initrd located in memory. Drives will be translated to `/dev/(drive)/`.
+Drive specifies the media where the filesystem is stored. It's optional, and fallbacks to the root filesystem.
+Drives will be translated to `/dev/(drive)/` where automount will take care of the rest. It is useful for removable media,
+like `dvd0:`.
 
 Directory part is a list of directories, separated by '/'.
 

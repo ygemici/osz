@@ -7,9 +7,9 @@ OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
 	      "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_start)
-SEARCH_DIR("../bin/initrd/lib");
-SEARCH_DIR("../../bin/initrd/lib");
-SEARCH_DIR("../../../bin/initrd/lib");
+SEARCH_DIR("../bin/initrd/sys/lib");
+SEARCH_DIR("../../bin/initrd/sys/lib");
+SEARCH_DIR("../../../bin/initrd/sys/lib");
 STARTUP("crt0.o");
 
 PHDRS

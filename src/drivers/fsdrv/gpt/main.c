@@ -33,12 +33,19 @@ bool_t detect(void *blk)
     return !memcmp(blk+512, "EFI PART", 8);
 }
 
+ino_t locate(mount_t *mnt, char *path, uint64_t type)
+{
+dbg_printf("GPT locate '%s'\n",path);
+    return -1;
+}
+
 void _init()
 {
     fsdrv_t drv = {
         "gpt",
         "GUID Partition Table",
-        detect
+        detect,
+        locate
     };
     //uint16_t id = 
     _fs_reg(&drv);

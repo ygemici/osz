@@ -28,4 +28,7 @@
 
 void string_test()
 {
+    dbg_printf("'a'=='ab' %x\n",strcmp("a","ab"));
+    dbg_printf("'ab'=='a' %x\n",strcmp("ab","a"));
+    dbg_printf("'ab'=='ab' %x\n",strcmp("ab","ab"));
 }
