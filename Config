@@ -7,3 +7,5 @@ ESPSIZE = 1024
 USRSIZE = 768
 VARSIZE = 4
 HOMESIZE = 4
+
+#CC=/usr/local/bin/tcc
