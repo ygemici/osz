@@ -25,6 +25,7 @@
  * @brief Early ELF64 loader and parser, used by service.c. Relies on identity mapping.
  */
 
+#include <platform.h>
 #include <elf.h>
 #include "env.h"
 

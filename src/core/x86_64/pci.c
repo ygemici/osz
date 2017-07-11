@@ -25,6 +25,8 @@
  * @brief PCI functions and enumeration
  */
 
+#include "platform.h"
+
 extern char *drvs;
 extern char *drvs_end;
 extern char fn[];

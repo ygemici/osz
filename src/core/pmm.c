@@ -25,7 +25,7 @@
  * @brief Physical Memory Manager architecture specific part
  */
 
-#include "env.h"
+#include <platform.h>
 
 /* get addresses from linker script */
 extern uint8_t pmm_entries;

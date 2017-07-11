@@ -24,6 +24,7 @@
  *
  * @brief Interrupt Controller independent, common assembly routines
  */
+#include "platform.h"
 #include <errno.h>
 #include <syscall.h>
 #include <limits.h>

@@ -25,6 +25,7 @@
  * @brief Pre FS service elf loader to load system services
  */
 
+#include <platform.h>
 #include <elf.h>
 #include <fsZ.h>
 

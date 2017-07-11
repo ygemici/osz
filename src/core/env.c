@@ -25,6 +25,8 @@
  * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG or /sys/config)
  */
 
+#include <platform.h>
+
 /*** parsed values ***/
 dataseg uint64_t nrphymax;
 dataseg uint64_t nrmqmax;

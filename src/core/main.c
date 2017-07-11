@@ -41,7 +41,7 @@
  *       instead into 0 - 2^56 and shared memory in -2^56 - -64M.
  */
 
-#include "env.h"
+#include <platform.h>
 
 dataseg char osver[] =
     OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"

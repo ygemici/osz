@@ -25,6 +25,8 @@
  * @brief HPET clock source
  */
 
+#include "platform.h"
+
 extern uint64_t tmrfreq;
 extern uint8_t tmrirq;
 

@@ -26,6 +26,7 @@
  */
 
 #define _AS 1
+#include "platform.h"
 #include <osZ.h>
 
 .global rtc_init

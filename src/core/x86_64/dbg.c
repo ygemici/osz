@@ -27,6 +27,7 @@
 
 #if DEBUG
 
+#include "platform.h"
 #include <sys/init.h>
 #include <sys/video.h>
 #include "../font.h"

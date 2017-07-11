@@ -25,6 +25,7 @@
  * @brief Kernel entry point
  */
 
+#include "platform.h"
 #include "isr.h"
 
 .section .text

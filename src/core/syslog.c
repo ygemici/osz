@@ -25,7 +25,7 @@
  * @brief Early syslog implementation. Shares buffer with "syslog" task
  */
 
-#include "env.h"
+#include <platform.h>
 
 /* re-entrant counter */
 extern char reent;

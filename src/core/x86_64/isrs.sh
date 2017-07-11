@@ -110,6 +110,7 @@ cat >isrs.S <<EOF
  *
  * @brief Interrupt Controller specific Interrupt Service Routines
  */
+#include "platform.h"
 #include <errno.h>
 #include <syscall.h>
 #include <limits.h>

@@ -25,6 +25,7 @@
  * @brief System routines
  */
 
+#include "platform.h"
 #include "../../../loader/bootboot.h"
 #include "../env.h"
 #include "acpi.h"

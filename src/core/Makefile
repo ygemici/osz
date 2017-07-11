@@ -6,10 +6,10 @@ BINTARGET = ../../bin/initrd/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS =
-LDFLAGS = -nostdlib -nodefaultlibs -nostartfiles
+LDFLAGS = -nostdlib
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DOSZ_BUILD='$(BUILD)' -DOSZ_ARCH='"$(ARCH)"' \
- -fpic -nostdinc -I../../etc/include -I. -I./$(ARCH) -include ./$(ARCH)/platform.h \
+ -fpic -nostdinc -I. -I./$(ARCH) -I../../etc/include \
  -Wall -ffreestanding -fno-builtin -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 ifeq ($(DEBUG),1)
 CFLAGS +=

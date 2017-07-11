@@ -25,9 +25,7 @@
  * @brief Message sender routines
  */
 
-#include <errno.h>
-#include <syscall.h>
-#include "env.h"
+#include <platform.h>
 
 // failsafe
 #ifndef SYS_mountfs

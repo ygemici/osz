@@ -25,6 +25,9 @@
  * @brief low level kernel routines for the core
  */
 
+#define _AS 1
+#include "platform.h"
+
 .section .text
 .global idle
 .global kpanic

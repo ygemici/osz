@@ -25,6 +25,7 @@
  * @brief Architecture specific environment parser
  */
 
+#include "platform.h"
 #include "isr.h"
 
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);

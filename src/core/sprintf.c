@@ -25,7 +25,7 @@
  * @brief String functions for core
  */
 
-#include "env.h"
+#include <platform.h>
 
 /* re-entrant counter */
 extern char reent;

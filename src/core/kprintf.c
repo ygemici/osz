@@ -25,8 +25,8 @@
  * @brief Ring 0 printf implementation for core, early console
  */
 
+#include <platform.h>
 #include "font.h"
-#include "env.h"
 
 /* re-entrant counter */
 dataseg char reent;

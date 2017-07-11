@@ -25,7 +25,7 @@
  * @brief Task scheduler
  */
 
-#include "env.h"
+#include <platform.h>
 
 extern ccb_t ccb;             //CPU Control Block (platform specific)
 extern uint64_t isr_next;       //next task to map when isr finishes

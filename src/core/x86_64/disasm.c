@@ -26,6 +26,7 @@
  */
 
 #if DEBUG
+#include "platform.h"
 
 /* this function is used to print to a string */
 extern char *sprintf(char *dst,char* fmt, ...);

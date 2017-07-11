@@ -25,7 +25,7 @@
  * @brief Platform independent syscall dispatcher. Called by isr_syscall0
  */
 
-
+#include <platform.h>
 #include <fsZ.h>
 #include <sysexits.h>
 #include <sys/video.h>

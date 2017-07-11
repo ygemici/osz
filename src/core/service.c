@@ -25,8 +25,8 @@
  * @brief System service loader and ELF parser
  */
 
+#include <platform.h>
 #include <elf.h>
-#include "env.h"
 
 /* external resources */
 extern phy_t screen[2];

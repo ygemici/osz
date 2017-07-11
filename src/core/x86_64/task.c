@@ -25,6 +25,8 @@
  * @brief Task functions, platform dependent code
  */
 
+#include "platform.h"
+
 extern uint64_t *syslog_buf;
 
 dataseg phy_t idle_mapping;
