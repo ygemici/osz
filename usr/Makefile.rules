@@ -5,7 +5,7 @@ OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
 CFLAGS += -g -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -L../../bin/initrd/sys/lib -L../../bin/usr/core/lib
+LDFLAGS += -nostdlib -L../../bin/initrd/sys/lib -L../../bin/usr/core/lib
 ifeq ($(LINKER),sharedlib)
 LDFLAGS += -shared -Bsymbolic -Bshareable
 endif

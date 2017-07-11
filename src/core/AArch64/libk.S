@@ -37,11 +37,6 @@
 .global kstrlen
 .global kstrcmp
 .global ksend
-.extern kmap_tmp
-.extern tmpmap
-.extern tmpctrl
-.extern tmppte
-.extern tmppde
 
 /* kernel panic */
 kpanic:

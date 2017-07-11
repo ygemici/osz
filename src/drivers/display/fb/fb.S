@@ -58,10 +58,6 @@
 .global _cursor_h
 .global _cursor_ptr
 
-.extern loadcursor
-.extern _binary_shapes_start
-.extern _binary_shapes_end
-
 .section .text
 
 task_init:

@@ -127,18 +127,6 @@ cat >isrs.S <<EOF
 .global isr_irqtmrcal_rtc
 .global isr_enableirq
 .global isr_disableirq
-.extern isr_maxirq
-.extern isr_savecontext
-.extern isr_loadcontext
-.extern isr_syscall0
-.extern isr_alarm
-.extern isr_timer
-.extern isr_routeirq
-.extern kentropy
-.extern gdt64_tss
-.extern excabort
-.extern pmm
-.extern sys_fault
 
 .section .data
     .align	16

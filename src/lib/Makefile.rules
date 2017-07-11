@@ -9,7 +9,7 @@ LIBS += -lc
 export O
 
 CFLAGS += -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_LIBRARY=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH)
-LDFLAGS += -nostdlib -nodefaultlibs -nostartfiles -shared -L../../../../bin/initrd/sys/lib
+LDFLAGS += -nostdlib -shared -L../../../../bin/initrd/sys/lib
 
 all: $(OBJS) $(BINTARGET)
 

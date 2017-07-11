@@ -31,7 +31,6 @@
 .section .text
 .global _start
 .global gdt64_tss
-.extern main
 
 /**********************************************************************
  *                     OS/Z Loader entry point                        *

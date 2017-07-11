@@ -30,8 +30,6 @@
 #include <osZ.h>
 
 .global pit_init
-.extern tmrfreq
-.extern tmrirq
 
 /**
  * Programmable Interrupt Timer. Called by isr_init()

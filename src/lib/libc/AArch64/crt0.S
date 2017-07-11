@@ -29,7 +29,6 @@
 
 .include "sys/core.h"
 
-.extern main
 .global _start
 .global exit
 .global atexit

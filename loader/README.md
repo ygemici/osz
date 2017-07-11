@@ -198,7 +198,7 @@ Compile and link it with:
 
 ```shell
 gcc -Wall -fpic -ffreestanding -m64 -mno-red-zone -c kernel.c -o kernel.o
-gcc -nostdlib -nodefaultlibs -nostartfiles -Xlinker --nmagic -T link.ld -o kernel
+gcc -nostdlib -Xlinker --nmagic -T link.ld -o kernel
 strip -s -K fb -K bootboot -K environment kernel
 ```
 

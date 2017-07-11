@@ -11,4 +11,4 @@
 ./src/core/msg.c:113:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
-./src/lib/libc/x86_64/crt0.S:45:    /* TODO: call ctors */
+./src/lib/libc/x86_64/crt0.S:43:    /* TODO: call ctors */

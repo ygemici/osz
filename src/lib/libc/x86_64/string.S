@@ -49,8 +49,6 @@
 .global strcasecmp
 .global strncasecmp
 
-.extern translatelower
-
 .section .text
 
 /**

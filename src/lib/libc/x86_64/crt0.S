@@ -30,8 +30,6 @@
  *  preserve RBP, RBX
  */
 
-.extern main
-.extern exit
 .global _start
 
 .section .crt0

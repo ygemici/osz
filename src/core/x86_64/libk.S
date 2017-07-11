@@ -44,16 +44,6 @@
 .global ksend
 .global kwaitkey
 .global kentropy
-.extern kmap_tmp
-.extern tmpctrl
-.extern tmpmqctrl
-.extern tmppte
-.extern mq_mapping
-.extern ccb
-.extern kpanicprefix
-.extern kpanicsuffix
-.extern kpanicsuffix2
-.extern sys_fault
 
 /* idle task's code */
 idle:

@@ -31,7 +31,6 @@
 
 .global _init
 .global task_init
-.extern mouse_init
 
 .section .text
 
