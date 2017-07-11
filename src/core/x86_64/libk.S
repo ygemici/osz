@@ -173,7 +173,7 @@ kpanic:
     cmpb    $0x38, %al
     je      1b
     /* reboot computer */
-2:  callq   sys_reset
+2:  call    sys_reset
     hlt
 
 /* misc memory functions */
@@ -390,7 +390,7 @@ kmap_init:
 kmap_mq:
     movq    %rdi, %rdx
     movq    $MQ_ADDRESS, %rdi
-    callq   kmap_getpte2
+    call    kmap_getpte2
     movb    $PG_CORE_NOCACHE, %r12b
     movq    $tmpmqctrl, %rax
     addq    $__PAGESIZE-16, %rax

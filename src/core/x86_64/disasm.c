@@ -1080,9 +1080,9 @@ virt_t disasm(virt_t addr, char *str)
 
     sys_fault = false;
 getprefix:
-    __asm__ __volatile__ ("pushq %%rax;pushq %%rdi":::"%rax","%rdi");
+    __asm__ __volatile__ ("pushq %rax;pushq %rdi");
     opcode = *((uint8_t*)addr);
-    __asm__ __volatile__ ("popq %%rdi;popq %%rax":::"%rax","%rdi");
+    __asm__ __volatile__ ("popq %rdi;popq %rax");
     if(sys_fault)
         goto end;
     addr++;

@@ -99,13 +99,13 @@ mymq_send:
 mq_call:
 mymq_call:
     /* send request */
-1:  callq   mymq_send
+1:  call    mymq_send
     cmpb    $EAGAIN, tcb_errno
     jne     1f
-    callq   myyield
+    call    myyield
     jmp     1b
 1:  /* receive result */
-    callq   mymq_recv
+    call    mymq_recv
     ret
 
 /**
@@ -157,7 +157,7 @@ mq_ismsg:
 mq_dispatchcall:
     /* rax=*symtable[MSG_FUNC(msg->evt)](msg->arg0, msg->arg1, msg->arg2, msg->arg3, msg->arg4, msg->arg5) */
     movq    8(%rsp), %rax
-    callq   *%rax
+    call    *%rax
     ret
 
 /**
@@ -169,7 +169,7 @@ lockacquire:
 1:  lock
     btsq    %rdi, (%rsi)
     jnc     1f
-    callq   myyield
+    call    myyield
     jmp     1b
 1:  ret
 
@@ -326,7 +326,7 @@ meminfo:
     xorq    %rax, %rax
     movb    $SYS_meminfo, %al
     syscall
-    callq   mymq_recv
+    call    mymq_recv
     movq    16(%rax), %rdx
     movq    8(%rax), %rax
     ret

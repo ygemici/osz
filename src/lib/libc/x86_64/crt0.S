@@ -35,7 +35,7 @@
 .section .crt0
 
     /* initial RIP on task execution, first byte of text segment */
-    retq
+    ret
 
 .section .text
 

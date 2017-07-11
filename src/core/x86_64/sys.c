@@ -74,7 +74,7 @@ void sys_reset()
 #endif
     kprintf(rebootprefix);
     // reboot computer
-    __asm__ __volatile__ ("movb $0xFE, %%al; outb %%al, $0x64" : : : );
+    __asm__ __volatile__ ("movb $0xFE, %al; outb %al, $0x64");
     // if it didn't work, show a message and freeze. Should never happen.
     fg = 0x29283f;
     kprintf_center(20, -8);
@@ -83,7 +83,7 @@ void sys_reset()
     dbg_putchar(13);
     dbg_putchar(10);
 #endif
-    __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
+    __asm__ __volatile__ ("1: cli; hlt; jmp 1b");
 }
 
 /**
@@ -103,7 +103,7 @@ void sys_disable()
     // Bochs poweroff hack
     char *s = "Shutdown";
     while (*s) {
-        __asm__ __volatile__ ("movw $0x8900, %%dx; outb %0, %%dx" : : "a"(*s) : );
+        __asm__ __volatile__ ("movw $0x8900, %%dx; outb %0, %%dx" : : "a"(*s));
         s++;
     }
     // if it didn't work, show a message and freeze.
@@ -114,7 +114,7 @@ void sys_disable()
     dbg_putchar(13);
     dbg_putchar(10);
 #endif
-    __asm__ __volatile__ ( "1: cli; hlt; jmp 1b" : : : );
+    __asm__ __volatile__ ("1: cli; hlt; jmp 1b");
 }
 
 /**
@@ -146,8 +146,7 @@ __inline__ void sys_enable()
         // "return" to the task
         "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
         :
-        "a"(fstcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS) :
-        "%rsp" );
+        "a"(fstcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS));
 }
 
 /**

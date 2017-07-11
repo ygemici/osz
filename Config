@@ -8,4 +8,4 @@ USRSIZE = 768
 VARSIZE = 4
 HOMESIZE = 4
 
-#CC=/usr/local/bin/tcc
+#CC=/usr/local/bin/x86_64-tcc

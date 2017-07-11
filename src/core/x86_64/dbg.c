@@ -141,7 +141,7 @@ void dbg_putchar(int c)
         "dec %%ecx;jz 2f;"
         "andb $0x40,%%al;jz 1b;"
         "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx;2:"
-    ::"r"(c):"%rax","%rbx","%rdx");
+    ::"r"(c));
 }
 
 void dbg_pagingflags(uint64_t p)
@@ -194,25 +194,25 @@ void dbg_setbrk(virt_t addr, uint8_t mode, uint8_t len)
             __asm__ __volatile__ (
                 "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr0;"
                 "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11))):"%rax","%rdx");
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11))));
             break;
         case 1:
             __asm__ __volatile__ (
                 "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr1;"
                 "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b1100))):"%rax","%rdx");
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b1100))));
             break;
         case 2:
             __asm__ __volatile__ (
                 "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr2;"
                 "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b110000))):"%rax","%rdx");
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b110000))));
             break;
         case 3:
             __asm__ __volatile__ (
                 "movq %0, %%rax;movq %1, %%rdx;movq %%rax, %%dr3;"
                 "movq %%dr7, %%rax;andq %%rdx,%%rax;movq %%rax, %%dr7"
-            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11000000))):"%rax","%rdx");
+            ::"r"(addr),"r"((uint64_t)(((len&3)<<18)|((mode&3)<<16)|(addr==0?0:0b11000000))));
         default: break;
     }
     dbg_numbrk++;
@@ -734,7 +734,11 @@ void dbg_data(uint64_t ptr)
         else
             kprintf("%8x: ",ptr);
         sys_fault = false;
+#if __TINYC__
+        __asm__ __volatile__ ("movq %0, %%rdi;movb (%%rdi), %%al"::"m"(ptr));
+#else
         __asm__ __volatile__ ("movq %0, %%rdi;movb (%%rdi), %%al"::"m"(ptr):"%rax","%rdi");
+#endif
         if(sys_fault) {
             fg = dbg_theme[2];
             if(dbg_tui)
@@ -1444,16 +1448,16 @@ void dbg_init()
 
     /* initialize uart as an alternative "keyboard" */
     __asm__ __volatile__ (
-        "movw $0x3f9, %%dx;"
-        "xorb %%al, %%al;outb %%al, %%dx;"               //IER int off
-        "movb $0x80, %%al;addb $2,%%dl;outb %%al, %%dx;" //LCR set divisor mode
-        "movb $1, %%al;subb $3,%%dl;outb %%al, %%dx;"    //DLL divisor lo 115200
-        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //DLH divisor hi
-        "xorb %%al, %%al;incb %%dl;outb %%al, %%dx;"     //FCR fifo off
-        "movb $0x43, %%al;incb %%dl;outb %%al, %%dx;"    //LCR 8N1, break on
-        "movb $0x8, %%al;incb %%dl;outb %%al, %%dx;"     //MCR Aux out 2
-        "xorb %%al, %%al;subb $4,%%dl;inb %%dx, %%al"   //clear receiver/transmitter
-    :::"%rax","%rdx");
+        "movw $0x3f9, %dx;"
+        "xorb %al, %al;outb %al, %dx;"                   //IER int off
+        "movb $0x80, %al;addb $2,%dl;outb %al, %dx;"     //LCR set divisor mode
+        "movb $1, %al;subb $3,%dl;outb %al, %dx;"        //DLL divisor lo 115200
+        "xorb %al, %al;incb %dl;outb %al, %dx;"          //DLH divisor hi
+        "xorb %al, %al;incb %dl;outb %al, %dx;"          //FCR fifo off
+        "movb $0x43, %al;incb %dl;outb %al, %dx;"        //LCR 8N1, break on
+        "movb $0x8, %al;incb %dl;outb %al, %dx;"         //MCR Aux out 2
+        "xorb %al, %al;subb $4,%dl;inb %dx, %al"         //clear receiver/transmitter
+    );
 }
 
 /**
@@ -1473,10 +1477,10 @@ void dbg_enable(virt_t rip, virt_t rsp, char *reason)
     // turn of scroll
     scry = -1;
     // set up variables and stack
-    __asm__ __volatile__ ( "movq %%cr2, %%rax; movq %%rax, %0" : "=r"(cr2) : : "%rax");
-    __asm__ __volatile__ ( "movq %%cr3, %%rax; movq %%rax, %0" : "=r"(cr3) : : "%rax");
-    __asm__ __volatile__ ( "movq %%dr6, %%rax; movq %%rax, %0;": "=r"(dr6) : : "%rax");
-    __asm__ __volatile__ ( "xorq %%rax, %%rax; movq %%rax,%%dr6": : : "%rax");
+    __asm__ __volatile__ ( "movq %%cr2, %%rax; movq %%rax, %0" : "=r"(cr2));
+    __asm__ __volatile__ ( "movq %%cr3, %%rax; movq %%rax, %0" : "=r"(cr3));
+    __asm__ __volatile__ ( "movq %%dr6, %%rax; movq %%rax, %0;": "=r"(dr6));
+    __asm__ __volatile__ ( "xorq %rax, %rax; movq %rax,%dr6");
     oldist1 = ccb.ist1;
     ccb.ist1 = (uint64_t)safestack + (uint64_t)__PAGESIZE-2048;
 
@@ -1590,7 +1594,7 @@ redraw:
         fx=kx=2; ky=3; fg = dbg_theme[3];
         if(dbg_tui)
             dbg_setpos();
-        __asm__ __volatile__ ("pushq %%rdi":::"%rdi");
+        __asm__ __volatile__ ("pushq %rdi");
         if(dbg_tab==tab_code) dbg_code(rip, tcb->rsp, &dbg_bt); else
         if(dbg_tab==tab_data) dbg_data(rsp); else
         if(dbg_tab==tab_tcb) dbg_tcb(); else
@@ -1598,7 +1602,7 @@ redraw:
         if(dbg_tab==tab_queues) dbg_queues(); else
         if(dbg_tab==tab_ram) dbg_ram(); else
         if(dbg_tab==tab_sysinfo) dbg_sysinfo();
-        __asm__ __volatile__ ("popq %%rdi":::"%rdi");
+        __asm__ __volatile__ ("popq %rdi");
 getcmd:
         offs = (maxy-1)*font->height*bootboot.fb_scanline;
         // debugger command line
@@ -2283,14 +2287,14 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
                         fx = kx = (maxx-25)/2; ky = (maxy-6)/2; fg=dbg_theme[5]; bg=dbg_theme[2];
                         if(dbg_tui)
                             dbg_setpos();
-                        __asm__ __volatile__ ("movq %%dr0, %0":"=r"(y)::);
+                        __asm__ __volatile__ ("movq %%dr0, %0":"=r"(y));
                         kprintf("                          \n");
                         kprintf("  %cBRK0 %8x  \n",dbg_numbrk%4==0?'>':' ',y);
-                        __asm__ __volatile__ ("movq %%dr1, %0":"=r"(y)::);
+                        __asm__ __volatile__ ("movq %%dr1, %0":"=r"(y));
                         kprintf("  %cBRK1 %8x  \n",dbg_numbrk%4==1?'>':' ',y);
-                        __asm__ __volatile__ ("movq %%dr2, %0":"=r"(y)::);
+                        __asm__ __volatile__ ("movq %%dr2, %0":"=r"(y));
                         kprintf("  %cBRK2 %8x  \n",dbg_numbrk%4==2?'>':' ',y);
-                        __asm__ __volatile__ ("movq %%dr3, %0":"=r"(y)::);
+                        __asm__ __volatile__ ("movq %%dr3, %0":"=r"(y));
                         kprintf("  %cBRK3 %8x  \n",dbg_numbrk%4==3?'>':' ',y);
                         kprintf("                          \n");
                         cmdidx = cmdlast = 0;
@@ -2356,7 +2360,7 @@ getgoto:                while(x<cmdlast && cmd[x]==' ') x++;
         }
     }
     breakpoint;
-    __asm__ __volatile__ ("movb $0xFE, %%al;outb %%al, $0x64;cli;hlt":::);
+    __asm__ __volatile__ ("movb $0xFE, %al;outb %al, $0x64;cli;hlt");
 }
 
 #endif

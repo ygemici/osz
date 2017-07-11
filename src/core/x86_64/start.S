@@ -73,7 +73,7 @@ _start:
     xorq    %rsp, %rsp
     xorq    %rbp, %rbp
     /* initialize console so that we can report errors and stats */
-    callq   kprintf_init
+    call    kprintf_init
     /* clear task rip to avoid symbol lookup in case of panic */
     xorq    %rax, %rax
     movq    %rax, __PAGESIZE-40
@@ -88,7 +88,7 @@ _start:
     xorq    %rax, 16(%rdi)
     addq    %rax, 24(%rdi)
     pushq   %rcx
-    callq   kentropy
+    call    kentropy
     popq    %rcx
     dec     %cx
     jnz     1b
@@ -183,7 +183,8 @@ nocpu:
 .asciz "CPU feature %a not supported"
     .align  16
 gdt64:
-    .word   1f-gdt64_start
+#    .word   1f-gdt64_start
+    .word   0x38
     .quad   gdt64_start
     .align  64
 gdt64_start:
