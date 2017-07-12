@@ -1,7 +1,7 @@
 /*
- * init/services.c
+ * init.h
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -22,16 +22,21 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Routines for user services
+ * @brief OS/Z user daemon services in init
  */
-#include <osZ.h>
 
-public void start(char *service){}
-public void stop(char *service){}
-public void restart(char *service){}
-public srvstat_t status(char *service){srvstat_t ret={};return ret;}
+#ifndef _INIT_H
+#define _INIT_H 1
 
-void services_init()
-{
-    // TODO: load and start user services
-}
+#ifndef _AS
+typedef struct {
+    uint8_t status;
+} srvstat_t;
+
+extern void start(char *service);
+extern void stop(char *service);
+extern void restart(char *service);
+extern srvstat_t status(char *service);
+#endif
+
+#endif /* sound.h */

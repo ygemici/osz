@@ -39,7 +39,7 @@
 
 /** structure of mtab */
 typedef struct {
-    dev_t fs_spec;      //index to devdir, block special device
+    dev_t fs_spec;      //index to devdir, block special device (if fs_mnt==dev)
     char *fs_file;      //path where it's mounted on
     uint16_t fs_type;   //index to fsdrvs, autodetected
     uint16_t fs_flags;  //mount options

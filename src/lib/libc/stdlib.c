@@ -37,6 +37,7 @@ typedef void (*atexit_t)(void);
 
 public int atexit_num = 0;
 public atexit_t *atexit_hooks = NULL;
+public uint32_t _pathmax=0;         // maximum length of path
 
 /* NOTE: that memory allocation functions are macros, see stdlib.h */
 
@@ -152,4 +153,19 @@ void exit(int status)
     _exit(status);
     /* make gcc happy */
     while(1);
+}
+
+/**
+ *  Return the canonical absolute name of file NAME.  If RESOLVED is
+ *  null, the result is malloc'd; otherwise, if the canonical name is
+ *  PATH_MAX chars or more, returns null with `errno' set to
+ *  ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
+ *  returns the name in RESOLVED.
+ */
+char *realpath (char *name, char *resolved)
+{
+    if(resolved!=NULL) {
+        strcpy(resolved,name);
+    }
+    return resolved;
 }

@@ -38,6 +38,7 @@ void task_init(int argc, char **argv)
 
     if(_rescueshell) {
         /* create a TTY window for rescue shell */
+//        ui_createwindow();
         /* replace ourself with shell */
 //        exec("/bin/sh");
         // never return here.

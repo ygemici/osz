@@ -1,11 +1,21 @@
+# OS/Z - an operating system for hackers
+# Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa
+
+# --- common configuration ---
 ARCH = x86_64
 DEBUG = 1
 OPTIMIZE = 0
 
-# EFI doesn't like smaller ESP partitions
+# --- disk layout ---
+#setting this to 1 will create a partition for root fs instead of initrd file
+NOINITRD = 0
+#with initrd file, the format: fsz, crc, newc, hpodc, tar
+INITRDFMT = fsz
+#EFI doesn't like smaller ESP partitions
 ESPSIZE = 1024
 USRSIZE = 768
 VARSIZE = 4
 HOMESIZE = 4
 
-#CC=/usr/local/bin/x86_64-tcc
+# --- build system ---
+#CC=/usr/local/bin/$(ARCH)-tcc

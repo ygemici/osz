@@ -25,22 +25,41 @@
  * @brief POSIX Standard: 2.10 Symbolic Constants <unistd.h>
  */
 
-#ifndef	_UNISTD_H
-#define	_UNISTD_H	1
-
-#include <stdio.h>
+#ifndef _UNISTD_H
+#define _UNISTD_H   1
 
 /* Standard file descriptors.  */
-#define	STDIN_FILENO	0	/* Standard input.  */
-#define	STDOUT_FILENO	1	/* Standard output.  */
-#define	STDERR_FILENO	2	/* Standard error output.  */
+#define STDIN_FILENO    0   /* Standard input. */
+#define STDOUT_FILENO   1   /* Standard output. */
+#define STDERR_FILENO   2   /* Standard error output. */
 
 /* Values for the second argument to access.
    These may be OR'd together.  */
-#define	R_OK	4		/* Test for read permission.  */
-#define	W_OK	2		/* Test for write permission.  */
-#define	X_OK	1		/* Test for execute permission.  */
-#define	F_OK	0		/* Test for existence.  */
+#define R_OK    A_READ      /* Test for read permission. */
+#define W_OK    A_WRITE     /* Test for write permission. */
+#define X_OK    A_EXEC      /* Test for execute permission. */
+#define A_OK    A_APPEND    /* Test for append permission. */
+#define D_OK    A_DELETE    /* Test for delete permission. */
+#define F_OK    0           /* Test for existence.  */
+
+#ifndef _AS
+#include <stdio.h>
+
+/* thread-safe libc errno at an absolute address (in TCB). Read-only, use seterr() */
+extern uint16_t errno;
+/* Set libc errno */
+void seterr(int errno);
+
+/* Return only when the bit is set and was clear, yield otherwise */
+void lockacquire(int bit, uint64_t *ptr);
+/* Clear a bit */
+void lockrelease(int bit, uint64_t *ptr);
+
+/* Dynamically link a symbol */
+extern void *dl(uchar *sym, uchar *elf);
+
+/* Give up CPU time */
+extern void yield();
 
 /* Make the process sleep for SEC seconds, or until a signal arrives
    and is not ignored.  The function returns the number of seconds less
@@ -253,6 +272,7 @@ extern void encrypt (char *__glibc_block, int __edflag);
    success or -1 on error.  */
 int getentropy (void *__buffer, size_t __length);
 
+#endif
 #endif
 
 #endif /* unistd.h  */

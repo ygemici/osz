@@ -45,9 +45,11 @@
 #endif
 #ifndef OSZ_CORE
 # include <sysexits.h>
+# include <unistd.h>
 # include <sound.h>
 # include <net.h>
 # include <ui.h>
+# include <init.h>
 #endif
 
 #include <syscall.h>

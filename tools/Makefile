@@ -1,6 +1,3 @@
-#setting this to 1 will create a partition for root fs instead of initrd file
-NOINITRD = 0
-
 include ../Config
 INITRD = ../bin/ESP/BOOTBOOT/INITRD
 ESPFILE = ../bin/esp.part
@@ -12,7 +9,7 @@ DDIMAGE = ../bin/disk.dd
 VDIIMAGE = ../bin/disk.vdi
 VMDKIMAGE = ../bin/disk.vmdk
 SRCS = mkfs.c elftool.c
-OPT  = -g
+OPT  =
 LIBS =
 OBJS = $(SRCS:.c=.o)
 
@@ -33,16 +30,16 @@ imgclean:
 esp: initrd
 	@echo "  mkfs		boot (ESP)"
 ifneq ($(NOINITRD),1)
-	@cp -f ../etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
+	$(O)cp -f ../etc/sys/config ../bin/ESP/BOOTBOOT/CONFIG 2>/dev/null || true
 ifneq ("$(wildcard ../loader/bootboot.bin)","")
-	@cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
+	$(O)cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
 endif
 endif
 ifneq ("$(wildcard ../loader/bootboot.efi)","")
-	@cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true
+	$(O)cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
-	@mkfs.vfat -F 12 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
+	$(O)mkfs.vfat -F 12 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
 	@mkdir ../bin/tmp 2>/dev/null || true
 	@sudo /usr/bin/mount -o loop,user $(ESPFILE) ../bin/tmp
 	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
@@ -65,22 +62,36 @@ endif
 	@cp -r ../etc/root ../bin/initrd || true
 ifeq ($(NOINITRD),1)
 ifneq ("$(wildcard ../loader/bootboot.bin)","")
-	@cp ../loader/bootboot.bin ../bin/initrd/sys/loader || true
+	$(O)cp ../loader/bootboot.bin ../bin/initrd/sys/loader || true
 endif
-	@./mkfs.o $(SYSFILE) ../bin/initrd
+	$(O)./mkfs.o $(SYSFILE) ../bin/initrd
 	@./mkfs.o $(SYSFILE) union bin/ "/sys/bin/" "/usr/*/bin/"
 	@./mkfs.o $(SYSFILE) union etc/ "/sys/etc/" "/usr/*/etc/"
 	@./mkfs.o $(SYSFILE) union lib/ "/sys/lib/" "/usr/*/lib/"
 else
-	@./mkfs.o $(INITRD) ../bin/initrd
+ifeq ($(INITRDFMT),fsz)
+	$(O)./mkfs.o $(INITRD) ../bin/initrd
 	@./mkfs.o $(INITRD) union bin/ "/sys/bin/" "/usr/*/bin/"
 	@./mkfs.o $(INITRD) union etc/ "/sys/etc/" "/usr/*/etc/"
 	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/*/lib/"
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
-	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
-	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H newc -o 2>/dev/null | gzip > ../$(INITRD)
-	@#cd ../bin/initrd && find . 2>/dev/null | cpio -H hpodc -o 2>/dev/null | gzip > ../$(INITRD)
-	@#cd ../bin/initrd && tar -czf ../$(INITRD) *
+else
+	@echo "uni:/sys/bin/ /usr/*/bin/" >../bin/initrd/bin
+	@echo "uni:/sys/etc/ /usr/*/etc/" >../bin/initrd/etc
+	@echo "uni:/sys/lib/ /usr/*/lib/" >../bin/initrd/lib
+ifeq ($(INITRDFMT),crc)
+	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
+endif
+ifeq ($(INITRDFMT),newc)
+	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H newc -o 2>/dev/null | gzip > ../$(INITRD)
+endif
+ifeq ($(INITRDFMT),hpodc)
+	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H hpodc -o 2>/dev/null | gzip > ../$(INITRD)
+endif
+ifeq ($(INITRDFMT),tar)
+	$(O)cd ../bin/initrd && tar -czf ../$(INITRD) *
+endif
+endif
 	@#./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
 endif
 
@@ -91,7 +102,7 @@ $(USRFILE): ../bin/usr
 	@cp -r ../etc/etc ../bin/usr/core || true
 	@cp -r ../etc/include ../bin/usr/core || true
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
-	@./mkfs.o $(USRFILE) ../bin/usr
+	$(O)./mkfs.o $(USRFILE) ../bin/usr
 	@./mkfs.o $(USRFILE) union bin/ "/bin" "/usr/*/bin"
 	@./mkfs.o $(USRFILE) union include/ "/usr/*/include"
 	@./mkfs.o $(USRFILE) union lib/ "/usr/*/lib"
@@ -111,7 +122,7 @@ $(HOMEFILE): ../bin/home
 
 images: initrd esp $(USRFILE) $(VARFILE) $(HOMEFILE)
 	@echo "  mkfs		bin/disk.dd"
-	@./mkfs.o disk
+	$(O)./mkfs.o disk
 
 vdi: $(DDIMAGE)
 	@echo "  mkfs		bin/disk.vdi"

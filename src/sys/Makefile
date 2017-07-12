@@ -1,4 +1,5 @@
 TARGET = sys/bin/sys
+HASHEADER = 1
 GENSYMS = sys.sym
 
 include ../Makefile.rules

@@ -34,6 +34,7 @@
 #define VFS_MEMFS_NULL_DEVICE       3
 #define VFS_MEMFS_TMPFS_DEVICE      4
 
+/* device type */
 typedef struct {
     char name[16];
     pid_t drivertask;   //major
@@ -44,10 +45,20 @@ typedef struct {
     uint64_t cacheidx;
 } device_t;
 
+/* loop device */
+typedef struct {
+    fid_t   fid;        //index to device_t
+    uint64_t mount;     //selects a file on one of the mounted filesystems
+    ino_t inode;
+    blksize_t blksize;  //virtual block size
+    blkcnt_t size;      //number of virtual blocks
+    fpos_t startsec;    //if image does not start at the begining of file
+} loopdev_t;
+
 extern uint64_t ndevdir;
 extern device_t *devdir;
 
-extern uint64_t devfs_locate(mount_t *mnt, char *file, uint64_t type);
+extern ino_t devfs_locate(mount_t *mnt, char *file, uint64_t type);
 
 #if DEBUG
 extern void devfs_dump();

@@ -32,6 +32,7 @@
 /* path manipulations buffer */
 extern uint64_t _pathmax;
 char *tmppath=NULL;
+char *canonpath=NULL;
 
 /* filesystem parsers */
 uint16_t nfsdrvs = 0;
@@ -63,6 +64,11 @@ public fid_t vfslocate(fid_t parent, char *name, uint64_t type)
         if(!tmppath || errno)
             return -1;
     }
+    if(canonpath==NULL) {
+        canonpath=(char*)malloc(_pathmax<512?512:_pathmax);
+        if(!canonpath || errno)
+            return -1;
+    }
     if(parent>=nfcbs) {
         seterr(ENXIO);
         return -1;
@@ -72,18 +78,18 @@ public fid_t vfslocate(fid_t parent, char *name, uint64_t type)
     /* TODO: canonize path */
     strcpy(tmppath, fcbs[parent].path);
     strcat(tmppath, name+(name[0]=='/'?1:0));
-    //canonize(tmppath);
-dbg_printf("tmppath '%s'\n",tmppath);
+    canonpath=realpath(tmppath, canonpath);
+dbg_printf("canonpath '%s'\n",canonpath);
 
     /* find the longest match in mtab */
     for(i=0;i<nmtab;i++) {
         j=strlen(mtab[i].fs_file);
-        if(j>k && !memcmp(mtab[i].fs_file, tmppath, j)) {
+        if(j>k && !memcmp(mtab[i].fs_file, canonpath, j)) {
             l=j;
             k=i;
         }
     }
-dbg_printf("%d / '%s'\n",k,tmppath+l);
+dbg_printf("%d '%s' '%s' ",k,mtab[k].fs_file,canonpath+l);
 dbg_printf("s %d %x\n",mtab[k].fs_type,fsdrvs[mtab[k].fs_type].locate);
     if(l==0 || mtab[k].fs_type>nfsdrvs || fsdrvs[mtab[k].fs_type].locate==NULL) {
         seterr(ENODEV);
@@ -91,7 +97,7 @@ dbg_printf("s %d %x\n",mtab[k].fs_type,fsdrvs[mtab[k].fs_type].locate);
     }
     
     /* pass the remaining path to filesystem driver */
-    in=(*fsdrvs[mtab[k].fs_type].locate)(&mtab[k], tmppath+l, type);
+    in=(*fsdrvs[mtab[k].fs_type].locate)(&mtab[k], canonpath+l, type);
     if(in==-1) {
         seterr(ENOENT);
         return -1;
@@ -146,11 +152,11 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     mount_t *mnt;
     fcb_t fcb;
     void *block;
-    ino_t devidx;
     uint64_t i,n=nmtab;
-    if(strncmp(dev,"/dev/",5))
+    dev_t devidx;
+    if(dev==NULL || dev[0]==0 || strncmp(dev,"/dev/",5))
         return -1;
-    devidx=devfs_locate(NULL, dev+5, S_IFBLK);
+    devidx=devfs_locate(NULL, dev+5, 0);
     if(devidx>=ndevdir)
         return -1;
     // get first sector of devdir[devidx]
@@ -161,7 +167,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     i=0; while(i<nfsdrvs && (fsdrvs[i].detect==NULL || !(*fsdrvs[i].detect)(block))) i++;
     if(i>=nfsdrvs)
         return -1;
-    dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
+    dbg_printf("parsed dev='%d' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
     mtab=(mount_t*)realloc(mtab,++nmtab*sizeof(mount_t));
     if(!mtab || errno)
         abort();
@@ -192,8 +198,8 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
         if(!mtab || errno)
             abort();
         mnt=&mtab[n+1];
-        mnt->fs_file="/dev/";
-        mnt->fs_spec=-1;
+        mnt->fs_file="/dev/";   // mount point
+        mnt->fs_spec=-1;        // no special device
         mnt->fs_type=_fs_get("devfs");
     }
     return n;
@@ -251,7 +257,6 @@ void vfs_fstab(char *ptr, size_t size)
     free(fstab);
 }
 
-
 #if DEBUG
 void vfs_dump()
 {
@@ -262,7 +267,10 @@ void vfs_dump()
 
     dbg_printf("\nMounts %d:\n",nmtab);
     for(i=0;i<nmtab;i++)
-        dbg_printf("%3d. '%s' %s %s\n",i,devdir[mtab[i].fs_spec].name,fsdrvs[mtab[i].fs_type].name,mtab[i].fs_file);
+        dbg_printf("%3d. '%s' %s %s\n",i,
+            devdir[mtab[i].fs_spec].name,
+            fsdrvs[mtab[i].fs_type].name,
+            mtab[i].fs_file);
 
     dbg_printf("\nFile Control Blocks %d:\n",nfcbs);
     for(i=0;i<nfcbs;i++) {
@@ -288,6 +296,6 @@ void vfs_dump()
 
     dbg_printf("\n");
 
-dbg_printf("locate %d\n",vfslocate(0,"/etc/kbd/",0));
+dbg_printf("locate %d\n",vfslocate(0,"/dev/tmp",0));
 }
 #endif

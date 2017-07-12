@@ -24,7 +24,9 @@
  *
  * @brief Cache definitions
  */
+
 #include <osZ.h>
+#include "vfs.h"
 
 #define CACHEDIRNAME 56
 typedef struct {
@@ -57,8 +59,8 @@ extern uint64_t ncache;
 extern cachedir_t *cache;
 extern cacheblk_t cacheblk[];
 
-extern void cache_dir(char*name,fid_t fid);
 extern void *cache_getblock(dev_t dev,blkcnt_t blk);
+extern void cache_setblock(msg_t *msg);
 
 #if DEBUG
 extern void cache_dump();

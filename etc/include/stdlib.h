@@ -126,6 +126,13 @@ extern void *bsearch (void *key, void *base, size_t nmemb, size_t size, int (*cm
    using CMP to perform the comparisons.  */
 extern void qsort (void *base, size_t nmemb, size_t size, int (*cmp)(void *, void *));
 
+/* Return the canonical absolute name of file NAME.  If RESOLVED is
+   null, the result is malloc'd; otherwise, if the canonical name is
+   PATH_MAX chars or more, returns null with `errno' set to
+   ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
+   returns the name in RESOLVED.  */
+extern char *realpath (char *name, char *resolved);
+
 /*** unimplemented ***/
 #if 0
 
@@ -160,13 +167,6 @@ extern int system (char *command);
 /* Return a malloc'd string containing the canonical absolute name of the
    existing named file.  */
 extern char *canonicalize_file_name (char *name);
-
-/* Return the canonical absolute name of file NAME.  If RESOLVED is
-   null, the result is malloc'd; otherwise, if the canonical name is
-   PATH_MAX chars or more, returns null with `errno' set to
-   ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
-   returns the name in RESOLVED.  */
-extern char *realpath (char *name, char *resolved);
 
 /* Return the length of the given multibyte character,
    putting its `wchar_t' representation in *PWC.  */

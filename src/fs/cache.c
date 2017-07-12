@@ -25,7 +25,6 @@
  * @brief Cache implementation
  */
 #include <osZ.h>
-#include "vfs.h"
 #include "cache.h"
 #include "devfs.h"
 
@@ -40,20 +39,16 @@ cachedir_t *cache = NULL;
 /* cache blocks */
 cacheblk_t cacheblk[8];
 
-void cache_dir(char *name,fid_t fid)
-{
-    cachedir=(cachedir_t*)realloc(cachedir,++ncachedir*sizeof(cachedir_t));
-    if(!cachedir || errno)
-        abort();
-    cachedir[ncachedir-1].fid = fid;
-    strncpy((char*)&cachedir[ncachedir-1].name, name, CACHEDIRNAME-1);
-}
+extern uint64_t delayanswer();
 
 void cache_init()
 {
 }
 
-void *cache_getblock(dev_t dev,blkcnt_t blk)
+/**
+ * read a block from cache
+ */
+void *cache_getblock(dev_t dev, blkcnt_t blk)
 {
     void *ptr;
     if(dev>=ndevdir)
@@ -72,12 +67,18 @@ void *cache_getblock(dev_t dev,blkcnt_t blk)
             break;
         }
     } else {
-        /* TODO: send an async message to the driver */
-        //if blk==0 send sync message
+        /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
+        delayanswer();
     }
     return NULL;
 }
 
+/**
+ * store a block in cache, called by drivers
+ */
+void cache_setblock(msg_t *msg)
+{
+}
 
 #if DEBUG
 void cache_dump()

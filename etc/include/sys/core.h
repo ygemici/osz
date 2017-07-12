@@ -66,15 +66,15 @@
 // rax: FFFFFFFFFFFFxxxx File system services
 // see sys/fs.h, stdlib.h, stdio.h, unistd.h
 // rax: FFFFFFFFFFFExxxx User Interface services
-// see sys/ui.h
+// see sys/ui.h, ui.h
 // rax: FFFFFFFFFFFDxxxx Syslog services
 // see sys/syslog.h, syslog.h
 // rax: FFFFFFFFFFFCxxxx Networking services
 // see sys/net.h, inet.h
 // rax: FFFFFFFFFFFBxxxx Audio services
-// see sys/sound.h
+// see sys/sound.h, sound.h
 // rax: FFFFFFFFFFFAxxxx Init, user services
-// see sys/init.h
+// see sys/init.h, init.h
 
 /*** libc implementation prototypes */
 #ifndef _AS
@@ -92,27 +92,11 @@ msg_t *mq_recv();
 /* sync, dispatch events (blocking, noreturn unless error) */
 uint64_t mq_dispatch();
 
-//thread-safe libc errno at an absolute address (in TCB). Read-only, use seterr()
-extern uint16_t errno;
 
-// bit manipulations
-void lockacquire(int bit, uint64_t *ptr); // return only when the bit is set and was clear, yield otherwise
-void lockrelease(int bit, uint64_t *ptr); // clear a bit
-
-// Memory and multitask
-/* TODO: move these to unistd.h, leave only OS/Z specific calls here */
-void *dl(uchar *sym, uchar *elf);       // dynamically link a symbol
-void yield();                           // give up CPU time
-void seterr(int errno);                 // set libc errno
+/* TODO: move these to time.h, leave only OS/Z specific calls here */
 uint64_t time();                        // get system time
 void stime(uint64_t utctimestamp);      // set system time
 pid_t exec(uchar *cmd);                 // start a new process in the background
-
-// rax: FFFFFFFFFFFAxxxx Init, user services
-extern void start();
-extern void stop();
-extern void restart();
-extern void status();
 
 #endif
 
