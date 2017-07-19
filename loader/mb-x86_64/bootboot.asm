@@ -278,19 +278,18 @@ end if
             jb          .cpuerror
             ;look for minimum feature flags
             ;so we have PAE?
-            mov         eax, edx
-            and         eax, 1000000b
-            jz          .cpuok
+            bt          edx, 6
+            jnc         .cpuerror
             ;what about MSR?
             bt          edx, 5
-            jnc         .cpuok
-            ;and can we use long mode?
+            jnc         .cpuerror
+            ;and can we use long mode (LME)?
             mov         eax, 80000000h
             push        bx
             cpuid
             pop         bx
             cmp         eax, 80000001h
-            jb          .cpuok
+            jb          .cpuerror
             mov         eax, 80000001h
             cpuid
             ;long mode
@@ -1694,6 +1693,35 @@ repeat $-loader
     chksum = (chksum + b) mod 100h
 end repeat
 store byte (100h-chksum) at (loader.checksum)
+
+;-----------bss area-----------
+tinf_bss_start:
+d_end:      dd          ?
+d_lzOff:    dd          ?
+d_dict_ring:dd          ?
+d_dict_size:dd          ?
+d_dict_idx: dd          ?
+d_tag:      db          ?
+d_bitcount: db          ?
+d_bfinal:   db          ?
+d_curlen:   dw          ?
+d_ltree:
+d_ltree_table:
+            dw          16 dup ?
+d_ltree_trans:
+            dw          288 dup ?
+d_dtree:
+d_dtree_table:
+            dw          16 dup ?
+d_dtree_trans:
+            dw          288 dup ?
+offs:       dw          16 dup ?
+num:        dw          ?
+lengths:    db          320 dup ?
+hlit:       dw          ?
+hdist:      dw          ?
+hclen:      dw          ?
+tinf_bss_end:
 
 ;-----------bound check-------------
 ;fasm will generate an error if the code

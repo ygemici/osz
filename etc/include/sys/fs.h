@@ -26,7 +26,7 @@
  */
 
 #define SYS_mountfs     (3)
-#define SYS_vfslocate   (4)
+#define SYS_locate      (4)
 #define SYS_setblock    (5)
 
 #define SYS_seek	(0x19)

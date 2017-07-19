@@ -344,7 +344,7 @@ BOOTBOOT-PANIC: Kernel is not a valid ELF64
 ```
 
 The file that was specified as kernel could be loaded by fs drivers, but it's not an ELF, it's class is not
-CLASS64, not little endian, not for x86_64 ABI, or does not have any program header with a loadable segment
+CLASS64, endianness does not mach architecture, or does not have any program header with a loadable segment
 in the negative p_vaddr range (see linker script).
 
 That's all, hope it will be useful!

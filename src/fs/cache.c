@@ -48,27 +48,32 @@ void cache_init()
 /**
  * read a block from cache
  */
-void *cache_getblock(dev_t dev, blkcnt_t blk)
+void *cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
 {
     void *ptr;
-    if(dev>=ndevdir)
-        return NULL;
-    /* built-in device? */
-    if(devdir[dev].drivertask==VFS_DEVICE_MEMFS) {
-        if(blk>=devdir[dev].size)
+    // devive file?
+    if(fs==devmtab) {
+        if(dev>=ndevdir)
             return NULL;
-        switch(devdir[dev].device) {
-            case VFS_MEMFS_ZERO_DEVICE:
-                ptr=(void*)malloc(devdir[dev].blksize);
-                return ptr;
-            break;
-            case VFS_MEMFS_RAMDISK_DEVICE:
-                return (void*)(devdir[dev].startsec+devdir[dev].blksize*blk);
-            break;
+        /* built-in device? */
+        if(devdir[dev].drivertask==VFS_DEVICE_MEMFS) {
+            if(blk>=devdir[dev].size)
+                return NULL;
+            switch(devdir[dev].device) {
+                case VFS_MEMFS_ZERO_DEVICE:
+                    ptr=(void*)malloc(devdir[dev].blksize);
+                    return ptr;
+                break;
+                case VFS_MEMFS_RAMDISK_DEVICE:
+                    return (void*)(devdir[dev].startsec+devdir[dev].blksize*blk);
+                break;
+            }
+        } else {
+            /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
+            delayanswer();
         }
     } else {
-        /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
-        delayanswer();
+    // simple file on another filesystem
     }
     return NULL;
 }

@@ -39,6 +39,8 @@ uint16_t nfsdrvs = 0;
 fsdrv_t *fsdrvs = NULL;
 
 /* mount points */
+uint64_t devmtab = -1;
+uint64_t fsmtab = -1;
 uint64_t nmtab = 0;
 mount_t *mtab = NULL;
 
@@ -53,12 +55,13 @@ openfile_t *files = NULL;
 /**
  * locate a file
  */
-public fid_t vfslocate(fid_t parent, char *name, uint64_t type)
+public fid_t vfs_locate(fid_t parent, char *name, uint64_t type)
 {
-    uint64_t i,j,k=0,l=0;
+    uint64_t i,j,l=0;
     ino_t in;
 
     seterr(SUCCESS);
+    fsmtab = -1;
     if(tmppath==NULL) {
         tmppath=(char*)malloc(_pathmax<512?512:_pathmax);
         if(!tmppath || errno)
@@ -84,20 +87,20 @@ dbg_printf("canonpath '%s'\n",canonpath);
     /* find the longest match in mtab */
     for(i=0;i<nmtab;i++) {
         j=strlen(mtab[i].fs_file);
-        if(j>k && !memcmp(mtab[i].fs_file, canonpath, j)) {
+        if(j>l && !memcmp(mtab[i].fs_file, canonpath, j)) {
             l=j;
-            k=i;
+            fsmtab=i;
         }
     }
-dbg_printf("%d '%s' '%s' ",k,mtab[k].fs_file,canonpath+l);
-dbg_printf("s %d %x\n",mtab[k].fs_type,fsdrvs[mtab[k].fs_type].locate);
-    if(l==0 || mtab[k].fs_type>nfsdrvs || fsdrvs[mtab[k].fs_type].locate==NULL) {
+dbg_printf("%d '%s' '%s' ",fsmtab,mtab[fsmtab].fs_file,canonpath+l);
+dbg_printf("s %d %x\n",mtab[fsmtab].fs_type,fsdrvs[mtab[fsmtab].fs_type].locate);
+    if(l==0 || mtab[fsmtab].fs_type>nfsdrvs || fsdrvs[mtab[fsmtab].fs_type].locate==NULL) {
         seterr(ENODEV);
         return -1;
     }
     
     /* pass the remaining path to filesystem driver */
-    in=(*fsdrvs[mtab[k].fs_type].locate)(&mtab[k], canonpath+l, type);
+    in=(*fsdrvs[mtab[fsmtab].fs_type].locate)(&mtab[fsmtab], canonpath+l, type);
     if(in==-1) {
         seterr(ENOENT);
         return -1;
@@ -144,30 +147,70 @@ fid_t fcb_add(const fcb_t *fcb)
     if(!fcbs || errno)
         abort();
     memcpy((void*)&fcbs[nfcbs-1], (void*)fcb, sizeof(fcb_t));
+    if(fcb->type!=VFS_FCB_TYPE_PIPE)
+        mtab[fcb->file.mount].nlink++;
     return nfcbs-1;
 }
 
+/**
+ * remove a file from fcb list
+ */
+void fcb_del(fid_t fid)
+{
+    if(fid>=nfcbs)
+        return;
+    if(fcbs[fid].type!=VFS_FCB_TYPE_PIPE) {
+        mtab[fcbs[fid].file.mount].nlink--;
+        if(mtab[fcbs[fid].file.mount].nlink==0)
+            mtab_del(fcbs[fid].file.mount);
+    }
+}
+ 
+/**
+ * add a mount point to mount list
+ */
 uint64_t mtab_add(char *dev, char *file, char *opts)
 {
     mount_t *mnt;
     fcb_t fcb;
     void *block;
     uint64_t i,n=nmtab;
-    dev_t devidx;
-    if(dev==NULL || dev[0]==0 || strncmp(dev,"/dev/",5))
+    ino_t ino;
+    if(dev==NULL || dev[0]==0 || file==NULL || file[0]==0) {
+        seterr(EINVAL);
         return -1;
-    devidx=devfs_locate(NULL, dev+5, 0);
-    if(devidx>=ndevdir)
+    }
+    // chicken and egg scenario when mounting root. We handle devfs
+    // directly to overcome
+    fsmtab = -1;
+    if(!strncmp(dev,"/dev/",5)) {
+        fsmtab = devmtab;
+        ino = devfs_locate(NULL, dev+5, 0);
+        if(ino >= ndevdir) {
+            seterr(ENODEV);
+            return -1;
+        }
+    } else {
+        // only devfs allowed for the first mount point
+        if(nmtab==0) {
+            seterr(ENODEV);
+            return -1;
+        }
+        ino=vfs_locate(0,dev,0);
+    }
+    // get first sector
+    block=cache_getblock(fsmtab, ino, 0);
+    if(block==NULL) {
+        seterr(ENOTBLK);
         return -1;
-    // get first sector of devdir[devidx]
-    block=cache_getblock(devidx, 0);
-    if(block==NULL)
-        return -1;
+    }
     // detect filesystem type
     i=0; while(i<nfsdrvs && (fsdrvs[i].detect==NULL || !(*fsdrvs[i].detect)(block))) i++;
-    if(i>=nfsdrvs)
+    if(i>=nfsdrvs) {
+        seterr(ENOFS);
         return -1;
-    dbg_printf("parsed dev='%d' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
+    }
+    dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
     mtab=(mount_t*)realloc(mtab,++nmtab*sizeof(mount_t));
     if(!mtab || errno)
         abort();
@@ -177,10 +220,11 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
         mnt->fs_file=(char*)realloc(mnt->fs_file,strlen(mnt->fs_file)+1);
         mnt->fs_file[strlen(mnt->fs_file)]='/';
     }
-    mnt->fs_spec=devidx;
+    mnt->fs_parent=fsmtab;
+    mnt->fs_spec=ino;
     mnt->fs_type=i;
 
-    // when mounting root, also mount /dev. It's path is fixed, mount point cannot be changed
+    // when mounting root, also mount /dev. It's path is fixed, cannot be changed
     if(file[0]=='/' && file[1]==0) {
         // also add to FCB list. Uninitialized rootdir and chdir will point here
         fcb.path=mnt->fs_file;
@@ -194,15 +238,29 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
 #endif
             abort();
         }
+        // make sure we don't unmount root by accident
+        mnt->nlink=1;
+        // fix devfs pointer
+        mnt->fs_parent=devmtab=n+1;
         mtab=(mount_t*)realloc(mtab,++nmtab*sizeof(mount_t));
         if(!mtab || errno)
             abort();
         mnt=&mtab[n+1];
-        mnt->fs_file="/dev/";   // mount point
+        mnt->fs_file="/dev/";   // mount point, cannot be changed
+        mnt->fs_parent=-1;      // no parent filesystem
         mnt->fs_spec=-1;        // no special device
         mnt->fs_type=_fs_get("devfs");
     }
     return n;
+}
+
+/**
+ * remove an entry from mount tab
+ */
+void mtab_del(uint64_t mid)
+{
+    if(mid>=nmtab)
+        return;
 }
 
 /**
@@ -266,12 +324,14 @@ void vfs_dump()
         dbg_printf("%3d. '%s' %s %x\n",i,fsdrvs[i].name,fsdrvs[i].desc,fsdrvs[i].detect);
 
     dbg_printf("\nMounts %d:\n",nmtab);
-    for(i=0;i<nmtab;i++)
-        dbg_printf("%3d. '%s' %s %s\n",i,
-            devdir[mtab[i].fs_spec].name,
+    for(i=0;i<nmtab;i++) {
+        dbg_printf("%3d. %d/%d ",i,mtab[i].fs_parent,mtab[i].fs_spec);
+        dbg_printf("%s%s %s %s\n",
+            mtab[i].fs_parent!=-1?mtab[mtab[i].fs_parent].fs_file:"",
+            mtab[i].fs_parent==devmtab?devdir[mtab[i].fs_spec].name:(mtab[i].fs_spec==-1?"none":"???"),
             fsdrvs[mtab[i].fs_type].name,
             mtab[i].fs_file);
-
+    }
     dbg_printf("\nFile Control Blocks %d:\n",nfcbs);
     for(i=0;i<nfcbs;i++) {
         dbg_printf("%3d. %x ",i,fcbs[i].type);
@@ -296,6 +356,6 @@ void vfs_dump()
 
     dbg_printf("\n");
 
-dbg_printf("locate %d\n",vfslocate(0,"/dev/tmp",0));
+dbg_printf("locate %d\n",vfs_locate(0,"/dev/tmp",0));
 }
 #endif

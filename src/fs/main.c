@@ -79,11 +79,11 @@ devfs_dump();
 vfs_dump();
                 break;
 
-            case SYS_vfslocate:
-                fid=vfslocate((fid_t)msg->arg0, (char*)msg->arg1, (uint64_t)msg->arg2);
+            case SYS_locate:
+                fid=vfs_locate((fid_t)msg->arg0, (char*)msg->arg1, (uint64_t)msg->arg2);
                 if(!ackdelayed) {
                     mq_send(EVT_SENDER(msg->evt), errno == SUCCESS ? SYS_ack : SYS_nack,
-                        fid/*return value*/, errno, SYS_vfslocate, msg->serial);
+                        fid/*return value*/, errno, SYS_locate, msg->serial);
                 }
                 break;
 

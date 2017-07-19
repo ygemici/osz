@@ -486,7 +486,7 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
         return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
     ZeroMem((void*)bootboot,PAGESIZE);
     CopyMem(bootboot->magic,BOOTBOOT_MAGIC,4);
-    // unlike BIOS bootboot, no need to check if we have
+    // unlike BIOS+MultiBoot bootboot, no need to check if we have
     // PAE + MSR + LME, as we're already in long mode.
     __asm__ __volatile__ (
         "mov $1, %%eax;"
@@ -552,7 +552,6 @@ efi_main (EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 foundinrom:
         uefi_call_wrapper(BS->FreePages, 2, (EFI_PHYSICAL_ADDRESS)memory_map, (memory_map_size+PAGESIZE-1)/PAGESIZE);
     }
-
     // fall back to INITRD on filesystem
     if(EFI_ERROR(status) || initrd.ptr==NULL){
         DBG(L" * Locate initrd in %s\n",initrdfile);
@@ -585,7 +584,7 @@ foundinrom:
         lba_s=lba_e=0;
         status = uefi_call_wrapper(BS->LocateHandle, 5, ByProtocol, &bioGuid, NULL, &handle_size, handles);
         for(i=0;i<handle_size/sizeof(EFI_HANDLE);i++) {
-            // we have to do it the hard way. HARDDRIVE_DEVICE_PATH does not return partition type...
+            // we have to do it the hard way. HARDDRIVE_DEVICE_PATH does not return partition type or attribs...
             status = uefi_call_wrapper(BS->HandleProtocol, 3, handles[i], &bioGuid, (void **) &bio);
             if(status!=EFI_SUCCESS || bio==NULL || bio->Media->BlockSize==0)
                 continue;
@@ -598,6 +597,7 @@ foundinrom:
                 gptEnt=(EFI_PARTITION_ENTRY*)ret.ptr;
                 if((ret.ptr[0]==0 && ret.ptr[1]==0 && ret.ptr[2]==0 && ret.ptr[3]==0) || gptEnt->EndingLBA==0)
                     break;
+                // use first partition with bootable flag as INITRD
                 if(gptEnt->Attributes & EFI_PART_USED_BY_OS) {
                     lba_s=gptEnt->StartingLBA; lba_e=gptEnt->EndingLBA;
                     initrd.size = (((lba_e-lba_s)*bio->Media->BlockSize + PAGESIZE-1)/PAGESIZE)*PAGESIZE;
@@ -667,6 +667,7 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
             env.ptr=NULL;
         }
         if(env.ptr==NULL) {
+            // if there were no environment file on boot partition, find it inside the INITRD
             j=0; ret.ptr=NULL; ret.size=0;
             while(ret.ptr==NULL && fsdrivers[j]!=NULL) {
                 ret=(*fsdrivers[j++])((unsigned char*)initrd.ptr,cfgname);
@@ -685,6 +686,7 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         if(env.ptr!=NULL) {
             ParseEnvironment(env.ptr,env.size, argc, argv);
         } else {
+            // provide an empty environment for the OS
             env.size=0;
             uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 1, (EFI_PHYSICAL_ADDRESS*)&env.ptr);
             if (env.ptr == NULL) {

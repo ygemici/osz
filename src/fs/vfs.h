@@ -37,15 +37,20 @@
 // mount point cache is not write-through
 #define VFS_MOUNT_FLAG_ASYNC        (1<<0)
 
+/* index to devfs in mtab */
+extern uint64_t devmtab;
+
 /** structure of mtab */
 typedef struct {
-    dev_t fs_spec;      //index to devdir, block special device (if fs_mnt==dev)
+    uint64_t fs_parent; //index to mtab, parent filesystem
+    ino_t fs_spec;      //index to devdir, block special device (if fs_mnt==dev)
     char *fs_file;      //path where it's mounted on
     uint16_t fs_type;   //index to fsdrvs, autodetected
     uint16_t fs_flags;  //mount options
     uint16_t len;       //number of access entries
     gid_t *grp;         //access entries
     uint8_t access;     //access for world
+    nlink_t nlink;      //number of fcb references
 } mount_t;
 
 typedef struct {
@@ -56,8 +61,8 @@ typedef struct {
 } fsdrv_t;
 
 #define VFS_FCB_TYPE_FILE           0
-#define VFS_FCB_TYPE_PIPE           1
-#define VFS_FCB_TYPE_DIRECTORY      2
+#define VFS_FCB_TYPE_DIRECTORY      1
+#define VFS_FCB_TYPE_PIPE           2
 
 #define VFS_FCB_FLAG_DIRTY          (1<<0)
 //fcb types
@@ -114,12 +119,15 @@ extern uint64_t nfiles;
 extern openfile_t *files;
 
 /* public syscalls */
-extern fid_t vfslocate(fid_t parent, char *path, uint64_t type);
+extern fid_t vfs_locate(fid_t parent, char *path, uint64_t type);
 
 /* private functions */
 extern uint16_t _fs_get(char *name);
 extern uint16_t _fs_reg(const fsdrv_t *fs);
+extern uint64_t mtab_add(char *dev, char *file, char *opts);
+extern void mtab_del(uint64_t mid);
 extern fid_t fcb_add(const fcb_t *fcb);
+extern void fcb_del(fid_t fid);
 extern void vfs_fstab(char *ptr,size_t size);
 #if DEBUG
 extern void vfs_dump();

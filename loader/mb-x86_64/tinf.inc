@@ -12,6 +12,14 @@
 ; edi: output buffer (guaranteed to be big enough)
 ; ecx: output buffer size
 tinf_uncompress:
+            push        ecx
+            push        edi
+            mov         edi, tinf_bss_start
+            mov         ecx, tinf_bss_end-tinf_bss_start
+            xor         al, al
+            repnz       stosb
+            pop         edi
+            pop         ecx
             mov         dword [d_end], ecx
             add         dword [d_end], edi
 .again:
@@ -469,29 +477,4 @@ clcidx:
             db          10, 5, 11, 4, 12, 3, 13, 2
             db          14, 1, 15
 
-d_end:      dd          0
-d_lzOff:    dd          0
-d_dict_ring:dd          0
-d_dict_size:dd          0
-d_dict_idx: dd          0
-d_tag:      db          0
-d_bitcount: db          0
 d_btype:    db          255
-d_bfinal:   db          0
-d_curlen:   dw          0
-d_ltree:
-d_ltree_table:
-            dw          16 dup 0
-d_ltree_trans:
-            dw          288 dup 0
-d_dtree:
-d_dtree_table:
-            dw          16 dup 0
-d_dtree_trans:
-            dw          288 dup 0
-offs:       dw          16 dup 0
-num:        dw          0
-lengths:    db          320 dup 0
-hlit:       dw          0
-hdist:      dw          0
-hclen:      dw          0

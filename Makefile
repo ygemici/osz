@@ -87,10 +87,14 @@ gdb:
 
 test: testq
 
-testefi: bin/disk.dd
+testesp: bin/disk.dd
 	@echo "TEST"
 	@echo
-	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -option-rom loader/bootboot.rom -d guest_errors -monitor stdio
+	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
+
+teste: bin/disk.dd
+	@echo "TEST"
+	@echo
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
 	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom bin/initrd.rom -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 

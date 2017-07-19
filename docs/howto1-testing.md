@@ -19,7 +19,13 @@ But for your convience I've added make commands. For example if you clone the re
 with TianoCore EFI. For that one should type
 
 ```shell
-make testefi
+make testesp
+```
+
+To run the resulting image in qemu with TianoCore UEFI
+
+```shell
+make teste
 ```
 
 To run the resulting image in qemu with BIOS
