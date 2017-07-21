@@ -92,3 +92,5 @@ Service's entry point is also called `_init`, which function must call either `m
 fallbacks to the default in [lib/libc/service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c) (also
 used by device drivers). In that case the service must implement `task_init()` to initialize it's structures. Services can use
 shared libraries, in which case the libraries' `_init` will be called one by one before the service's `_init` function.
+
+The [next turorial](https://github.com/bztsrc/osz/blob/master/docs/howto4-rescueshell.md) is about how to use the rescue shell.

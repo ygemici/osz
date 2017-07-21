@@ -158,7 +158,6 @@ void sys_init()
     char *c, *f;
     drvs = (char *)fs_locate("sys/drivers");
     drvs_end = drvs + fs_size;
-    kmemcpy(&fn[0], "sys/", 4);
 
     /*** Platform specific initialization ***/
     /* create idle task */
@@ -183,18 +182,19 @@ void sys_init()
 #endif
         syslog_early("WARNING missing /sys/drivers\n");
         // hardcoded legacy devices if driver list not found
-        drv_init("sys/input/ps2.so");
-        drv_init("sys/display/fb.so");
+        drv_init("sys/drv/input/ps2.so");
+        drv_init("sys/drv/display/fb.so");
     } else {
+        kmemcpy(&fn[0], "sys/drv/", 8);
         // load devices which are not coverable by bus enumeration
         for(c=drvs;c<drvs_end;) {
             f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
             // skip filesystem drivers
             if(f[0]=='*' && f[1]==9 && (f[2]!='f' || f[3]!='s')) {
                 f+=2;
-                if(c-f<255-4) {
-                    kmemcpy(&fn[4], f, c-f);
-                    fn[c-f+4]=0;
+                if(c-f<255-8) {
+                    kmemcpy(&fn[8], f, c-f);
+                    fn[c-f+8]=0;
                     drv_init(fn);
                 }
                 continue;

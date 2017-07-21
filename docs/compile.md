@@ -46,14 +46,14 @@ BASE
   src		sys/net
   src		sys/init
 DRIVERS
-  src		sys/fsdrv/gpt.so
-  src		sys/fsdrv/pax.so
-  src		sys/fsdrv/vfat.so
-  src		sys/fsdrv/fsz.so
-  src		sys/fsdrv/tmpfs.so
-  src		sys/input/ps2.so
-  src		sys/display/fb.so
-  src		sys/drv
+  src		sys/drv/fs/gpt.so
+  src		sys/drv/fs/pax.so
+  src		sys/drv/fs/vfat.so
+  src		sys/drv/fs/fsz.so
+  src		sys/drv/fs/tmpfs.so
+  src		sys/drv/input/ps2.so
+  src		sys/drv/display/fb.so
+  src		sys/driver
 USERSPACE
 IMAGES
   mkfs		initrd

@@ -22,10 +22,14 @@ OS/Z Device Drivers Classes
 | wireless | Wireless controller |
 
 Under these directories each driver has exactly one sub-directory. The compiled
-driver will be placed in `sys/(class)/(driver).so`
+driver will be placed in `sys/drv/(class)/(driver).so`
 
 The resemblance with [PCI device classes](http://pci-ids.ucw.cz/read/PD) is not a coincidence.
 
-Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have drivers, they
+Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have separate drivers, they
 are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
 switch among them, you'll have to edit `ISR_CTRL` define in [isr.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.h).
+
+Likewise, timers are also built into core, you can switch among them with a boot time configurable [environment variable](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md#L67).
+
+For more information on device drivers, see [documentation](https://github.com/bztsrc/osz/blob/master/docs/drivers.md).

@@ -27,8 +27,8 @@ Directories
 Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/master/src/drivers), groupped in categories.
 Each [driver class](https://github.com/bztsrc/osz/blob/master/src/drivers/README.md) has one directory, and
 under these directories each driver has exactly one sub-directory. The compiled
-driver will be placed in `sys/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
-to `sys/input/ps2.so`.
+driver will be placed in `sys/drv/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
+to `sys/drv/input/ps2.so`.
 
 Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have separate drivers, they
 are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
@@ -66,3 +66,8 @@ and if the platform it's compiling for not listed there, the driver won't be com
 is an easy way to avoid having PS2 driver and such when creating for example an AArch64 image, yet
 you won't have to rewrite drivers for every architecture that supports it (like a usb storage
 driver).
+
+Developing drivers
+------------------
+
+If you want to write a device driver for OS/Z, [here](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md) you can find more information.

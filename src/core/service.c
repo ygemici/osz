@@ -105,18 +105,18 @@ void fs_init()
         // hardcoded if driver list not found
         // should not happen!
         syslog_early("/sys/drivers not found");
-        elf_loadso("sys/fs/gpt.so");    // disk
-        elf_loadso("sys/fs/fsz.so");    // initrd and OS/Z partitions
-        elf_loadso("sys/fs/vfat.so");   // EFI boot partition
+        elf_loadso("sys/drv/fs/gpt.so");    // disk
+        elf_loadso("sys/drv/fs/fsz.so");    // initrd and OS/Z partitions
+        elf_loadso("sys/drv/fs/vfat.so");   // EFI boot partition
     } else {
-        kmemcpy(&fn[0], "sys/", 4);
+        kmemcpy(&fn[0], "sys/drv/", 8);
         for(s=drvs;s<drvs_end;) {
             f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
             if(f[0]=='*' && f[1]==9 && f[2]=='f' && f[3]=='s') {
                 f+=2;
-                if(s-f<255-4) {
-                    kmemcpy(&fn[4], f, s-f);
-                    fn[s-f+4]=0;
+                if(s-f<255-8) {
+                    kmemcpy(&fn[8], f, s-f);
+                    fn[s-f+8]=0;
                     elf_loadso(fn);
                 }
                 continue;
@@ -208,8 +208,8 @@ void drv_init(char *driver)
     tcb_t *tcb = task_new(drvname, PRI_DRV);
     driver[i]='.';
     // ...start with driver event dispatcher
-    if(elf_load("sys/drv") == (void*)(-1)) {
-        kpanic("unable to load ELF from /sys/drv");
+    if(elf_load("sys/driver") == (void*)(-1)) {
+        kpanic("unable to load ELF from /sys/driver");
     }
     // map libc
     elf_loadso("sys/lib/libc.so");

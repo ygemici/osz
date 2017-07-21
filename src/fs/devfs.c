@@ -44,8 +44,6 @@ device_t *devdir = NULL;
 /* subdirectories */
 FSZ_DirEnt *devvoldir;
 FSZ_DirEnt *devuuiddir;
-uint64_t ndevloopdir = 0;
-loopdev_t *devloopdir = NULL;
 
 public uint64_t mknod()
 {
@@ -68,11 +66,11 @@ void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
 }
 
 /**
- * locate a in devfs. We don't use mnt here
+ * locate a file in devfs. We don't use mnt here
  */
 ino_t devfs_locate(mount_t *mnt, char *file, uint64_t type)
 {
-    uint64_t i,j;
+    uint64_t i;
     if((file==NULL || file[0]==0) || (type!=0 && type!=S_IFBLK && type!=S_IFCHR))
         return -1;
     if(!strncmp(file,"vol/",4)) {
@@ -86,13 +84,6 @@ ino_t devfs_locate(mount_t *mnt, char *file, uint64_t type)
         for(i=1;i<=((FSZ_DirEntHeader *)devuuiddir)->numentries;i++)
             if(!strcmp(file,(char*)&devuuiddir[i].name))
                 return devuuiddir[i].fid;
-    } else
-    if(!strncmp(file,"loop/",5)) {
-        file+=5;
-        j=atoi(file);
-        if(j>ndevloopdir)
-            return -1;
-        return devloopdir[j].fid;
     } else {
         for(i=0;i<ndevdir;i++) {
             if(!strcmp(file,devdir[i].name))

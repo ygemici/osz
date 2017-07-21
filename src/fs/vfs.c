@@ -210,11 +210,12 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
         seterr(ENOFS);
         return -1;
     }
-    dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
+dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
     mtab=(mount_t*)realloc(mtab,++nmtab*sizeof(mount_t));
     if(!mtab || errno)
         abort();
     mnt=&mtab[n];
+    mnt->id=n;
     mnt->fs_file=strdup(file);
     if(mnt->fs_file[strlen(mnt->fs_file)-1]!='/') {
         mnt->fs_file=(char*)realloc(mnt->fs_file,strlen(mnt->fs_file)+1);
@@ -224,7 +225,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     mnt->fs_spec=ino;
     mnt->fs_type=i;
 
-    // when mounting root, also mount /dev. It's path is fixed, cannot be changed
+    // when mounting root, also mount /dev. It's path is hardcoded, cannot be changed
     if(file[0]=='/' && file[1]==0) {
         // also add to FCB list. Uninitialized rootdir and chdir will point here
         fcb.path=mnt->fs_file;
@@ -246,6 +247,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
         if(!mtab || errno)
             abort();
         mnt=&mtab[n+1];
+        mnt->id=n+1;
         mnt->fs_file="/dev/";   // mount point, cannot be changed
         mnt->fs_parent=-1;      // no parent filesystem
         mnt->fs_spec=-1;        // no special device
@@ -356,6 +358,6 @@ void vfs_dump()
 
     dbg_printf("\n");
 
-dbg_printf("locate %d\n",vfs_locate(0,"/dev/tmp",0));
+dbg_printf("locate %d\n",vfs_locate(0,"/etc/kbd/en_us",0));
 }
 #endif

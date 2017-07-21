@@ -45,16 +45,6 @@ typedef struct {
     uint64_t cacheidx;
 } device_t;
 
-/* loop device */
-typedef struct {
-    fid_t   fid;        //index to device_t
-    uint64_t mount;     //selects a file on one of the mounted filesystems
-    ino_t inode;
-    blksize_t blksize;  //virtual block size
-    blkcnt_t size;      //number of virtual blocks
-    fpos_t startsec;    //if image does not start at the begining of file
-} loopdev_t;
-
 extern uint64_t ndevdir;
 extern device_t *devdir;
 

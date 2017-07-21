@@ -42,8 +42,9 @@ extern uint64_t devmtab;
 
 /** structure of mtab */
 typedef struct {
+    uint64_t id;
     uint64_t fs_parent; //index to mtab, parent filesystem
-    ino_t fs_spec;      //index to devdir, block special device (if fs_mnt==dev)
+    ino_t fs_spec;      //index to devdir, block special device (if fs_parent==devmtab)
     char *fs_file;      //path where it's mounted on
     uint16_t fs_type;   //index to fsdrvs, autodetected
     uint16_t fs_flags;  //mount options
