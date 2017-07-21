@@ -25,15 +25,16 @@ SysAdmin's Playground
 Documentation on how to operate OS/Z.
 
  * Available [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md)
- * [Services](https://github.com/bztsrc/osz/blob/master/docs/services.md)
+ * [Services](https://github.com/bztsrc/osz/blob/master/docs/services.md) hierarchy and details
  * [File System](https://github.com/bztsrc/osz/blob/master/docs/fs.md) and paths
  * [Boot options](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md)
  * Invoking [Rescue Shell](https://github.com/bztsrc/osz/blob/master/docs/howto4-rescueshell.md)
  * [Install](https://github.com/bztsrc/osz/blob/master/docs/howto5-install.md) OS/Z on a USB stick and package management
+ * Manage and initialize [services](https://github.com/bztsrc/osz/blob/master/docs/howto6-services.md).
 
 User's Guide
 ------------
 
 Information for end users.
 
- * [User Interface](https://github.com/bztsrc/osz/blob/master/docs/howto6-interface.md)
+ * [User Interface](https://github.com/bztsrc/osz/blob/master/docs/howto7-interface.md)
