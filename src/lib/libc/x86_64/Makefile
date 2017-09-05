@@ -5,7 +5,7 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS =
 
-CFLAGS = -Wall -fpic -ffreestanding -fPIC -nostdinc
+CFLAGS = -Wall -fpic -ffreestanding -fPIC -fno-stack-protector -nostdinc
 ifeq ($(DEBUG),1)
 CFLAGS += -DDEBUG=1
 endif

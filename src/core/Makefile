@@ -9,12 +9,12 @@ LIBS =
 LDFLAGS = -nostdlib
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DOSZ_BUILD='$(BUILD)' -DOSZ_ARCH='"$(ARCH)"' \
- -fpic -nostdinc -I. -I./$(ARCH) -I../../etc/include \
+ -fpic -fno-stack-protector -nostdinc -I. -I./$(ARCH) -I../../etc/include \
  -Wall -ffreestanding -fno-builtin -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 ifeq ($(DEBUG),1)
 CFLAGS +=
 else
-LDFLAGS += -Xlinker -s
+LDFLAGS += -s
 endif
 
 all: $(OBJS) $(BINTARGET)
@@ -32,15 +32,15 @@ platform:
 
 font.o: ../../etc/system.8x16.psf
 	@cp ../../etc/system.8x16.psf ./font
-	$(O)ld -r -b binary -o font.o font
+	$(O)$(LD) -r -b binary -o font.o font
 	@rm font
 
 logo.o: logo.tga
-	$(O)ld -r -b binary -o logo.o logo.tga
+	$(O)$(LD) -r -b binary -o logo.o logo.tga
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  lnk		$(TARGET) ($(ARCH))"
-	$(O)$(CC) $(LDFLAGS) $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -T $(ARCH)/supervisor.ld -Xlinker --build-id=none -Xlinker --nmagic -Xlinker -static -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) $(LDFLAGS) -T $(ARCH)/supervisor.ld --build-id=none --nmagic -static $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
 	@echo "0000000000200000 _init" >../../bin/core.sym
 	@../../tools/elftool.o -s 0 $(BINTARGET) | sort >>../../bin/core.sym

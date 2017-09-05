@@ -48,7 +48,7 @@ void cache_init()
 /**
  * read a block from cache
  */
-void *cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
+public void* cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
 {
     void *ptr;
     // devive file?
@@ -57,7 +57,7 @@ void *cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
             return NULL;
         /* built-in device? */
         if(devdir[dev].drivertask==VFS_DEVICE_MEMFS) {
-            if(blk>=devdir[dev].size)
+            if(blk>=devdir[dev].size || devdir[dev].device==VFS_MEMFS_NULL_DEVICE)
                 return NULL;
             switch(devdir[dev].device) {
                 case VFS_MEMFS_ZERO_DEVICE:
@@ -69,11 +69,14 @@ void *cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
                 break;
             }
         } else {
+            /* TODO: look for fs/dev/blk in cache and return block if found */
             /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
             delayanswer();
+            seterr(EAGAIN);
+            return NULL;
         }
     } else {
-    // simple file on another filesystem
+        // simple file on another filesystem
     }
     return NULL;
 }
@@ -81,7 +84,7 @@ void *cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
 /**
  * store a block in cache, called by drivers
  */
-void cache_setblock(msg_t *msg)
+public void cache_setblock(msg_t *msg)
 {
 }
 

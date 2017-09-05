@@ -26,9 +26,9 @@
  */
 
 #include <osZ.h>
-#include <vfs.h>
+#include <cache.h>
 
-bool_t detect(void *blk)
+ino_t detect(void *blk)
 {
     return
      /* CPIO */
@@ -36,10 +36,11 @@ bool_t detect(void *blk)
      !memcmp(blk,"070702",6) ||
      !memcmp(blk,"070707",6) ||
      /* USTAR */
-     !memcmp(blk+257,"ustar",5));
+     !memcmp(blk+257,"ustar",5))
+     ? 0 : -1;
 }
 
-ino_t locate(mount_t *mnt, char *path, uint64_t type)
+ino_t locate(mount_t *mnt, ino_t parent, char *path)
 {
 dbg_printf("PAX locate '%s'\n",path);
     return -1;
@@ -54,5 +55,5 @@ void _init()
         locate
     };
     //uint16_t id = 
-    _fs_reg(&drv);
+    fsdrv_reg(&drv);
 }

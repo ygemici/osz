@@ -8,13 +8,13 @@ CMD = all
 endif
 export O
 
+all: system $(LIBS) $(APPS)
+
 drivers: $(DRVS)
 
 apps: $(APPS)
 
 libs: $(LIBS)
-
-all: system $(LIBS) $(APPS)
 
 system:
 	@make -e --no-print-directory -C core all | grep -v 'Nothing to be done' || true

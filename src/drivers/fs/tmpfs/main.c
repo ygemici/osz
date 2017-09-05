@@ -26,14 +26,14 @@
  */
 
 #include <osZ.h>
-#include <vfs.h>
+#include <cache.h>
 
-bool_t detect(void *blk)
+ino_t detect(void *blk)
 {
-    return false;
+    return -1;
 }
 
-ino_t locate(mount_t *mnt, char *path, uint64_t type)
+ino_t locate(mount_t *mnt, ino_t parent, char *path)
 {
 dbg_printf("TMP locate '%s'\n",path);
     return -1;
@@ -48,5 +48,5 @@ void _init()
         locate
     };
     //uint16_t id = 
-    _fs_reg(&drv);
+    fsdrv_reg(&drv);
 }

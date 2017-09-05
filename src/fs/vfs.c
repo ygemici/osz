@@ -76,8 +76,10 @@ public fid_t vfs_locate(fid_t parent, char *name, uint64_t type)
         seterr(ENXIO);
         return -1;
     }
-    if(name==NULL || name[0]==0)
+    if(name==NULL || name[0]==0) {
+        seterr(SUCCESS);
         return parent;
+    }
     /* TODO: canonize path */
     strcpy(tmppath, fcbs[parent].path);
     strcat(tmppath, name+(name[0]=='/'?1:0));
@@ -100,7 +102,7 @@ dbg_printf("s %d %x\n",mtab[fsmtab].fs_type,fsdrvs[mtab[fsmtab].fs_type].locate)
     }
     
     /* pass the remaining path to filesystem driver */
-    in=(*fsdrvs[mtab[fsmtab].fs_type].locate)(&mtab[fsmtab], canonpath+l, type);
+    in=(*fsdrvs[mtab[fsmtab].fs_type].locate)(&mtab[fsmtab], 0, canonpath+l);
     if(in==-1) {
         seterr(ENOENT);
         return -1;
@@ -112,7 +114,7 @@ return 0;
 /**
  * Register a filesystem parser
  */
-public uint16_t _fs_reg(const fsdrv_t *fs)
+public uint16_t fsdrv_reg(const fsdrv_t *fs)
 {
     fsdrvs=(fsdrv_t*)realloc(fsdrvs,++nfsdrvs*sizeof(fsdrv_t));
     if(!fsdrvs || errno)
@@ -124,7 +126,7 @@ public uint16_t _fs_reg(const fsdrv_t *fs)
 /**
  * return filesystem parser
  */
-uint16_t _fs_get(char *name)
+uint16_t fsdrv_get(char *name)
 {
     int i;
     for(i=0;i<nfsdrvs;i++)
@@ -185,7 +187,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     fsmtab = -1;
     if(!strncmp(dev,"/dev/",5)) {
         fsmtab = devmtab;
-        ino = devfs_locate(NULL, dev+5, 0);
+        ino = devfs_locate(NULL, 0, dev+5);
         if(ino >= ndevdir) {
             seterr(ENODEV);
             return -1;
@@ -196,7 +198,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
             seterr(ENODEV);
             return -1;
         }
-        ino=vfs_locate(0,dev,0);
+        ino=vfs_locate(VFS_FCB_ROOT,dev,0);
     }
     // get first sector
     block=cache_getblock(fsmtab, ino, 0);
@@ -205,7 +207,13 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
         return -1;
     }
     // detect filesystem type
-    i=0; while(i<nfsdrvs && (fsdrvs[i].detect==NULL || !(*fsdrvs[i].detect)(block))) i++;
+    ino_t rootino;
+    for(i=0;i<nfsdrvs;i++){
+        if(fsdrvs[i].detect!=NULL) {
+            rootino=(*fsdrvs[i].detect)(block);
+            if(rootino!=-1) break;
+        }
+    }
     if(i>=nfsdrvs) {
         seterr(ENOFS);
         return -1;
@@ -215,7 +223,6 @@ dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].na
     if(!mtab || errno)
         abort();
     mnt=&mtab[n];
-    mnt->id=n;
     mnt->fs_file=strdup(file);
     if(mnt->fs_file[strlen(mnt->fs_file)-1]!='/') {
         mnt->fs_file=(char*)realloc(mnt->fs_file,strlen(mnt->fs_file)+1);
@@ -224,6 +231,7 @@ dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].na
     mnt->fs_parent=fsmtab;
     mnt->fs_spec=ino;
     mnt->fs_type=i;
+    mnt->rootdir=rootino;
 
     // when mounting root, also mount /dev. It's path is hardcoded, cannot be changed
     if(file[0]=='/' && file[1]==0) {
@@ -247,11 +255,10 @@ dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].na
         if(!mtab || errno)
             abort();
         mnt=&mtab[n+1];
-        mnt->id=n+1;
         mnt->fs_file="/dev/";   // mount point, cannot be changed
         mnt->fs_parent=-1;      // no parent filesystem
         mnt->fs_spec=-1;        // no special device
-        mnt->fs_type=_fs_get("devfs");
+        mnt->fs_type=fsdrv_get("devfs");
     }
     return n;
 }

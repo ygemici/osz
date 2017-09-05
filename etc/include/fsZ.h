@@ -1,28 +1,15 @@
 /*
  * fsZ.h
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
- * https://creativecommons.org/licenses/by-nc-sa/4.0/
+ * 2016 Public Domain bztsrc@github
+ * 
+ * IMPORTANT NOTE: the on disk format of FS/Z is public domain, you
+ * can use it without any restrictions and free of charge. The right
+ * to create and use disks and images with FS/Z and implement programs
+ * to do so is hereby granted to everybody. The filesystem driver for
+ * it in OS/Z on the other hand licensed under CC-by-nc-sa.
  *
- * You are free to:
- *
- * - Share — copy and redistribute the material in any medium or format
- * - Adapt — remix, transform, and build upon the material
- *     The licensor cannot revoke these freedoms as long as you follow
- *     the license terms.
- *
- * Under the following terms:
- *
- * - Attribution — You must give appropriate credit, provide a link to
- *     the license, and indicate if changes were made. You may do so in
- *     any reasonable manner, but not in any way that suggests the
- *     licensor endorses you or your use.
- * - NonCommercial — You may not use the material for commercial purposes.
- * - ShareAlike — If you remix, transform, or build upon the material,
- *     you must distribute your contributions under the same license as
- *     the original.
- *
- * @brief fs/Z filesystem defines and structures
+ * @brief FS/Z filesystem defines and structures for on disk format
  */
 
 #ifndef _FS_Z_H_
@@ -37,7 +24,8 @@
 
 // fid is a file id, a logical sector address of an inode. Logical sector addresses
 // are 128 bits long to be future proof, although currently only 64 bits used. That
-// gives you to total capacity of 64 Zettabytes current implementation can handle.
+// gives you to total capacity of 64 Zettabytes current implementation can handle with
+// 4096 bytes sector size.
 
 /*********************************************************
  *            1st sector, the super block                *
@@ -74,7 +62,7 @@ typedef struct {
     uint16_t    maxmounts;          // 704 number of maximum mounts allowed to next fsck
     uint16_t    currmounts;         // 706 current mount counter
     uint16_t    logsec;             // 708 logical sector size, 0=2048,1=4096(default),2=8192...
-    uint16_t    physec;             // 710 how many physical sector gives up a logical one
+    uint16_t    physec;             // 710 how many physical sector gives up a logical one, defaults to 8
     uint64_t    createdate;         // 712 creation timestamp UTC
     uint64_t    lastmountdate;      // 720
     uint64_t    lastcheckdate;      // 728
@@ -161,25 +149,25 @@ typedef struct {
     FSZ_Version version3;       // 256 see FSZ_Version structure above
     FSZ_Version version2;       // 320
     FSZ_Version version1;       // 384
-    // FSZ_Version current; I haven't used struct here to save typing when referencing
-    uint64_t        sec;        // 448 current (or only) version
-    uint64_t        sec_hi;
-    uint64_t        size;       // 464 file size
-    uint64_t        size_hi;
-    uint64_t        modifydate; // 480
-    uint32_t        filechksum; // 488 Castagnoli CRC32 of data
-    uint32_t        flags;      // 492 see FSZ_IN_FLAG_*
+    // FSZ_Version current; I haven't used FSZ_Version struct here to save typing when referencing
+    uint64_t         sec;       // 448 current (or only) version
+    uint64_t         sec_hi;
+    uint64_t         size;      // 464 file size
+    uint64_t         size_hi;
+    uint64_t         modifydate;// 480
+    uint32_t         filechksum;// 488 Castagnoli CRC32 of data
+    uint32_t         flags;     // 492 see FSZ_IN_FLAG_*
     //owner is the last in FSZ_Version to followed by ACL.
     //so first entry in ACL is the control ACE
-    FSZ_Access      owner;      // 496
+    FSZ_Access       owner;     // 496
     union {
         struct {
-        FSZ_Access  groups[32]; // 512 List of 32 FSZ_Access entries
-        uint8_t     inlinedata[FSZ_SECSIZE-1024];
+          FSZ_Access groups[32];// 512 List of 32 FSZ_Access entries, groups
+          uint8_t    inlinedata[FSZ_SECSIZE-1024];
         };
         struct {
-        FSZ_Access  groups[96]; // 512 List of 96 FSZ_Access entries
-        uint8_t     inlinedata[FSZ_SECSIZE-2048];
+          FSZ_Access groups[96];// 512 List of 96 FSZ_Access entries, groups
+          uint8_t    inlinedata[FSZ_SECSIZE-2048];
         } big;
     };
 } __attribute__((packed)) FSZ_Inode;
@@ -214,6 +202,8 @@ typedef struct {
 
 // if even that's not enough, you can use sector lists (extents) to store file data.
 
+#define FLAG_TRANSLATION(x) ((x>>0)&0xFF)
+
 /*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
     the data is included in the inode sector at 1024 (or 2048 if BIGINODE)
@@ -227,8 +217,7 @@ typedef struct {
 
 /*  data size < sector size * sector size / 16 (1 M)
     FSZ_Inode.sec points to a sector directory,
-    which is a sector with up to 512 sector
-    addresses
+    which is a sector with up to 256 sector addresses
     FSZ_Inode.sec -> sd -> data */
 #define FSZ_IN_FLAG_SD      (1<<0)
 

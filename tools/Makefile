@@ -76,9 +76,9 @@ ifeq ($(INITRDFMT),fsz)
 	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/*/lib/"
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 else
-	@echo "uni:/sys/bin/ /usr/*/bin/" >../bin/initrd/bin
-	@echo "uni:/sys/etc/ /usr/*/etc/" >../bin/initrd/etc
-	@echo "uni:/sys/lib/ /usr/*/lib/" >../bin/initrd/lib
+	@echo -e "uni:/sys/bin/\00/usr/*/bin/\00\00" >../bin/initrd/bin
+	@echo -e "uni:/sys/etc/\00/usr/*/etc/\00\00" >../bin/initrd/etc
+	@echo -e "uni:/sys/lib/\00/usr/*/lib/\00\00" >../bin/initrd/lib
 ifeq ($(INITRDFMT),crc)
 	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
 endif

@@ -71,6 +71,7 @@ void _init(int argc, char **argv)
             //else
             //  continue;
         }
+        /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
 devfs_dump();

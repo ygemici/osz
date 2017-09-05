@@ -48,7 +48,7 @@ typedef struct {
 extern uint64_t ndevdir;
 extern device_t *devdir;
 
-extern ino_t devfs_locate(mount_t *mnt, char *file, uint64_t type);
+extern ino_t devfs_locate(mount_t *mnt, ino_t parent, char *file);
 
 #if DEBUG
 extern void devfs_dump();

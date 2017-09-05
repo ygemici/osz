@@ -42,7 +42,6 @@ extern uint64_t devmtab;
 
 /** structure of mtab */
 typedef struct {
-    uint64_t id;
     uint64_t fs_parent; //index to mtab, parent filesystem
     ino_t fs_spec;      //index to devdir, block special device (if fs_parent==devmtab)
     char *fs_file;      //path where it's mounted on
@@ -52,14 +51,17 @@ typedef struct {
     gid_t *grp;         //access entries
     uint8_t access;     //access for world
     nlink_t nlink;      //number of fcb references
+    ino_t rootdir;      //root directory inode
 } mount_t;
 
 typedef struct {
     const char *name;
     const char *desc;
-    bool_t (*detect)(void *blk);
-    ino_t (*locate)(mount_t *mnt, char *path, uint64_t type);
+    ino_t (*detect)(void *blk);
+    ino_t (*locate)(mount_t *mnt, ino_t parent, char *path);
 } fsdrv_t;
+
+#define VFS_FCB_ROOT                0
 
 #define VFS_FCB_TYPE_FILE           0
 #define VFS_FCB_TYPE_DIRECTORY      1
@@ -123,8 +125,8 @@ extern openfile_t *files;
 extern fid_t vfs_locate(fid_t parent, char *path, uint64_t type);
 
 /* private functions */
-extern uint16_t _fs_get(char *name);
-extern uint16_t _fs_reg(const fsdrv_t *fs);
+extern uint16_t fsdrv_get(char *name);
+extern uint16_t fsdrv_reg(const fsdrv_t *fs);
 extern uint64_t mtab_add(char *dev, char *file, char *opts);
 extern void mtab_del(uint64_t mid);
 extern fid_t fcb_add(const fcb_t *fcb);

@@ -68,10 +68,10 @@ void dev_link(FSZ_DirEnt *entries, char *name, fid_t fid)
 /**
  * locate a file in devfs. We don't use mnt here
  */
-ino_t devfs_locate(mount_t *mnt, char *file, uint64_t type)
+ino_t devfs_locate(mount_t *mnt, ino_t parent, char *file)
 {
     uint64_t i;
-    if((file==NULL || file[0]==0) || (type!=0 && type!=S_IFBLK && type!=S_IFCHR))
+    if(file==NULL || file[0]==0 || parent!=0)
         return -1;
     if(!strncmp(file,"vol/",4)) {
         file+=4;
@@ -104,7 +104,7 @@ void devfs_init()
         NULL,
         devfs_locate
     };
-    _fs_reg(&devdrv);
+    fsdrv_reg(&devdrv);
 
     ndevdir=5;
     //allocate memory for devfs

@@ -48,4 +48,4 @@ _start:
     call    main
     /* exit task */
     movq    %rax, %rdi
-    jmp    exit
+    jmp    exit@PLT

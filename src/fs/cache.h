@@ -59,8 +59,8 @@ extern uint64_t ncache;
 extern cachedir_t *cache;
 extern cacheblk_t cacheblk[];
 
-extern void *cache_getblock(uint64_t fs, ino_t dev, blkcnt_t blk);
-extern void cache_setblock(msg_t *msg);
+extern public void *cache_getblock(uint64_t fs, ino_t dev, blkcnt_t blk);
+extern public void cache_setblock(msg_t *msg);
 
 #if DEBUG
 extern void cache_dump();

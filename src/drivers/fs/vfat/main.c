@@ -26,19 +26,20 @@
  */
 
 #include <osZ.h>
-#include <vfs.h>
+#include <cache.h>
 
-bool_t detect(void *blk)
+ino_t detect(void *blk)
 {
     return
      ((uint8_t*)blk)[510]==0x55 && ((uint8_t*)blk)[511]==0xAA &&
      /* FAT12 / FAT16 */
      (!memcmp(blk+54, "FAT1", 4)||
      /* FAT32 */
-      !memcmp(blk+84, "FAT3", 4));
+      !memcmp(blk+84, "FAT3", 4))
+    ? 0 : -1;
 }
 
-ino_t locate(mount_t *mnt, char *path, uint64_t type)
+ino_t locate(mount_t *mnt, ino_t parent, char *path)
 {
 dbg_printf("FAT locate '%s'\n",path);
     return -1;
@@ -53,5 +54,5 @@ void _init()
         locate
     };
     //uint16_t id = 
-    _fs_reg(&drv);
+    fsdrv_reg(&drv);
 }
