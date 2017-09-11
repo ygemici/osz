@@ -387,13 +387,14 @@ int createdisk()
     hs=read_size;
     char *gpt=malloc(gs+512),*p;
     char *swap=malloc(ss);
-    // get MBR code if any
+    // get MBR / VBR code if any
     char *loader=readfileall(stage1);   //stage1 loader
     if(loader==NULL) {
         loader=malloc(512);
         memset(loader,0,512);
+    } else {
+        memset(loader+0x1B8,0,0x1FE - 0x1B8);
     }
-    memset(loader+0x1B8,0,0x1FE - 0x1B8);
     j=0;
     // locate stage2 loader FS0:\BOOTBOOT\LOADER on ESP
     if(es>0) {
@@ -424,6 +425,15 @@ int createdisk()
             }
         }
     }
+    // magic
+    loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
+
+    // copy stage1 loader to VBR too. This will be used when
+    // later a boot manager is installed on disk
+    if(loader[0]!=0) {
+        memcpy(rs>0?ssp:usr, loader, 512);
+    }
+
     // WinNT disk id
     setint(uuid[0],loader+0x1B8);
 
@@ -440,17 +450,24 @@ int createdisk()
     loader[0x1C2]=0xEE;                         //type
     setint((gs/512)+1,loader+0x1C4);            //end CHS
     setint(1,loader+0x1C6);                     //start lba
-    setint((gs/512),loader+0x1CA);              //end lba
+    setint((gs/512),loader+0x1CA);              //number of sectors
+    j=0x1D0;
     // MBR, EFI System Partition record
     if(es>0) {
-        setint((gs/512)+2,loader+0x1D0);        //start CHS
-        loader[0x1D2]=0xEF;                     //type
-        setint(((gs+es)/512)+2,loader+0x1D4);   //end CHS
-        setint((gs/512)+1,loader+0x1D6);        //start lba
-        setint(((es)/512),loader+0x1DA);        //end lba
+        setint((gs/512)+2,loader+j);            //start CHS
+        loader[j+2]=0xEF;                       //type
+        setint(((gs+es)/512)+2,loader+j+4);     //end CHS
+        setint((gs/512)+1,loader+j+6);          //start lba
+        setint(((es)/512),loader+j+10);         //number of sectors
+        j+=16;
     }
-    // magic
-    loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
+    // MBR, bootable OS/Z System partition (for optional boot manager)
+    loader[j-2]=0x80;                           //bootable flag
+    setint(((gs+es)/512)+3,loader+j);           //start CHS
+    loader[j+2]=0x30;                           //type
+    setint(((gs+es)/512)+3+512,loader+j+4);     //end CHS
+    setint(((gs+es+rs)/512)+1,loader+j+6);      //start lba
+    setint(((us)/512),loader+j+10);             //number of sectors
 
     // GPT Header
     memset(gpt,0,gs);
