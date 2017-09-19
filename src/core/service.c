@@ -31,7 +31,7 @@
 /* external resources */
 extern phy_t screen[2];
 extern phy_t pdpe;
-extern void task_mapsyslog();
+extern uint64_t *syslog_buf;
 
 /* pids of services. Negative pids are service ids and looked up in this */
 dataseg pid_t  services[NUMSRV];
@@ -42,6 +42,9 @@ dataseg uint8_t scrptr = 0;
 /* location of fstab in mapped initrd */
 dataseg uint64_t fstab;
 dataseg uint64_t fstab_size;
+
+/* pointer to mapped buffer */
+dataseg virt_t buffer_ptr;
 
 /**
  * Initialize a non-special system service
@@ -60,7 +63,7 @@ void service_init(int subsystem, char *fn)
     }
     // little trick to support syslog buffer
     if(subsystem==SRV_syslog)
-        task_mapsyslog();
+        buffer_ptr=task_mapbuf(syslog_buf,nrlogmax);
     // map libc and other libraries
     elf_neededso(0);
 
@@ -211,6 +214,8 @@ void drv_init(char *driver)
     if(elf_load("sys/driver") == (void*)(-1)) {
         kpanic("unable to load ELF from /sys/driver");
     }
+    // map the environment so that drivers can parse it for their config
+    buffer_ptr=task_mapbuf(environment,1);
     // map libc
     elf_loadso("sys/lib/libc.so");
     // map the real driver as a shared object

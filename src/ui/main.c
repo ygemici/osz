@@ -31,7 +31,7 @@ extern char _binary_logo_start;
 extern void keymap_parse(bool_t alt, char *keymap, size_t len);
 extern void reset_pointers();
 
-// filled by real-time linker
+// filled by run-time linker
 public char _keymap[8];
 public void* _screen_ptr;
 public uint64_t _fb_width;
@@ -49,6 +49,7 @@ void task_init(int argc, char **argv)
     uint64_t len;
 
     /* map keymap */
+    // FIXME: once vfs ready, use fopen() and fread()
     len = mapfile((void*)bss, "/etc/kbd/en_us");
     keymap_parse(0, (char*)bss, (size_t)len);
     bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);

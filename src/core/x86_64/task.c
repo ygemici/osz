@@ -27,8 +27,6 @@
 
 #include "platform.h"
 
-extern uint64_t *syslog_buf;
-
 dataseg phy_t idle_mapping;
 dataseg phy_t core_mapping;
 dataseg phy_t identity_mapping;
@@ -156,16 +154,17 @@ bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
 }
 
 /**
- * Map early syslog buffer into task's memory
+ * Map a core buffer into task's memory
  */
-void task_mapsyslog()
+virt_t task_mapbuf(void *buf, uint64_t npages)
 {
     int i=0,j=0;
     uint64_t *paging = (uint64_t *)&tmpmap;
     // map early syslog buffer after ELF
     for(i=0;paging[i]!=0;i++);
-    for(j=0;j<nrlogmax;j++)
+    for(j=0;j<npages;j++)
         paging[i+j] = ((*((uint64_t*)kmap_getpte(
-            (uint64_t)syslog_buf + j*__PAGESIZE)))
+            (uint64_t)buf + j*__PAGESIZE)))
             & ~(__PAGESIZE-1)) + PG_USER_RO;
+    return TEXT_ADDRESS + i*__PAGESIZE;
 }

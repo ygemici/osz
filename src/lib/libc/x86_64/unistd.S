@@ -264,6 +264,7 @@ mprotect:
 /**
  * size_t mapfile(void *bss, char *fn)
  */
+// FIXME: remove mapfile once vfs ready
 mapfile:
     xorq    %rax, %rax
     movb    $SYS_mapfile, %al

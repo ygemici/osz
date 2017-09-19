@@ -140,6 +140,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             sched_alarm(tcb, ticks[TICKS_TS]+arg0, ticks[TICKS_NTS]+arg1);
             break;
 
+        // FIXME: remove mapfile once vfs ready
         case SYS_mapfile:
             /* map a file info bss */
             if(arg0<BSS_ADDRESS || arg0>=BUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {

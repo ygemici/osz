@@ -237,6 +237,9 @@ extern bool_t task_check(tcb_t *tcb, phy_t *paging);
 /** Check access for a group */
 extern bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access);
 
+/** map core buffer in task's address space */
+extern virt_t task_mapbuf(void *buf, uint64_t npages);
+
 // ----- Scheduler -----
 /** Add task to scheduling */
 extern void sched_add(tcb_t *tcb);
@@ -251,7 +254,7 @@ extern void sched_block(tcb_t *tcb);
 extern void sched_awake(tcb_t *tcb);
 
 /** suspend a task until given time */
-void sched_alarm(tcb_t *tcb, uint64_t sec, uint64_t nsec);
+extern void sched_alarm(tcb_t *tcb, uint64_t sec, uint64_t nsec);
 
 /** Hybernate a task */
 extern void sched_sleep(tcb_t *tcb);

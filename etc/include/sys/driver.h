@@ -31,6 +31,9 @@
 /*** libc implementation prototypes */
 #ifndef _AS
 
+// import environment configuration
+extern unsigned char *_environment;
+
 typedef struct {
     uint64_t freepages;
     uint64_t totalpages;

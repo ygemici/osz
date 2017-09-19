@@ -37,7 +37,7 @@ extern uint8_t identity;    // run first time setup utility
 extern uint8_t lefthanded;  // swap pointers?
 extern uint64_t clocksource;// clock source
 extern uint64_t debug;      // debug flags
-extern uint64_t quantum;    // max CPU allocation time: 1/quantum sec
+extern uint64_t quantum;    // max CPU allocation time in timer interrupts
 extern uint64_t fps;        // max frame per sec
 extern uint64_t display;    // display type
 extern uint64_t keymap;     // keymap

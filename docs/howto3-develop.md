@@ -69,8 +69,15 @@ IRQs can be assigned three ways to tasks:
  3. or autodetected from system tables, in which case implement `irq()`.
 
 In driver's `task_init()` function, it may register device files in "devfs" with `mknod()` calls.
-If a device driver requires configuration file, it must use `mapfile()` to load that from initrd as filesystems are not mounted
-when their initialization called.
+If a device driver requires a configuration, it can't load config files as filesystems are not mounted
+when their initialization code is called. Instead it should use a string defined in driver.h:
+
+```c
+extern unisgned char *_environment;
+```
+
+Which is the [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) file mapped by the run-time linker,
+so that the driver can parse it looking for it's configuration.
 
 Note that you don't have to do any message receive calls, just create public functions for your message types.
 

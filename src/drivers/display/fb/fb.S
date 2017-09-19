@@ -33,6 +33,9 @@
 .type _init, STT_FUNC
 .global _init
 .global task_init
+.type _environment, STT_OBJECT
+.size _environment, 8
+.global _environment
 .type _screen_ptr, STT_OBJECT
 .size _screen_ptr, 8
 .global _screen_ptr
@@ -280,7 +283,10 @@ copyarea:
 
 .section .data
 /* that stupid GNU as and ld can't refer to a label rip relatively
-   when it's scope is global... so we have to double all labels. */
+   when it's scope is global... so we have to double all the labels. */
+_environment:
+environment:
+    .quad 0
 _screen_ptr:
 screen_ptr:
     .quad 0

@@ -26,6 +26,10 @@
  */
 #include <osZ.h>
 
+// import early syslog buffer from rtlinker
+extern unsigned char *_syslog_ptr;
+extern uint64_t _syslog_size;
+
 public void openlog(char *ident, int option, int facility) {}
 public void closelog() {}
 public void syslog(int pri, char *fmt, ...) {}

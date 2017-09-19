@@ -39,6 +39,7 @@ extern uint64_t fstab;
 extern uint64_t fstab_size;
 extern uint64_t alarmstep;
 extern uint64_t bogomips;
+extern uint64_t buffer_ptr;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -752,6 +753,12 @@ bool_t elf_rtlink()
                             {k=8; *objptr=BUF_ADDRESS;scrptr=true;}
                         if(!kmemcmp(strtable + s->st_name,"_fb_ptr",8) && s->st_size==8)
                             {k=8; *objptr=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
+                        if(!kmemcmp(strtable + s->st_name,"_syslog_ptr",12) && s->st_size==8)
+                            {k=8; *objptr=buffer_ptr;}
+                        if(!kmemcmp(strtable + s->st_name,"_syslog_size",13) && s->st_size>=4)
+                            {k=4; *objptr=nrlogmax*__PAGESIZE;}
+                        if(!kmemcmp(strtable + s->st_name,"_environment",13) && s->st_size==8)
+                            {k=8; *objptr=buffer_ptr;}
                         if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
                             syslog_early("pid %x: exporting %s on page boundary",
                                 ((tcb_t*)(pmm.bss_end))->pid,strtable + s->st_name);

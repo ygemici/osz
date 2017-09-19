@@ -268,8 +268,8 @@ void env_init()
             env += 9;
             env = env_boolf(env, &identity);
         } else
-        // maximum timeslice rate per second for a task
-        // to allocate CPU continously (1/quantum sec)
+        // maximum timeslice a task can allocate
+        // CPU continously in timer interrupts
         if(!kmemcmp(env, "quantum=", 8)) {
             env += 8;
             env = env_dec(env, &tmp, 10, 10000);
@@ -299,9 +299,4 @@ void env_init()
 		// architecture specific keys
             env = envarch_parse(env);
     }
-
-    // force identity process without hostname
-    fs_locate("etc/hostname");
-    if(fs_size==0)
-        identity = true;
 }
