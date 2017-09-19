@@ -7,10 +7,10 @@
 ./docs/howto4-rescueshell.md:20:TODO: write howto
 ./etc/include/sys/core.h:96:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
-./src/drivers/fs/fsz/main.c:73:        /* TODO: sector directory */
+./src/drivers/fs/fsz/main.c:84:            /* TODO: sector directory */
 ./src/fs/vfs.c:83:    /* TODO: canonize path */
-./src/fs/main.c:65:            /* TODO: check if caller is a driver task, PRI_DRV and msg->argX valid delayedmsg index */
-./src/fs/main.c:67:            /* TODO: find delayedmsg, decrease numblk */
+./src/fs/main.c:67:            /* TODO: check if caller is a driver task, PRI_DRV and msg->argX valid delayedmsg index */
+./src/fs/main.c:69:            /* TODO: find delayedmsg, decrease numblk */
 ./src/fs/cache.c:72:            /* TODO: look for fs/dev/blk in cache and return block if found */
 ./src/fs/cache.c:73:            /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
 ./src/core/x86_64/pci.c:66:// TODO: enumerate bus and load drivers

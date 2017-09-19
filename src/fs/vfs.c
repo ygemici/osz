@@ -63,12 +63,12 @@ public fid_t vfs_locate(fid_t parent, char *name, uint64_t type)
     seterr(SUCCESS);
     fsmtab = -1;
     if(tmppath==NULL) {
-        tmppath=(char*)malloc(_pathmax<512?512:_pathmax);
+        tmppath=(char*)malloc(_pathmax);
         if(!tmppath || errno)
             return -1;
     }
     if(canonpath==NULL) {
-        canonpath=(char*)malloc(_pathmax<512?512:_pathmax);
+        canonpath=(char*)malloc(_pathmax);
         if(!canonpath || errno)
             return -1;
     }
@@ -110,6 +110,39 @@ dbg_printf("s %d %x\n",mtab[fsmtab].fs_type,fsdrvs[mtab[fsmtab].fs_type].locate)
 dbg_printf("fslocate %d\n",in);
 return 0;
 }
+
+/**
+ * Locate a path in symlink
+ */
+public fid_t vfs_parsesymlink(char *path, unsigned char *target, int size)
+{
+    return -1;
+}
+
+/**
+ * Locate a path in directory union
+ */
+public fid_t vfs_parseunion(char *path, unsigned char *target, int size)
+{
+    fid_t ret=-1;
+    char *c=(char*)target, *tmp=(char*)malloc(_pathmax);
+    char *rem=strdup(path);
+    if(!tmp || errno)
+        return -1;
+    while(*c!=0) {
+        strcpy(tmp,c);
+        strcat(tmp,rem);
+        dbg_printf("UNION %s '%s' '%s'\n",tmp,c,rem);
+        ret=vfs_locate(0,tmp,0);
+        if(ret>=0) break;
+        while(*c!=0) c++;
+        c++;
+    }
+    free(tmp);
+    free(rem);
+    return ret;
+}
+
 
 /**
  * Register a filesystem parser

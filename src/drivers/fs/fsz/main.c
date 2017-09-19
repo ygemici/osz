@@ -63,30 +63,43 @@ dbg_printf("FS/Z locate %d '%s'\n",parent,path);
     while(*e!='/' && *e!=0) e++;
     if(*e=='/') e++;
 dbg_printf("%x '%s' %x\n", in, in->filetype, FLAG_TRANSLATION(in->flags));
-    if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_INLINE) {
-        // inline
-        dirent=(FSZ_DirEnt *)in->inlinedata;
-    } else if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_DIRECT) {
-        // direct data
-        dirent=(FSZ_DirEnt *)cache_getblock(mnt->fs_parent, mnt->fs_spec, in->sec);
-    } else if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SD) {
-        /* TODO: sector directory */
+
+    if(!memcmp(in->filetype, FILETYPE_SYMLINK, 4)) {
+        return vfs_parsesymlink(path,in->inlinedata,in->size);
     }
-    if(dirent==NULL)
-        return -1;
-    i=((FSZ_DirEntHeader *)dirent)->numentries;
-    while(i) {
-        dirent++;
-        if(!memcmp(dirent->name,path,e-path)) {
-            // end of path
-            if(*e==0 && (dirent->name[e-path]==0 || dirent->name[e-path]=='/'))
-                return dirent->fid;
-            // path continues
-            parent=dirent->fid;
-            path=e;
-            goto again;
+
+    if(!memcmp(in->filetype, FILETYPE_UNION, 4)) {
+        return vfs_parseunion(path,in->inlinedata,in->size);
+    }
+
+    if(!memcmp(in->filetype, FILETYPE_DIR, 4)) {
+        dirent=NULL;
+        if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_INLINE) {
+            // inline
+            dirent=(FSZ_DirEnt *)(in->inlinedata);
+        } else if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_DIRECT) {
+            // direct data
+            dirent=(FSZ_DirEnt *)cache_getblock(mnt->fs_parent, mnt->fs_spec, in->sec);
+        } else if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SD) {
+            /* TODO: sector directory */
         }
-        i--;
+        if(dirent==NULL)
+            return -1;
+        i=((FSZ_DirEntHeader *)dirent)->numentries;
+        while(i) {
+            dirent++;
+            if(!memcmp(dirent->name,path,e-path)) {
+                // end of path
+                if(*e==0 && (dirent->name[e-path]==0 || dirent->name[e-path]=='/'))
+                    return dirent->fid;
+                // path continues
+                parent=dirent->fid;
+                path=e;
+                goto again;
+            }
+            if(dirent->name[0]==0) break;
+            i--;
+        }
     }
     return -1;
 }

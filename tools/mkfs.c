@@ -131,6 +131,7 @@ int add_inode(char *filetype, char *mimetype)
         if(!strcmp(filetype,"dir:")){
             FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)(in->inlinedata);
             in->sec=size/secsize;
+            in->flags=FSZ_IN_FLAG_INLINE;
             memcpy(in->inlinedata,FSZ_DIR_MAGIC,4);
             hdr->checksum=crc32_calc((char*)hdr+sizeof(FSZ_DirEntHeader),hdr->numentries*sizeof(FSZ_DirEnt));
         }
@@ -142,8 +143,10 @@ int add_inode(char *filetype, char *mimetype)
             i=strlen(mimetype);
         }
         memcpy(j==56?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
+        if(j!=56)
+            in->size=i;
     }
-    in->checksum=crc32_calc((char*)in->filetype,1024);
+    in->checksum=crc32_calc((char*)in->filetype,1016);
     size+=secsize;
     return size/secsize-1;
 }
@@ -166,6 +169,7 @@ void link_inode(int inode, char *path, int toinode)
         }
         ent++; cnt++;
     }
+    FSZ_Inode *in=((FSZ_Inode *)(fs+toinode*secsize));
     ent->fid=inode;
     ent->length=strlen(path);
     memcpy(ent->name,path,strlen(path));
@@ -173,8 +177,10 @@ void link_inode(int inode, char *path, int toinode)
         ent->name[ent->length++]='/';
     }
     hdr->numentries++;
+    in->size+=sizeof(FSZ_DirEnt);
     qsort((char*)hdr+sizeof(FSZ_DirEntHeader), hdr->numentries, sizeof(FSZ_DirEnt), direntcmp);
     hdr->checksum=crc32_calc((char*)hdr+sizeof(FSZ_DirEntHeader),hdr->numentries*sizeof(FSZ_DirEnt));
+    in->checksum=crc32_calc((char*)in->filetype,1016);
 }
 
 //reads a file and adds it to the output
@@ -270,7 +276,7 @@ void add_file(char *name, char *datafile)
          memcpy(in->filetype,"imag",4);
         }
 
-    in->checksum=crc32_calc((char*)in->filetype,1024);
+    in->checksum=crc32_calc((char*)in->filetype,1016);
     size+=s;
     link_inode(inode,name,0);
 }
@@ -710,7 +716,7 @@ void changemime(int argc, char **argv)
         if(*c!='/') { printf("mkfs: bad mime type\n"); exit(2); } else c++;
         memcpy(in->filetype,argv[4],4);
         memcpy(in->mimetype,c,strlen(c)<56?strlen(c):55);
-        in->checksum=crc32_calc((char*)in->filetype,1024);
+        in->checksum=crc32_calc((char*)in->filetype,1016);
         //write out new image
         f=fopen(argv[1],"wb");
         fwrite(data,read_size,1,f);

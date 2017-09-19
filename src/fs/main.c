@@ -51,6 +51,8 @@ uint64_t delayanswer()
 void _init(int argc, char **argv)
 {
     fid_t fid;
+    if(_pathmax<512)
+        _pathmax=512;
     /* allocate directory and block caches */
     cache_init();
     /* initialize dev directory, and in memory "block devices" */

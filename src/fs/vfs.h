@@ -132,6 +132,9 @@ extern void mtab_del(uint64_t mid);
 extern fid_t fcb_add(const fcb_t *fcb);
 extern void fcb_del(fid_t fid);
 extern void vfs_fstab(char *ptr,size_t size);
+extern fid_t vfs_parsesymlink(char *path, unsigned char *target, int size);
+extern fid_t vfs_parseunion(char *path, unsigned char *target, int size);
+
 #if DEBUG
 extern void vfs_dump();
 #endif
