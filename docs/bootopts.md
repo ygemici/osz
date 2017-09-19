@@ -49,10 +49,10 @@ This can be a numeric value, or a comma separated list of flags.
 | 0     |      | DBG_NONE | no debug information |
 | 1     | me   | DBG_MEMMAP | dump memory map (either E820 or EFI) |
 | 2     | ta   | DBG_TASKS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
-| 4     | el   | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
-| 8     | ri   | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/service.c) imported values |
+| 4     | el   | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/elf.c#L66) |
+| 8     | ri   | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/elf.c#L486) imported values |
 | 16    | re   | DBG_RTEXPORT | debug run-time linker exported values |
-| 32    | ir   | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/service.c) |
+| 32    | ir   | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c#L270) |
 | 64    | de   | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pci.c) |
 | 128   | sc   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
 | 256   | ms   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
@@ -60,7 +60,7 @@ This can be a numeric value, or a comma separated list of flags.
 | 1024  | pm   | DBG_PMM | debug [physical memory manager](https://github.com/bztsrc/osz/blob/master/src/core/pmm.c) |
 | 2048  | vm   | DBG_VMM | debug [virtual memory manager](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/vmm.c) |
 | 4096  | ma   | DBG_MALLOC | debug [libc memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
-| 8192  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test/main.c) instead of [init](https://github.com/bztsrc/osz/blob/master/docs/services.md) task |
+| 8192  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
 
 Most of these only available when compiled with debug. Normally you can only use three to troubleshoot boot: DBG_DEVICES, DBG_LOG and DBG_MSG.
 
@@ -69,12 +69,14 @@ Clock Source
 
 Either a numeric value or exactly one flag.
 
-| Value | Flag | Arch   | Description |
-| ----: | ---- | ------ | ----------- |
-| 0     |      | -      | auto detect |
-| 1     | hp   | x86_64 | High Precision Event Timer (default) |
-| 2     | pi   | x86_64 | Programmable Interval Timer (fallback) |
-| 3     | rt   | x86_64 | Real Time Clock |
+| Value | Flag | Arch    | Description |
+| ----: | ---- | ------- | ----------- |
+| 0     |      | -       | auto detect |
+| 1     | hp   | x86_64  | High Precision Event Timer (default) |
+| 2     | pi   | x86_64  | Programmable Interval Timer (fallback) |
+| 3     | rt   | x86_64  | Real Time Clock |
+| 1     | bu   | AArch64 | Built-in ARM timer (default) |
+| 2     | rt   | AArch64 | External Real Time Clock chip on GPIO |
 
 Display
 -------
