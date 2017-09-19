@@ -5,12 +5,21 @@ Libraries, applications and user services that are mounted under /usr.
 
 This directory differs in OS/Z to other UNIXes. The first
 subdirectory is the package name, and all usual directories
-are at second level. Note that this does not broke File
-Hieracrchy Standard, and makes easy to keep track of files for
-the package manager. It's pretty much like Applications under MacOSX.
+are at second level. Note that this broke [File Hieracrchy Standard](http://www.pathname.com/fhs/) on purpose,
+because this makes easy to keep track of files for the package manager. It's pretty much like Applications under MacOSX, and
+like the /usr/X11R6 or /opt directories under Linux.
 
-For POSIX compatibility, FS/Z uses directory unions, like /usr/share -> /usr/*/share
-or /etc -> /sys/etc + /usr/*/etc.
+For POSIX and FHS compatibility, OS/Z uses directory unions, like 
+
+```
+/usr/share -> /usr/*/share
+```
+
+or
+
+```
+/etc -> /sys/etc + /usr/*/etc
+```
 
 Examples:
 ---------
