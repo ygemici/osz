@@ -13,7 +13,7 @@ to be small, and to handle enormous amounts of data in
 a user friendly way. To achieve that goal, I've eliminated
 as many limits as possible by design.
 For example only storage capacity limits the number of inodes
-on a disk. And only RAM limits the number of concurent tasks
+on a disk. And only amount of RAM limits the number of concurent tasks
 at any given time. If I couldn't eliminate a hard limit, I've
 created a [boot option](https://github.com/bztsrc/osz/tree/master/docs/bootopts.md) for it so that you
 can tweek without recompilation. This makes OS/Z a very scalable system.
@@ -52,8 +52,9 @@ with [qemu](http://www.qemu.org/), [bochs](http://bochs.sourceforge.net/) and [v
 License
 -------
 
-The boot loader and the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol are Public Domain.
-All the other parts of OS/Z (like [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) filesystem) licensed under CC-by-nc-sa-4.0:
+The boot loader, the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol and the on-disk format of FS/Z are Public Domain.
+I hereby grant you the right to use them in your own project without any resctictions, although I would appreciate attribution.
+All the other parts of OS/Z (like my [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) implementation) licensed under CC-by-nc-sa-4.0:
 
  Copyright 2017 bzt (bztsrc@github) [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
  

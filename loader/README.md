@@ -105,10 +105,10 @@ A fully compatible level 2 loader should map these where the ELF symbols tell to
 And the registers:
 
 ```
-    rax     magic 'BOOTBOOT' (0x544f4f42544f4f42)
-    rbx     virtual address of bootboot structure
-    rcx     virtual address of environment variables
-    rdx     virtual address of linear framebuffer
+    rax/r0     magic 'BOOTBOOT' (0x544f4f42544f4f42)
+    rbx/r1     virtual address of bootboot structure
+    rcx/r2     virtual address of environment variables
+    rdx/r3     virtual address of linear framebuffer
 ```
 
 Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0.
@@ -346,5 +346,15 @@ BOOTBOOT-PANIC: Kernel is not a valid ELF64
 The file that was specified as kernel could be loaded by fs drivers, but it's not an ELF, it's class is not
 CLASS64, endianness does not mach architecture, or does not have any program header with a loadable segment
 in the negative p_vaddr range (see linker script).
+
+```
+BOOTBOOT-PANIC: GOP failed, no framebuffer
+```
+```
+BOOTBOOT-PANIC: VESA VBE error, no framebuffer
+```
+
+The loader was unable to set up linear framebuffer with packed 32 bit pixels in the requested resolution.
+Possible soultion is to modify screen to "screen=800x600" in CONFIG, which is the minimal resolution supported.
 
 That's all, hope it will be useful!

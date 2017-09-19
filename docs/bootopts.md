@@ -17,19 +17,19 @@ Boot Parameters
 
 | Parameter | Default  | Type | Parsed by | Description |
 | --------- | :------: | ---- | --------- | ----------- |
-| screen    | 1024x768 | numxnum | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
+| screen    | 1024x768 | num<i>x</i>num | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
 | kernel    | sys/core | string  | loader | the name of kernel executable on initrd |
 | debug     | 0        | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
 | nrphymax  | 2        | number  | core | the number of pages to store physical RAM fragments (16 bytes each) |
 | nrmqmax   | 1        | number  | core | the number of pages for Message Queue (64 bytes each) |
 | nrlogmax  | 8        | number  | core | the number of pages for early syslog buffer |
-| quantum   | 100      | number  | core | scheduler frequency, a task can allocate CPU continously for 1/(quantum) second. |
-| fps       | 10       | number  | ui   | requested frame rate |
-| display   | 0        | number  | ui   | selects output mode (see below) |
-| lefthanded | false   | boolean | ui   | swap pointers |
+| quantum   | 100      | number  | core | scheduler frequency, a task can allocate CPU continously for (quantum) timer interrupts. |
 | syslog    | true     | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
 | networking | true    | boolean | core | disable networking service |
 | sound     | true     | boolean | core | disable sound service |
+| fps       | 10       | number  | ui   | requested frame rate |
+| display   | 0        | number  | ui   | selects output mode (see below) |
+| lefthanded | false   | boolean | ui   | swap pointers |
 | identity  | false    | boolean | init | force running first time setup to get machine's identity, such as hostname |
 | rescueshell | false  | boolean | init | if true, starts `/bin/sh` instead of user services |
 | hpet      | -        | hexdec  | core | x86_64 override autodetected HPET address |

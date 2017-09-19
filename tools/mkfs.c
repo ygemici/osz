@@ -143,7 +143,7 @@ int add_inode(char *filetype, char *mimetype)
         }
         memcpy(j==56?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
     }
-    in->checksum=crc32_calc((char*)in->filetype,secsize-8);
+    in->checksum=crc32_calc((char*)in->filetype,1024);
     size+=secsize;
     return size/secsize-1;
 }
@@ -270,7 +270,7 @@ void add_file(char *name, char *datafile)
          memcpy(in->filetype,"imag",4);
         }
 
-    in->checksum=crc32_calc((char*)in->filetype,secsize-8);
+    in->checksum=crc32_calc((char*)in->filetype,1024);
     size+=s;
     link_inode(inode,name,0);
 }
@@ -710,7 +710,7 @@ void changemime(int argc, char **argv)
         if(*c!='/') { printf("mkfs: bad mime type\n"); exit(2); } else c++;
         memcpy(in->filetype,argv[4],4);
         memcpy(in->mimetype,c,strlen(c)<56?strlen(c):55);
-        in->checksum=crc32_calc((char*)in->filetype,secsize-8);
+        in->checksum=crc32_calc((char*)in->filetype,1024);
         //write out new image
         f=fopen(argv[1],"wb");
         fwrite(data,read_size,1,f);

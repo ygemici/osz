@@ -22,10 +22,9 @@
 #define FSZ_VERSION_MINOR 0
 #define FSZ_SECSIZE 4096
 
-// fid is a file id, a logical sector address of an inode. Logical sector addresses
-// are 128 bits long to be future proof, although currently only 64 bits used. That
-// gives you to total capacity of 64 Zettabytes current implementation can handle with
-// 4096 bytes sector size.
+// logical sector numbers are 128 bits wide to be future proof, and are relative to
+// the superblock. Current implementation only supports 64 bits, that gives you the
+// capacity of 64 Zettabytes with 4096 bytes sector size.
 
 /*********************************************************
  *            1st sector, the super block                *
@@ -41,7 +40,7 @@ typedef struct {
     uint64_t    numsec_hi;          //      128 bit
     uint64_t    freesec;            // 536 first free sector if fs is defragmented, otherwise
     uint64_t    freesec_hi;         //     it's the last used sector+1
-    uint64_t    rootdirfid;         // 552 logical sector number of root directory's inode
+    uint64_t    rootdirfid;         // 552 logical sector number of root directory's inode, usually LSN 1
     uint64_t    rootdirfid_hi;
     uint64_t    freesecfid;         // 568 inode to free records (FSZ_SectorList allocated)
     uint64_t    freesecfid_hi;
@@ -91,7 +90,7 @@ typedef struct {
 /*********************************************************
  *                    I-node sector                      *
  *********************************************************/
-// fid: file id, logical sector number where the sector contains an inode.
+// fid: file id, logical sector number where the sector contains an inode structure.
 
 //sizeof = 32
 typedef struct {
@@ -134,7 +133,7 @@ typedef struct {
 //sizeof = 4096
 typedef struct {
     uint8_t     magic[4];       //   0 magic 'FSIN'
-    uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to end of the sector
+    uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to inlinedata (exclusive)
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
     uint8_t     mimetype[52];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
     uint8_t     encrypt[20];    //  64 AES encryption key mask or zero
@@ -183,7 +182,7 @@ typedef struct {
 // special entities, 4th character always ':'
 #define FILETYPE_DIR        "dir:"  // directory
 #define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths with jokers
-#define FILETYPE_INTERNAL   "int:"  // internal files
+#define FILETYPE_INTERNAL   "int:"  // internal files, like free and bad sectors and meta info
 #define FILETYPE_SYMLINK    "url:"  // symbolic link, inlined data is a path
 // mime types for filesystem specific files
 // for FILETYPE_DIR
@@ -200,7 +199,7 @@ typedef struct {
 // FSZ_SuperBlock if you think 11 sector reads is too much to access
 // data at any arbitrary position in a Yotta magnitude file.
 
-// if even that's not enough, you can use sector lists (extents) to store file data.
+// if even that's not enough, you can use FSZ_SectorList (extents) to store file data.
 
 #define FLAG_TRANSLATION(x) ((x>>0)&0xFF)
 
@@ -257,7 +256,7 @@ typedef struct {
 
 /*  inlined sector list (up to 96 entries)
     FSZ_Inode.sec points to itself, FSZ_SectorList entries inlined.
-    FSZ_Inode.sec -> FSZ_Inode.sec -> sl -> data */
+    FSZ_Inode.sec -> FSZ_Inode.sec; sl -> data */
 #define FSZ_IN_FLAG_SECLIST  (0x80<<0)
 
 /*  normal sector list (up to 128 entries)

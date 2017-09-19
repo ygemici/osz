@@ -11,6 +11,7 @@ OPTIMIZE = 0
 NOINITRD = 0
 #with initrd file, the format: fsz, crc, newc, hpodc, tar
 INITRDFMT = fsz
+#size of partitions in kilobytes
 #EFI doesn't like smaller ESP partitions
 ESPSIZE = 1024
 USRSIZE = 768

@@ -37,6 +37,7 @@ char* readfileall(char *file)
     return data;
 }
 
+/* number conversion */
 unsigned long int hextoi(char *s)
 {
     uint64_t v = 0;
@@ -81,7 +82,7 @@ int main(int argc,char** argv)
     // elf file
     Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(elf);
 
-    // section header
+    // read segments
     Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
     Elf64_Sym *sym = NULL, *s = NULL;
     // the string table
@@ -126,7 +127,7 @@ int main(int argc,char** argv)
 
     // if dump of sections was requested on command line
     if(dump || reloc!=-1) {
-        // section header
+        // read sections
         Elf64_Shdr *shdr=(Elf64_Shdr *)((uint8_t *)ehdr+ehdr->e_shoff);
         // string table and other section header entries
         Elf64_Shdr *strt=(Elf64_Shdr *)((uint8_t *)shdr+(uint64_t)ehdr->e_shstrndx*(uint64_t)ehdr->e_shentsize);

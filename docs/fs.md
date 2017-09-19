@@ -50,38 +50,47 @@ ones are relative offsets from the end of the file.
 Super Block
 -----------
 
-The super block is the first sector of the media and repeated in the last sector. If the superblocks differ, they have
+The super block is the first sector of the media and optionally repeated in the last sector. If the superblocks differ, they have
 checksums to decide which sector is correct.
+
+Logical Sector Number
+---------------------
+
+The size of a logical sector is recorded in the superblock. Sector number is a scalar value up to 2^128 and relative to
+the superblock, which therefore resides on LSN 0, regardless whether it's on LBA 0 (whole disk) or any other (partition).
+This means you can move the filesystem image around without the need of relocating sector addresses. Because LSN 0
+stores the superblock which is never referenced from any file, so in mappings LSN 0 encodes a sector full of zeros,
+allowing spare files and gaps inside files.
 
 File ID
 -------
 
-The file id (fid in short) is a scalar logical sector number up to 2^128. It's only valid if the pointed sector holds an
-inode structure. In other words, the data must start with the bytes "FSIN".
+The file id (fid in short) is a logical sector number, which points to a sector with i-node structure. That can be checked
+by starting with the magic bytes "FSIN".
 
 Inode
 -----
 
 The most important structure of FS/Z. It describes portion of the disk as files, directory entries etc. It's the first
-1024 bytes of a sector. It can contain several versions thus allowing not only easy snapshot recovery, but per file recovery
-as well.
+1024 bytes of a logical sector. It can contain several versions thus allowing not only easy snapshot recovery, but per file
+recovery as well.
 
 FS/Z also stores meta information (like mime type and checksum) on the contents, and supports meta labels in inodes.
 
-Contents have their own address space (other than fids). To support that, FS/Z has two different fid translation mechanisms.
-The first one is similar to memory mapping, and the other stores variable sized areas, so called extents.
+Contents have their own address space mapping (other than LSNs). To support that, FS/Z has two different LSN translation
+mechanisms. The first one is similar to memory mapping, and the other stores variable sized areas, so called extents.
 
 Sector List
 -----------
 
-Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting fid and the number
-of sectors in that area.
+Used to implement extents and marking bad and free sector areas on disks. A list item contains a starting LSN and the number
+of logical sectors in that area, describing a continuous area on disk. Therefore every extent is 32 bytes long.
 
 Sector Directory
 ----------------
 
-A sector that has (sectorsize)/16 fid entries. The building block of memory paging like translations. As with sector lists,
-sector directories can handle fids up to 2^128, but describe fix sized, continous areas on disk. Not to confuse with common
+A sector that has (logical sector size)/16 entries. The building block of memory paging like translations. As with sector lists,
+sector directories can handle LSNs up to 2^128, but describe fix sized, non-continous areas on disk. Not to confuse with common
 directories which are used to assign names to fids.
 
 Directory

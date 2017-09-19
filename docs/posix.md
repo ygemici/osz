@@ -4,7 +4,7 @@ OS/Z Notable differences to POSIX
 Limits
 ------
 
-Most of the defines int [limits.h](https://github.com/bztsrc/osz/blob/master/etc/include/limits.h) are meaningless in OS/Z.
+Most of the defines in [limits.h](https://github.com/bztsrc/osz/blob/master/etc/include/limits.h) are meaningless in OS/Z.
 Either because I have used an unlimited algorithm or because the limit is boot time [configurable](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 
 Paths

@@ -26,8 +26,7 @@ User Tasks
 |  4096 .. x       | local   | Message Queue (read/write, growing upwards) |
 |     x .. 2M-1    | local   | local stack (read/write, growing downwards) |
 |    2M .. x       | [process](https://github.com/bztsrc/osz/tree/master/docs/process.md) | user program text segment (read only) |
-|     x .. 4G-2M-1 | process | shared libraries (text read only / data read/write) |
-| 4G-2M .. 4G-1    | local   | list of open files (each 8 bytes, first is a counter) |
+|     x .. 4G-1    | process | shared libraries (text read only / data read/write) |
 |    4G .. 2^56-4G | local   | dynamically [allocated tls memory](https://github.com/bztsrc/osz/tree/master/src/lib/libc/bztalloc.c) (growing upwards, read/write) |
 | 2^56-4G .. 2^56  | local   | pre-allocated mapped system buffers (screen, initrd) |
 
