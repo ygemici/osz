@@ -48,7 +48,7 @@ typedef struct {
     uint64_t    badsecfid_hi;
     uint64_t    indexfid;           // 600 inode to search index. Zero if not indexed
     uint64_t    indexfid_hi;
-    uint64_t    metafid;            // 616 inode to meta labels file. Zero if there's no meta label
+    uint64_t    metafid;            // 616 inode to meta labels file. Zero if there're no meta labels at all
     uint64_t    metafid_hi;
     uint64_t    journalfid;         // 632 inode to journal file. Zero if journaling is turned off
     uint64_t    journalfid_hi;
@@ -138,14 +138,14 @@ typedef struct {
     uint8_t     mimetype[52];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
     uint8_t     encrypt[20];    //  64 AES encryption key mask or zero
     uint32_t    enchash;        //  84 password Castagnoli CRC32, to avoid decryption with bad passwords
-    uint64_t    createdate;     //  88 number of seconds since 1970. jan. 1 00:00:00 UTC
+    uint64_t    createdate;     //  88 number of microseconds since 1970. jan. 1 00:00:00 UTC
     uint64_t    lastaccess;     //  96
-    uint64_t    metalabel;      // 104 sector offset into meta labels file
+    uint64_t    metalabel;      // 104 logical sector number of meta label block
     uint64_t    metalabel_hi;
     uint64_t    numlinks;       // 120 number of references to this inode
     FSZ_Version version5;       // 128 previous oldest version (if versioning enabled)
-    FSZ_Version version4;       // 192 all the same format as the current
-    FSZ_Version version3;       // 256 see FSZ_Version structure above
+    FSZ_Version version4;       // 192    all the same format as the current one
+    FSZ_Version version3;       // 256    see FSZ_Version structure above
     FSZ_Version version2;       // 320
     FSZ_Version version1;       // 384
     // FSZ_Version current; I haven't used FSZ_Version struct here to save typing when referencing
@@ -154,10 +154,10 @@ typedef struct {
     uint64_t         size;      // 464 file size
     uint64_t         size_hi;
     uint64_t         modifydate;// 480
-    uint32_t         filechksum;// 488 Castagnoli CRC32 of data
+    uint32_t         filechksum;// 488 Castagnoli CRC32 of data or zero
     uint32_t         flags;     // 492 see FSZ_IN_FLAG_*
-    //owner is the last in FSZ_Version to followed by ACL.
-    //so first entry in ACL is the control ACE
+    //owner is the last in FSZ_Version to followed by ACL, so it can be considered to be the first
+    //entry in the Access Control List. It is the control ACE, specifies who can modify the ACL.
     FSZ_Access       owner;     // 496
     union {
         struct {
@@ -321,15 +321,22 @@ typedef struct {
  *********************************************************/
 
 /* meta labels are list of sector aligned, zero terminated JSON strings,
- * filled up with zeros to be multiple of sector size. The metalabel sector
- * in inode points to the start position.
+ * filled up with zeros to be multiple of sector size.
  *
- * Example (assuming meta label file is continous and starts at lba 1234):
+ * Example (assuming meta label file starts at lsn 1234):
  * {"icon":"/usr/firefox/share/icon.png"} (zeros padding to sector size)
  * {"icon":"/usr/vlc/share/icon.svg","downloaded":"http://videolan.org"} (zeros, at least one)
  *
  * Inode of /usr/firefox/bin/firefox: metalabel=1234
  * Inode of /usr/vlc/bin/vlc: metalabel=1235
+ * 
+ * Normally meta labels do not exceed logical sector size. But when they do, the allocation
+ * must be careful to allocate continuous sectors for a meta block. This complicates things
+ * a bit when large meta label blocks (>4096) are written, but simplifies a lot on read by
+ * eliminating the need of translation LSNs for meta labels file. As meta labels are read more
+ * often than written, and usually one block is smaller than 4096, this is intentional.
+ * In other words, meta label blocks are one or more continuous sectors per inode on disk, and
+ * meta labels file covers them just like bad sectors file covers bad sectors.
  */
 
 /*********************************************************
@@ -342,6 +349,6 @@ typedef struct {
  *                    Journal data                       *
  *********************************************************/
 
-/* to be specified. Circular buffer of modified sectors */
+/* to be specified. Circular buffer of modified sectors with transaction done markers */
 
 #endif /* fsZ.h */
