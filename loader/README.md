@@ -3,18 +3,18 @@ BOOTBOOT Reference Implementations
 
 1. *efi-x86_64* the preferred way of booting on x86_64 architecture.
     Standard GNU toolchain and a few files from gnuefi (included).
-    [bootboot.efi](https://github.com/bztsrc/osz/blob/master/loader/bootboot.efi), [bootboot.rom](https://github.com/bztsrc/osz/blob/master/loader/bootboot.rom)
+    [bootboot.efi](https://github.com/bztsrc/osz/blob/master/loader/bootboot.efi?raw=true) (74k), [bootboot.rom](https://github.com/bztsrc/osz/blob/master/loader/bootboot.rom?raw=true) (74k)
 
 2. *mb-x86_64* BIOS and MultiBoot (GRUB) compatible, OBSOLETE loader.
     If you want to recompile this, you'll need fasm (not included).
-    [mbr.bin](https://github.com/bztsrc/osz/blob/master/loader/mbr.bin) (works as VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin)
+    [mbr.bin](https://github.com/bztsrc/osz/blob/master/loader/mbr.bin?raw=true) (512 bytes, works as VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin?raw=true) (8k)
 
 3. *rpi-AArch64* ARM boot loader for Raspberry Pi 3 (only planned as of now)
-    [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img)
+    [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img?raw=true)
 
 Please note that the reference implementations do not support
 the full protocol at level 2, they only handle static mappings
-which makes them level 1 loaders.
+which makes them level 1 loaders. I provide precompiled images for use.
 
 BOOTBOOT Protocol
 =================
