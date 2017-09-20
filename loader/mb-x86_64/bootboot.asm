@@ -343,7 +343,6 @@ end if
             ret
 .a20ok:
 
-
             ;-----detect memory map-----
 getmemmap:
             DBG         dbg_mem
@@ -1249,18 +1248,55 @@ protmode_start:
             cmp         dword [esi], 5A2F534Fh ; OS/Z magic
             je          .alt
             cmp         dword [esi], 464C457Fh ; ELF magic
+            je          .alt
+            cmp         word [esi], 5A4Dh      ; MZ magic
+            jne         @b
+            mov         eax, dword [esi+0x3c]
+            add         eax, esi
+            cmp         dword [eax], 00004550h ; PE magic
+            jne         @b
+            cmp         word [eax+4], 8664h
+            jne         @b
+            cmp         word [eax+20], 20Bh
             jne         @b
 .alt:       cmp         word [esi+4], 0102h ;lsb 64 bit
             jne         @b
             cmp         word [esi+0x38], 0  ;e_phnum > 0
             jz          @b
 .coreok:
+            ; parse PE
+            cmp         word [esi], 5A4Dh      ; MZ magic
+            jne         .tryelf
+            mov         ebx, dword [esi+0x3c]
+            add         ebx, esi
+            cmp         dword [ebx], 00004550h ; PE magic
+            jne         .badcore
+            cmp         word [ebx+4], 8664h    ; x86_64 architecture
+            jne         .badcore
+            cmp         word [ebx+20], 20Bh    ; PE32+ format
+            jne         .badcore
+
+            DBG32       dbg_pe
+
+            mov         dword [core_ptr], esi
+
+            mov         eax, dword [ebx+40]    ; code base
+            add         eax, dword [ebx+24]    ; + text size
+            add         eax, dword [ebx+28]    ; + data size
+            mov         dword [core_len], eax
+
+            mov         eax, dword [ebx+36]    ; entry point
+            mov         dword [entrypoint], eax
+            mov         dword [entrypoint+4], 0
+
+            jmp         .aligned
+
             ; parse ELF
-            cmp         dword [esi], 5A2F534Fh ; OS/Z magic
+.tryelf:    cmp         dword [esi], 5A2F534Fh ; OS/Z magic
             je          @f
             cmp         dword [esi], 464C457Fh ; ELF magic
             jne         .badcore
-@@:         cmp         word [esi+4], 0102h ;lsb 64 bit, shared object
+@@:         cmp         word [esi+4], 0102h    ;lsb 64 bit, shared object
             je          @f
 .badcore:   mov         esi, badcore
             jmp         prot_diefunc
@@ -1494,7 +1530,7 @@ protmode_start:
             mov         dword[0D000h], 08001h   ;map bootboot
             mov         dword[0D008h], 09001h   ;map configuration
             mov         edi, 0D010h
-            mov         eax, dword[core_ptr]    ;map ELF text segment
+            mov         eax, dword[core_ptr]    ;map core text segment
             inc         eax
             mov         ecx, dword[core_len]
             shr         ecx, 12
@@ -1662,6 +1698,7 @@ dbg_env     db          " * Environment",10,13,0
 dbg_initrd  db          " * Initrd loaded",10,13,0
 dbg_gzinitrd db         " * Gzip compressed initrd",10,13,0
 dbg_elf     db          " * Parsing ELF64",10,13,0
+dbg_pe      db          " * Parsing PE32+",10,13,0
 dbg_vesa    db          " * Screen VESA VBE",10,13,0
 end if
 starting:   db          "Booting OS...",10,13,0
@@ -1676,7 +1713,7 @@ nogpt:      db          "No boot partition",0
 nord:       db          "FS0:\BOOTBOOT\INITRD not found",0
 nolib:      db          "/sys not found in initrd",0
 nocore:     db          "Kernel not found in initrd",0
-badcore:    db          "Kernel is not a valid ELF64",0
+badcore:    db          "Kernel is not a valid executable",0
 novbe:      db          "VESA VBE error, no framebuffer",0
 nogzip:     db          "Unable to uncompress",0
 cfgfile:    db          "sys/config",0,0,0

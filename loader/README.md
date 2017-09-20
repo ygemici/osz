@@ -19,7 +19,7 @@ BOOTBOOT Protocol
 Rationale
 ---------
 
-The protocol describes how to boot an ELF64 executable inside an
+The protocol describes how to boot an ELF64 or PE32+ executable inside an
 initial ram disk image on a GPT disk or from ROM into 64 bit mode, without
 using any configuration or even knowing the filesystem in question.
 
@@ -51,13 +51,13 @@ Glossary
 * _boot partition_: the first bootable partition of the first disk,
   a rather small one. Most likely an EFI System Partition, but can be
   any other FAT partition as well if the partition is bootable (bit 2 set in flags).
-  It can hold a FAT filesystem or the INITRD.
+  It can hold a FAT filesystem or entirely the INITRD.
 
 * _environment file_: a one page long utf-8 file on boot partition at
   BOOTBOOT\CONFIG or (when initrd is on the partition) /sys/config,
   with "key=value" pairs (separated by newlines). The protocol
   only specifies two of the keys: "screen" for screen size,
-  and "kernel" for the name of the ELF executable inside the initrd.
+  and "kernel" for the name of the executable inside the initrd.
 
 * _initrd_: initial ramdisk image in ROM or on boot partition at
   BOOTBOOT\INITRD or it can occupy the whole partition. It's format is not
@@ -67,9 +67,9 @@ Glossary
   bootable disks more loader can co-exists.
 
 * _filesystem driver_: a plug-in that parses initrd for the kernel. Without
-  one the first ELF executable in the initrd will be loaded.
+  one the first ELF64/PE32+ executable in the initrd will be loaded.
 
-* _kernel file_: an ELF executable inside initrd, optionally with
+* _kernel file_: an ELF64/PE32+ executable inside initrd, optionally with
   the following symbols: fb, environment, bootboot (see linker script).
 
 * _BOOTBOOT structure_: an informational structure defined in `bootboot.h`.
@@ -82,16 +82,16 @@ Boot process
 2. the loader initializes hardware (long mode, screen resolution, memory map etc.)
 3. then loads environment file and initrd file from the boot partition (or from ROM).
 4. iterates on filesystem drivers, and loads kernel from initrd.
-5. if filesystem is not recognized, scans for the first ELF executable in initrd.
-6. parses ELF program header and symbols to get link addresses (only level 2 compatible loaders).
+5. if filesystem is not recognized, scans for the first executable in initrd.
+6. parses executable header and symbols to get link addresses (only level 2 compatible loaders).
 7. maps framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
-8. sets up stack, registers and jumps to [ELF's entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See example kernel below.
+8. sets up stack, registers and jumps to [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See example kernel below.
 
 Machine state
 -------------
 
 When the kernel gains control, the memory mapping looks like this (unless symbol table is provided.
-A fully compatible level 2 loader should map these where the ELF symbols tell to):
+A fully compatible level 2 loader should map these where the symbols tell to):
 
 ```
    -64M framebuffer                       (0xFFFFFFFFFC000000)
@@ -111,12 +111,12 @@ And the registers:
     rdx/r3     virtual address of linear framebuffer
 ```
 
-Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0.
+Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0 (supervisor mode).
 The stack is at the top of the memory, starting at zero and growing downwards.
 
 You can locate your initrd in memory using the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
 The boot time and a platform independent memory map is also provided in bootboot structure.
-The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer.
+The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the defined location (the physical address of the framebuffer can be found in the bootboot structure's fb_ptr field).
 
 [Environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) is passed to your kernel as newline separated "key=value" pairs.
 
@@ -149,7 +149,7 @@ The protocol expects that a BOOTBOOT compliant loader iterates on a list of driv
 returns a non-NULL.
 
 If all filesystem drivers returned {NULL,0}, the loader will brute-force
-scan for the first ELF image in the initrd, which is quite comfortable specially
+scan for the first ELF64/PE32+ image in the initrd, which is quite comfortable specially
 when you want to use your own filesystem but you don't have an fs driver for it.
 You just copy your initrd on the EFI System Partition, and ready to rock and roll!
 
@@ -337,15 +337,15 @@ BOOTBOOT-PANIC: Kernel not found in initrd
 ```
 
 Kernel is not included in the initrd, or initrd's fileformat is not recognized by any of the filesystem
-drivers and scanning haven't found a valid ELF64 header in it.
+drivers and scanning haven't found a valid executable header in it.
 
 ```
-BOOTBOOT-PANIC: Kernel is not a valid ELF64
+BOOTBOOT-PANIC: Kernel is not a valid executable
 ```
 
 The file that was specified as kernel could be loaded by fs drivers, but it's not an ELF, it's class is not
 CLASS64, endianness does not mach architecture, or does not have any program header with a loadable segment
-in the negative p_vaddr range (see linker script).
+in the negative p_vaddr range (see linker script); or it's not a 64 bit PE32+ executable for the architecture.
 
 ```
 BOOTBOOT-PANIC: GOP failed, no framebuffer

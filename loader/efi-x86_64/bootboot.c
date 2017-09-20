@@ -11,7 +11,6 @@
 //#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
 #define DBG(fmt, ...)
 
-#include <elf.h>
 #include <efi.h>
 #include <efilib.h>
 #include <efiprot.h>
@@ -22,6 +21,77 @@
 
 #include "fs.h"
 
+/*** ELF64 defines and structs ***/
+#define ELFMAG      "\177ELF"
+#define SELFMAG     4
+#define EI_CLASS    4       /* File class byte index */
+#define ELFCLASS64  2       /* 64-bit objects */
+#define EI_DATA     5       /* Data encoding byte index */
+#define ELFDATA2LSB 1       /* 2's complement, little endian */
+#define PT_LOAD     1       /* Loadable program segment */
+
+typedef struct
+{
+  unsigned char e_ident[16];/* Magic number and other info */
+  UINT16    e_type;         /* Object file type */
+  UINT16    e_machine;      /* Architecture */
+  UINT32    e_version;      /* Object file version */
+  UINT64    e_entry;        /* Entry point virtual address */
+  UINT64    e_phoff;        /* Program header table file offset */
+  UINT64    e_shoff;        /* Section header table file offset */
+  UINT32    e_flags;        /* Processor-specific flags */
+  UINT16    e_ehsize;       /* ELF header size in bytes */
+  UINT16    e_phentsize;    /* Program header table entry size */
+  UINT16    e_phnum;        /* Program header table entry count */
+  UINT16    e_shentsize;    /* Section header table entry size */
+  UINT16    e_shnum;        /* Section header table entry count */
+  UINT16    e_shstrndx;     /* Section header string table index */
+} Elf64_Ehdr;
+
+typedef struct
+{
+  UINT32    p_type;         /* Segment type */
+  UINT32    p_flags;        /* Segment flags */
+  UINT64    p_offset;       /* Segment file offset */
+  UINT64    p_vaddr;        /* Segment virtual address */
+  UINT64    p_paddr;        /* Segment physical address */
+  UINT64    p_filesz;       /* Segment size in file */
+  UINT64    p_memsz;        /* Segment size in memory */
+  UINT64    p_align;        /* Segment alignment */
+} Elf64_Phdr;
+
+/*** PE32+ defines and structs ***/
+#define MZ_MAGIC                    0x5a4d      /* "MZ" */
+#define PE_MAGIC                    0x00004550  /* "PE\0\0" */
+#define IMAGE_FILE_MACHINE_AMD64    0x8664      /* x86_64 */
+#define PE_OPT_MAGIC_PE32PLUS       0x020b      /* PE32+ format */
+typedef struct
+{
+  UINT16 magic;         /* MZ magic */
+  UINT16 reserved[29];  /* reserved */
+  UINT32 peaddr;        /* address of pe header */
+} mz_hdr;
+
+typedef struct {
+  UINT32 magic;         /* PE magic */
+  UINT16 machine;       /* machine type */
+  UINT16 sections;      /* number of sections */
+  UINT32 timestamp;     /* time_t */
+  UINT32 sym_table;     /* symbol table offset */
+  UINT32 symbols;       /* number of symbols */
+  UINT16 opt_hdr_size;  /* size of optional header */
+  UINT16 flags;         /* flags */
+  UINT16 file_type;     /* file type, PE32PLUS magic */
+  UINT8  ld_major;      /* linker major version */
+  UINT8  ld_minor;      /* linker minor version */
+  UINT32 text_size;     /* size of text section(s) */
+  UINT32 data_size;     /* size of data section(s) */
+  UINT32 bss_size;      /* size of bss section(s) */
+  UINT32 entry_point;   /* file offset of entry point */
+  UINT32 code_base;     /* relative code addr in ram */
+} pe_hdr;
+
+/*** EFI defines and structs ***/
 extern EFI_GUID GraphicsOutputProtocol;
 extern EFI_GUID LoadedImageProtocol;
 struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL;
@@ -385,10 +455,15 @@ LoadCore()
         core.ptr=initrd.ptr;
         while(i-->0) {
             Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(core.ptr);
+            pe_hdr *pehdr=(pe_hdr*)(core.ptr + ((mz_hdr*)(core.ptr))->peaddr);
             if((!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||!CompareMem(ehdr->e_ident,"OS/Z",4))&&
                 ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
                 ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
                 ehdr->e_phnum>0){
+                    break;
+                }
+            if(((mz_hdr*)(core.ptr))->magic==MZ_MAGIC && pehdr->magic == PE_MAGIC && 
+                pehdr->machine == IMAGE_FILE_MACHINE_AMD64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
                     break;
                 }
             core.ptr++;
@@ -396,36 +471,42 @@ LoadCore()
         core.ptr=NULL;
     }
 
-    DBG(L" * Parsing ELF64 @%lx\n",core.ptr);
     if(core.ptr!=NULL) {
-        // Parse ELF64
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(core.ptr);
-        if((CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)&&CompareMem(ehdr->e_ident,"OS/Z",4))||
-            ehdr->e_ident[EI_CLASS]!=ELFCLASS64||
-            ehdr->e_ident[EI_DATA]!=ELFDATA2LSB||
-            ehdr->e_phnum==0){
-                return report(EFI_LOAD_ERROR,L"Kernel is not a valid ELF64");
-            }
-        // Check program header
-        Elf64_Phdr *phdr=(Elf64_Phdr *)((UINT8 *)ehdr+ehdr->e_phoff);
-        for(i=0;i<ehdr->e_phnum;i++){
-            if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
-                core.size = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
-                // is core page aligned?
-                if((UINT64)ehdr&(PAGESIZE-1)){
-                    uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, core.size/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&core.ptr);
-                    if (core.ptr == NULL)
-                        return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
-                    CopyMem(core.ptr,ehdr,phdr->p_filesz);
+        pe_hdr *pehdr=(pe_hdr*)(core.ptr + ((mz_hdr*)(core.ptr))->peaddr);
+        if((!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||!CompareMem(ehdr->e_ident,"OS/Z",4))&&
+            ehdr->e_ident[EI_CLASS]==ELFCLASS64&&ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
+            ehdr->e_phnum>0){
+            // Parse ELF64
+            DBG(L" * Parsing ELF64 @%lx\n",core.ptr);
+            Elf64_Phdr *phdr=(Elf64_Phdr *)((UINT8 *)ehdr+ehdr->e_phoff);
+            for(i=0;i<ehdr->e_phnum;i++){
+                if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
+                    core.size = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+                    // is core page aligned?
+                    if((UINT64)ehdr&(PAGESIZE-1)){
+                        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, core.size/PAGESIZE, (EFI_PHYSICAL_ADDRESS*)&core.ptr);
+                        if (core.ptr == NULL)
+                            return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
+                        CopyMem(core.ptr,ehdr,phdr->p_filesz);
+                    }
+                    entrypoint=ehdr->e_entry;
+gotcore:
+                    DBG(L" * Entry point @%lx, text @%lx %d bytes @%lx\n",entrypoint, 
+                        core.ptr, core.size, (entrypoint/PAGESIZE)*PAGESIZE+core.size);
+                    return EFI_SUCCESS;
                 }
-                entrypoint=ehdr->e_entry;
-                DBG(L" * Entry point @%lx, text @%lx %d bytes @%lx\n",entrypoint, 
-                    core.ptr, core.size, (entrypoint/PAGESIZE)*PAGESIZE+core.size);
-                return EFI_SUCCESS;
+                phdr=(Elf64_Phdr *)((UINT8 *)phdr+ehdr->e_phentsize);
             }
-            phdr=(Elf64_Phdr *)((UINT8 *)phdr+ehdr->e_phentsize);
+        } else if(((mz_hdr*)(core.ptr))->magic==MZ_MAGIC && pehdr->magic == PE_MAGIC && 
+            pehdr->machine == IMAGE_FILE_MACHINE_AMD64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
+            //Parse PE32+
+            DBG(L" * Parsing PE32+ @%lx\n",core.ptr);
+            core.size = pehdr->code_base + pehdr->text_size + pehdr->data_size;
+            entrypoint = pehdr->entry_point;
+            goto gotcore;
         }
-        return report(EFI_LOAD_ERROR,L"Kernel does not have a valid text segment.");
+        return report(EFI_LOAD_ERROR,L"Kernel is not a valid executable");
     }
     return report(EFI_LOAD_ERROR,L"Kernel not found in initrd");
 }
