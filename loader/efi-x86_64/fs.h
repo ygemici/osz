@@ -158,19 +158,21 @@ file_t tar_initrd(unsigned char *initrd_p, char *kernel)
 }
 
 /**
- * Simple File System image, see http://wiki.osdev.org/SFS
+ * Simple File System 1.0 image, see http://wiki.osdev.org/SFS (Brendan's version)
+ * Simple File System 1.1 image, see http://www.fysnet.net/blog/files/sfs.pdf (BenLunt's version)
  */
 file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
 {
     unsigned char *ptr, *end;
-    int k,bs;
+    int k,bs,ver;
     file_t ret = { NULL, 0 };
-    if(initrd_p==NULL || kernel==NULL || CompareMem(initrd_p+0x1AC,"SFS",3))
+    if(initrd_p==NULL || kernel==NULL || CompareMem(initrd_p+0x1AC,"SFS",3) || CompareMem(initrd_p+0x1A6,"SFS",3))
         return ret;
-    bs=1<<(7+(UINT8)initrd_p[0x1BC]);
-    end=initrd_p + *((UINT64 *)&initrd_p[0x1B0]) * bs; // base + total_number_of_blocks * blocksize
+    ver=!CompareMem(initrd_p+0x1A6,"SFS",3)?1:0;
+    bs=1<<(7+(UINT8)initrd_p[ver?0x1B6:0x1BC]);
+    end=initrd_p + *((UINT64 *)&initrd_p[ver?0x1AA:0x1B0]) * bs; // base + total_number_of_blocks * blocksize
     // get index area
-    ptr=end - *((UINT64 *)&initrd_p[0x1A4]); // end - size of index area
+    ptr=end - *((UINT64 *)&initrd_p[ver?0x19E:0x1A4]); // end - size of index area
     // got a Starting Marker Entry?
     if(ptr[0]!=2)
         return ret;
@@ -183,9 +185,9 @@ file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
         if(ptr[0]!=0x12)
             continue;
         // filename match?
-        if(!CompareMem(ptr+0x22,kernel,k+1)){
-            ret.size=*((UINTN*)&ptr[0x1A]);                 // file_length
-            ret.ptr=initrd_p + *((UINT64*)&ptr[0x0A]) * bs; // base + start_block * blocksize
+        if(!CompareMem(ptr+(ver?0x23:0x22),kernel,k+1)){
+            ret.size=*((UINTN*)&ptr[ver?0x1B:0x1A]);                 // file_length
+            ret.ptr=initrd_p + *((UINT64*)&ptr[ver?0x0B:0x0A]) * bs; // base + start_block * blocksize
             break;
         }
     }

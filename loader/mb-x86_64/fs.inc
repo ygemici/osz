@@ -296,7 +296,9 @@ tar_initrd:
 .fs:        dd          0
 
 ; ----------- SFS ----------
-; Find the kernel on Stupid File System image, see http://wiki.osdev.org/SFS
+; Find the kernel on Stupid File System
+; SFS 1.0 image, see http://wiki.osdev.org/SFS
+; SFS 1.1 image, see http://www.fysnet.net/blog/files/sfs.pdf
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
 ;         esi: pointer to the first byte, ecx: size in bytes
@@ -304,12 +306,21 @@ tar_initrd:
 ;         ecx: 0
 sfs_initrd:
             ; check magic
+            ; 1.0, Brendan's version
+            mov         byte [.ver], 0
             cmp         word [esi+01ACh], 'SF'
-            jne         .err
+            jne         @f
             cmp         byte [esi+01AEh], 'S'
+            je          .ok
+            ; 1.1, BenLunt's version
+            cmp         word [esi+01A6h], 'SF'
             jne         .err
+            cmp         byte [esi+01A8h], 'S'
+            jne         .err
+            inc         byte [.ver]
+
             ; upper bound
-            mov         ebx, ecx
+.ok:        mov         ebx, ecx
             xor         ecx, ecx
             ; strlen(kernel)
             mov         eax, edi
@@ -328,16 +339,26 @@ sfs_initrd:
             inc         eax
             xor         ecx, ecx
             mov         cl, byte [esi+01BCh]
-            add         cl, 7
+            cmp         byte [.ver], 0
+            jz          @f
+            mov         cl, byte [esi+01B6h]
+@@:         add         cl, 7
             shl         eax, cl
             mov         dword [.bs], ecx
             ; get index area, base + totalblocks*blocksize - indexsize
             xor         edx, edx
             mov         eax, dword [esi+01B0h]  ; total number of blocks
-            mul         ecx
+            cmp         byte [.ver], 0
+            jz          @f
+            mov         eax, dword [esi+01AAh]  ; total number of blocks
+@@:         mul         ecx
             add         eax, esi
             mov         ebx, eax
-            sub         eax, dword [esi+01A4h]  ; size of index area
+            mov         edx, dword [esi+01A4h]  ; size of index area
+            cmp         byte [.ver], 0
+            jz          @f
+            mov         edx, dword [esi+019Eh]  ; size of index area
+@@:         sub         eax, edx
             mov         edx, esi
             mov         esi, eax
             cmp         byte [esi], 02h         ; got Starting Marker Entry?
@@ -354,21 +375,29 @@ sfs_initrd:
             push        edi
             mov         ecx, dword [.ks]
             add         esi, 022h
+            add         esi, dword [.ver]
             repz        cmpsb
             pop         edi
             pop         esi
             jnz         .nextindex
             mov         ebx, esi
             mov         eax, dword [esi+0Ah]    ; start_block
-            mov         esi, edx
+            cmp         byte [.ver], 0
+            jz          @f
+            mov         eax, dword [esi+0Bh]    ; start_block
+@@:         mov         esi, edx
             xor         edx, edx
             mov         ecx, dword [.bs]
             mul         ecx                     ; * blocksize
             add         esi, eax                ; base +
             ; found! esi=data, ecx=size
             mov         ecx, dword [ebx+01Ah]   ; file_length
-            ret
+            cmp         byte [.ver], 0
+            jz          @f
+            mov         ecx, dword [ebx+01Bh]   ; file_length
+@@:         ret
 .err:       xor         ecx, ecx
             ret
 .ks:        dd          0
 .bs:        dd          0
+.ver:       dd          0

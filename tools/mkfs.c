@@ -51,7 +51,7 @@
 
 //-------------DATA-----------
 char *diskname;     //entire disk
-char *stage1;       //mbr code
+char *stage1;       //boot sector code
 char *espfile;      //EFI System Partition imagefile
 char *sysfile;      //system partition imagefile
 char *usrfile;      //usr partition imagefile
@@ -792,7 +792,7 @@ int main(int argc, char **argv)
     for(i=strlen(path);i>0;i--) {if(path[i-1]=='/') break;}
     memcpy(path+i,"../bin/",8); i+=8; path[i]=0;
     diskname=malloc(i+16); sprintf(diskname,"%sdisk.dd",path);
-    stage1=malloc(i+16); sprintf(stage1,"%s/../loader/mbr.bin",path);
+    stage1=malloc(i+16); sprintf(stage1,"%s/../loader/boot.bin",path);
     sysfile=malloc(i+16); sprintf(sysfile,"%ssys.part",path);
     espfile=malloc(i+16); sprintf(espfile,"%sesp.part",path);
     usrfile=malloc(i+16); sprintf(usrfile,"%susr.part",path);

@@ -2,7 +2,7 @@ all:
 	@# NOTE: GNU assembler cannot mix 16 bit real mode with 32 bit prot mode instructions
 	@# as easily as I need it in a boot loader. So I decided to use fasm.
 	@echo "  src		mb-x86_64 (MultiBoot / BIOS)"
-	@fasm mbr.asm ../mbr.bin >/dev/null
+	@fasm boot.asm ../boot.bin >/dev/null
 	@fasm bootboot.asm ../bootboot.bin >/dev/null
 
 clean:

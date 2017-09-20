@@ -67,7 +67,7 @@ IMAGES
 Non-EFI loader
 --------------
 
-If you want to recompile `loader/mbr.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
+If you want to recompile `loader/boot.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
 Unfortunately GAS is not good at mixing 16, 32 and 64 bit instuctions, which is necessary for BIOS booting. So
 I've added those images to the source. With those pre-built binaries you should be able to compile the source using
 GNU toolchain only.
