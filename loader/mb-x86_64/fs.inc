@@ -313,7 +313,7 @@ sfs_initrd:
             cmp         byte [esi+01AEh], 'S'
             je          .ok
             ; 1.1, BenLunt's version
-            cmp         word [esi+01A6h], 'SF'
+@@:         cmp         word [esi+01A6h], 'SF'
             jne         .err
             cmp         byte [esi+01A8h], 'S'
             jne         .err

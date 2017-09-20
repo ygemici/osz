@@ -260,7 +260,8 @@ mkdir -r tmp/sys
 cp yourkernel tmp/sys/core
 # copy more files to tmp/ directory
 cd tmp
-# create your filesystem image or an archive. For the latter, use one of these:
+# create your filesystem image (SFS, FS/Z or your own) or an archive.
+# For the latter, you can use one of these:
 find . | cpio -H newc -o | gzip > ../INITRD
 find . | cpio -H crc -o | gzip > ../INITRD
 find . | cpio -H hpodc -o | gzip > ../INITRD
@@ -299,6 +300,8 @@ You can also create an Option ROM out of INITRD (on BIOS there's not much space 
         logical sector's number in a dword at 0x1B0.
     
 3.4. *BIOS ROM*: install __bootboot.bin__ in a **_BIOS Expansion ROM_**.
+
+3.5. *Raspberry Pi 3*: copy __kernel8.img__ on the boot partition, and add `initramfs BOOTBOOT\INITRD 0x80000` to [config.txt](http://elinux.org/RPi_config.txt#Boot).
 
 Troubleshooting
 ---------------
