@@ -1138,7 +1138,10 @@ protmode_start:
             pop         esi
             jmp         .getnext
 
-.nextvar:   cmp         word[esi], '//'
+            ;skip comments
+.nextvar:   cmp         byte[esi], '#'
+            je          .skipcom
+            cmp         word[esi], '//'
             jne         @f
             add         esi, 2
 .skipcom:   lodsb
@@ -1161,7 +1164,7 @@ protmode_start:
             cmp         esi, 0A000h
             ja          .parseend
             jmp         .skipcom2
-
+            ;parse screen dimensions
 @@:         cmp         dword[esi], 'scre'
             jne         @f
             cmp         word[esi+4], 'en'
@@ -1175,6 +1178,7 @@ protmode_start:
             call        prot_dec2bin
             mov         dword [reqheight], eax
             jmp         .getnext
+            ;get kernel's filename
 @@:         cmp         dword[esi], 'kern'
             jne         @f
             cmp         word[esi+4], 'el'
@@ -1201,10 +1205,12 @@ protmode_start:
             jmp         .getnext
 @@:
             inc         esi
+            ;failsafe
 .getnext:   cmp         esi, 0A000h
             jae         .parseend
             cmp         byte [esi], 0
             je          .parseend
+            ;skip white spaces
             cmp         byte [esi], ' '
             je          @b
             cmp         byte [esi], 13
@@ -1212,7 +1218,7 @@ protmode_start:
             jmp         .nextvar
 .noconf:    mov         edi, ebx
             mov         ecx, 1024
-            mov         eax, 0A0A0A0Ah
+            xor         eax, eax
             repnz       stosd
             mov         dword [ebx+0], '// N'
             mov         dword [ebx+4], '/A\n'

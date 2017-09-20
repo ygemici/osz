@@ -20,14 +20,15 @@ if FSZ_SUPPORT eq 1
 end if
             dw          cpio_initrd
             dw          tar_initrd
+            dw          sfs_initrd
             dw          0
 
 if FSZ_SUPPORT eq 1
 ; ----------- FS/Z ----------
-; Find the ELF kernel on initrd
+; Find the kernel on initrd
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
-;         esi: pointer to an ELF64 executable, ecx: size in bytes
+;         esi: pointer to the first byte, ecx: size in bytes
 ;       On Error
 ;         ecx: 0
 fsz_initrd:
@@ -135,10 +136,10 @@ fsz_initrd:
 end if
 
 ; ----------- cpio ----------
-; Find the ELF kernel on initrd
+; Find the kernel on initrd
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
-;         esi: pointer to an ELF64 executable, ecx: size in bytes
+;         esi: pointer to the first byte, ecx: size in bytes
 ;       On Error
 ;         ecx: 0
 cpio_initrd:
@@ -238,10 +239,10 @@ cpio_initrd:
 .fs:        dd          0
 
 ; ----------- tar ----------
-; Find the ELF kernel on initrd
+; Find the kernel on initrd
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
-;         esi: pointer to an ELF64 executable, ecx: size in bytes
+;         esi: pointer to the first byte, ecx: size in bytes
 ;       On Error
 ;         ecx: 0
 tar_initrd:
@@ -293,3 +294,81 @@ tar_initrd:
             ret
 .ks:        dd          0
 .fs:        dd          0
+
+; ----------- SFS ----------
+; Find the kernel on Stupid File System image, see http://wiki.osdev.org/SFS
+; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
+; OUT:  On Success
+;         esi: pointer to the first byte, ecx: size in bytes
+;       On Error
+;         ecx: 0
+sfs_initrd:
+            ; check magic
+            cmp         word [esi+01ACh], 'SF'
+            jne         .err
+            cmp         byte [esi+01AEh], 'S'
+            jne         .err
+            ; upper bound
+            mov         ebx, ecx
+            xor         ecx, ecx
+            ; strlen(kernel)
+            mov         eax, edi
+            or          eax, eax
+            jz          .err
+            cmp         byte [eax], 0
+            jz          .err
+            xor         ecx, ecx
+@@:         inc         ecx
+            inc         eax
+            cmp         byte [eax], 0
+            jnz         @b
+            mov         dword [.ks], ecx
+            ; get block size
+            xor         eax, eax
+            inc         eax
+            xor         ecx, ecx
+            mov         cl, byte [esi+01BCh]
+            add         cl, 7
+            shl         eax, cl
+            mov         dword [.bs], ecx
+            ; get index area, base + totalblocks*blocksize - indexsize
+            xor         edx, edx
+            mov         eax, dword [esi+01B0h]  ; total number of blocks
+            mul         ecx
+            add         eax, esi
+            mov         ebx, eax
+            sub         eax, dword [esi+01A4h]  ; size of index area
+            mov         edx, esi
+            mov         esi, eax
+            cmp         byte [esi], 02h         ; got Starting Marker Entry?
+            jne         .err
+            ; iterate on index until we reach end or Volume Identifier
+.nextindex: cmp         esi, ebx
+            jae         .err
+            cmp         byte [esi], 01h
+            je          .err
+            add         esi, 64
+            cmp         byte [esi], 12h         ; file entry?
+            jne         .nextindex
+            push        esi                     ; name equals?
+            push        edi
+            mov         ecx, dword [.ks]
+            add         esi, 022h
+            repz        cmpsb
+            pop         edi
+            pop         esi
+            jnz         .nextindex
+            mov         ebx, esi
+            mov         eax, dword [esi+0Ah]    ; start_block
+            mov         esi, edx
+            xor         edx, edx
+            mov         ecx, dword [.bs]
+            mul         ecx                     ; * blocksize
+            add         esi, eax                ; base +
+            ; found! esi=data, ecx=size
+            mov         ecx, dword [ebx+01Ah]   ; file_length
+            ret
+.err:       xor         ecx, ecx
+            ret
+.ks:        dd          0
+.bs:        dd          0

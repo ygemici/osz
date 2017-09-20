@@ -11,14 +11,16 @@
 //#define DBG(fmt, ...) do{Print(fmt,__VA_ARGS__); }while(0);
 #define DBG(fmt, ...)
 
+// get UEFI functions and environment
 #include <efi.h>
 #include <efilib.h>
 #include <efiprot.h>
 #include <efigpt.h>
+// get BOOTBOOT specific stuff
 #define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
 #include "tinf.h"
-
+// get filesystem drivers for initrd
 #include "fs.h"
 
 /*** ELF64 defines and structs ***/
@@ -147,6 +149,7 @@ typedef struct {
 } EFI_PCI_OPTION_ROM_TABLE;
 #endif
 
+/*** other defines and structs ***/
 typedef struct {
     UINT8 magic[8];
     UINT8 chksum;
@@ -160,12 +163,13 @@ typedef struct {
 
 #define PAGESIZE 4096
 
-file_t env;
-file_t initrd;
-file_t core;
-BOOTBOOT *bootboot;
-UINT64 *paging;
-UINT64 entrypoint;
+/*** common variables ***/
+file_t env;         // environment file descriptor
+file_t initrd;      // initrd file descriptor
+file_t core;        // kernel file descriptor
+BOOTBOOT *bootboot; // the BOOTBOOT structure
+UINT64 *paging;     // paging table for MMU
+UINT64 entrypoint;  // kernel entry point
 EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *Volume;
 EFI_FILE_HANDLE                 RootDir;
 EFI_FILE_PROTOCOL               *Root;
@@ -178,6 +182,9 @@ char *kernelname="sys/core";
 // alternative environment name
 char *cfgname="sys/config";
 
+/**
+ * function to convert ascii to number
+ */
 int atoi(unsigned char*c)
 {
     int r=0;
@@ -188,6 +195,9 @@ int atoi(unsigned char*c)
     return r;
 }
 
+/**
+ * convert ascii to unicode characters
+ */
 CHAR16 *
 a2u (char *str)
 {
@@ -200,6 +210,9 @@ a2u (char *str)
     return mem;
 }
 
+/**
+ * report status with message to standard output
+ */
 EFI_STATUS
 report(EFI_STATUS Status,CHAR16 *Msg)
 {
@@ -207,6 +220,9 @@ report(EFI_STATUS Status,CHAR16 *Msg)
     return Status;
 }
 
+/**
+ * convert ascii octal number to binary number
+ */
 int oct2bin(unsigned char *str,int size)
 {
     int s=0;
@@ -219,6 +235,9 @@ int oct2bin(unsigned char *str,int size)
     return s;
 }
 
+/**
+ * convert ascii hex number to binary number
+ */
 int hex2bin(unsigned char *str, int size)
 {
     int v=0;
@@ -241,9 +260,12 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
 {
     unsigned char *ptr=cfg-1;
     int i;
+    // failsafe
     if(len>PAGESIZE-1) {
         len=PAGESIZE-1;
     }
+    // append temporary variables provided on EFI command line
+    // if a key exists multiple times, the last is used
     cfg[len]=0;
     if(argc>2){
         ptr=cfg+len;
@@ -259,23 +281,33 @@ ParseEnvironment(unsigned char *cfg, int len, INTN argc, CHAR16 **argv)
     DBG(L" * Environment @%lx %d bytes\n",cfg,len);
     while(ptr<cfg+len) {
         ptr++;
+        // failsafe
         if(ptr[0]==0)
             break;
+        // skip white spaces
         if(ptr[0]==' '||ptr[0]=='\t'||ptr[0]=='\r'||ptr[0]=='\n')
             continue;
-        if(ptr[0]=='/'&&ptr[1]=='/') {
+        // skip comments
+        if((ptr[0]=='/'&&ptr[1]=='/')||ptr[0]=='#') {
             while(ptr<cfg+len && ptr[0]!='\r' && ptr[0]!='\n' && ptr[0]!=0){
                 ptr++;
             }
             ptr--;
             continue;
         }
+        if(ptr[0]=='/'&&ptr[1]=='*') {
+            ptr+=2;
+            while(ptr[0]!=0 && ptr[-1]!='*' && ptr[0]!='/')
+                ptr++;
+        }
+        // parse screen dimensions
         if(!CompareMem(ptr,(const CHAR8 *)"screen=",7)){
             ptr+=7;
             reqwidth=atoi(ptr);
             while(ptr<cfg+len && *ptr!=0 && *(ptr-1)!='x') ptr++;
             reqheight=atoi(ptr);
         }
+        // get kernel's filename
         if(!CompareMem(ptr,(const CHAR8 *)"kernel=",7)){
             ptr+=7;
             kernelname=(char*)ptr;
@@ -437,7 +469,7 @@ LoadFile(IN CHAR16 *FileName, OUT UINT8 **FileData, OUT UINTN *FileDataLength)
 }
 
 /**
- * Locate and load the elf kernel in initrd
+ * Locate and load the kernel in initrd
  */
 EFI_STATUS
 LoadCore()
@@ -449,7 +481,7 @@ LoadCore()
     while(core.ptr==NULL && fsdrivers[i]!=NULL) {
         core=(*fsdrivers[i++])((unsigned char*)initrd.ptr,kernelname);
     }
-    // if every driver failed, try brute force, scan for the first elf
+    // if every driver failed, try brute force, scan for the first elf or pe executable
     if(core.ptr==NULL) {
         i=initrd.size;
         core.ptr=initrd.ptr;

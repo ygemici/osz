@@ -158,6 +158,41 @@ file_t tar_initrd(unsigned char *initrd_p, char *kernel)
 }
 
 /**
+ * Simple File System image, see http://wiki.osdev.org/SFS
+ */
+file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
+{
+    unsigned char *ptr, *end;
+    int k,bs;
+    file_t ret = { NULL, 0 };
+    if(initrd_p==NULL || kernel==NULL || CompareMem(initrd_p+0x1AC,"SFS",3))
+        return ret;
+    bs=1<<(7+(UINT8)initrd_p[0x1BC]);
+    end=initrd_p + *((UINT64 *)&initrd_p[0x1B0]) * bs; // base + total_number_of_blocks * blocksize
+    // get index area
+    ptr=end - *((UINT64 *)&initrd_p[0x1A4]); // end - size of index area
+    // got a Starting Marker Entry?
+    if(ptr[0]!=2)
+        return ret;
+    DBG(L" * SFS %s\n",a2u(kernel));
+    k=strlena((unsigned char*)kernel);
+    // iterate on index until we reach the end or Volume Identifier
+    while(ptr<end && ptr[0]!=0x01){
+        ptr+=64;
+        // file entry?
+        if(ptr[0]!=0x12)
+            continue;
+        // filename match?
+        if(!CompareMem(ptr+0x22,kernel,k+1)){
+            ret.size=*((UINTN*)&ptr[0x1A]);                 // file_length
+            ret.ptr=initrd_p + *((UINT64*)&ptr[0x0A]) * bs; // base + start_block * blocksize
+            break;
+        }
+    }
+    return ret;
+}
+
+/**
  * Static file system drivers registry
  */
 file_t (*fsdrivers[]) (unsigned char *, char *) = {
@@ -166,5 +201,6 @@ file_t (*fsdrivers[]) (unsigned char *, char *) = {
 #endif
     cpio_initrd,
     tar_initrd,
+    sfs_initrd,
     NULL
 };

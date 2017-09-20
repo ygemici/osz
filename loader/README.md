@@ -3,11 +3,14 @@ BOOTBOOT Reference Implementations
 
 1. *efi-x86_64* the preferred way of booting on x86_64 architecture.
     Standard GNU toolchain and a few files from gnuefi (included).
+    [bootboot.efi](https://github.com/bztsrc/osz/blob/master/loader/bootboot.efi), [bootboot.rom](https://github.com/bztsrc/osz/blob/master/loader/bootboot.rom)
 
 2. *mb-x86_64* BIOS and MultiBoot (GRUB) compatible, OBSOLETE loader.
     If you want to recompile this, you'll need fasm (not included).
+    [mbr.bin](https://github.com/bztsrc/osz/blob/master/loader/mbr.bin) (works as VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin)
 
 3. *rpi-AArch64* ARM boot loader for Raspberry Pi 3 (only planned as of now)
+    [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img)
 
 Please note that the reference implementations do not support
 the full protocol at level 2, they only handle static mappings
@@ -31,13 +34,10 @@ On EFI machines, the PCI Option ROM is created from a standard EFI
 OS loader application.
 
 The difference to other booting protocols is flexibility and that
-BOOTBOOT expects the kernel to fit inside the ramdisk. This is ideal for
+BOOTBOOT expects the kernel to fit inside the initial ramdisk. This is ideal for
 hobby OSes and microkernels. The advantage it gaves is that your kernel
-can be splitted into several files and yet they will be loaded together
+can be splitted up into several files and yet they will be loaded together
 as if it was a monolitic kernel, and you can use your own filesystem for that.
-
-Also note that the initrd can be in another Option ROM, which is ideal
-for diskless, embedded systems.
 
 License
 -------
@@ -49,9 +49,8 @@ Glossary
 --------
 
 * _boot partition_: the first bootable partition of the first disk,
-  a rather small one. Most likely an EFI System Partition, but can be
-  any other FAT partition as well if the partition is bootable (bit 2 set in flags).
-  It can hold a FAT filesystem or entirely the INITRD.
+  a rather small one. Most likely an EFI System Partition with FAT, but can be
+  any other partition as well if the partition is bootable (bit 2 set in flags).
 
 * _environment file_: a one page long utf-8 file on boot partition at
   BOOTBOOT\CONFIG or (when initrd is on the partition) /sys/config,
@@ -64,15 +63,15 @@ Glossary
   specified (the good part :-) ) and can be optionally gzip compressed.
 
 * _loader_: a native executable on the boot partition or in ROM. For multi-
-  bootable disks more loader can co-exists.
+  bootable disks more loader implementations can co-exists.
 
 * _filesystem driver_: a plug-in that parses initrd for the kernel. Without
-  one the first ELF64/PE32+ executable in the initrd will be loaded.
+  one the first ELF64 / PE32+ executable in the initrd will be loaded.
 
-* _kernel file_: an ELF64/PE32+ executable inside initrd, optionally with
+* _kernel file_: an ELF64 / PE32+ executable inside initrd, optionally with
   the following symbols: fb, environment, bootboot (see linker script).
 
-* _BOOTBOOT structure_: an informational structure defined in `bootboot.h`.
+* _BOOTBOOT structure_: an informational structure defined in [bootboot.h](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
 
 
 Boot process
@@ -112,29 +111,34 @@ And the registers:
 ```
 
 Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0 (supervisor mode).
-The stack is at the top of the memory, starting at zero and growing downwards.
+The stack is at the top of the memory, starting at zero and growing downwards. The first 16G of RAM is identity mapped.
 
 You can locate your initrd in memory using the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
 The boot time and a platform independent memory map is also provided in bootboot structure.
-The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the defined location (the physical address of the framebuffer can be found in the bootboot structure's fb_ptr field).
+
+The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the defined location (the physical address of the framebuffer can be found in the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s fb_ptr field).
 
 [Environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) is passed to your kernel as newline separated "key=value" pairs.
 
 Filesystem drivers
 ------------------
 
+For boot partition, BIOS/Multiboot version expects *defragmented* FAT12, FAT16 or FAT32 filesystems.
+EFI version relies on any filesystem that's supported by EFI Simple FileSystem Protocol.
+
 Luckily the EFI loader can load files from the boot partition with the
-help of the firmware. MultiBoot implementation is not so lucky,
+help of the firmware. BIOS/MultiBoot implementation is not so lucky,
 therefore it needs an extra functions to do that. That function however
 is out of the scope of this specification: the BOOTBOOT Protocol only
-states that a compatible loader must be able to load initrd and environment
-from the boot partition, but does not describe how.
+states that a compatible loader must be able to load initrd and environment,
+but does not describe how or from where. They can be loaded from ROM or over
+network for example.
 
-On the other hand it does specify one API function to locate a file (the kernel)
-inside initrd, but the ABI is also implementation specific. This function
-receives a pointer to initrd in memory, and returns a pointer to the
-first byte of the kernel and it's size. On error (if filesystem is not recognized or
-the kernel is not found) returns {NULL,0}. Plain simple.
+On the other hand BOOTBOOT does specify one API function to locate a file (the kernel)
+inside the initrd image, but the ABI is also implementation (and architecture) specific.
+This function receives a pointer to initrd in memory as well as the kernel's filename, and
+returns a pointer to the first byte of the kernel and it's size. On error (if filesystem is
+not recognized or the kernel is not found) returns {NULL,0}. Plain simple.
 
 ```c
 typedef struct {
@@ -157,10 +161,10 @@ The BOOTBOOT Protocol expects the [filesystem drivers](https://github.com/bztsrc
 the rest of the loader in source. This is so because it was designed to help the needs of hobby
 OS developers, specially those who want to write their own filesystem.
 
-For boot partition, Multiboot version expects *defragmented* FAT12, FAT16 or FAT32 filesystems.
-EFI version relies on any filesystem that's supported by EFI Simple FileSystem Protocol. As for initrd, 
-the reference implementations support cpio (hpodc, newc and crc variants), ustar and [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
-Gzip compressed initrds also supported to save disk space and load time.
+The reference implementations support [cpio](https://en.wikipedia.org/wiki/Cpio) (hpodc, newc and crc variants),
+[ustar](https://en.wikipedia.org/wiki/Tar_(computing)), [Stupid File System](http://wiki.osdev.org/SFS) 
+and OS/Z's native [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
+Gzip compressed initrds also supported to save disk space and fasten up load time.
 
 Example kernel
 --------------
