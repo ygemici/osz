@@ -162,7 +162,7 @@ the rest of the loader in source. This is so because it was designed to help the
 OS developers, specially those who want to write their own filesystem.
 
 The reference implementations support [cpio](https://en.wikipedia.org/wiki/Cpio) (hpodc, newc and crc variants),
-[ustar](https://en.wikipedia.org/wiki/Tar_(computing)), [Stupid File System](http://wiki.osdev.org/SFS) 
+[ustar](https://en.wikipedia.org/wiki/Tar_(computing)), [Simple File System](http://wiki.osdev.org/SFS) 
 and OS/Z's native [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
 Gzip compressed initrds also supported to save disk space and fasten up load time.
 
