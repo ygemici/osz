@@ -36,7 +36,7 @@ fsz_initrd:
             xor         ecx, ecx
             ; FS/Z superblock
             ; get root dir inode
-            mov         eax, dword [esi+552]    ; FSZ_SuperBlock.rootdirfid
+            mov         eax, dword [esi+560]    ; FSZ_SuperBlock.rootdirfid
             shl         eax, 12
             add         esi, eax
             cmp         dword [esi], 'FSIN'
@@ -58,7 +58,7 @@ fsz_initrd:
             cmp         dword [esi], 'FSDR'
             jne         .nolib
 .srchdir:   ; find sys/
-            mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
+            mov         ecx, dword [esi+16]          ; FSZ_DirEntHeader.numentries
             mov         eax, dword [edi]
 @@:         add         esi, 128                    ; directories than
             cmp         dword [esi+17], eax
@@ -93,7 +93,7 @@ fsz_initrd:
             jne         .nolib
 
 .srchcore:  ; find filename
-            mov         ecx, dword [esi+8]          ; FSZ_DirEntHeader.numentries
+            mov         ecx, dword [esi+16]          ; FSZ_DirEntHeader.numentries
             ;filename, 8 characters supported
             mov         eax, dword [edi]
             mov         edx, dword [edi+4]

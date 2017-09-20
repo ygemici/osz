@@ -36,32 +36,32 @@ typedef struct {
     uint8_t     version_minor;      // 517
     uint8_t     flags;              // 518 flags
     uint8_t     raidtype;           // 519 raid type
-    uint64_t    numsec;             // 520 total number of logical sectors
+    uint16_t    logsec;             // 520 logical sector size, 0=2048,1=4096(default),2=8192...
+    uint16_t    physec;             // 522 how many physical sector gives up a logical one, defaults to 8
+    uint16_t    maxmounts;          // 524 number of maximum mounts allowed to next fsck
+    uint16_t    currmounts;         // 526 current mount counter
+    uint64_t    numsec;             // 528 total number of logical sectors
     uint64_t    numsec_hi;          //      128 bit
-    uint64_t    freesec;            // 536 first free sector if fs is defragmented, otherwise
+    uint64_t    freesec;            // 544 first free sector if fs is defragmented, otherwise
     uint64_t    freesec_hi;         //     it's the last used sector+1
-    uint64_t    rootdirfid;         // 552 logical sector number of root directory's inode, usually LSN 1
+    uint64_t    rootdirfid;         // 560 logical sector number of root directory's inode, usually LSN 1
     uint64_t    rootdirfid_hi;
-    uint64_t    freesecfid;         // 568 inode to free records (FSZ_SectorList allocated)
+    uint64_t    freesecfid;         // 576 inode to free records (FSZ_SectorList allocated)
     uint64_t    freesecfid_hi;
-    uint64_t    badsecfid;          // 584 inode to bad sectors table (FSZ_SectorList allocated)
+    uint64_t    badsecfid;          // 592 inode to bad sectors table (FSZ_SectorList allocated)
     uint64_t    badsecfid_hi;
-    uint64_t    indexfid;           // 600 inode to search index. Zero if not indexed
+    uint64_t    indexfid;           // 608 inode to search index. Zero if not indexed
     uint64_t    indexfid_hi;
-    uint64_t    metafid;            // 616 inode to meta labels file. Zero if there're no meta labels at all
+    uint64_t    metafid;            // 624 inode to meta labels file. Zero if there're no meta labels at all
     uint64_t    metafid_hi;
-    uint64_t    journalfid;         // 632 inode to journal file. Zero if journaling is turned off
+    uint64_t    journalfid;         // 640 inode to journal file. Zero if journaling is turned off
     uint64_t    journalfid_hi;
-    uint64_t    journalstr;         // 648 logical sector inside journal file where buffer starts
+    uint64_t    journalstr;         // 656 logical sector inside journal file where buffer starts
     uint64_t    journalstr_hi;
-    uint64_t    journalend;         // 664 logical sector inside journal file where buffer ends
+    uint64_t    journalend;         // 672 logical sector inside journal file where buffer ends
     uint64_t    journalend_hi;
-    uint8_t     encrypt[20];        // 680 encryption mask for AES or zero
-    uint32_t    enchash;            // 700 password Castagnoli CRC32, to avoid decryption with bad passwords
-    uint16_t    maxmounts;          // 704 number of maximum mounts allowed to next fsck
-    uint16_t    currmounts;         // 706 current mount counter
-    uint16_t    logsec;             // 708 logical sector size, 0=2048,1=4096(default),2=8192...
-    uint16_t    physec;             // 710 how many physical sector gives up a logical one, defaults to 8
+    uint8_t     encrypt[20];        // 688 encryption mask for AES or zero
+    uint32_t    enchash;            // 708 password Castagnoli CRC32, to avoid decryption with bad passwords
     uint64_t    createdate;         // 712 creation timestamp UTC
     uint64_t    lastmountdate;      // 720
     uint64_t    lastcheckdate;      // 728
@@ -140,9 +140,9 @@ typedef struct {
     uint32_t    enchash;        //  84 password Castagnoli CRC32, to avoid decryption with bad passwords
     uint64_t    createdate;     //  88 number of microseconds since 1970. jan. 1 00:00:00 UTC
     uint64_t    lastaccess;     //  96
-    uint64_t    metalabel;      // 104 logical sector number of meta label block
+    uint64_t    numlinks;       // 104 number of references to this inode
+    uint64_t    metalabel;      // 112 logical sector number of meta label block
     uint64_t    metalabel_hi;
-    uint64_t    numlinks;       // 120 number of references to this inode
     FSZ_Version version5;       // 128 previous oldest version (if versioning enabled)
     FSZ_Version version4;       // 192    all the same format as the current one
     FSZ_Version version3;       // 256    see FSZ_Version structure above
@@ -288,10 +288,10 @@ typedef struct {
 typedef struct {
     uint8_t     magic[4];
     uint32_t    checksum;       // Castagnoli CRC32 of entries
+    uint64_t    flags;
     uint64_t    numentries;
     uint64_t    numentries_hi;
-    uint32_t    flags;
-    uint8_t     reserved[100];
+    uint8_t     reserved[96];
 } __attribute__((packed)) FSZ_DirEntHeader;
 
 #define FSZ_DIR_MAGIC "FSDR"

@@ -357,8 +357,8 @@ void checkcompilation()
     FSZ_DirEnt ent;
     // ********* WARNING *********
     // These numbers MUST match the ones in: etc/include/fsZ.h
-    if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 520 ||
-        (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 552 ||
+    if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 528 ||
+        (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 560 ||
         (uint64_t)(&sb.owneruuid) - (uint64_t)(&sb) != 744 ||
         (uint64_t)(&sb.magic2) - (uint64_t)(&sb) != 1016 ||
         (uint64_t)(&in.filetype) - (uint64_t)(&in) != 8 ||
@@ -368,7 +368,7 @@ void checkcompilation()
         (uint64_t)(&in.groups) - (uint64_t)(&in) != 512 ||
         ((uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 1024 &&
          (uint64_t)(&in.inlinedata) - (uint64_t)(&in) != 2048) ||
-        (uint64_t)(&hdr.numentries) - (uint64_t)(&hdr) != 8 ||
+        (uint64_t)(&hdr.numentries) - (uint64_t)(&hdr) != 16 ||
         (uint64_t)(&ent.name) - (uint64_t)(&ent) != 17) {
         fprintf(stderr,"mkfs: your compiler rearranged structure members. Recompile me with packed struct.\n");
         exit(1);
