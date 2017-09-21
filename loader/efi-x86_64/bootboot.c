@@ -992,10 +992,6 @@ get_memory_map:
         __asm__ __volatile__ (
             "xorq %%rsp, %%rsp;"
             "pushq %0;"
-            "movq $0x544f4f42544f4f42,%%rax;"    // boot magic 'BOOTBOOT'
-            "movq $0xffffffffffe00000,%%rbx;"    // bootboot virtual address
-            "movq $0xffffffffffe01000,%%rcx;"    // environment virtual address
-            "movq $0xfffffffffc000000,%%rdx;"    // framebuffer virtual address
             "retq"
             : : "a"(entrypoint): "memory" );
     }

@@ -297,8 +297,6 @@ tar_initrd:
 
 ; ----------- SFS ----------
 ; Find the kernel on Stupid File System
-; SFS 1.0 image, see http://wiki.osdev.org/SFS
-; SFS 1.1 image, see http://www.fysnet.net/blog/files/sfs.pdf
 ; IN:   esi: initrd pointer, ecx: initrd end, edi: kernel filename
 ; OUT:  On Success
 ;         esi: pointer to the first byte, ecx: size in bytes

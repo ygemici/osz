@@ -1636,10 +1636,6 @@ longmode_init:
             mov         gs, ax
 
             xor         rsp, rsp
-            mov         rax, 'BOOTBOOT'             ; magic
-            mov         rbx, 0FFFFFFFFFFE00000h     ; bootboot virtual address
-            mov         rcx, 0FFFFFFFFFFE01000h     ; environment virtual address
-            mov         rdx, 0FFFFFFFFFC000000h     ; framebuffer virtual address
             ;call _start() at qword[entrypoint]
             jmp         qword[entrypoint]
             nop

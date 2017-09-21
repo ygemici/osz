@@ -101,15 +101,6 @@ A fully compatible level 2 loader should map these where the symbols tell to):
     0-16G RAM identity mapped
 ```
 
-And the registers:
-
-```
-    rax/r0     magic 'BOOTBOOT' (0x544f4f42544f4f42)
-    rbx/r1     virtual address of bootboot structure
-    rcx/r2     virtual address of environment variables
-    rdx/r3     virtual address of linear framebuffer
-```
-
 Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0 (supervisor mode).
 The stack is at the top of the memory, starting at zero and growing downwards. The first 16G of RAM is identity mapped.
 
@@ -118,7 +109,27 @@ The boot time and a platform independent memory map is also provided in bootboot
 
 The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the defined location (the physical address of the framebuffer can be found in the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s fb_ptr field).
 
+Environment file
+----------------
+
 [Environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) is passed to your kernel as newline separated "key=value" pairs.
+
+```
+// BOOTBOOT Options
+
+// --- Loader specific ---
+screen=800x600
+kernel=sys/core
+
+// --- Kernel specific, you're choosing ---
+anythingyouwant=somevalue
+otherstuff=enabled
+
+```
+
+The file cannot be larger than 4095 bytes (1 page minus 1 byte) long. Temporary variables will be appended at the end (from
+UEFI command line). C style single line and multi line comments can be used. BOOTBOOT protocol only uses `screen` and
+`kernel`, all the other keys and their formats are up to your kernel (or drivers) to parse. Be creative :-)
 
 Filesystem drivers
 ------------------
@@ -159,11 +170,10 @@ You just copy your initrd on the EFI System Partition, and ready to rock and rol
 
 The BOOTBOOT Protocol expects the [filesystem drivers](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/fs.h) to be separated from
 the rest of the loader in source. This is so because it was designed to help the needs of hobby
-OS developers, specially those who want to write their own filesystem.
+OS developers, specially those who want to write their own filesystems.
 
-The reference implementations support [cpio](https://en.wikipedia.org/wiki/Cpio) (hpodc, newc and crc variants),
-[ustar](https://en.wikipedia.org/wiki/Tar_(computing)), Simple File System [1.0](http://wiki.osdev.org/SFS) / [1.1](http://www.fysnet.net/blog/files/sfs.pdf) 
-and OS/Z's native [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
+The reference implementations support [cpio](https://en.wikipedia.org/wiki/Cpio) (all hpodc, newc and crc variants),
+[ustar](https://en.wikipedia.org/wiki/Tar_(computing)), osdev.org's SFS and OS/Z's native [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md).
 Gzip compressed initrds also supported to save disk space and fasten up load time.
 
 Example kernel
@@ -260,33 +270,20 @@ mkdir -r tmp/sys
 cp yourkernel tmp/sys/core
 # copy more files to tmp/ directory
 cd tmp
-# create your filesystem image (SFS, FS/Z or your own) or an archive.
-# For the latter, you can use one of these:
+# create your filesystem image (FS/Z or use your own) or an archive.
+# You can use one of these:
+tools/mkfs INITRD . && gzip INITRD
 find . | cpio -H newc -o | gzip > ../INITRD
 find . | cpio -H crc -o | gzip > ../INITRD
 find . | cpio -H hpodc -o | gzip > ../INITRD
 tar -czf ../INITRD *
 ```
 
-2. Create FS0:\BOOTBOOT directory on boot partition, and copy the archive you've created
+2. Create FS0:\BOOTBOOT directory on the boot partition, and copy the image you've created
         into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/sys/config)
         there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there.
-        It cannot be larger than 4095 bytes (1 page minus 1 byte) long. Temporary variables will be appended at the end.
 
-```
-// BOOTBOOT Options
-
-// --- Loader specific ---
-screen=800x600
-kernel=sys/core
-
-// --- Kernel specific, you're choosing ---
-anythingyouwant=somevalue
-otherstuff=enabled
-
-```
-
-Alternatively you can copy an uncompressed INITRD into the whole partition using your fs only, leaving FAT filesystem enitrely out.
+Alternatively you can copy an uncompressed INITRD into the whole partition using your fs only, leaving FAT filesystem entirely out.
 You can also create an Option ROM out of INITRD (on BIOS there's not much space ~64-96k, but on EFI it can be 16M).
 
 3. copy the BOOTBOOT loader on the boot partition:
