@@ -166,7 +166,7 @@ file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
     unsigned char *ptr, *end;
     int k,bs,ver;
     file_t ret = { NULL, 0 };
-    if(initrd_p==NULL || kernel==NULL || CompareMem(initrd_p+0x1AC,"SFS",3) || CompareMem(initrd_p+0x1A6,"SFS",3))
+    if(initrd_p==NULL || kernel==NULL || (CompareMem(initrd_p+0x1AC,"SFS",3) && CompareMem(initrd_p+0x1A6,"SFS",3)))
         return ret;
     ver=!CompareMem(initrd_p+0x1A6,"SFS",3)?1:0;
     bs=1<<(7+(UINT8)initrd_p[ver?0x1B6:0x1BC]);
@@ -176,7 +176,7 @@ file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
     // got a Starting Marker Entry?
     if(ptr[0]!=2)
         return ret;
-    DBG(L" * SFS %s\n",a2u(kernel));
+    DBG(L" * SFS 1.%d %s\n",ver,a2u(kernel));
     k=strlena((unsigned char*)kernel);
     // iterate on index until we reach the end or Volume Identifier
     while(ptr<end && ptr[0]!=0x01){

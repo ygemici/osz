@@ -64,7 +64,7 @@ FILE *f;
 char *fs;
 int size;
 long int li=0,read_size=0;
-long int ts;
+long int ts;   // current timestamp in microsec
 
 //-------------CODE-----------
 
