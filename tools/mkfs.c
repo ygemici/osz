@@ -45,6 +45,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/stat.h>
 #include "../etc/include/fsZ.h"
 #include "../etc/include/crc32.h"
@@ -63,6 +64,7 @@ FILE *f;
 char *fs;
 int size;
 long int li=0,read_size=0;
+long int ts;
 
 //-------------CODE-----------
 
@@ -111,6 +113,7 @@ void add_superblock()
     sb->physec=secsize/512; //logsec/mediasectorsize
     sb->maxmounts=255;
     sb->currmounts=0;
+    sb->createdate=ts;
     memcpy(sb->magic2,FSZ_MAGIC,4);
     size+=secsize;
 }
@@ -146,6 +149,7 @@ int add_inode(char *filetype, char *mimetype)
         if(j!=56)
             in->size=i;
     }
+    in->createdate=ts;
     in->checksum=crc32_calc((char*)in->filetype,1016);
     size+=secsize;
     return size/secsize-1;
@@ -785,6 +789,8 @@ int main(int argc, char **argv)
 {
     char *path=strdup(argv[0]);
     int i;
+    // get current timestamp in microsec
+    ts = (long int)time(NULL) * 1000000;
 
     checkcompilation();
 
