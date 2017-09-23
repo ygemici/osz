@@ -48,7 +48,6 @@
 .global sleep
 .global usleep
 .global meminfo
-.global rand
 .global abort
 .global _exit
 #if DEBUG
@@ -330,18 +329,6 @@ meminfo:
     call    mymq_recv
     movq    16(%rax), %rdx
     movq    8(%rax), %rax
-    ret
-
-/**
- * should be in stdlib.S, but calls mymq_recv.
- * Fills up almost every register with random
- *
- * uint64_t rand()
- */
-rand:
-    xorq    %rax, %rax
-    movb    $SYS_rand, %al
-    syscall
     ret
 
 /**

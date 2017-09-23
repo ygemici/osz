@@ -118,6 +118,7 @@ isr_syscall0:
 
     /* rbx: destination pid, ax: function */
     movq    %rax, %rbx
+    andb    $0xF, %ah
     shrq    $16, %rbx
 
     /* 'recv' */
@@ -346,7 +347,7 @@ isr_timer:
     /* qcnt==0? */
     xorq    %rax, %rax
     cmpq    %rax, qcnt
-    jnz     1f
+    jnz     9f
     callq   kentropy
 
     /* pick the next task to run */
@@ -365,6 +366,6 @@ isr_timer:
     btw     $4, %ax
     jnc     1f
     int     $1
-#endif
 1:
+#endif
     ret

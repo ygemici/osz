@@ -30,6 +30,7 @@
 #include <syscall.h>
 
 .global srand
+.global rand
 .global mblen
 .global div
 .global ldiv
@@ -38,11 +39,24 @@
 .section .text
 
 /**
+ * initialize random with seed
+ *
  * void srand(uint64_t seed)
  */
 srand:
     xorq    %rax, %rax
     movb    $SYS_srand, %al
+    syscall
+    ret
+
+/**
+ * Fills up almost every register with random
+ *
+ * uint64_t rand()
+ */
+rand:
+    xorq    %rax, %rax
+    movb    $SYS_rand, %al
     syscall
     ret
 

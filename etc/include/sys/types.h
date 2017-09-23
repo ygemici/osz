@@ -125,14 +125,16 @@ typedef struct {
     uint64_t arg5;
     uint64_t serial;
 } __attribute__((packed)) msg_t;
-// bits in evt: (63)TTT..TTT P FFFFFFFFFFFFFFF(0)
+// bits in evt: (63)TTT..TTT P QQQ FFFFFFFFFFFF(0)
 //  where T is a task id or subsystem id, P true if message has a pointer,
-//  F is a function number from 1 to 32767 (SHRT_MAX). Function number 0 is reserved.
+//  Q is the sender task's priority queue (for quick security checks),
+//  F is a function number from 1 to 4095. Function number 0 and 4096 are reserved.
 #define EVT_DEST(t) ((uint64_t)(t)<<16)
 #define EVT_SENDER(m) ((pid_t)((m)>>16))
-#define EVT_FUNC(m) ((uint16_t)((m)&((USHRT_MAX+1)/2-1)))
+#define EVT_SENDERPRIO(m) ((uint8_t)(((m)>>12)&0x7))
+#define EVT_FUNC(m) ((uint16_t)((m)&0xFFF))
 #define MSG_REGDATA (0)
-#define MSG_PTRDATA ((USHRT_MAX+1)/2)
+#define MSG_PTRDATA (0x8000)
 #define MSG_PTR(m) (m.arg0)
 #define MSG_SIZE(m) (m.arg1)
 #define MSG_MAGIC(m) (m.arg2)

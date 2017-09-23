@@ -2,7 +2,7 @@
 ./src/ui/main.c:52:    // FIXME: once vfs ready, use fopen() and fread()
 ./src/core/syscall.c:143:        // FIXME: remove mapfile once vfs ready
 ./src/core/syscall.c:187:            /* FIXME: naive implementation, no checks */
-./src/lib/libc/x86_64/unistd.S:267:// FIXME: remove mapfile once vfs ready
+./src/lib/libc/x86_64/unistd.S:266:// FIXME: remove mapfile once vfs ready
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
 ./etc/include/sys/core.h:96:/* TODO: move these to time.h, leave only OS/Z specific calls here */

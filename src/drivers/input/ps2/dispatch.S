@@ -46,7 +46,10 @@ _init:
 1:  call    mq_recv@PLT
 
     /* failsafe */
-    cmpw    $SYS_IRQ, (%rax)
+    xorq    %rdi, %rdi
+    movw    (%rax), %di
+    andw    $0xFFF, %di
+    cmpw    $SYS_IRQ, %di
     jne     1b
     xorq    %rdi, %rdi
     movb    8(%rax), %dil
