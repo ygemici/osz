@@ -93,7 +93,7 @@ Init
 This service manages all the other, non-system services. Those include user session daemon, mailer daemon, 
 print daemon, web server etc. You can command init to start only a rescue shell with the boot environment variable `rescueshell=true`.
 Also, if compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config) and if you set `debug=test`
-[boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md), a special `[test](https://github.com/bztsrc/osz/blob/master/src/test)` process will be started instead
+[boot parameter](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md), a special [test](https://github.com/bztsrc/osz/blob/master/src/test) process will be started instead
 of `init` that will do system tests.
 
 Typical functions: start(), stop(), restart(), status().

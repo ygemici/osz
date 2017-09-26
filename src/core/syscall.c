@@ -44,8 +44,8 @@ extern phy_t screen[2];
 extern uint64_t coreerrno;
 
 /**
- * System call dispatcher for messages sent to SRV_CORE. Also has a low level
- * part, isr_syscall0 in isrc.S. We only came here if message is not handled there
+ * System call dispatcher for messages sent to SRV_CORE. Also has a low level part,
+ * isr_syscall0 in (platform)/isrc.S. We only came here if message is not handled there
  */
 uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {

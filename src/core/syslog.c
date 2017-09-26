@@ -27,22 +27,122 @@
 
 #include <platform.h>
 
+/* if compiled with debug, (platform)/dbg.c also uses sprintf() */
+
 /* re-entrant counter */
 extern char reent;
 /* argument */
 extern uint8_t cnt;
+/* for temporary strings */
+extern char tmpstr[33];
+extern char nullstr[];
 
-typedef unsigned char *valist;
-#define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
-#define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
-
-extern char *sprintf(char *dst,char* fmt, ...);
-extern char *sprintf_putascii(char *dst, int64_t c);
-extern char *sprintf_putdec(char *dst, int64_t c);
-extern char *sprintf_puthex(char *dst, int64_t c);
-
+/* the buffer */
 dataseg char *syslog_buf;
 dataseg char *syslog_ptr;
+
+/* we don't have libc's stdarg */
+typedef unsigned char *valist;
+#define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
+#define vastart_sprintf(list, param) (list = (((valist)&param) + sizeof(void*)*8))
+#define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
+
+/* simple sprintf implementation (core can't use libc) */
+char *sprintf(char *dst,char* fmt, ...);
+
+char *sprintf_putascii(char *dst, int64_t c)
+{
+    kmemcpy((void*)&tmpstr[0],(void*)&c, 8);
+    if(cnt>8) cnt=8;
+    tmpstr[cnt+1]=0;
+    return sprintf(dst,&tmpstr[0]);
+}
+
+char *sprintf_putdec(char *dst, int64_t c)
+{
+    int i=12;
+    tmpstr[i]=0;
+    do {
+        tmpstr[--i]='0'+(c%10);
+        c/=10;
+    } while(c!=0&&i>0);
+    if(cnt>0&&cnt<10) {
+        while(i>12-cnt) {
+            tmpstr[--i]=' ';
+        }
+    }
+    return sprintf(dst,&tmpstr[i]);
+}
+
+char *sprintf_puthex(char *dst, int64_t c)
+{
+    int i=16;
+    tmpstr[i]=0;
+    do {
+        char n=c & 0xf;
+        tmpstr[--i]=n<10?'0'+n:'A'+n-10;
+        c>>=4;
+    } while(c!=0&&i>0);
+    if(cnt>0&&cnt<=8) {
+        while(i>16-cnt*2) {
+            tmpstr[--i]='0';
+        }
+    }
+    return sprintf(dst,&tmpstr[i]);
+}
+
+char *sprintf(char *dst,char* fmt, ...)
+{
+    valist args;
+    vastart_sprintf(args, fmt);
+    uint64_t arg;
+    char *p;
+
+    if(dst==NULL)
+        return NULL;
+    if(fmt==NULL || (((virt_t)fmt>>32)!=0 && ((virt_t)fmt>>32)!=0xffffffff))
+        fmt=nullstr;
+
+    while(fmt[0]!=0) {
+        // argument access
+        if(fmt[0]=='%' && !reent) {
+            fmt++; cnt=0;
+            if(fmt[0]=='%') {
+                goto put;
+            }
+            while(fmt[0]>='0'&&fmt[0]<='9') {
+                cnt *= 10;
+                cnt += fmt[0]-'0';
+                fmt++;
+            }
+            p = *((char**)(args));
+            arg = vaarg(args, int64_t);
+            if(fmt[0]=='c') {
+                *dst = (char)arg; dst++;
+                fmt++;
+                continue;
+            }
+            reent++;
+            if(fmt[0]=='a') {
+                dst = sprintf_putascii(dst, arg);
+            }
+            if(fmt[0]=='d') {
+                dst = sprintf_putdec(dst, arg);
+            }
+            if(fmt[0]=='x') {
+                dst = sprintf_puthex(dst, arg);
+            }
+            if(fmt[0]=='s') {
+                dst = sprintf(dst, p);
+            }
+            reent--;
+        } else {
+put:        *dst++ = *fmt;
+        }
+        fmt++;
+    }
+    return dst;
+}
 
 /**
  * early RFC5424 compatible logger
@@ -57,6 +157,7 @@ void syslog_early(char* fmt, ...)
         return;
 
     /* bound check */
+    while(syslog_ptr[0]!=0) syslog_ptr++;
     p=syslog_buf; p+=nrlogmax*__PAGESIZE-256;
     if(((uint64_t)syslog_ptr<(uint64_t)syslog_buf) ||
        ((uint64_t)syslog_ptr>=(uint64_t)p)
@@ -75,10 +176,10 @@ void syslog_early(char* fmt, ...)
     *syslog_ptr = (bootboot.timezone<0?'-':'+'); syslog_ptr++;
     syslog_ptr = sprintf(syslog_ptr, "%1d%1d:",
         (bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/600,
-        (bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/60);
+        ((bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/60)%10);
     syslog_ptr = sprintf(syslog_ptr, "%1d%1d - boot - - - ",
-        (bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/600,
-        (bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/60);
+        ((bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/10)%10,
+        (bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)%10);
 
     /* copy the message */
     while(fmt[0]!=0) {

@@ -47,7 +47,7 @@ This can be a numeric value, or a comma separated list of flags.
 | Value | Flag | Define | Description |
 | ----: | ---- | ------ | ----------- |
 | 0     |      | DBG_NONE | no debug information |
-| 1     | me   | DBG_MEMMAP | dump memory map (either E820 or EFI) |
+| 1     | me   | DBG_MEMMAP | dump memory map on console (also dumped to syslog) |
 | 2     | ta   | DBG_TASKS | dump [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) with TCB physical addresses |
 | 4     | el   | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/elf.c#L66) |
 | 8     | ri   | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/elf.c#L486) imported values |
@@ -62,7 +62,7 @@ This can be a numeric value, or a comma separated list of flags.
 | 4096  | ma   | DBG_MALLOC | debug [libc memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
 | 8192  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
 
-Most of these only available when compiled with debug. Normally you can only use three to troubleshoot boot: DBG_DEVICES, DBG_LOG and DBG_MSG.
+Most of these only available when compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config). Normally you can only use three to troubleshoot boot: DBG_DEVICES, DBG_LOG and DBG_MSG.
 
 Clock Source
 ------------

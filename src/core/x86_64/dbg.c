@@ -263,7 +263,7 @@ void dbg_tcb()
             prio[tcb->priority], tcb->priority,
             tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
         );
-        kprintf("  exception error: %d\n", tcb->excerr);
+        kprintf("\nLast xception error code: %d\n", tcb->excerr);
     
         fg=dbg_theme[4];
         if(dbg_tui)
