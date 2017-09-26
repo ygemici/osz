@@ -10,7 +10,7 @@ The compatible loader is loaded by the firmware, presumeably from ROM. It does t
  1. initialize hardware and framebuffer
  2. locate initrd on boot partition (or in ROM)
  3. locate `sys/core` inside initrd
- 4. map it's elf segments at -2M..0 and framebuffer at -64M..-4M
+ 4. map it's text segment at -2M..0 and framebuffer at -64M..-4M
  5. transfer control to core
 
 Currently both x86_64 [BIOS](https://github.com/bztsrc/osz/blob/master/loader/mb-x86_64/bootboot.asm) and [UEFI](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/bootboot.c) boot supported by the same disk image.
@@ -18,7 +18,12 @@ Currently both x86_64 [BIOS](https://github.com/bztsrc/osz/blob/master/loader/mb
 Core
 ----
 
-First we have to clearify that the core consist of two different parts: one is platform independent, with sources located in [src/core](https://github.com/bztsrc/osz/blob/master/src/core). The other part is platform specific, and can be found in [src/core/(platform)](https://github.com/bztsrc/osz/blob/master/src/core/x86_64). The first part is written entirely in C, the second has mixed C and assembly sources.
+First we have to clearify that the `core` consist of two parts: one is platform independent, with sources
+located in [src/core](https://github.com/bztsrc/osz/blob/master/src/core). The other part is platform specific
+(see [porting](https://github.com/bztsrc/osz/blob/master/docs/porting.md)),
+and can be found in [src/core/(platform)](https://github.com/bztsrc/osz/blob/master/src/core/x86_64).
+The first part is written entirely in C, the second has mixed C and assembly sources. During boot, the execution is
+jumping forth and back from one part to the other.
 
 The entry point that the loader calls is at the label `_start`, which can be found in  [src/core/(platform)/start.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S).
 It disables interrupts, sets up segments registers, stack frame and checks required CPU features. It also initializes [kprintf](https://github.com/bztsrc/osz/blob/master/src/core/kprintf.c), so that it can write kpanic messages if a CPU feature is missing.

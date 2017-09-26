@@ -63,7 +63,7 @@ Platform files just list platforms, like "x86_64" or "AArch64". At compilation t
 and if the platform it's compiling for not listed there, the driver won't be compiled. This
 is an easy way to avoid having platform specific drivers in non-compatible images, yet
 you won't have to rewrite multi-platform drivers for every architecture (like an usb storage
-driver).
+driver). If the platform file is missing, the driver will be compiled for all platforms.
 
 Developing drivers
 ------------------

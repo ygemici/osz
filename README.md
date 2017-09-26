@@ -4,12 +4,12 @@ OS/Z - an operating system for hackers
 <img align="left" style="margin-right:10px;" alt="OS/Z" src="https://github.com/bztsrc/osz/raw/master/logo.png">
 <a href="https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true">Download live image</a>, <i>osZ-latest-x86_64.dd</i> <small>(3 Mbyte)</small><br>
 <a href="https://github.com/bztsrc/osz/tree/master/docs/README.md">Documentation</a><br>
-<a href="http://forum.osdev.org/viewtopic.php?f=2&t=30914&p=266383">Support</a><br><br>
+<a href="https://github.com/bztsrc/osz/issues">Support</a><br><br>
 
 OS/Z is a hobby OS project. As such it's primary goal is not
 everyday use. Instead it demostrates different concepts to [POSIX](https://github.com/bztsrc/osz/tree/master/docs/posix.md)
 for those who like hacking with hobby OSes, like the good fellows on [OSDEV](http://forum.osdev.org/). It's aim is
-to be small, and to handle enormous amounts of data in
+to be small, elegant, [portable](https://github.com/bztsrc/osz/tree/master/docs/porting.md) and to be able to handle enormous amounts of data in
 a user friendly way. To achieve that goal, I've eliminated
 as many limits as possible by design.
 For example only storage capacity limits the number of inodes

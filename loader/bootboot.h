@@ -24,7 +24,7 @@ extern "C" {
 //  kernel name parsed from environment, static kernel memory addresses
 #define PROTOCOL_STATIC  1
 // dynamic protocol level:
-//  kernel name parsed from environment, kernel memory addresses parsed from ELF symbols
+//  kernel name parsed from environment, kernel memory addresses parsed from ELF or PE symbols
 #define PROTOCOL_DYNAMIC 2
 
 // loader types, just informational
@@ -58,7 +58,7 @@ typedef struct {
 #define INITRD_MAXSIZE 16 //Mb
 
 typedef struct {
-  uint8_t    magic[4];    // BOOT, first 72 bytes architecture independent
+  uint8_t    magic[4];    // BOOT, first 72 bytes platform independent
   uint32_t   size;        // length of bootboot structure
 
   uint8_t    protocol;    // 1, static addresses, see PROTOCOL_* above
@@ -81,7 +81,7 @@ typedef struct {
   uint32_t   fb_height;
   uint32_t   fb_scanline;
 
-  // architecture specific pointers, second 56 bytes arch dependent
+  // the rest (56 bytes) is platform specific pointers
   union {
     struct {
       uint64_t acpi_ptr;

@@ -81,6 +81,11 @@ so that the driver can parse it looking for it's configuration.
 
 Note that you don't have to do any message receive calls, just create public functions for your message types.
 
+Additionaly to Makefile, the build system looks for two more files along with a device driver source.
+
+ * `platform` - if this file exists, it can limit the driver for specific platforms
+ * `devices` - specifies which devices the driver supports, used by `core` during system bus enumeration.
+
 Entry points
 ------------
 

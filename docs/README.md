@@ -13,6 +13,7 @@ Materials interests for developers.
  * Using [messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) at different levels (aka. syscalls in OS/Z)
  * How a [keypress](https://github.com/bztsrc/osz/blob/master/docs/keypress.md) is processed
  * Differences to [POSIX](https://github.com/bztsrc/osz/blob/master/docs/posix.md)
+ * [Porting](https://github.com/bztsrc/osz/blob/master/docs/porting.md) to new architecture
  * [Compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md)
  * [Boot procedure](https://github.com/bztsrc/osz/blob/master/docs/boot.md)
  * [Testing](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md)
