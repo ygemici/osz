@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Pre FS service elf loader to load system services
+ * @brief Pre FS task file loader to load files from an FS/Z initrd (read-only)
  */
 
 #include <platform.h>

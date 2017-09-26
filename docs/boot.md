@@ -34,24 +34,21 @@ That platform independent code does the following:
  1. as OS/Z core is polite, greets you with a "starting" text, then
  2. `env_init` parses the environment variables passed by the loader in [src/core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c)
  3. `pmm_init()` sets up Physical Memory Manager in [src/core/pmm.c](https://github.com/bztsrc/osz/blob/master/src/core/pmm.c)
-
-After that it initializes subsystems (or system [services](https://github.com/bztsrc/osz/blob/master/docs/services.md)), begining with the critical ones:
-
- 1. first is `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), that loads idle task
+ 4. initializes system [services](https://github.com/bztsrc/osz/blob/master/docs/services.md), starting with `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), which loads idle task
  and enumerates system buses to locate and load [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md). It will also fill up entries
 in [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md) (IRT).
- 2. second is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal system service, save it has the initrd entirely mapped in it's bss segment.
- 3. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). That is mandatory, unlike the rest.
- 4. loads additional, non-critical system services by several `service_init()` calls in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `net`, `sound` and `init` service daemon.
- 5. and as a last thing, switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). That `sys_enable()` function switches to the "FS" task, and starts executing it. When it blocks, the scheduler,
+ 5. second service is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal system service, save it has the initrd entirely mapped in it's bss segment.
+ 6. in order to communicate with the user, user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). These first three service are mandatory, unlike the rest.
+ 7. loads additional, non-critical system services by several `service_init()` calls in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `net`, `sound` and `init` service daemon.
+ 8. switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). That function switches to the "FS" task, and starts executing it. When it blocks, the scheduler,
  `sched_pick` in [src/core/sched.c](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) will choose drivers and services one by one until all blocks. Note that preemption is not enabled at this point. 
- 6. When the `idle` task first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). It will enable IRQs which has entries in IRT.
- It will also enable timer IRQ and with that enables pre-emption. As a last thing, `sys_ready()` will send a message to "FS" task to mount all filesystems in the name of "init" task.
- So FS will notify "init" task when it's done, and with that normal operation will start.
+ 9. When the `idle` task first scheduled, it will call `sys_ready()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c). That will enable IRQs which has entries in IRT.
+ It will also enable timer IRQ along with pre-emption. As a last thing, `sys_ready()` will send a message to "FS" task to mount all filesystems in the name of "init" task.
+ So when mounting is finished, "FS" task will notify "init" task and normal operation will start.
 
 User land
 ---------
 
-The first real 100% userspace process is started by [sys/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c) system service.
+The first real 100% userspace process is started by the [sys/init](https://github.com/bztsrc/osz/blob/master/src/init/main.c) system service.
 If rescueshell was requested in [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config), then init starts [bin/sh](https://github.com/bztsrc/osz/blob/master/src/sh/main.c)
 instead of user services. Services are classic UNIX daemons, among others the user session service that provides a login prompt.

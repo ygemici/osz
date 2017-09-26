@@ -7,8 +7,8 @@ It's splitted into two parts:
  - platform independent part
  - platform dependent part
 
-The C source files in this directory are the independent ones. Platform
-dependent code are organized in sub-directories, and may have .S assembler
+The C source files in this directory are the independent ones. [Platform
+dependent code](https://github.com/bztsrc/osz/blob/master/docs/porting.md) is organized in sub-directories, and have .S assembler
 sources as well, at least start.S .
 
 Files
@@ -26,7 +26,7 @@ OS/Z is booted, you should read the [documentation on booting](https://github.co
 
 `kprintf.c` - console print commands. It's not optimal or effective, but that was never intended. It's sole purpose is to display
 messages during boot. Later the [user interface service](https://github.com/bztsrc/osz/blob/master/src/ui) is responsible for
-displaying windows.
+displaying windows and terminals.
 
 `msg.c` - messaging functions. As OS/Z is a microkernel, it heavily realies on an effective message bus.
 
@@ -34,30 +34,22 @@ displaying windows.
 
 `sched.c` - task scheduler. OS/Z guarantees no starvation with a O(1) algorithm. [Read more](https://github.com/bztsrc/osz/blob/master/docs/scheduler.md).
 
-`service.c` - functions to load system [services](https://github.com/bztsrc/osz/blob/master/docs/services.md).
+`service.c` - functions to load system [services](https://github.com/bztsrc/osz/blob/master/docs/services.md) and [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md).
 
-`(platform)/sys.c` - system service initialization code.
+`syscall.c` - message handler for SYS_core destination.
 
-`(platform)/task.c` - task routines. For efficientcy, it has a platform specific implementation.
+`syslog.c` - boot time syslog implementation.
 
-`(platform)/user.S` - the "system" service, which runs in a non-privileged mode.
+`(platform)/vmm.c` - Virtual Memory manager.
 
-`(platform)/libk.S` - low level kernel library, like kmap() or kstrcpy().
+`(platform)/sys.c` - system bus enumeration code and idle task.
 
-`(platform)/supervisor.ld` - linker script for core (privileged).
+`(platform)/task.c` - task routines.
+
+`(platform)/libk.S` - low level kernel library, like kmap(), kstrcpy() or ksend().
+
+`(platform)/supervisor.ld` - linker script for core (privileged supervisor mode).
 
 `(platform)/sharedlib.ld` - linker script for shared libraries and services.
 
 `(platform)/executable.ld` - linker script for normal applications.
-
-Platform
---------
-
-Mostly for effectiveness it's partially compile time configurable. Platform dependent part is responsible for:
-
- - interrupt controllers and IRQ messages
- - preemption (counting isr_ticks)
- - random seed generation
- - virtual memory mapping
- - address space switching
- - system bus enumeration

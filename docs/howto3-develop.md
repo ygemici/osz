@@ -70,7 +70,7 @@ IRQs can be assigned three ways to tasks:
 
 In driver's `task_init()` function, it may register device files in "devfs" with `mknod()` calls.
 If a device driver requires a configuration, it can't load config files as filesystems are not mounted
-when their initialization code is called. Instead it should use a string defined in driver.h:
+when their initialization code is called. Instead it should use a string defined in [sys/driver.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/driver.h):
 
 ```c
 extern unisgned char *_environment;
@@ -83,7 +83,7 @@ Note that you don't have to do any message receive calls, just create public fun
 
 Additionaly to Makefile, the build system looks for two more files along with a device driver source.
 
- * `platform` - if this file exists, it can limit the driver for specific platforms
+ * `platforms` - if this file exists, it can limit the driver for specific platforms
  * `devices` - specifies which devices the driver supports, used by `core` during system bus enumeration.
 
 Entry points
