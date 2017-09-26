@@ -1,31 +1,14 @@
 OS/Z Message Queues
 ===================
 
-Preface
--------
-
-The main inter process communication form of OS/Z tasks are message queues.
-It's a so essential type that it's defined in [etc/include/sys/types.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/types.h).
-
-```c
-msg_t *mq;
-```
-
-The first item in the array is the header. Because the exact implementation of msghdr_t is irrelevant to the queue's user, it scope is core only and defined
-in [src/core/msg.h](https://github.com/bztsrc/osz/blob/master/src/core/msg.h).
-
-```c
-msghdr = (msghdr_t *)mq[0];
-```
-
-The other items (starting from 1) form a circular buffer for a FIFO queue. The size of that buffer is `msghdr_t.mq_size - 1`.
-
 User level library
 ------------------
 
-Normally you won't see a thing about message queues. The libc library hides all the details from you, so you just
-use printf() and fopen() etc. as usual. But if you want to use the messaging system directly, you have libc
-functions for that.
+Normally you won't see a thing about message queues. The `libc` library hides all the details from you, so you just
+use printf() and fopen() etc. as usual. It is required that you do not use the low level (like syscall) directly.
+The `libc` functions guarantee the [portability](https://github.com/bztsrc/osz/blob/master/docs/porting.md) of applications.
+
+But if there's really a need to use the messaging system, you have platform independent `libc` functions for that.
 
 ### Low level user Library
 
@@ -84,7 +67,7 @@ only one kind of reference.
 
 ### Low Level
 
-The lowest level of message sending can be found in [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S) and it's a non-blocking call.
+The lowest level of message sending can be found in [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S) and it's an atomic, non-blocking call.
 
 ```c
 void ksend(
@@ -101,16 +84,16 @@ void ksend(
 It's an effective assembly implementation of copying msg_t into the queue and handle start / end indeces. The `msg_sends()`
 function calls it after it had mapped the destination's task message queue temporarily.
 
-From userspace the queue routines can be accessed via `syscall` instruction. The low level user library builds on it (basically
-mq_send() and mq_recv() are just wrappers).
-The destination and function is passed in %rax. When destination is SRV_CORE (0) and function is SYS_recv (0xFFFF), it receives
-messages. All other values sends.
+From userspace the message queue routines can be accessed via `syscall` instruction on x86_64 platform. The low level user library
+builds on it (basically mq_send() and mq_recv() and all the other libc functions are just wrappers).
+The destination and function is passed in %rax. When destination is SRV_CORE (0) and function is SYS_recv (0xFFF), it receives
+messages. Any other value sends.
 
 The arguments are stored and read in System V ABI way, with two exception: %rcx is clobbered by the syscall instruction, so
-it must be passed in %rbx. Also unlike in `mq_send()`, the destination task and the function code is aggregated into one argument:
+it must be passed in %rbx. Also unlike in `mq_send()`, the destination task and the function code are aggregated into one argument:
 
 ```
-%rax= (pid_t task) << 16 + function,
+%rax= (pid_t task) << 16 | function,
 %rdi= arg0/ptr
 %rsi= arg1/size
 %rdx= arg2/magic
@@ -136,6 +119,25 @@ or sending to a specific service
     syscall
     ret
 ```
-Note that normally you never use these, you should use `mq_send()` or `mq_call()` and other functions in libc instead.
-These instruction and examples are only listed for completeness.
+Note that you must never use these, you should use `mq_send()` or `mq_call()` and other functions in `libc` instead.
+These instruction and examples are only listed for completeness!
+
+Structures
+----------
+
+The main inter process communication form of OS/Z tasks are message queues.
+It's a so essential type that it's defined in [etc/include/sys/types.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/types.h#L117).
+
+```c
+msg_t *mq;
+```
+
+The first item in the array is the header. Because the exact implementation of msghdr_t is irrelevant to the queue's user, it scope is core only and defined
+in [src/core/msg.h](https://github.com/bztsrc/osz/blob/master/src/core/msg.h).
+
+```c
+msghdr = (msghdr_t *)mq[0];
+```
+
+The other items (starting from 1) form a circular buffer for a FIFO queue. The size of that buffer is `msghdr_t.mq_size - 1`.
 

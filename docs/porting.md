@@ -30,7 +30,7 @@ The `core` is responsible for handling the lowest level of the hardware, such as
  * timers (including pre-emption)
  * MMU management, virtual memory mapping, address space switching
  * managing and scheduling tasks (creating and switching execution environment, strongly CPU dependent)
- * low level inter-task communication with [messaging](https://github.com/bztsrc/osz/blob/master/docs/messages.md)
+ * low level inter-task communication with [messaging](https://github.com/bztsrc/osz/blob/master/docs/messages.md#supervisor-mode-ring-0)
  * system bus enumeration for device detection
 
 A significant part of the `core` is platform independent, and written in C, [sys/core](https://github.com/bztsrc/osz/blob/master/src/core).
@@ -78,8 +78,8 @@ This shared library is called `libc` for historic reasons, in reality it's a pla
 to all OS/Z functions, so should be called `libosz`. It provides library functions for user space services, libraries
 and applications as well as for device drivers. It's mostly written in C, but some parts had to be written in Assembly
 (like memcpy() for performance and calling a supervisor mode service in `core` for compatibility). It hides
-all details of low level [messaging](https://github.com/bztsrc/osz/blob/master/docs/messages.md), but just in case also
-provides a platform independent, user level abstraction for them.
+all details of low level messaging, but just in case also provides a platform independent, 
+[user level abstraction for messaging](https://github.com/bztsrc/osz/blob/master/docs/messages.md#low-level-user-library).
 
 All programs compiled for OS/Z must be dynamically linked with `libc`, and must not use other, lower level abstractions
 directly. At `libc` level, OS/Z is totally platform independent.
