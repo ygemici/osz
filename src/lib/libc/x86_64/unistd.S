@@ -40,7 +40,6 @@
 .global dl
 .global yield
 .global seterr
-.global _chroot
 .global setirq
 .global mmap
 .global munmap
@@ -67,6 +66,16 @@ dbg_printf:
     ret
 #endif
 
+/* in: rbx: errno */
+myseterrno:
+    push    %rax
+    push    %rdi
+    movq    %rbx, %rdi
+    call    seterr@PLT
+    pop     %rdi
+    pop     %rax
+    ret
+
 /* dest: pid_t<<16 + msg type */
 
 /**
@@ -87,6 +96,7 @@ mymq_send:
     movq    16(%rsp), %r9
     /* this will call msg_sends() in core */
     syscall
+    call    myseterrno
     movq    tcb_serial, %rax
     ret
 
@@ -99,7 +109,7 @@ mq_call:
 mymq_call:
     /* send request */
 1:  call    mymq_send
-    cmpb    $EAGAIN, tcb_errno
+    cmpb    $EAGAIN, %bl
     jne     1f
     call    myyield
     jmp     1b
@@ -210,29 +220,6 @@ myyield:
     ret
 
 /**
- * Set errno variable (which is read-only, no direct access)
- *
- * void seterr(uint64_t err)
- */
-seterr:
-myseterr:
-    xorq    %rax, %rax
-    movb    $SYS_seterr, %al
-    syscall
-    ret
-
-/**
- * Set chroot variable (which is read-only, no direct access)
- *
- * void _chroot(ino_t inode)
- */
-_chroot:
-    xorq    %rax, %rax
-    movb    $SYS_chroot, %al
-    syscall
-    ret
-
-/**
  * void *mmap (void *addr, size_t len, int prot, int flags, int fd, off_t offset);
  */
 mmap:
@@ -240,6 +227,7 @@ mmap:
     xorq    %rax, %rax
     movb    $SYS_mmap, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -249,6 +237,7 @@ munmap:
     xorq    %rax, %rax
     movb    $SYS_munmap, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -258,6 +247,7 @@ mprotect:
     xorq    %rax, %rax
     movb    $SYS_munmap, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -268,6 +258,7 @@ mapfile:
     xorq    %rax, %rax
     movb    $SYS_mapfile, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -278,6 +269,7 @@ setirq:
     xorq    %rax, %rax
     movb    $SYS_setirq, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -287,6 +279,7 @@ sleep:
     xorq    %rax, %rax
     movb    $SYS_alarm, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -317,6 +310,7 @@ usleep:
     xorq    %rax, %rax
     movb    $SYS_alarm, %al
     syscall
+    call    myseterrno
     ret
 
 /**
@@ -329,6 +323,7 @@ meminfo:
     call    mymq_recv
     movq    16(%rax), %rdx
     movq    8(%rax), %rax
+    call    myseterrno
     ret
 
 /**

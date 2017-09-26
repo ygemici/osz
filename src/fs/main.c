@@ -87,8 +87,8 @@ vfs_dump();
                 msg->arg3 = msg->arg1;
                 fid=vfs_locate((fid_t)msg->arg0, (char*)msg->arg1, (uint64_t)msg->arg2);
                 if(!ackdelayed) {
-                    mq_send(EVT_SENDER(msg->evt), errno == SUCCESS ? SYS_ack : SYS_nack,
-                        fid/*return value*/, errno, SYS_locate, msg->serial);
+                    mq_send(EVT_SENDER(msg->evt), errno() == SUCCESS ? SYS_ack : SYS_nack,
+                        fid/*return value*/, errno(), SYS_locate, msg->serial);
                 }
                 break;
 

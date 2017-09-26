@@ -64,12 +64,12 @@ public fid_t vfs_locate(fid_t parent, char *name, uint64_t type)
     fsmtab = -1;
     if(tmppath==NULL) {
         tmppath=(char*)malloc(_pathmax);
-        if(!tmppath || errno)
+        if(!tmppath || errno())
             return -1;
     }
     if(canonpath==NULL) {
         canonpath=(char*)malloc(_pathmax);
-        if(!canonpath || errno)
+        if(!canonpath || errno())
             return -1;
     }
     if(parent>=nfcbs) {
@@ -127,7 +127,7 @@ public fid_t vfs_parseunion(char *path, unsigned char *target, int size)
     fid_t ret=-1;
     char *c=(char*)target, *tmp=(char*)malloc(_pathmax);
     char *rem=strdup(path);
-    if(!tmp || errno)
+    if(!tmp || errno())
         return -1;
     while(*c!=0) {
         strcpy(tmp,c);
@@ -150,7 +150,7 @@ public fid_t vfs_parseunion(char *path, unsigned char *target, int size)
 public uint16_t fsdrv_reg(const fsdrv_t *fs)
 {
     fsdrvs=(fsdrv_t*)realloc(fsdrvs,++nfsdrvs*sizeof(fsdrv_t));
-    if(!fsdrvs || errno)
+    if(!fsdrvs || errno())
         abort();
     memcpy((void*)&fsdrvs[nfsdrvs-1], (void*)fs, sizeof(fsdrv_t));
     return nfsdrvs-1;
@@ -179,7 +179,7 @@ fid_t fcb_add(const fcb_t *fcb)
             return i;
     }
     fcbs=(fcb_t*)realloc(fcbs,++nfcbs*sizeof(fcb_t));
-    if(!fcbs || errno)
+    if(!fcbs || errno())
         abort();
     memcpy((void*)&fcbs[nfcbs-1], (void*)fcb, sizeof(fcb_t));
     if(fcb->type!=VFS_FCB_TYPE_PIPE)
@@ -253,7 +253,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     }
 dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].name,opts);
     mtab=(mount_t*)realloc(mtab,++nmtab*sizeof(mount_t));
-    if(!mtab || errno)
+    if(!mtab || errno())
         abort();
     mnt=&mtab[n];
     mnt->fs_file=strdup(file);
@@ -285,7 +285,7 @@ dbg_printf("parsed dev='%s' path='%s' fs='%s' opts='%s'\n",dev,file,fsdrvs[i].na
         // fix devfs pointer
         mnt->fs_parent=devmtab=n+1;
         mtab=(mount_t*)realloc(mtab,++nmtab*sizeof(mount_t));
-        if(!mtab || errno)
+        if(!mtab || errno())
             abort();
         mnt=&mtab[n+1];
         mnt->fs_file="/dev/";   // mount point, cannot be changed
@@ -313,7 +313,7 @@ void vfs_fstab(char *ptr, size_t size)
     char *dev, *file, *opts, *end, pass;
     char *fstab = (char*)malloc(size);
     // create a copy 'cos we are going to convert strings to asciiz in it
-    if(!fstab || errno)
+    if(!fstab || errno())
         abort();
     memcpy(fstab,ptr,size);
     end=fstab+size;

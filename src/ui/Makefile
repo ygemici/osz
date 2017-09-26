@@ -6,7 +6,10 @@ GENSYMS = ui.sym
 all: avatar.o main.o
 
 avatar.o: avatar.tga
-	@ld -r -b binary -o avatar.o avatar.tga
+	@$(LD) -r -b binary -o avatar.o avatar.tga
+
+../core/logo.o: ../../etc/logo.tga
+	@make -e --no-print-directory -C ../core logo.o
 
 include ../Makefile.rules
 

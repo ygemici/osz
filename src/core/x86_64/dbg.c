@@ -243,10 +243,6 @@ void dbg_tcb()
 {
     tcb_t *tcb = (tcb_t*)0;
     char *states[] = { "hybernated", "blocked", "running" };
-    char *errn[] = { "SUCCESS", "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", "E2BIG", "ENOEXEC",
-        "EBADF", "ECHILD", "EAGAIN", "ENOMEM", "EACCES", "EFAULT", "ENOTBLK", "EBUSY", "EEXIST", "EXDEV",
-        "ENODEV", "ENOTDIR", "EISDIR", "EINVAL", "ENFILE", "EMFILE", "ENOTTY", "ETXTBSY", "EFBIG", "ENOSPC",
-        "ESPIPE", "EROFS", "EMLNK", "EPIPE", "EDOM", "ERANGE" };
     uint64_t t;
     int mask[]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
     char *bmap=".123456789ABCDEF";
@@ -267,8 +263,7 @@ void dbg_tcb()
             prio[tcb->priority], tcb->priority,
             tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
         );
-        kprintf("\nerrno: %d %s, exception error code: %d\n",
-            tcb->errno, tcb->errno<sizeof(errn)? errn[tcb->errno] : "???", tcb->excerr);
+        kprintf("  exception error: %d\n", tcb->excerr);
     
         fg=dbg_theme[4];
         if(dbg_tui)

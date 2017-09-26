@@ -35,8 +35,10 @@ font.o: ../../etc/system.8x16.psf
 	$(O)$(LD) -r -b binary -o font.o font
 	@rm font
 
-logo.o: logo.tga
-	$(O)$(LD) -r -b binary -o logo.o logo.tga
+logo.o: ../../etc/logo.tga
+	@cp ../../etc/logo.tga ./logo
+	$(O)$(LD) -r -b binary -o logo.o logo
+	@rm logo
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  lnk		$(TARGET) ($(ARCH))"

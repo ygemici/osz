@@ -50,6 +50,7 @@
  *  ptr points to a slot aligned address, size[0] holds number of continous allocsize blocks
  *
  * Depends on the following libc functions:
+ * - void seterr(errno);                              // set errno
  * - void lockacquire(int bit, uint64_t *ptr);        // return only when the bit is set and was clear, yield otherwise
  * - void lockrelease(int bit, uint64_t *ptr);        // clear a bit
  * - void memzero (void *dest, size_t n);             // clear memory, fill up with zeros

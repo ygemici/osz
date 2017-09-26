@@ -30,12 +30,10 @@
 /* WARNING: must match tcb struct, for asm */
 #define tcb_priority 4
 #define tcb_state 5
-#define tcb_errno 6
 #define tcb_gpr   8
 #define tcb_fx  128
 #define tcb_pid 640
 #define tcb_memroot 648
-#define tcb_rootdir 656
 #define tcb_billcnt 664
 #define tcb_excerr 680
 #define tcb_serial 816
@@ -59,14 +57,13 @@
 typedef struct {
     uint32_t magic;     // Task Control Block magic, must be 'TASK'
     uint8_t priority;   // task priority                     tcb+   4
-    uint8_t state;      // task state                        tcb+   5
-    uint8_t errno;      // thread safe libc errno            tcb+   6
+    uint16_t state;     // task state                        tcb+   5
     uint8_t forklevel;  // fork level                        tcb+   7
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128
     pid_t pid;          // task's pid at                     tcb+ 640
     phy_t memroot;      // memory mapping root at            tcb+ 648
-    fid_t rootdir;      // inode of root directory           tcb+ 656
+    uint64_t syscnt;    // unused                            tcb+ 656
     uint64_t billcnt;   // ticks task spent                  tcb+ 664
     uint64_t cpu;       // APIC ID of executor cpu           tcb+ 672
     uint64_t excerr;    // exception error code              tcb+ 680
@@ -93,8 +90,9 @@ typedef struct {
 
     // compile time check for minimum stack size
     uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 1080 ];
-    uint8_t irqhandlerstack[TCB_ISRSTACK-40];
 
+    // ISR stack
+    uint8_t irqhandlerstack[TCB_ISRSTACK-40];
     // the last 40 bytes of stack is referenced directly from asm
     uint64_t rip;       // at the end of ist_usr stack an iretq
     uint64_t cs;        // structure, initialized by task_new()

@@ -77,7 +77,7 @@ typedef unsigned char *valist;
 #define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
 #define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
-extern char _binary_logo_tga_start;
+extern char _binary_logo_start;
 extern uint64_t isr_currfps;
 extern uint64_t isr_lastfps;
 #if DEBUG
@@ -132,8 +132,8 @@ void kprintf_init()
     kprintf_reset();
 
     // display logo
-    char *data = &_binary_logo_tga_start + 0x255;
-    char *palette = &_binary_logo_tga_start + 0x12;
+    char *data = &_binary_logo_start + 0x255;
+    char *palette = &_binary_logo_start + 0x12;
     offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
            ((bootboot.fb_width/2-32) * 4);
     for(y=0;y<64;y++){
@@ -168,7 +168,7 @@ void kprintf_putlogo()
         ((ky * font->height - font->height/2) * bootboot.fb_scanline) +
         (kx * (font->width+1) * 4);
     int x,y, line;
-    char *data = &_binary_logo_tga_start + 0x255;
+    char *data = &_binary_logo_start + 0x255;
     for(y=0;y<64;y++){
         line=offs;
         for(x=0;x<64;x++){

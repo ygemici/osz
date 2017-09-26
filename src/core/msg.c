@@ -36,6 +36,8 @@ extern pid_t isr_next;
 
 /* pointer to PDE for TMPQ_ADDRESS */
 dataseg phy_t *mq_mapping;
+/* errno in core */
+dataseg uint64_t coreerrno;
 
 /**
  * send a message with scalar values. Note msg_send() sends a buffer, it's a macro.
@@ -56,7 +58,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // only ISRs allowed to send SYS_IRQ message, and they are sent
     // on a more efficient way, directly with ksend
     if(EVT_FUNC(event)==0) {
-        srctcb->errno = EPERM;
+        coreerrno = EPERM;
         return false;
     }
     // do we need pid_t translation?
@@ -64,7 +66,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         if(-task >= NUMSRV || services[-task]!=0) {
             task = services[-task];
         } else {
-            srctcb->errno = EFAULT;
+            coreerrno = EFAULT;
             return false;
         }
     }
@@ -73,12 +75,12 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     if(task == services[-SRV_FS]) {
         // only init allowed to send SYS_mountfs to FS
         if(event==SYS_mountfs && srctcb->pid!=services[-SRV_init]) {
-            srctcb->errno = EPERM;
+            coreerrno = EPERM;
             return false;
         }
         // only drivers allowed to send SYS_mknod to FS
         if(event==SYS_mknod && srctcb->priority!=PRI_DRV) {
-            srctcb->errno = EPERM;
+            coreerrno = EPERM;
             return false;
         }
     }
@@ -86,7 +88,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // map destination task's message queue
     kmap((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->pid)*__PAGESIZE), PG_CORE_NOCACHE);
     if(dsttcb->magic != OSZ_TCB_MAGICH) {
-        srctcb->errno = EINVAL;
+        coreerrno = EINVAL;
         return false;
     }
     isr_next = dsttcb->memroot;
@@ -119,14 +121,14 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
             msghdr->mq_buffstart = (nrmqmax + 1)*__PAGESIZE;
         // core memory cannot be sent in range -64M..0
         if((int64_t)p < 0 && (uint64_t)p > FBUF_ADDRESS) {
-            srctcb->errno = EACCES;
+            coreerrno = EACCES;
             return false;
         }
         // not mapping shared memory (not in the range -2^56..-64M).
         if((int64_t)p > 0) {
             // check size. Buffers over 1M must be sent in shared memory
             if(arg1 > (__SLOTSIZE/2)) {
-                srctcb->errno = EINVAL;
+                coreerrno = EINVAL;
                 return false;
             }
             // modify pointer to point into the temporary buffer area
@@ -142,18 +144,18 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         }
     }
 
-    srctcb->errno = EBUSY;
+    coreerrno = EBUSY;
     // send message to the mapped queue. Don't use EVT_FUNC, would
     // loose MSG_PTRDATA flag
     if(!ksend(msghdr,
-        EVT_DEST((uint64_t)task) | (event&0xFFFF),
+        EVT_DEST((uint64_t)task) | (event&0xFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
         if(srctcb->pid!=dsttcb->pid)
             sched_block(dsttcb);
         return false;
     } else {
-        srctcb->errno = SUCCESS;
+        coreerrno = SUCCESS;
         if(srctcb->pid!=dsttcb->pid)
             sched_awake(dsttcb);
     }

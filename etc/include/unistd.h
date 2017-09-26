@@ -45,8 +45,8 @@
 #ifndef _AS
 #include <stdio.h>
 
-/* thread-safe libc errno at an absolute address (in TCB). Read-only, use seterr() */
-extern uint16_t errno;
+/* thread-safe libc errno */
+uint64_t errno();
 /* Set libc errno */
 void seterr(int errno);
 

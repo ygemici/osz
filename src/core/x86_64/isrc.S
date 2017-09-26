@@ -45,6 +45,7 @@
 .extern ccb
 .extern isr_next
 .extern bogomips
+.extern coreerrno
 
 .section .text
 
@@ -103,6 +104,8 @@ isr_syscall0:
     movq    %rcx, __PAGESIZE-40
     /* use %rbx in ABI as %rcx and %r11 are clobbered */
     movq    %rbx, %rcx
+    /* clear errno for system calls */
+    movq    $0, coreerrno
 #if DEBUG
     /* dbg_printf */
     orq     %rax, %rax
@@ -122,8 +125,9 @@ isr_syscall0:
     shrq    $16, %rbx
 
     /* 'recv' */
+    /* is destination SRV_CORE? */
 1:  orq     %rbx, %rbx
-    jnz     1f
+    jnz     4f
     cmpw    $SYS_recv, %ax
     jne     1f
     /* tcb->gpr */
@@ -141,18 +145,8 @@ isr_syscall0:
     jmp     8f
 
     /* 'send' */
-    /* is destination SRV_CORE? */
-1:  orq     %rbx, %rbx
-    jnz     4f
-
+1:
     /*** public syscalls ***/
-    /* shortcut to seterr syscall */
-    cmpb    $SYS_seterr, %al
-    jne     2f
-    /* tcb->errno = rdi */
-    movb    %dil, tcb_errno
-    jmp     9f
-2:
     /* shortcut for yield */
     cmpb    $SYS_sched_yield, %al
     jne      2f
@@ -187,7 +181,6 @@ isr_syscall0:
     callq   kentropy
     movq    srand, %rax
     movq    srand+16, %rdx
-    movq    srand+24, %rbx
     jmp     9f
 
     /*** driver tasks only ***/
@@ -201,6 +194,7 @@ isr_syscall0:
     shlq    $3, %rsi
     addq    irq_routing_table, %rsi
     movq    (%rsi), %rsi
+    xorq    %rbx, %rbx
     cmpq    tcb_memroot, %rsi
     jne     9f
     /* enable the given irq */
@@ -236,6 +230,7 @@ isr_syscall0:
 9:  movq    __PAGESIZE-16, %rsp
 6:  movq    __PAGESIZE-24, %r11
     movq    __PAGESIZE-40, %rcx
+    movq    coreerrno, %rbx
     sysretq
 
 /**

@@ -132,8 +132,8 @@ int atexit (void (*func) (void))
         if(atexit_hooks[i] == func)
             return 1;
     atexit_hooks = realloc(atexit_hooks, (atexit_num+1)*sizeof(atexit_t));
-    if(!atexit_hooks || errno)
-        return errno;
+    if(!atexit_hooks || errno())
+        return errno();
     atexit_hooks[atexit_num++] = func;
     return SUCCESS;
 }

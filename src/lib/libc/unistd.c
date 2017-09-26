@@ -32,21 +32,25 @@
 #define SYS_vfslocate 1
 #endif
 
-/* it's on a read-only page in TCB */
-extern ino_t _rootdir;
-extern void _chroot(ino_t inode);
-
-/* structure to hold file descriptors. It's filld by real time linker */
-typedef struct {
-    fid_t cwdir;
-    fid_t of;
-    fid_t lf;
-    fid_t *fd;
-} _fd_t;
-
-public _fd_t _fd = { 0,0,0,NULL };
 public uint64_t _bogomips = 1000;
 public uint64_t _alarmstep = 1000;
+public uint64_t errn = SUCCESS;
+
+/**
+ * set error status, errno
+ */
+public void seterr(int e)
+{
+    errn = e;
+}
+
+/**
+ * get error status, errno
+ */
+public uint64_t errno()
+{
+    return errn;
+}
 
 /**
  * Make PATH be the root directory (the starting point for absolute paths).
@@ -54,12 +58,7 @@ public uint64_t _alarmstep = 1000;
  */
 public fid_t chroot(const char *path)
 {
-    fid_t f=(fid_t)mq_call(SRV_FS, SYS_vfslocate, 0, path, S_IFDIR);
-    if(f!=-1)
-        _chroot(f);
-    else
-        seterr(ENOENT);
-    return _rootdir;
+    return 0;
 }
 
 /**
@@ -67,10 +66,5 @@ public fid_t chroot(const char *path)
  */
 public fid_t chdir(const char *path)
 {
-    fid_t f=(fid_t)mq_call(SRV_FS, SYS_vfslocate, _rootdir, path, S_IFDIR);
-    if(f!=-1)
-        _fd.cwdir=f;
-    else
-        seterr(ENOENT);
-    return _fd.cwdir;
+    return 0;
 }

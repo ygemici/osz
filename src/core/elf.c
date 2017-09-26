@@ -783,11 +783,6 @@ bool_t elf_rtlink()
 #endif
                         // save virtual address
                         uint64_t *ptr = (uint64_t *)r->offs;
-                        // soecial cases, they're in the TCB
-                        if(!kmemcmp(strtable + s->st_name, "errno", 6))
-                            offs = tcb_errno;
-                        if(!kmemcmp(strtable + s->st_name, "_rootdir", 9))
-                            offs = tcb_rootdir;
                         *ptr = offs;
                         r->offs = 0;
                     }

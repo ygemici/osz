@@ -41,6 +41,7 @@ extern uint64_t isr_getts(char *p,int16_t timezone);
 extern uint64_t isr_currfps;
 extern phy_t identity_mapping;
 extern phy_t screen[2];
+extern uint64_t coreerrno;
 
 /**
  * System call dispatcher for messages sent to SRV_CORE. Also has a low level
@@ -55,18 +56,16 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
     char fn[128];
     phy_t tmp;
     uint64_t i,j;
-    uint64_t errn = tcb->errno;
 
-    tcb->errno = SUCCESS;
+    coreerrno = SUCCESS;
     switch(EVT_FUNC(event)) {
         /* case SYS_ack: in isr_syscall0 asm for performance */
-        /* case SYS_seterr: in isr_syscall0 asm for performance */
+        /* case SYS_sched_yield: in isr_syscall0 asm for performance */
         /* case SYS_rand: in isr_syscall0 asm for more bits */
         case SYS_exit:
             /* is it a critical service that's exiting? */
             if(tcb->pid == services[-SRV_FS] || tcb->pid == services[-SRV_UI]) {
-                kpanic("%s task panic: %s",tcb->pid == services[-SRV_FS]?"FS":"UI",
-                errn>0 && errn<sizeof(errnums) ? errnums[errn] : "EUNKWN");
+                kpanic("critical %s task exited",tcb->pid == services[-SRV_FS]?"FS":"UI");
             }
             /* power off or reboot system when init task exits */
             if(tcb->pid == services[-SRV_init]) {
@@ -97,7 +96,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
                 /* flush screen buffer to video memory. */
                 msg_sends(EVT_DEST(SRV_video) | EVT_FUNC(VID_flush), 0,0,0,0,0,0);
             } else
-                tcb->errno = EACCES;
+                coreerrno = EACCES;
             break;
 
         case SYS_stimebcd:
@@ -110,27 +109,19 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
                 ticks[TICKS_TS] = arg0;
                 ticks[TICKS_NTS] = 0;
             } else {
-                tcb->errno = EACCES;
+                coreerrno = EACCES;
             }
             break;
 
         case SYS_time:
             return ticks[TICKS_TS];
 
-        case SYS_chroot:
-            if(task_allowed(tcb, "chroot", A_WRITE)) {
-                tcb->rootdir = arg0;
-            } else {
-                tcb->errno = EACCES;
-            }
-            break;
-
         case SYS_setirq:
             /* set irq handler, only device drivers allowed to do so */
             if(tcb->priority == PRI_DRV) {
                 isr_installirq(arg0, tcb->memroot);
             } else {
-                tcb->errno = EACCES;
+                coreerrno = EACCES;
             }
             break;
     
@@ -144,7 +135,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_mapfile:
             /* map a file info bss */
             if(arg0<BSS_ADDRESS || arg0>=BUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
-                tcb->errno = EINVAL;
+                coreerrno = EINVAL;
                 return 0;
             }
             /* locate the file */
@@ -156,7 +147,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             data = fs_locate(fn);
             task_map(tmp);
             if(data==NULL) {
-                tcb->errno = ENOENT;
+                coreerrno = ENOENT;
                 return 0;
             }
             /* data inlined in inode? */
@@ -225,7 +216,7 @@ uint64_t isr_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             break;
 
         default:
-            tcb->errno = EPERM;
+            coreerrno = EPERM;
             return (uint64_t)false;
     }
     return (uint64_t)true;

@@ -21,9 +21,6 @@ PHDRS
 
 SECTIONS
 {
-  /* Read-only variables in TCB */
-  errno = 6;
-  _rootdir = 656;
   /* Read-only sections, merged into text segment: */
   . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
   .text :

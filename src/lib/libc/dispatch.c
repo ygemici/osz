@@ -118,8 +118,8 @@ public uint64_t mq_dispatch()
             i = false;
         }
         /* send positive or negative acknowledgement back to the caller */
-        mq_send(EVT_SENDER(msg->evt), errno == SUCCESS ? SYS_ack : SYS_nack,
-            i/*return value*/, errno, func+3, msg->serial);
+        mq_send(EVT_SENDER(msg->evt), errno() == SUCCESS ? SYS_ack : SYS_nack,
+            i/*return value*/, errno(), func+3, msg->serial);
     }
     /* should never reach this */
     return EX_OK;

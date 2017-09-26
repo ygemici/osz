@@ -25,8 +25,8 @@
  * @brief OS/Z system calls for syslog service. Include with osZ.h
  */
 
-#define SYS_vsyslog	(0x08)
-#define SYS_openlog	(0x0c)
-#define SYS_closelog	(0x0d)
-#define SYS_syslog	(0x0e)
+#define SYS_vsyslog	(0x07)
+#define SYS_openlog	(0x0a)
+#define SYS_closelog	(0x0b)
+#define SYS_syslog	(0x0c)
 

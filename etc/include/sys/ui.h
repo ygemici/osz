@@ -28,8 +28,8 @@
 #define SYS_opentty	(0x0e)
 #define SYS_openwrd	(0x10)
 #define SYS_openwin	(0x15)
-#define SYS_setcursor	(0x18)
+#define SYS_setcursor	(0x17)
 #define SYS_keypress	(0x1b)
-#define SYS_keyrelease	(0x1e)
-#define SYS_pointer	(0x23)
+#define SYS_keyrelease	(0x1d)
+#define SYS_pointer	(0x21)
 

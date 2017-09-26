@@ -109,17 +109,17 @@ void devfs_init()
     ndevdir=5;
     //allocate memory for devfs
     devdir=(device_t*)malloc(ndevdir*sizeof(device_t));
-    if(!devdir || errno)
+    if(!devdir || errno())
         abort();
 
     //allocate memory for dev subdirectories
     memcpy((void*)devdir,FSZ_DIR_MAGIC,4);
     devvoldir=(FSZ_DirEnt*)malloc(__PAGESIZE);
-    if(!devvoldir || errno)
+    if(!devvoldir || errno())
         abort();
     memcpy((void*)devvoldir,FSZ_DIR_MAGIC,4);
     devuuiddir=(FSZ_DirEnt*)malloc(__PAGESIZE);
-    if(!devuuiddir || errno)
+    if(!devuuiddir || errno())
         abort();
     memcpy((void*)devuuiddir,FSZ_DIR_MAGIC,4);
 
