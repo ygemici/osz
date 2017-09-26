@@ -1,5 +1,5 @@
 /*
- * core/x86_64/sched.c
+ * core/sched.c
  *
  * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
