@@ -27,7 +27,7 @@ initial ram disk image on a GPT disk or from ROM into 64 bit mode, without
 using any configuration or even knowing the filesystem in question.
 
 On BIOS based systems, the same image can be loaded via MultiBoot,
-chainload from MBR (GPT hybrid booting) or run as a BIOS Expansion ROM
+chainload from MBR or VBR (GPT hybrid booting) or run as a BIOS Expansion ROM
 (so not only the ramdisk can be in ROM, but the loader as well).
 
 On EFI machines, the PCI Option ROM is created from a standard EFI
@@ -58,15 +58,15 @@ Glossary
   only specifies two of the keys: "screen" for screen size,
   and "kernel" for the name of the executable inside the initrd.
 
-* _initrd_: initial ramdisk image in ROM or on boot partition at
-  BOOTBOOT\INITRD or it can occupy the whole partition. It's format is not
-  specified (the good part :-) ) and can be optionally gzip compressed.
+* _initrd_: initial ramdisk image (probably in ROM or on boot partition at
+  BOOTBOOT\INITRD or it can occupy the whole partition). It's format and whereabouts
+  are not specified (the good part :-) ) and can be optionally gzip compressed.
 
-* _loader_: a native executable on the boot partition or in ROM. For multi-
-  bootable disks more loader implementations can co-exists.
+* _loader_: a native executable on the boot partition or in ROM. For multibootable disks
+  more loader implementations can co-exists.
 
-* _filesystem driver_: a plug-in that parses initrd for the kernel. Without
-  one the first ELF64 / PE32+ executable in the initrd will be loaded.
+* _filesystem driver_: a separated function that parses initrd for the kernel file.
+  Without one the first executable found will be loaded.
 
 * _kernel file_: an ELF64 / PE32+ executable inside initrd, optionally with
   the following symbols: fb, environment, bootboot (see linker script).
@@ -79,11 +79,11 @@ Boot process
 
 1. the firmware locates the loader, loads it and passes control to it.
 2. the loader initializes hardware (long mode, screen resolution, memory map etc.)
-3. then loads environment file and initrd file from the boot partition (or from ROM).
-4. iterates on filesystem drivers, and loads kernel from initrd.
-5. if filesystem is not recognized, scans for the first executable in initrd.
+3. then loads environment file and initrd file (probably from the boot partition or from ROM).
+4. iterates on filesystem drivers, and loads kernel file from initrd.
+5. if filesystem is not recognized, scans for the first executable in the initrd.
 6. parses executable header and symbols to get link addresses (only level 2 compatible loaders).
-7. maps framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
+7. maps linear framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
 8. sets up stack, registers and jumps to [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See example kernel below.
 
 Machine state
@@ -93,12 +93,12 @@ When the kernel gains control, the memory mapping looks like this (unless symbol
 A fully compatible level 2 loader should map these where the symbols tell to):
 
 ```
-   -64M framebuffer                       (0xFFFFFFFFFC000000)
-    -2M core          bootboot structure  (0xFFFFFFFFFFE00000)
-        -2M+1page     environment         (0xFFFFFFFFFFE01000)
-        -2M+2page.. v kernel text segment (0xFFFFFFFFFFE02000)
-         ..0        ^ kernel stack
-    0-16G RAM identity mapped
+   -64M         framebuffer           (0xFFFFFFFFFC000000)
+    -2M         bootboot structure    (0xFFFFFFFFFFE00000)
+    -2M+1page   environment           (0xFFFFFFFFFFE01000)
+    -2M+2page.. v kernel text segment (0xFFFFFFFFFFE02000)
+     ..0        ^ kernel stack
+    0-16G       RAM identity mapped
 ```
 
 Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0 (supervisor mode).
@@ -112,7 +112,7 @@ The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mappe
 Environment file
 ----------------
 
-[Environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) is passed to your kernel as newline separated "key=value" pairs.
+[Environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) is passed to your kernel as newline separated "key=value" pairs in an UTF-8 string.
 
 ```
 // BOOTBOOT Options
@@ -127,9 +127,9 @@ otherstuff=enabled
 
 ```
 
-The file cannot be larger than 4095 bytes (1 page minus 1 byte) long. Temporary variables will be appended at the end (from
+That cannot be larger than page size (4096 bytes). Temporary variables will be appended at the end (from
 UEFI command line). C style single line and multi line comments can be used. BOOTBOOT protocol only uses `screen` and
-`kernel`, all the other keys and their formats are up to your kernel (or drivers) to parse. Be creative :-)
+`kernel` keys, all the other keys and their values are up to your kernel (or drivers) to parse. Be creative :-)
 
 Filesystem drivers
 ------------------
@@ -139,17 +139,17 @@ EFI version relies on any filesystem that's supported by EFI Simple FileSystem P
 
 Luckily the EFI loader can load files from the boot partition with the
 help of the firmware. BIOS/MultiBoot implementation is not so lucky,
-therefore it needs an extra functions to do that. That function however
+therefore it needs an extra function to do that. That function however
 is out of the scope of this specification: the BOOTBOOT Protocol only
 states that a compatible loader must be able to load initrd and environment,
 but does not describe how or from where. They can be loaded from ROM or over
-network for example.
+network for example, it does not matter.
 
 On the other hand BOOTBOOT does specify one API function to locate a file (the kernel)
 inside the initrd image, but the ABI is also implementation (and architecture) specific.
 This function receives a pointer to initrd in memory as well as the kernel's filename, and
 returns a pointer to the first byte of the kernel and it's size. On error (if filesystem is
-not recognized or the kernel is not found) returns {NULL,0}. Plain simple.
+not recognized or the kernel file is not found) returns {NULL,0}. Plain simple.
 
 ```c
 typedef struct {
@@ -161,12 +161,11 @@ file_t myfs_initrd(uint8_t *initrd, char *filename);
 ```
 
 The protocol expects that a BOOTBOOT compliant loader iterates on a list of drivers until one
-returns a non-NULL.
+returns a valid result. If all filesystem drivers returned {NULL,0}, the loader will brute-force
+scan for the first ELF64 / PE32+ image in the initrd.
 
-If all filesystem drivers returned {NULL,0}, the loader will brute-force
-scan for the first ELF64/PE32+ image in the initrd, which is quite comfortable specially
-when you want to use your own filesystem but you don't have an fs driver for it.
-You just copy your initrd on the EFI System Partition, and ready to rock and roll!
+This feature is quite comfortable when you want to use your own filesystem but you don't have written
+an fs driver for it yet. You just copy your file system image on the EFI System Partition, and ready to rock and roll!
 
 The BOOTBOOT Protocol expects the [filesystem drivers](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/fs.h) to be separated from
 the rest of the loader in source. This is so because it was designed to help the needs of hobby
@@ -184,10 +183,10 @@ A minimal kernel that demostrates how to access BOOTBOOT environment:
 ```c
 #include <bootboot.h>
 
-/* imported virtual addresses, see linker script */
-extern BOOTBOOT bootboot;
-extern unsigned char *environment;
-extern uint8_t fb;
+/* imported virtual addresses, see linker script below */
+extern BOOTBOOT bootboot;           // see bootboot.h
+extern unsigned char *environment;  // configuration, key=value pairs
+extern uint8_t fb;                  // linear framebuffer mapped
 
 void _start()
 {
@@ -211,9 +210,9 @@ void _start()
 Compile and link it with:
 
 ```shell
-gcc -Wall -fpic -ffreestanding -m64 -mno-red-zone -c kernel.c -o kernel.o
-gcc -nostdlib -Xlinker --nmagic -T link.ld -o kernel
-strip -s -K fb -K bootboot -K environment kernel
+gcc -Wall -fpic -ffreestanding -fno-stack-protector -m64 -mno-red-zone -c kernel.c -o kernel.o
+gcc -nostdlib -Xlinker --nmagic -T link.ld -o mykernel
+strip -s -K fb -K bootboot -K environment mykernel
 ```
 
 A minimal linker script would be:
@@ -226,7 +225,7 @@ ENTRY(_start)
 OUTPUT_FORMAT(elf64-x86-64)
 SECTIONS
 {
-    /* bootboot.fb_ptr holds the physical address, this is the linear */
+    /* bootboot.fb_ptr holds the physical address, which is mapped here */
     . = FBUF_ADDRESS;
         fb = .;
     /* the bootboot structure and your envirenment file mapped here */
@@ -267,12 +266,10 @@ Installation
 
 ```shell
 mkdir -r tmp/sys
-cp yourkernel tmp/sys/core
+cp mykernel tmp/sys/core
 # copy more files to tmp/ directory
 cd tmp
-# create your filesystem image (FS/Z or use your own) or an archive.
-# You can use one of these:
-tools/mkfs INITRD . && gzip INITRD
+# create your filesystem image or an archive. For example use one of these:
 find . | cpio -H newc -o | gzip > ../INITRD
 find . | cpio -H crc -o | gzip > ../INITRD
 find . | cpio -H hpodc -o | gzip > ../INITRD
@@ -282,6 +279,7 @@ tar -czf ../INITRD *
 2. Create FS0:\BOOTBOOT directory on the boot partition, and copy the image you've created
         into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/sys/config)
         there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there.
+        If you want to use a different name than "sys/core" for your kernel, specify "kernel=" in it.
 
 Alternatively you can copy an uncompressed INITRD into the whole partition using your fs only, leaving FAT filesystem entirely out.
 You can also create an Option ROM out of INITRD (on BIOS there's not much space ~64-96k, but on EFI it can be 16M).
@@ -293,8 +291,8 @@ You can also create an Option ROM out of INITRD (on BIOS there's not much space 
 3.2. *EFI ROM*: use __bootboot.rom__ which is a standard **_PCI Option ROM image_**.
 
 3.3. *BIOS disk*: copy __bootboot.bin__ to **_FS0:\BOOTBOOT\LOADER_**. You can place it inside your INITRD partition
-        or outside of partition area as well. Install __boot.bin__ in the master boot record, saving bootboot.bin's first
-        logical sector's number in a dword at 0x1B0.
+        or outside of partition area as well. Install __boot.bin__ in the master boot record (or in volume boot record if you have a boot manager),
+        saving bootboot.bin's first logical sector's number in a dword at 0x1B0.
     
 3.4. *BIOS ROM*: install __bootboot.bin__ in a **_BIOS Expansion ROM_**.
 
@@ -357,8 +355,11 @@ BOOTBOOT-PANIC: GOP failed, no framebuffer
 ```
 BOOTBOOT-PANIC: VESA VBE error, no framebuffer
 ```
+```
+BOOTBOOT-PANIC: VideoCore error, no framebuffer
+```
 
 The loader was unable to set up linear framebuffer with packed 32 bit pixels in the requested resolution.
-Possible soultion is to modify screen to "screen=800x600" in CONFIG, which is the minimal resolution supported.
+Possible solution is to modify screen to "screen=800x600" in CONFIG, which is the minimal resolution supported.
 
 That's all, hope it will be useful!
