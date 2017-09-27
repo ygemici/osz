@@ -3,7 +3,7 @@
 // requested screen dimension
 screen=800x600
 
-// elf binary to load
+// elf or pe binary to load
 kernel=sys/core
 
 // number of pages to store free physical memory fragments
