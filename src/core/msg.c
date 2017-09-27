@@ -173,9 +173,9 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 
     coreerrno = SUCCESS;
     switch(EVT_FUNC(event)) {
-        /* case SYS_ack: in isr_syscall0 asm for performance */
-        /* case SYS_sched_yield: in isr_syscall0 asm for performance */
-        /* case SYS_rand: in isr_syscall0 asm for more bits */
+        /* case SYS_ack: in isr_syscall asm for performance */
+        /* case SYS_sched_yield: in isr_syscall asm for performance */
+        /* case SYS_rand: in isr_syscall asm for more bits */
         case SYS_exit:
             /* is it a critical service that's exiting? */
             if(tcb->pid == services[-SRV_FS] || tcb->pid == services[-SRV_UI]) {
@@ -237,7 +237,7 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
     
         case SYS_alarm:
             /* suspend task for arg0 sec and arg1 microsec.
-             * Values smaller than alarmstep already handled by isr_syscall0 in isrc.S */
+             * Values smaller than alarmstep already handled by isr_syscall in isrc.S */
             sched_alarm(tcb, ticks[TICKS_TS]+arg0, ticks[TICKS_NTS]+arg1);
             break;
 
