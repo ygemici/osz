@@ -20,6 +20,8 @@ features like MMU or FPU (usually built-in CPU, but not necessairly), while the 
 the motherboard or SoC (usually not replaceable by the end user), like interrupt controllers, nvram, PCI(e) bus and
 BIOS or UEFI firmware.
 
+For valid architecture and platform combinations, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
+
 Porting core
 ------------
 
@@ -32,24 +34,22 @@ The `core` is responsible for handling the lowest level of the hardware, such as
  * managing and scheduling tasks (creating and switching execution environment, strongly CPU dependent)
  * low level inter-task communication with [messaging](https://github.com/bztsrc/osz/blob/master/docs/messages.md#supervisor-mode-ring-0)
  * system bus enumeration for device detection
-
-A significant part of the `core` is platform independent, and written in C, [sys/core](https://github.com/bztsrc/osz/blob/master/src/core).
-Hardware specific part is written in C and Assembly, in [sys/core/(platform)](https://github.com/bztsrc/osz/blob/master/src/core/x86_64). This
-is the only part of OS/Z that runs in supervisor mode (ring 0 on x86_64), and it must be kept small. Interrupt
-controllers and timers are only built-in for performance reasons, all other platform specific parts must be
-implemented in a device driver running in user mode (ring 3 on x86_64). For valid architecture and platform
-combinations, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
+ * rebooting, powering off the machine
 
 The `core` is loaded by the `loader`, and it [boots](https://github.com/bztsrc/osz/blob/master/docs/boot.md) the
 rest of the operating system by initializing lowest level parts, enumerating system buses, loading and initializing
 [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md) and device drivers. Once it's finished
 with all of that, it passes control the `init` system service.
 
+A significant part of the `core` is platform independent, and written in C, [sys/core](https://github.com/bztsrc/osz/blob/master/src/core).
+Hardware specific part is written in C and Assembly, in [sys/core/(platform)](https://github.com/bztsrc/osz/blob/master/src/core/x86_64). This
+is the only part of OS/Z that runs in supervisor mode (ring 0 on x86_64), and it must be kept small.
+
 Although OS/Z is a micro-kernel, the `core` does a little more than other typical micro-kernels, like Minix. It is so
-because the goal was performance and also to provide a minimal, but well-defined support for the platform. So `core`
-does not abstract the architecture, instead it abstracts the platform in a minimalistic approach: everything that's
-required to support individual, pre-empted, auto detected device driver tasks must be in `core`, but nothing more and
-specially not the driver's code itself. Everything else must be pushed out to user space in separate binaries. There's
+because the goal was performance and also to provide a minimal, but well-defined support for each platform. So `core`
+abstracts the platform in a minimalistic approach: everything that's required to support individual, pre-empted, auto
+detected, inter communicating device driver tasks must be in `core`, but nothing more and specially not the driver's
+code itself. Everything else must be pushed out to user space in separate binaries. There's
 a simple rule: if the hardware can be physically replaced by the end user (eg.: using PCI card or BIOS setup), it must
 be supported by a device driver and not by `core` for sure.
 

@@ -50,9 +50,6 @@ dataseg char osver[] =
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************/
-/**
- * Start computer
- */
 void main()
 {
     // note: we cannot call syslog_early("starting") as syslog_buf
