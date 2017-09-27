@@ -92,10 +92,10 @@ As mentioned before, `libc` does not only provide the usual functions, but also 
 all OS/Z services (including device driver specific functions and user interface functions for example). This ease the
 development for new programs, but also makes porting code written for other operating systems a little bit harder. You
 have to use `#ifdef _OS_Z_` pre-define blocks. There's no way around this as
-[OS/Z is not POSIX](https://github.com/bztsrc/osz/blob/master/docs/posix.md) by design. Although I did my best to use a
-similar interface as much as possible, OS/Z uses it's own interface. For one, `errno()` is a function and not a global
+[OS/Z is not POSIX](https://github.com/bztsrc/osz/blob/master/docs/posix.md) by design. Although I did my best to make
+it similar to POSIX, that's still OS/Z's own interface. For one, `errno()` is a function and not a global
 variable. On the other hand this `libc` provides everything for interfacing with OS/Z, which guarantees that all OS
-specific difference to POSIX is limited to this single library.
+specific stuff is limited to this single library.
 
 OS/Z is designed in a way that at shared library level all applications are binary compatible for a specific
 architecture, and source compatible for all architectures and platforms. Therefore libraries should not and applications
@@ -103,6 +103,6 @@ must not use any Assembly or platform specific C code. If such a thing is requir
 drivers, then that code must be placed in a separate library with an interface common on all platforms, and should be
 implemented for all the platforms. The pixman library would be a perfect example for that.
 
-Because it is the `libc` level when OS/Z becames platform independent, unit and functionality
+Because it is the `libc` level where OS/Z becames platform independent, unit and functionality
 [tests](https://github.com/bztsrc/osz/blob/master/src/test) are provided for this level and above, but not for lower
 levels.
