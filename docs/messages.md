@@ -66,7 +66,8 @@ bool_t msg_syscall(
 )
 ```
 
-Those are variations on scalar and reference arguments, as `core` never blocks. They use (dst<<16 | func) as event.
+Those are variations on scalar and reference arguments, as `core` never blocks, so they are all async.
+Also they use (dst<<16 | func) as event.
 
 If magic is given it can be a type hint on what's ptr is pointing to. It's optional as most events accept
 only one kind of reference.
@@ -98,8 +99,7 @@ The destination and function is passed in %rax. When destination is SRV_CORE (0)
 messages. Any other value sends.
 
 The arguments are stored and read in System V ABI way, with two exception: %rcx is clobbered by the syscall instruction, so
-it must be passed in %rbx. The destination task and the function code are aggregated into one argument:
-
+it must be passed in %rbx. The destination task and the function code are aggregated into one argument in %rax.
 ```
 %rax= (pid_t task) << 16 | function,
 %rdi= arg0/ptr
@@ -108,27 +108,10 @@ it must be passed in %rbx. The destination task and the function code are aggreg
 %rbx= arg3
 %r8 = arg4
 %r9 = arg5
+syscall
 ```
-
-Examples
-```
-    xorq    %rdi, %rdi
-    movb    $EINVAL, %dil
-    xorq    %rax, %rax
-    movb    $SYS_seterr, %al
-    syscall
-```
-or sending to a specific service
-```
-    /* arguments in %rdi, %rsi... */
-    movq    $SRV_video, %rax
-    shlq    $16, %rax
-    movb    $VID_movecursor, %al
-    syscall
-    ret
-```
-Note that you must never use these, you should use `mq_send()` or `mq_call()` or even better, higher level functions in `libc` instead.
-These examples are only listed for completeness, and they are not portable.
+Note that you must never use this syscall instruction from your code, you have to use `mq_send()`, `mq_call()` and the others instead.
+Or even better, use higher level functions in `libc`.
 
 Structures
 ----------
