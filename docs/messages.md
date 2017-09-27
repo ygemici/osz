@@ -12,7 +12,8 @@ But if there's really a need to use the messaging system, you have platform inde
 
 ### Low level user Library
 
-Only five functions, variations on synchronisation. They are provided by `libc`, and defined in [etc/include/sys/core.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/core.h).
+There are only five functions for messaging, variations on synchronisation. They are provided by `libc`, and defined in [etc/include/sys/core.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/core.h).
+You should not use them directly (unless you're implementing your own message protocol), use higher level functions instead.
 
 ```c
 /* async, send a message and return it's serial (non-blocking) */
@@ -39,35 +40,42 @@ are defined in the corresponding header file under [etc/include/sys](https://git
 Supervisor Mode (Ring 0)
 ------------------------
 
-Core can't use libc, it has it's own message queue implementation. Two functions in [src/core/msg.c](https://github.com/bztsrc/osz/blob/master/src/core/msg.c):
+Core can't use libc, it has it's own message queue implementation. Three functions in [src/core/msg.c](https://github.com/bztsrc/osz/blob/master/src/core/msg.c):
 
 ```c
 bool_t msg_send(
-    pid_t task,
-    uint64_t func,
+    evt_t event,
     void *ptr,
     size_t size,
     uint64_t magic);
 
 bool_t msg_sends(
-    pid_t task,
-    uint64_t func,
+    evt_t event,
     uint64_t arg0,
     uint64_t arg1,
     uint64_t arg2,
     uint64_t arg3,
     uint64_t arg4,
     uint64_t arg5);
+
+bool_t msg_syscall(
+    evt_t event,
+    uint64_t arg0,
+    uint64_t arg1,
+    uint64_t arg2);
+)
 ```
 
-Those are variations on scalar and reference arguments, as core never blocks.
+Those are variations on scalar and reference arguments, as `core` never blocks. They use (dst<<16 | func) as event.
 
 If magic is given it can be a type hint on what's ptr is pointing to. It's optional as most events accept
 only one kind of reference.
 
+The third version handles messages sent specifically to the `core` (like SYS_exit or SYS_alarm events) efficiently.
+
 ### Low Level
 
-The lowest level of message sending can be found in [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S) and it's an atomic, non-blocking call.
+The platfrom specific lowest level of message sending can be found in [src/core/(platform)/libk.S](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/libk.S) and it's an atomic, non-blocking call.
 
 ```c
 void ksend(
@@ -81,7 +89,7 @@ void ksend(
     uint64_t arg5);
 ```
 
-It's an effective assembly implementation of copying msg_t into the queue and handle start / end indeces. The `msg_sends()`
+It's an efficient assembly implementation of copying msg_t into the queue and handle start / end indeces. The `msg_sends()`
 function calls it after it had mapped the destination's task message queue temporarily.
 
 From userspace the message queue routines can be accessed via `syscall` instruction on x86_64 platform. The low level user library
@@ -90,7 +98,7 @@ The destination and function is passed in %rax. When destination is SRV_CORE (0)
 messages. Any other value sends.
 
 The arguments are stored and read in System V ABI way, with two exception: %rcx is clobbered by the syscall instruction, so
-it must be passed in %rbx. Also unlike in `mq_send()`, the destination task and the function code are aggregated into one argument:
+it must be passed in %rbx. The destination task and the function code are aggregated into one argument:
 
 ```
 %rax= (pid_t task) << 16 | function,
@@ -119,8 +127,8 @@ or sending to a specific service
     syscall
     ret
 ```
-Note that you must never use these, you should use `mq_send()` or `mq_call()` and other functions in `libc` instead.
-These instruction and examples are only listed for completeness!
+Note that you must never use these, you should use `mq_send()` or `mq_call()` or even better, higher level functions in `libc` instead.
+These examples are only listed for completeness, and they are not portable.
 
 Structures
 ----------
