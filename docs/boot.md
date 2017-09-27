@@ -60,5 +60,5 @@ instead of user services. Services are classic UNIX daemons, among others the us
 End game
 --------
 
-When the `init` system service exists, the execution we be passed back to core. It will say 'Good Bye' and depending on
-the exit status, calls `sys_reset()` to restart or `sys_disable()` to turn off the computer.
+When the `init` system service exists, the execution will be passed back to core. It will say 'Good Bye', depending on
+the exit status, with `kprintf_reboot()` or `kprintf_poweroff()`.
