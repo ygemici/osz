@@ -25,7 +25,7 @@
  * @brief Early syslog implementation. Shares buffer with "syslog" task
  */
 
-#include <platform.h>
+#include <arch.h>
 
 /* if compiled with debug, (platform)/dbg.c also uses sprintf() */
 
@@ -40,12 +40,6 @@ extern char nullstr[];
 /* the buffer */
 dataseg char *syslog_buf;
 dataseg char *syslog_ptr;
-
-/* we don't have libc's stdarg */
-typedef unsigned char *valist;
-#define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
-#define vastart_sprintf(list, param) (list = (((valist)&param) + sizeof(void*)*8))
-#define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
 /* simple sprintf implementation (core can't use libc) */
 char *sprintf(char *dst,char* fmt, ...);

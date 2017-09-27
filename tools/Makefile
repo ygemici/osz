@@ -5,11 +5,11 @@ SYSFILE = ../bin/sys.part
 USRFILE = ../bin/usr.part
 VARFILE = ../bin/var.part
 HOMEFILE = ../bin/home.part
-DDIMAGE = ../bin/disk.dd
+DDIMAGE = ../bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
 VDIIMAGE = ../bin/disk.vdi
 VMDKIMAGE = ../bin/disk.vmdk
 SRCS = mkfs.c elftool.c
-OPT  =
+OPT  = -DOSZ_ARCH='"$(ARCH)"'
 LIBS =
 OBJS = $(SRCS:.c=.o)
 
@@ -121,8 +121,8 @@ $(HOMEFILE): ../bin/home
 	@dd if=/dev/zero of=$(HOMEFILE) bs=1024 count=$(HOMESIZE) >/dev/null 2>/dev/null
 
 images: initrd esp $(USRFILE) $(VARFILE) $(HOMEFILE)
-	@echo "  mkfs		bin/disk.dd"
-	$(O)./mkfs.o disk
+	@echo "  mkfs		bin/osZ-latest-$(ARCH)-$(PLATFORM).dd"
+	$(O)./mkfs.o disk "osZ-latest-$(ARCH)-$(PLATFORM).dd"
 
 vdi: $(DDIMAGE)
 	@echo "  mkfs		bin/disk.vdi"

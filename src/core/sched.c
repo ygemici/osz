@@ -25,7 +25,7 @@
  * @brief Task scheduler
  */
 
-#include <platform.h>
+#include <arch.h>
 
 extern ccb_t ccb;             //CPU Control Block (platform specific)
 extern uint64_t isr_next;       //next task to map when isr finishes
@@ -99,7 +99,7 @@ void sched_dump()
 /**
  * block until alarm, add task to ccb.hd_timerq list too
  * note that isr_timer() consumes tasks from timer queue this is only called if sleep time is
- * bigger than alarmstep, shorter usleeps are implemented as busy loops in isr_syscall0 in isrc.S 
+ * bigger than alarmstep, shorter usleeps are implemented as busy loops in libc
  */
 void sched_alarm(tcb_t *tcb, uint64_t sec, uint64_t nsec)
 {

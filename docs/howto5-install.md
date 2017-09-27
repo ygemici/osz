@@ -13,10 +13,10 @@ System Install
 ### From Development Environment
 
 It's quite easy to install it on a hard drive or removable media, like an USB stick.
-Just [download live image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) and use
+Just [download live image](https://github.com/bztsrc/osz/blob/master/bin/) and use
 
 ```sh
-dd if=bin/disk.dd of=/dev/sdc
+dd if=bin/osZ-latest-x86_64-ibmpc.dd of=/dev/sdc
 ```
 
 Where `/dev/sdc` is the device where you want to install.

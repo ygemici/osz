@@ -25,8 +25,7 @@
  * @brief Pre FS task file loader to load files from an FS/Z initrd (read-only)
  */
 
-#include <platform.h>
-#include <elf.h>
+#include <arch.h>
 #include <fsZ.h>
 
 dataseg uint64_t fs_size;

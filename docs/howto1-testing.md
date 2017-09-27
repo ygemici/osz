@@ -9,10 +9,10 @@ In this episode we'll take a look on how to test a live image.
 I always push the source to git in a state that's known to [compile](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without errors by a `make clean all` command.
 Although I did my best, it doesn't mean it won't crash under unforseen circumstances :-)
 
-The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example type
+The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/) should boot OS/Z in emulators and on real machines. For example type
 
 ```shell
-qemu-system-x86_64 -hda bin/disk.dd
+qemu-system-x86_64 -hda bin/osZ-latest-x86_64-ibmpc.dd
 ```
 
 But for your convience I've added make commands. For example if you clone the repo and [compile](https://github.com/bztsrc/osz/blob/master/docs/compile.md), you can boot OS/Z right from your `bin/ESP` directory

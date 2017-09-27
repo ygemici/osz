@@ -1,5 +1,5 @@
 /*
- * loader/rpi-AArch64/bootboot.S
+ * loader/rpi-AArch64/boot.S
  * 
  * Copyright 2016 Public Domain bztsrc@github
  *
@@ -9,21 +9,7 @@
 
 .section ".text.boot"
 
-.global interrupt_handlers
 .global _start
-
-interrupt_handlers:
-.quad 0     //reset
-.quad 0     //undef
-.quad 0     //swint
-.quad 0     //abrtp
-.quad 0     //abrtd
-.quad 0     //resv1
-.quad 0     //irq
-.quad 0     //fiq
-
-//magic
-.ascii "BOOTBOOT"
 
 _start:
 /*
@@ -53,3 +39,6 @@ halt:
     wfe
     b       halt
 */
+.align 16
+//magic
+.ascii "BOOTBOOT"

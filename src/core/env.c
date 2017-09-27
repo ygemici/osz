@@ -25,7 +25,7 @@
  * @brief Core environment parser (see FS0:\BOOTBOOT\CONFIG or /sys/config)
  */
 
-#include <platform.h>
+#include <arch.h>
 
 /*** parsed values ***/
 dataseg uint64_t nrphymax;
@@ -46,11 +46,59 @@ dataseg uint8_t rescueshell;
 dataseg uint8_t lefthanded;
 
 /*** for overriding default or autodetected values ***/
-// architecture specific variables
-extern void envarch_init();
-extern unsigned char *envarch_parse(unsigned char *env);
+// platform specific variables
+extern unsigned char *platform_parse(unsigned char *env);
 
 /*** value parsing helper functions ***/
+
+/*** get UTC system timestamp from a BCD local date ***/
+uint64_t env_getts(char *p, int16_t timezone)
+{
+    uint64_t j,r=0,y,m,d,h,i,s;
+    /* detect BCD and binary formats */
+    if(p[0]>=0x20 && p[0]<=0x30 && p[1]<=0x99 &&    //year
+       p[2]>=0x01 && p[2]<=0x12 &&                  //month
+       p[3]>=0x01 && p[3]<=0x31 &&                  //day
+       p[4]<=0x23 && p[5]<=0x59 && p[6]<=0x60       //hour, min, sec
+    ) {
+        /* decode BCD */
+        y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
+        m = ((p[2]>>4)*10)+(p[2]&0x0F);
+        d = ((p[3]>>4)*10)+(p[3]&0x0F);
+        h = ((p[4]>>4)*10)+(p[4]&0x0F);
+        i = ((p[5]>>4)*10)+(p[5]&0x0F);
+        s = ((p[6]>>4)*10)+(p[6]&0x0F);
+    } else {
+        /* binary */
+        y = (p[1]<<8)+p[0];
+        m = p[2];
+        d = p[3];
+        h = p[4];
+        i = p[5];
+        s = p[6];
+    }
+    uint64_t md[12] = {31,0,31,30,31,30,31,31,30,31,30,31};
+    /* is year leap year? then tweak February */
+    md[1]=((y&3)!=0 ? 28 : ((y%100)==0 && (y%400)!=0?28:29));
+
+    // get number of days since Epoch, cheating
+    r = 16801; // precalculated number of days (1970.jan.1-2017.jan.1.)
+    for(j=2016;j<y;j++)
+        r += ((j&3)!=0 ? 365 : ((j%100)==0 && (j%400)!=0?365:366));
+    // in this year
+    for(j=1;j<m;j++)
+        r += md[j-1];
+    // in this month
+    r += d-1;
+    // convert to sec
+    r *= 24*60*60;
+    // add time with timezone correction to get UTC timestamp
+    r += h*60*60 + (timezone + i)*60 + s;
+    // we don't honor leap sec here, but this timestamp should
+    // be overwritten anyway by SYS_stime with a more accurate value
+    return r;
+}
+
 /** parse a hex value */
 unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max)
 {
@@ -164,20 +212,22 @@ unsigned char *env_debug(unsigned char *s)
             break;
         }
         // debug flags
+        if(s[0]=='d' && s[1]=='e')              debug |= DBG_DEVICES;
+        if(s[0]=='l' && s[1]=='o')              debug |= DBG_LOG;
+#if DEBUG
+        if(s[0]=='m' && s[1]=='s')              debug |= DBG_MSG;
         if(s[0]=='m' && s[1]=='m')              debug |= DBG_MEMMAP;
         if(s[0]=='t' && s[1]=='a')              debug |= DBG_TASKS;
         if(s[0]=='e' && s[1]=='l')              debug |= DBG_ELF;
         if(s[0]=='r' && (s[1]=='i'||s[2]=='i')) debug |= DBG_RTIMPORT;
         if(s[0]=='r' && (s[1]=='e'||s[2]=='e')) debug |= DBG_RTEXPORT;
         if(s[0]=='i' && s[1]=='r')              debug |= DBG_IRQ;
-        if(s[0]=='d' && s[1]=='e')              debug |= DBG_DEVICES;
         if(s[0]=='s' && s[1]=='c')              debug |= DBG_SCHED;
-        if(s[0]=='m' && s[1]=='s')              debug |= DBG_MSG;
-        if(s[0]=='l' && s[1]=='o')              debug |= DBG_LOG;
         if(s[0]=='p' && s[1]=='m')              debug |= DBG_PMM;
-        if(s[0]=='v' && s[1]=='m')              debug |= DBG_PMM;
+        if(s[0]=='v' && s[1]=='m')              debug |= DBG_VMM;
         if(s[0]=='m' && s[1]=='a')              debug |= DBG_MALLOC;
         if(s[0]=='t' && s[1]=='e')              debug |= DBG_TESTS;
+#endif
         s++;
     }
     return s;
@@ -194,7 +244,7 @@ void env_init()
     uint64_t tmp;
 
     // set up defaults
-    networking = sound = true;
+    networking = sound = syslog = true;
     identity = false;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
@@ -204,7 +254,6 @@ void env_init()
     display = DSP_MONO_COLOR;
     debug = DBG_NONE;
     kmemcpy(&keymap,"en_us",6);
-    envarch_init();
 
     // parse ascii text
     while(env < env_end && *env!=0) {
@@ -296,7 +345,7 @@ void env_init()
             env += 6;
             env = env_debug(env);
         } else
-		// architecture specific keys
-            env = envarch_parse(env);
+            // platform specific keys
+            env = platform_parse(env);
     }
 }

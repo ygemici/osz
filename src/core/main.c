@@ -41,16 +41,18 @@
  *       instead into 0 - 2^56 and shared memory in -2^56 - -64M.
  */
 
-#include <platform.h>
+#include <arch.h>
 
 dataseg char osver[] =
-    OSZ_NAME " " OSZ_VER " " OSZ_ARCH " (build " OSZ_BUILD ")\n"
+    OSZ_NAME " " OSZ_VER " " OSZ_ARCH "-" OSZ_PLATFORM " (build " OSZ_BUILD ")\n"
     "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
- **********************************************************************
-*/
+ **********************************************************************/
+/**
+ * Start computer
+ */
 void main()
 {
     // note: we cannot call syslog_early("starting") as syslog_buf
@@ -58,6 +60,8 @@ void main()
     kprintf("OS/Z starting...\n");
 
     /*** step 1: motoric reflexes ***/
+    // initialize platform
+    platform_init();
     // parse environment
     env_init();
     // initialize physical memory manager, required by new task creation
@@ -101,8 +105,8 @@ void main()
     sys_enable();
 
     /*** step 4: go to dreamless sleep. ***/
-    // ...we should never return here. Instead syscall will call sys_disable()
-    // as the last step in the shutdown procedure when "init" task exits.
-    // But just in case of any unwanted return, we call poweroff anyway.
-    sys_disable();
+    // ...we should never return here. Instead exiting init will
+    // poweroff the machine as the last step in the shutdown procedure.
+    // But just in case of any unwanted return, we say good bye.
+    kprintf_poweroff();
 }

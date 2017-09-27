@@ -1,5 +1,5 @@
 /*
- * core/x86_64/pci.c
+ * core/AArch64/task.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,46 +22,33 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief PCI functions and enumeration
+ * @brief Task functions, platform dependent code
  */
 
-#include "platform.h"
+#include "arch.h"
 
-extern char *drvs;
-extern char *drvs_end;
-extern char fn[];
+dataseg phy_t idle_mapping;
+dataseg phy_t core_mapping;
+dataseg phy_t identity_mapping;
+dataseg phy_t *stack_ptr;
 
 /**
- * find a shared object for a pci address
+ * create a task, allocate memory for it and init TCB
  */
-char *pci_getdriver(char *device)
+tcb_t *task_new(char *cmdline, uint8_t prio)
 {
-    char *c, *f;
-    int d = kstrlen(device);
-    for(c=drvs;c<drvs_end;) {
-        f = c; while(c<drvs_end && *c!=0 && *c!='\n') c++;
-        // skip filesystem drivers
-        if(f[0]=='p' && f[1]=='c' && (f[2]!='i')) {
-            f+=3;
-            if(c-f<255-8 && *(f+d)==9 && !kstrcmp(device,f)) {
-                f += d+1;
-                kmemcpy(&fn[8], f, c-f);
-                fn[c-f+8]=0;
-                return fn;
-            }
-            continue;
-        }
-        // failsafe
-        if(c>=drvs_end || *c==0) break;
-        if(*c=='\n') c++;
-    }
-    return NULL;
 }
 
 /**
- * enumerate PCI bus. Called by sys_init()
+ * Check task address space consistency
  */
-void pci_init()
+bool_t task_check(tcb_t *tcb, phy_t *paging)
 {
-// TODO: enumerate bus and load drivers
+}
+
+/**
+ * Map a core buffer into task's memory
+ */
+virt_t task_mapbuf(void *buf, uint64_t npages)
+{
 }

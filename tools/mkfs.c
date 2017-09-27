@@ -34,7 +34,7 @@
  *  ./mkfs (file) mime (path) (mimetype) - change the mime type of a file in image file
  *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
  *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
- *  ./mkfs disk - assembles partition images into one GPT disk, saves bin/disk.dd
+ *  ./mkfs disk - assemble partition images into one big GPT disk, bin/disk.dd
  *
  * It's a minimal implementation, has several limitations compared to the FS/Z spec.
  * For example it supports only 24 entries per directory (entries are inlined in inode).
@@ -797,7 +797,6 @@ int main(int argc, char **argv)
     //get filenames
     for(i=strlen(path);i>0;i--) {if(path[i-1]=='/') break;}
     memcpy(path+i,"../bin/",8); i+=8; path[i]=0;
-    diskname=malloc(i+16); sprintf(diskname,"%sdisk.dd",path);
     stage1=malloc(i+16); sprintf(stage1,"%s/../loader/boot.bin",path);
     sysfile=malloc(i+16); sprintf(sysfile,"%ssys.part",path);
     espfile=malloc(i+16); sprintf(espfile,"%sesp.part",path);
@@ -819,6 +818,7 @@ int main(int argc, char **argv)
         exit(0);
     }
     if(!strcmp(argv[1],"disk")) {
+        diskname=malloc(i+64); sprintf(diskname,"%s%s",path,argv[2]!=NULL?argv[2]:"disk.dd");
         createdisk();
     } else
     if(argc>1){

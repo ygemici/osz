@@ -25,7 +25,7 @@
  * @brief Task functions, platform dependent code
  */
 
-#include "platform.h"
+#include "arch.h"
 
 dataseg phy_t idle_mapping;
 dataseg phy_t core_mapping;
@@ -129,28 +129,6 @@ tcb_t *task_new(char *cmdline, uint8_t prio)
 bool_t task_check(tcb_t *tcb, phy_t *paging)
 {
     return true;
-}
-
-/**
- * check if current task has a specific Access Control Entry
- */
-bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
-{
-    char *g;
-    int i,j;
-    if(grp==NULL||grp[0]==0)
-        return false;
-    j=kstrlen(grp);
-    if(j>15)
-        j=15;
-    for(i=0;i<TCB_MAXACE;i++) {
-        g = (char *)(&tcb->acl[i]);
-        if(g[0]==0)
-            return false;
-        if(!kmemcmp(g, grp, j))
-            return (g[15] & access)!=0;
-    }
-    return false;
 }
 
 /**

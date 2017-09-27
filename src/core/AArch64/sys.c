@@ -1,5 +1,5 @@
 /*
- * core/x86_64/sys.c
+ * core/AArch64/sys.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -26,15 +26,8 @@
  */
 
 #include "arch.h"
-#include "../env.h"
 
 /* external resources */
-extern ccb_t ccb;                   // CPU Control Block
-extern uint64_t pt;
-extern char *syslog_buf;
-
-extern void idle();
-extern tcb_t *sched_get_tcb(pid_t task);
 #if DEBUG
 extern uint8_t dbg_enabled;
 #endif
@@ -42,8 +35,6 @@ extern uint8_t dbg_enabled;
 /* device drivers map */
 dataseg char *drvs;
 dataseg char *drvs_end;
-dataseg phy_t screen[2];
-dataseg char fn[256];
 dataseg uint8_t sys_fault;
 dataseg uint8_t idle_first;
 
@@ -55,9 +46,6 @@ dataseg uint64_t systables[8];
  */
 __inline__ void sys_enable()
 {
-    tcb_t *tcb = (tcb_t*)0;
-    tcb_t *fstcb = (tcb_t*)(&tmpmap);
-
 #if DEBUG
     // enable debugger, it can be used only with task mappings
     dbg_enabled = true;
@@ -65,21 +53,9 @@ __inline__ void sys_enable()
     sys_fault = false;
 
     // map FS task's TCB
-    kmap((uint64_t)&tmpmap,
-        (uint64_t)(services[-SRV_FS]*__PAGESIZE),
-        PG_CORE_NOCACHE);
 
     syslog_early("Initializing");
     // fake an interrupt handler return to force first task switch
-    __asm__ __volatile__ (
-        // switch to first task's address space
-        "mov %0, %%rax; mov %%rax, %%cr3;"
-        // clear ABI arguments
-        "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;"
-        // "return" to the task
-        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" :
-        :
-        "a"(fstcb->memroot), "b"(&tcb->rip), "i"(TEXT_ADDRESS));
 }
 
 /**
@@ -99,8 +75,6 @@ void sys_init()
     // modify TCB for idle task. Don't add to scheduler queue, normally it will never be scheduled
     //start executing a special function.
     tcb->rip = (uint64_t)&idle;
-    tcb->cs = 0x8;  //ring 0 selectors
-    tcb->ss = 0x10;
     idle_mapping = tcb->memroot;
     idle_first = true;
 
@@ -116,8 +90,6 @@ void sys_init()
 #endif
         syslog_early("WARNING missing /sys/drivers\n");
         // hardcoded legacy devices if driver list not found
-        drv_init("sys/drv/input/ps2.so");
-        drv_init("sys/drv/display/fb.so");
     } else {
         kmemcpy(&fn[0], "sys/drv/", 8);
         // load devices which are not coverable by bus enumeration
@@ -146,39 +118,8 @@ void sys_init()
 }
 
 /**
- * Called when the "idle" task first scheduled 
+ *  Called when the "idle" task first scheduled
  */
 void sys_ready()
 {
-    tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
-
-    /* reset early kernel console */
-    kprintf_reset();
-
-    /* finish up ISR initialization */
-    isr_fini();
-    /* log we're ready */
-    syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
-
-    /* Display ready message */
-    kprintf("OS/Z ready. Allocated %d pages out of %d",
-        pmm.totalpages - pmm.freepages, pmm.totalpages);
-    kprintf(", free %d.%d%%\n",
-        pmm.freepages*100/(pmm.totalpages+1), (pmm.freepages*1000/(pmm.totalpages+1))%10);
-#if DEBUG
-    // breakpoint for bochs
-    breakpoint;
-#endif
-
-    // dump log even if compiled without debug support
-    if(debug&DBG_LOG)
-        kprintf(syslog_buf);
-
-    /* disable scroll pause */
-    scry = -1;
-
-    /* mount filesystems. Make it look like init had sent the message so FS will notify init when it's done */
-    sched_awake(tcb);
-    task_map(tcb->memroot);
-    msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }

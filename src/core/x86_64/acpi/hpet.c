@@ -1,5 +1,5 @@
 /*
- * core/x86_64/hpet.c
+ * core/x86_64/acpi/hpet.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -25,7 +25,7 @@
  * @brief HPET clock source
  */
 
-#include "platform.h"
+#include "../arch.h"
 
 extern uint64_t tmrfreq;
 extern uint8_t tmrirq;

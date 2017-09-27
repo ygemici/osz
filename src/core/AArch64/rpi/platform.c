@@ -1,7 +1,7 @@
 /*
- * core/x86_64/platform.h
+ * core/AArch64/rpi/platform.c
  *
- * Copyright 2017 CC-by-nc-sa bztsrc@github
+ * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -22,30 +22,56 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Platform dependent libk headers (for the core)
+ * @brief Platform glue code
  */
 
-#include <errno.h>
-#include <limits.h>
-#ifndef _AS
-#include <stdint.h>
-#include <sys/types.h>
-#endif
-#include <syscall.h>
-#include "tcb.h"
-#include "ccb.h"
-#include "isr.h"
-#include "../core.h"
+/**
+ * Initialize platform dependent part. Called by main()
+ */
+void platform_init()
+{
+}
 
-#define task_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "a"(m));
-#define breakpoint __asm__ __volatile__("xchg %bx, %bx")
-#define dataseg __attribute__ ((section (".data")))
+/**
+ * Parse platform specific parameters, called by env_init()
+ */
+unsigned char *platform_parse(unsigned char *env)
+{
+    env++;
+    return env;
+}
 
-/* VMM access bits */
-#define PG_CORE 0b00011
-#define PG_CORE_NOCACHE 0b11011
-#define PG_USER_RO 0b00101
-#define PG_USER_RW 0b00111
-#define PG_USER_RWNOCACHE 0b10111
-#define PG_USER_DRVMEM 0b11111
-#define PG_SLOT 0b10000000
+/**
+ * Set up timer. Called by isr_init()
+ */
+void platform_timer()
+{
+}
+
+/**
+ * Detect devices on platform. Called by sys_init()
+ */
+void platform_enumerate()
+{
+}
+
+/**
+ * Power off the platform. Called by kprintf_poweroff()
+ */
+void platform_poweroff()
+{
+}
+
+/**
+ * Reboot computer. Called by kprintf_reboot()
+ */
+void platform_reset()
+{
+}
+
+/**
+ * Hang computer.
+ */
+void platform_halt()
+{
+}

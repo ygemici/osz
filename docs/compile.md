@@ -8,6 +8,19 @@ Requirements
 - bash (shell scripts are used to generate different files during compilation)
 - optionally fasm (for recompiling non-UEFI booting)
 
+Configuration
+-------------
+
+The `core` is always compiled for a specific [platform](https://github.com/bztsrc/osz/blob/master/docs/porting.md),
+which can be controlled in [Config](https://github.com/bztsrc/osz/blob/master/Config) with ARCH and PLATFORM variables. 
+Valid combinations are:
+
+| ARCH   | PLATFORM | Description |
+| ----   | -------- | ----------- |
+| x86_64 | ibmpc    | For old machines, uses PIC and PIT (or RTC), enumerates PCI bus |
+| x86_64 | apci     | For new machines, APIC, x2APIC, IOAPIC, HPET and parses ACPI tables |
+| AArch64 | rpi     | Raspberry Pi 3 |
+
 Compilation
 -----------
 
@@ -32,8 +45,8 @@ TOOLS
   src		mkfs.c
   src		elftool.c
 CORE
-  gen		x86_64/isrs.S (PIC, numirq 32, idtsz 4096)
-  lnk		sys/core (x86_64)
+  gen		x86_64/ibmpc/isrs.S (PIC, numirq 32, idtsz 4096)
+  lnk		sys/core (x86_64-ibmpc)
   lnk		sys/lib/libc.so (x86_64)
 BASE
   src		sys/ui
@@ -61,7 +74,7 @@ IMAGES
   mkfs		usr
   mkfs		var
   mkfs		home
-  mkfs		bin/disk.dd
+  mkfs		bin/osZ-latest-x86_64-ibmpc.dd
 ```
 
 Non-EFI loader
@@ -75,11 +88,11 @@ GNU toolchain only.
 See what you've done!
 ---------------------
 
-The live disk image is generated to [bin/disk.dd](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true). Use the
+The live disk image is generated to [bin/osZ-(ver)-(arch)-(platform).dd](https://github.com/bztsrc/osz/blob/master/bin). Use the
 `dd` command to write it on a USB stick or boot with qemu, bochs or VirtualBox.
 
 ```
-$ dd if=bin/disk.dd of=/dev/sdc
+$ dd if=bin/osZ-latest-x86_64-acpi.dd of=/dev/sdc
 $ make testq
 $ make testb
 $ make testv

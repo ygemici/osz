@@ -1,5 +1,5 @@
 ;*
-;* loader/mb-x86_64/boot.asm
+;* loader/x86_64-bios/boot.asm
 ;*
 ;* Copyright 2016 Public Domain BOOTBOOT bztsrc@github
 ;*
@@ -85,6 +85,8 @@ bootboot_record:
             ;we use pendrive as removable media for a long time
             cmp         dl, byte 80h
             jl          .nolba
+            cmp         dl, byte 84h
+            jae         .nostage2err
 .notfloppy: mov         ah, byte 41h
             mov         bx, word 55AAh
             int         13h
@@ -117,7 +119,12 @@ bootboot_record:
             add         ax, ldr.executor+3
             jmp         ax
 
-.nostage2:  mov         si, stage2notf
+.nostage2:  ;try to load stage2 from a RAID mirror
+            inc         byte [drive]
+            cmp         byte [drive], 84h
+            jl          .lbaok
+.nostage2err:
+            mov         si, stage2notf
             ;fall into the diefunc code
 
 ;*********************************************************************

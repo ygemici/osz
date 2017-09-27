@@ -25,7 +25,8 @@
  * @brief Interrupt Service Routines
  */
 
-#include "platform.h"   
+#include "arch.h"
+#include <platform.h>
 #include <fsZ.h>
 #include "isr.h"
 
@@ -48,12 +49,8 @@ extern void isr_irqtmr_rtc();
 extern void isr_irqtmrcal();
 extern void isr_irqtmrcal_rtc();
 extern uint64_t isr_tmrcalibrate();
-extern void acpi_early(void *hdr);
-
-/* timer drivers */
-extern void hpet_init();
-extern void pit_init();
-extern void rtc_init();
+extern void platform_timer();
+extern uint64_t env_getts(char *p, int16_t timezone);
 
 /* safe stack for interrupt routines */
 dataseg uint64_t *safestack;
@@ -87,56 +84,6 @@ dataseg uint64_t ticks[4];
 dataseg uint64_t srand[4];
 
 /**
- *  get UTC system timestamp from a BCD local date
- */
-uint64_t isr_getts(char *p, int16_t timezone)
-{
-    uint64_t j,r=0,y,m,d,h,i,s;
-    /* detect BCD and binary formats */
-    if(p[0]>=0x20 && p[0]<=0x30 && p[1]<=0x99 &&    //year
-       p[2]>=0x01 && p[2]<=0x12 &&                  //month
-       p[3]>=0x01 && p[3]<=0x31 &&                  //day
-       p[4]<=0x23 && p[5]<=0x59 && p[6]<=0x60       //hour, min, sec
-    ) {
-        /* decode BCD */
-        y = ((p[0]>>4)*1000)+(p[0]&0x0F)*100+((p[1]>>4)*10)+(p[1]&0x0F);
-        m = ((p[2]>>4)*10)+(p[2]&0x0F);
-        d = ((p[3]>>4)*10)+(p[3]&0x0F);
-        h = ((p[4]>>4)*10)+(p[4]&0x0F);
-        i = ((p[5]>>4)*10)+(p[5]&0x0F);
-        s = ((p[6]>>4)*10)+(p[6]&0x0F);
-    } else {
-        /* binary */
-        y = (p[1]<<8)+p[0];
-        m = p[2];
-        d = p[3];
-        h = p[4];
-        i = p[5];
-        s = p[6];
-    }
-    uint64_t md[12] = {31,0,31,30,31,30,31,31,30,31,30,31};
-    /* is year leap year? then tweak February */
-    md[1]=((y&3)!=0 ? 28 : ((y%100)==0 && (y%400)!=0?28:29));
-
-    // get number of days since Epoch, cheating
-    r = 16801; // precalculated number of days (1970.jan.1-2017.jan.1.)
-    for(j=2016;j<y;j++)
-        r += ((j&3)!=0 ? 365 : ((j%100)==0 && (j%400)!=0?365:366));
-    // in this year
-    for(j=1;j<m;j++)
-        r += md[j-1];
-    // in this month
-    r += d-1;
-    // convert to sec
-    r *= 24*60*60;
-    // add time with timezone correction to get UTC timestamp
-    r += h*60*60 + (timezone + i)*60 + s;
-    // we don't honor leap sec here, but this timestamp should
-    // be overwritten anyway by SYS_stime with a more accurate value
-    return r;
-}
-
-/**
  * Initialize interrupts
  */
 void isr_init()
@@ -155,9 +102,6 @@ void isr_init()
     ccb.ist2 = (uint64_t)safestack + (uint64_t)__PAGESIZE;
     //debug stack (rest of the page)
     ccb.ist3 = (uint64_t)safestack + (uint64_t)__PAGESIZE - 512;
-
-    // parse MADT to get IOAPIC address and HPET address
-    acpi_early(NULL);
 
     /*** generate Interrupt Descriptor Table ***/
     idt = kalloc(1);
@@ -188,29 +132,7 @@ void isr_init()
     // default timer frequency and IRQ
     tmrfreq = 0; tmrirq = 0;
     // load timer driver
-    //   0 = autodetect
-    //   1 = HPET
-    //   2 = PIT
-    //   3 = RTC
-#if ISR_CTRL == CTRL_PIC
-    if(clocksource>3) clocksource=0;
-    if(clocksource==0) {
-        clocksource=systables[systable_hpet_idx]==0?TMR_PIT:TMR_HPET;
-    }
-#else
-    clocksource = TMR_HPET;
-#endif
-    // if HPET not found, fallback to PIT
-    if(clocksource==TMR_HPET && systables[systable_hpet_idx]!=0) {
-        hpet_init();
-#if ISR_CTRL == CTRL_PIC
-    } else if(clocksource==TMR_RTC) {
-        rtc_init();
-    } else {
-        clocksource=TMR_PIT;
-        pit_init();
-#endif
-    }
+    platform_timer();
 
     /* checks */
     if(tmrfreq<1000 || tmrfreq>TMRMAX)
@@ -227,7 +149,7 @@ void isr_init()
     qdiv = tmrfreq/quantum; //number of ints to a task switch
 
     /* use bootboot.datetime and bootboot.timezone to calculate */
-    ticks[TICKS_TS] = isr_getts((char *)&bootboot.datetime, bootboot.timezone);
+    ticks[TICKS_TS] = env_getts((char *)&bootboot.datetime, bootboot.timezone);
     ticks[TICKS_NTS] = isr_currfps = isr_lastfps =
     ticks[TICKS_HI] = ticks[TICKS_LO] = 0;
     // set up system counters

@@ -25,8 +25,7 @@
  * @brief System service loader and ELF parser
  */
 
-#include <platform.h>
-#include <elf.h>
+#include <arch.h>
 
 /* external resources */
 extern phy_t screen[2];
@@ -107,7 +106,6 @@ void fs_init()
     if(drvs==NULL) {
         // hardcoded if driver list not found
         // should not happen!
-        syslog_early("/sys/drivers not found");
         elf_loadso("sys/drv/fs/gpt.so");    // disk
         elf_loadso("sys/drv/fs/fsz.so");    // initrd and OS/Z partitions
         elf_loadso("sys/drv/fs/vfat.so");   // EFI boot partition

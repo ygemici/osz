@@ -25,7 +25,7 @@
  * @brief Virtual Memory Manager, on-demand paging
  */
 
-#include "platform.h"
+#include "arch.h"
 
 dataseg phy_t pdpe;
 

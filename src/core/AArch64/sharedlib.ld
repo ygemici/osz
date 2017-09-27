@@ -10,27 +10,31 @@ SEARCH_DIR("../bin/initrd/sys/lib");
 SEARCH_DIR("../lib");
 SEARCH_DIR("../../lib");
 SEARCH_DIR("../../../lib");
-STARTUP("libc/AArch64/init.o");
+STARTUP("libc/x86_64/init.o");
 
 PHDRS
 {
   text PT_LOAD FILEHDR PHDRS ;
   data PT_LOAD ;
+  dynamic PT_DYNAMIC ;
 }
 
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
-  PROVIDE (_code = .);
-  .text           :
+  .text :
   {
+    _code = .;
+    /* text segment must start with crt0 */
+    *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
     *(.text.exit .text.exit.*)
     *(.text.startup .text.startup.*)
     *(.text.hot .text.hot.*)
     *(.text .stub .text.* .gnu.linkonce.t.*)
-  } :text
+  } :text =0x90
+  /* important that dynstr follows dynsym */
   .dynsym         : { *(.dynsym) }
   .dynstr         : { *(.dynstr) }
   .rela.dyn       :
@@ -62,7 +66,7 @@ SECTIONS
   .plt.got        : { *(.plt.got) }
   .plt.bnd        : { *(.plt.bnd) }
   PROVIDE (_etext = .);
-  .cl             : { *(.cl) }
+  .buildid        : { *(.buildid) *(.note.gnu.build-id) }
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
   . = ALIGN(4096);
@@ -71,16 +75,21 @@ SECTIONS
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
+    *(.bss .bss.* .sbss* .gnu.linkonce.b.*)
     SORT(CONSTRUCTORS)
+    *(COMMON)
+    . = ALIGN(. != 0 ? 64 / 8 : 1);
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
-  .dynamic        : { *(.dynamic) }
-  .got            : { *(.got) *(.igot) }
+  .dynamic        : { *(.dynamic) } :data :dynamic
+  . = ALIGN(8);
+  .got            : { *(.got) *(.igot) } :data
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
-  PROVIDE (_edata = .);
   _end = .;
+  . = ALIGN (4096);
   . = DATA_SEGMENT_END (.);
+  _edata = ABSOLUTE(.);
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

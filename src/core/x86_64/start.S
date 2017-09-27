@@ -25,8 +25,7 @@
  * @brief Kernel entry point
  */
 
-#include "platform.h"
-#include "isr.h"
+#include "arch.h"
 
 .section .text
 .global _start
@@ -34,21 +33,14 @@
 
 /**********************************************************************
  *                     OS/Z Loader entry point                        *
- **********************************************************************
-
-    Registers
-        rax     magic 'BOOTBOOT' (0x544f4f42544f4f42)
-        rbx     virtual address of bootboot stucture
-        rcx     virtual address of environment
-        rdx     virtual address of framebuffer
-*/
+ **********************************************************************/
 _start:
     cli
     cld
 /* disable PIC and NMI */
     movb	$0xFF, %al
-    outb	%al, $PIC_MASTER_DATA
-    outb	%al, $PIC_SLAVE_DATA
+    outb	%al, $0x21
+    outb	%al, $0xA1
     inb		$0x70, %al
     btsw	$8, %ax
     outb	%al, $0x70

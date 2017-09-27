@@ -26,7 +26,7 @@
  */
 
 #define _AS 1
-#include "platform.h"
+#include "arch.h"
 
 .section .text
 .global idle
@@ -169,11 +169,12 @@ kpanic:
     call    kprintf_putlogo
     /* wait for user input */
 1:  call    kwaitkey
-    /* don't accept Alt key. I press it when I press Alt+Q or Alt+F4 to close qemu and bochs */
+    /* don't accept Alt key. I press it when I press Alt+Q or Alt+F4 to close qemu and bochs :-) */
     cmpb    $0x38, %al
     je      1b
     /* reboot computer */
-2:  call    sys_reset
+2:  call    kprintf_reboot
+    cli
     hlt
 
 /* misc memory functions */

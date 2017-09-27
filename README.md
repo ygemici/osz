@@ -2,7 +2,7 @@ OS/Z - an operating system for hackers
 ======================================
 
 <img align="left" style="margin-right:10px;" alt="OS/Z" src="https://github.com/bztsrc/osz/raw/master/logo.png">
-<a href="https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true">Download live image</a>, <i>osZ-latest-x86_64.dd</i> <small>(3 Mbyte)</small><br>
+<a href="https://github.com/bztsrc/osz/blob/master/bin/">Download live images</a>,  <small>(~3 Mbyte)</small><br>
 <a href="https://github.com/bztsrc/osz/tree/master/docs/README.md">Documentation</a><br>
 <a href="https://github.com/bztsrc/osz/issues">Support</a><br><br>
 
@@ -23,7 +23,7 @@ Features
 
  - [GNU toolchain](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without cross-compiler
  - Microkernel architecture with an effective [messaging system](https://github.com/bztsrc/osz/tree/master/docs/messages.md)
- - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from MBR, VBR, ROM BIOS, GRUB or UEFI.
+ - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from BIOS or UEFI.
  - [Higher half kernel](https://github.com/bztsrc/osz/tree/master/docs/memory.md) mapping, full 64 bit support
  - It's [filesystem](https://github.com/bztsrc/osz/tree/master/docs/fs.md) can handle YottaBytes of data (unimagineable as of writing)
  - ELF64 object format support
@@ -41,10 +41,10 @@ Hardware Requirements
 Testing
 -------
 
-The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/disk.dd?raw=true) should boot OS/Z in emulators and on real machines. For example type
+The [latest live dd image](https://github.com/bztsrc/osz/blob/master/bin/osZ-latest-x86_64-ibmpc.dd?raw=true) should boot OS/Z in emulators and on real machines. For example type
 
 ```shell
-qemu-system-x86_64 -hda bin/disk.dd
+qemu-system-x86_64 -hda bin/osZ-latest-x86_64-ibmpc.dd
 ```
 For more options, see [Testing How To](https://github.com/bztsrc/osz/tree/master/docs/howto1-testing.md). I usually test the image
 with [qemu](http://www.qemu.org/), [bochs](http://bochs.sourceforge.net/) and [virtualbox](https://www.virtualbox.org/).

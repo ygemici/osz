@@ -24,7 +24,7 @@
  *
  * @brief Interrupt Controller independent, common assembly routines
  */
-#include "platform.h"
+#include "arch.h"
 #include <errno.h>
 #include <syscall.h>
 #include <limits.h>
@@ -35,7 +35,7 @@
 
 .global isr_savecontext
 .global isr_loadcontext
-.global isr_syscall0
+.global isr_syscall
 .global isr_timer
 .global isr_gainentropy
 .global isr_tmrcalibrate
@@ -92,11 +92,11 @@ isr_loadcontext:
     ret
 
 /**
- * syscall dispatcher, platform dependent wrapper around isr_syscall()
+ * syscall dispatcher, platform dependent wrapper around msg_syscall() and msg_send()
  * performance hacks and special access checks mostly
  */
 .align  16, 0x90
-isr_syscall0:
+isr_syscall:
     cli
     cld
     /* make the environment look like in an irq handler */
@@ -206,7 +206,7 @@ isr_syscall0:
     movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    %rax, %rdi
-    call    isr_syscall
+    call    msg_syscall
     jmp     9f
 4:  pushq   %r9
     movq    %r8, %r9
@@ -234,8 +234,8 @@ isr_syscall0:
     sysretq
 
 /**
- * calibrate busy loop used by isr_syscall0 by calculating how many times we increase a register
- * between two interrupts running at tmrfreq. See isr_irqtmrcal in isrs.S
+ * calibrate busy loop used by libc for short alarms. Calculating how many times we increase
+ * a register between two interrupts running at tmrfreq. See isr_irqtmrcal in isrs.S
  */
 isr_tmrcalibrate:
     xorq    %rax, %rax

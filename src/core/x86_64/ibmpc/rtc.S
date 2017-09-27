@@ -22,11 +22,11 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief RTC timer for legacy computers
+ * @brief RTC timer for legacy computers. Has special code in isrs.S to ack RTC interrupt
  */
 
 #define _AS 1
-#include "platform.h"
+#include "../arch.h"
 #include <osZ.h>
 
 .global rtc_init

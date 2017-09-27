@@ -8,19 +8,20 @@ SRCS += dbg.c disasm.c
 SRCS+= $(wildcard *.S)
 TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
-CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DOSZ_ARCH='"$(ARCH)"' -DOSZ_BUILD='$(BUILD)' \
- -Wall -fpic -ffreestanding -nostdinc -fno-stack-protector -I ../../../etc/include
+CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' \
+ -DOSZ_ARCH='"$(ARCH)"' -DOSZ_PLATFORM='"$(PLATFORM)"' -DOSZ_BUILD='$(BUILD)' \
+ -Wall -fpic -ffreestanding -nostdinc -fno-stack-protector -I../../../etc/include -I./$(PLATFORM)
 
-all: isrs.S $(OBJS)
+all: $(PLATFORM)/isrs.S $(OBJS)
 
-isrs.S: isr.h isrs.sh isr.c
-	@./isrs.sh $(ARCH) 2>/dev/null || true
+$(PLATFORM)/isrs.S: isr.h isrs.sh isr.c $(PLATFORM)/platform.h
+	@./isrs.sh 2>/dev/null || true
 
-%.o: %.S isrs.S
+%.o: %.S $(PLATFORM)/isrs.S
 	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) -D_AS=1 $(OPT) $(CFLAGS) -c $< -o $@
 
-%.o: %.c isrs.S
+%.o: %.c $(PLATFORM)/isrs.S
 	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 

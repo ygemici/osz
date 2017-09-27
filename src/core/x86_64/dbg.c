@@ -27,7 +27,7 @@
 
 #if DEBUG
 
-#include "platform.h"
+#include "arch.h"
 #include <sys/init.h>
 #include <sys/video.h>
 #include "../font.h"
@@ -2046,14 +2046,14 @@ quitdbg:
                     dbg_tui = false;
                     dbg_indump = false;
                     ccb.ist1 = oldist1;
-                    sys_reset();
+                    kprintf_reboot();
                 } else
                 // quit, halt
                 if(cmd[0]=='q'||(cmd[0]=='h' && cmd[1]=='a')){
                     dbg_tui = false;
                     dbg_indump = false;
                     ccb.ist1 = oldist1;
-                    sys_disable();
+                    kprintf_poweroff();
                 } else
                 // help
                 if(cmd[0]=='h'){

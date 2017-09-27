@@ -1,15 +1,15 @@
 BOOTBOOT Reference Implementations
 ==================================
 
-1. *efi-x86_64* the preferred way of booting on x86_64 architecture.
+1. *x86_64-efi* the preferred way of booting on x86_64 architecture.
     Standard GNU toolchain and a few files from gnuefi (included).
     [bootboot.efi](https://github.com/bztsrc/osz/blob/master/loader/bootboot.efi?raw=true) (74k), [bootboot.rom](https://github.com/bztsrc/osz/blob/master/loader/bootboot.rom?raw=true) (74k)
 
-2. *mb-x86_64* BIOS and MultiBoot (GRUB) compatible, OBSOLETE loader.
+2. *x86_64-bios* BIOS and MultiBoot (GRUB) compatible, OBSOLETE loader.
     If you want to recompile this, you'll need fasm (not included).
     [boot.bin](https://github.com/bztsrc/osz/blob/master/loader/boot.bin?raw=true) (512 bytes, works as MBR and VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin?raw=true) (8k)
 
-3. *rpi-AArch64* ARM boot loader for Raspberry Pi 3 (only planned as of now)
+3. *AArch64-rpi* ARM boot loader for Raspberry Pi 3 (only planned as of now)
     [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img?raw=true)
 
 Please note that the reference implementations do not support
@@ -167,7 +167,7 @@ scan for the first ELF64 / PE32+ image in the initrd.
 This feature is quite comfortable when you want to use your own filesystem but you don't have written
 an fs driver for it yet. You just copy your file system image on the EFI System Partition, and ready to rock and roll!
 
-The BOOTBOOT Protocol expects the [filesystem drivers](https://github.com/bztsrc/osz/blob/master/loader/efi-x86_64/fs.h) to be separated from
+The BOOTBOOT Protocol expects the [filesystem drivers](https://github.com/bztsrc/osz/blob/master/loader/x86_64-efi/fs.h) to be separated from
 the rest of the loader in source. This is so because it was designed to help the needs of hobby
 OS developers, specially those who want to write their own filesystems.
 

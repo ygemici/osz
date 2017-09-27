@@ -1,5 +1,5 @@
 /*
- * core/x86_64/acpi.c
+ * core/x86_64/acpi/acpi.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -25,10 +25,10 @@
  * @brief ACPI table parser
  */
 
-#include "platform.h"
+#include "../arch.h"
 #include <elf.h>
 #include "acpi.h"
-#include "isr.h"
+#include "../isr.h"
 
 /* poweroff stuff, autodetected */
 dataseg uint32_t SLP_EN;
@@ -363,24 +363,4 @@ bool_t acpi_init()
 #endif
     }
     return true;
-}
-
-/**
- * Power off the computer. Called by sys_disable()
- */
-void acpi_poweroff()
-{
-    uint64_t en;
-    if(PM1a_CNT!=0) {
-        en = SLP_TYPa | SLP_EN;
-        __asm__ __volatile__ (
-            "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :
-            "a"(en), "d"(PM1a_CNT) );
-        if ( PM1b_CNT != 0 ) {
-            en = SLP_TYPb | SLP_EN;
-            __asm__ __volatile__ (
-                "movq %0, %%rax; movl %1, %%edx; outw %%ax, %%dx" : :
-                "a"(en), "d"(PM1b_CNT) );
-        }
-    }
 }

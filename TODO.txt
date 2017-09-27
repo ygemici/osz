@@ -1,7 +1,7 @@
  --- Error fixes ---
 ./src/ui/main.c:52:    // FIXME: once vfs ready, use fopen() and fread()
-./src/core/syscall.c:134:        // FIXME: remove mapfile once vfs ready
-./src/core/syscall.c:178:            /* FIXME: naive implementation, no checks */
+./src/core/msg.c:244:        // FIXME: remove mapfile once vfs ready
+./src/core/msg.c:288:            /* FIXME: naive implementation, no checks */
 ./src/lib/libc/x86_64/unistd.S:256:// FIXME: remove mapfile once vfs ready
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
@@ -13,9 +13,10 @@
 ./src/fs/main.c:69:            /* TODO: find delayedmsg, decrease numblk */
 ./src/fs/cache.c:72:            /* TODO: look for fs/dev/blk in cache and return block if found */
 ./src/fs/cache.c:73:            /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
-./src/core/x86_64/pci.c:66:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
-./src/core/msg.c:115:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/x86_64/ibmpc/platform.c:107:// TODO: enumerate bus and load drivers
+./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers
+./src/core/msg.c:110:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/x86_64/crt0.S:43:    /* TODO: call ctors */

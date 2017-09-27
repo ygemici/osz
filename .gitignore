@@ -2,3 +2,5 @@
 *.dSYM/
 *.su
 bin/*.txt
+bin/home
+bin/var

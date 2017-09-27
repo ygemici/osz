@@ -32,10 +32,10 @@ Boot Parameters
 | lefthanded | false   | boolean | ui   | swap pointers |
 | identity  | false    | boolean | init | force running first time setup to get machine's identity, such as hostname |
 | rescueshell | false  | boolean | init | if true, starts `/bin/sh` instead of user services |
-| hpet      | -        | hexdec  | core | x86_64 override autodetected HPET address |
-| apic      | -        | hexdec  | core | x86_64 override autodetected LAPIC address |
-| ioapic    | -        | hexdec  | core | x86_64 override autodetected IOAPIC address |
-| clock     | 0        | number  | core | x86_64 override autodetected clock source |
+| clock     | 0        | number  | core | override autodetected clock source |
+| hpet      | -        | hexdec  | core | x86_64-acpi override autodetected HPET address |
+| apic      | -        | hexdec  | core | x86_64-acpi override autodetected LAPIC address |
+| ioapic    | -        | hexdec  | core | x86_64-acpi override autodetected IOAPIC address |
 
 The available values for debug parameter and display can be found in [env.h](https://github.com/bztsrc/osz/blob/master/src/core/env.h).
 
@@ -62,21 +62,22 @@ This can be a numeric value, or a comma separated list of flags.
 | 4096  | ma   | DBG_MALLOC | debug [libc memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
 | 8192  | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
 
-Most of these only available when compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config). Normally you can only use three to troubleshoot boot: DBG_DEVICES, DBG_LOG and DBG_MSG.
+Most of these only available when compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config). Normally you can only use two to troubleshoot boot: DBG_DEVICES and DBG_LOG.
 
 Clock Source
 ------------
 
 Either a numeric value or exactly one flag.
 
-| Value | Flag | Arch    | Description |
-| ----: | ---- | ------- | ----------- |
-| 0     |      | -       | auto detect |
-| 1     | hp   | x86_64  | High Precision Event Timer (default) |
-| 2     | pi   | x86_64  | Programmable Interval Timer (fallback) |
-| 3     | rt   | x86_64  | Real Time Clock |
-| 1     | bu   | AArch64 | Built-in ARM timer (default) |
-| 2     | rt   | AArch64 | External Real Time Clock chip on GPIO |
+| Value | Flag | Platform     | Description |
+| ----: | ---- | --------     | ----------- |
+| 0     |      | -            | auto detect |
+| 1     | hp   | x86_64-acpi  | High Precision Event Timer (default) |
+| 2     | pi   | x86_64-acpi  | Programmable Interval Timer (fallback) |
+| 2     | pi   | x86_64-ibmpc | Programmable Interval Timer (default) |
+| 3     | rt   | x86_64-ibmpc | Real Time Clock |
+| 1     | bu   | AArch64-rpi  | Built-in ARM timer (default) |
+| 2     | rt   | AArch64-rpi  | External Real Time Clock chip on GPIO |
 
 Display
 -------

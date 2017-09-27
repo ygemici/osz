@@ -1,5 +1,5 @@
 /*
- * loader/efi-x86_64/fs.h
+ * loader/x86_64-efi/fs.h
  * 
  * Copyright 2017 Public Domain BOOTBOOT bztsrc@github
  * 

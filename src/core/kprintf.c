@@ -25,7 +25,7 @@
  * @brief Ring 0 printf implementation for core, early console
  */
 
-#include <platform.h>
+#include <arch.h>
 #include "font.h"
 
 /* re-entrant counter */
@@ -72,10 +72,6 @@ char poweroffprefix[] =
 char poweroffsuffix[] =
     "TURN OFF YOUR COMPUTER.\n";
 char nullstr[] = "(null)";
-
-typedef unsigned char *valist;
-#define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
-#define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
 
 extern char _binary_logo_start;
 extern uint64_t isr_currfps;
@@ -157,6 +153,58 @@ void kprintf_init()
     dbg_init();
 #endif
 }
+
+/**
+ *  Display good bye screen and reboot computer
+ */
+void kprintf_reboot()
+{
+    // say we're rebooting (on serial too)
+    kprintf_init();
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
+    kprintf(rebootprefix);
+    // reboot computer
+    platform_reset();
+    // if it didn't work, show a message and freeze. Should never happen.
+    fg = 0x29283f;
+    kprintf_center(20, -8);
+    kprintf(poweroffsuffix);
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
+    platform_halt();
+}
+
+/**
+ * Display good bye screen and turn off computer
+ */
+void kprintf_poweroff()
+{
+    // say we're finished (on serial too)
+    kprintf_init();
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
+    kprintf(poweroffprefix);
+    // Poweroff real hardware
+    platform_poweroff();
+
+    // if it didn't work, show a message and freeze.
+    fg = 0x29283f;
+    kprintf_center(20, -8);
+    kprintf(poweroffsuffix);
+#if DEBUG
+    dbg_putchar(13);
+    dbg_putchar(10);
+#endif
+    platform_halt();
+}
+
 
 /**
  * put logo on panic screen, colours shifted to red

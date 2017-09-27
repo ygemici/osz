@@ -37,7 +37,8 @@ A significant part of the `core` is platform independent, and written in C, [sys
 Hardware specific part is written in C and Assembly, in [sys/core/(platform)](https://github.com/bztsrc/osz/blob/master/src/core/x86_64). This
 is the only part of OS/Z that runs in supervisor mode (ring 0 on x86_64), and it must be kept small. Interrupt
 controllers and timers are only built-in for performance reasons, all other platform specific parts must be
-implemented in a device driver running in user mode (ring 3 on x86_64).
+implemented in a device driver running in user mode (ring 3 on x86_64). For valid architecture and platform
+combinations, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
 
 The `core` is loaded by the `loader`, and it [boots](https://github.com/bztsrc/osz/blob/master/docs/boot.md) the
 rest of the operating system by initializing lowest level parts, enumerating system buses, loading and initializing

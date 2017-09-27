@@ -4,21 +4,21 @@ OS/Z Device Drivers
 Drivers are shared libraries which are loaded into separate address spaces after a
 common, platform independent event dispatcher, [service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
 They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
-are normal userspace applications.
+are normal userspace applications. You can compile the `core` for a platform with ARCH and PLATFORM variables in [Config](https://github.com/bztsrc/osz/blob/master/Config).
 
 Supported devices
 -----------------
 
  * VESA2.0 VGA, GOP, UGA (set up by [loader](https://github.com/bztsrc/osz/blob/master/loader), 32 bit frame buffer)
  * x86_64 syscall, NX protection
- * PIC / IOAPIC + APIC, x2APIC, see [ISRs](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh)
- * [PIT](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pit.S), [RTC](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/rtc.S)
+ * x86_64-apic: IOAPIC + APIC, x2APIC, see [ISRs](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh)
+ * x86_64-ibmpc: PIC, [PIT](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pit.S), [RTC](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/rtc.S)
  * PS2 [keyboard](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/keyboard.S) and [mouse](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/mouse.S)
 
 Planned drivers
 ---------------
 
- * HPET
+ * x86_64-apic: HPET
 
 Directories
 -----------

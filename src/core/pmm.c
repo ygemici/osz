@@ -25,7 +25,7 @@
  * @brief Physical Memory Manager architecture specific part
  */
 
-#include <platform.h>
+#include <arch.h>
 
 /* get addresses from linker script */
 extern uint8_t pmm_entries;
@@ -370,6 +370,7 @@ void pmm_init()
     syslog_buf = syslog_ptr = kalloc(nrlogmax);
 
     //first real message
+    syslog_early(OSZ_NAME " " OSZ_VER " " OSZ_ARCH "-" OSZ_PLATFORM);
     syslog_early("Started uuid %4x-%2x-%2x-%8x",
         (uint32_t)srand[0],(uint16_t)srand[1],(uint16_t)srand[2],srand[3]);
     syslog_early("Frame buffer %d x %d @%x sc %d",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr,bootboot.fb_scanline);

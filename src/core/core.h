@@ -125,7 +125,17 @@ extern void kprintf(char* fmt, ...);
 /** Display a reason and die */
 extern void kpanic(char *reason, ...);
 
+/** Display good bye screen */
+extern void kprintf_poweroff();
+extern void kprintf_reboot();
+
 // ----- Platform -----
+extern void platform_init();
+extern void platform_enumerate();
+extern void platform_poweroff();
+extern void platform_reset();
+extern void platform_halt();
+
 /** Parse configuration to get environment */
 extern void env_init();
 
@@ -155,17 +165,11 @@ extern void isr_disableirq(uint8_t irq);
 extern int  isr_installirq(uint8_t irq, phy_t memroot);
 
 // ----- System -----
-/** Initialize system (idle task and device drivers) */
+/** Initialize main system "service" (idle task and device drivers) */
 extern void sys_init();
 
 /** Switch to first task and start executing user space code */
 extern void sys_enable();
-
-/** Turn the computer off */
-extern void sys_disable();
-
-/** Reboot the computer */
-extern void sys_reset();
 
 /** called when idle is first scheduled */
 extern void sys_ready();
@@ -227,15 +231,20 @@ extern void kfree(void* ptr);
 /** Add entropy to random generator **/
 extern void kentropy();
 
+// ----- Security -----
+/** Check access for a group */
+extern bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access);
+
+/** Check if msg can be sent */
+extern bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event);
+
+
 // ----- Tasks -----
 /** Allocate and initialize process structures */
 extern tcb_t *task_new(char *cmdline, uint8_t prio);
 
 /** Sanity check process data */
 extern bool_t task_check(tcb_t *tcb, phy_t *paging);
-
-/** Check access for a group */
-extern bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access);
 
 /** map core buffer in task's address space */
 extern virt_t task_mapbuf(void *buf, uint64_t npages);

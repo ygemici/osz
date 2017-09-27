@@ -1,5 +1,5 @@
 /*
- * core/x86_64/pit.S
+ * core/AArch64/rpi/platform.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,32 +22,6 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief PIT timer for legacy computers
+ * @brief Interrupt Controller and Timer definitions for the platform
  */
 
-#define _AS 1
-#include "platform.h"
-#include <osZ.h>
-
-.global pit_init
-
-/**
- * Programmable Interrupt Timer. Called by isr_init()
- */
-pit_init:
-    /* initialize PIT */
-    // 1193180/freq
-    movq    $1193, %rbx
-    movb    $0b00110100, %al    //bit 7,6 = (00) channel 0
-                                //bit 5,4 = (11) write LSB then MSB
-                                //bit 3-1 = (010) rate generator
-                                //bit 0 = (0) binary counter
-    outb    %al, $0x43
-    movb    %bl, %al
-    outb    %al, $0x40
-    mov     %bh, %al
-    outb    %al, $0x40
-
-    movq    $1000, tmrfreq
-    movb    $0, tmrirq
-    ret

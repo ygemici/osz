@@ -9,7 +9,7 @@ It's splitted into two parts:
 
 The C source files in this directory are the independent ones. [Platform
 dependent code](https://github.com/bztsrc/osz/blob/master/docs/porting.md) is organized in sub-directories, and have .S assembler
-sources as well, at least start.S .
+sources as well, at least start.S . For supported platforms, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md)
 
 Files
 -----
@@ -39,7 +39,7 @@ displaying windows and terminals.
 
 `syslog.c` - boot time syslog implementation.
 
-`(platform)/envarch.c` - hardware specific environment parser.
+`security.c` - access right checks
 
 `(platform)/vmm.c` - Virtual Memory manager.
 

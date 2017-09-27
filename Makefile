@@ -1,10 +1,15 @@
+# OS/Z - an operating system for hackers
+# Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa
+
 include Config
 export O = @
 
 all: clrdd todogen util boot system apps usrs images
 
+# housekeeping
+
 clrdd:
-	@rm bin/disk.dd 2>/dev/null || true
+	@rm bin/disk.dd bin/osZ-latest-$(ARCH)-$(PLATFORM).dd 2>/dev/null || true
 
 todogen:
 	@echo " --- Error fixes ---" >TODO.txt
@@ -12,31 +17,40 @@ todogen:
 	@echo " --- Features ---" >>TODO.txt
 	@grep -ni 'TODO:' `find . 2>/dev/null|grep -v './bin'` 2>/dev/null | grep -v Binary | grep -v grep >>TODO.txt || true
 
+# boot loader
+
 boot: loader/bootboot.bin loader/bootboot.efi
 
 loader/kernel.img:
 	@echo "LOADER"
-	@make -e --no-print-directory -C loader/rpi-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
+	@make -e --no-print-directory -C loader/$(ARCH)-rpi | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
 
 loader/bootboot.bin:
 	@echo "LOADER"
-	@make -e --no-print-directory -C loader/mb-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
+	@make -e --no-print-directory -C loader/$(ARCH)-bios | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
 
 loader/bootboot.efi:
 	@echo "LOADER"
-	@make -e --no-print-directory -C loader/efi-$(ARCH) | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
+	@make -e --no-print-directory -C loader/$(ARCH)-efi | grep -v 'Nothing to be done' | grep -v 'rm bootboot'
+
+# utilities to use during compilation
 
 util: tools
-	@cat etc/sys/etc/os-release | grep -v ^BUILD | grep -v ^ARCH >/tmp/os-release
+	@cat etc/sys/etc/os-release | grep -v ^BUILD | grep -v ^ARCH | grep -v ^PLATFORM >/tmp/os-release
 	@mv /tmp/os-release etc/sys/etc/os-release
 	@date +'BUILD = "%Y-%m-%d %H:%M:%S UTC"' >>etc/sys/etc/os-release
 	@echo 'ARCH = "$(ARCH)"' >>etc/sys/etc/os-release
+	@echo 'PLATFORM = "$(PLATFORM)"' >>etc/sys/etc/os-release
 	@echo "TOOLS"
 	@make --no-print-directory -e -C tools all | grep -v 'Nothing to be done' || true
+
+# the core
 
 system: src
 	@echo "CORE"
 	@make -e --no-print-directory -C src system | grep -v 'Nothing to be done' || true
+
+# user space programs
 
 apps: src
 	@echo "BASE"
@@ -52,7 +66,7 @@ usrs: usr
 	@echo "USERSPACE"
 	@make -e --no-print-directory -C usr all | grep -v 'Nothing to be done' || true
 
-bin/disk.dd: images
+# disk image stuff
 
 images: tools
 	@echo "IMAGES"
@@ -73,10 +87,12 @@ clean:
 	@make -e --no-print-directory -C tools clean
 	@make -e --no-print-directory -C tools imgclean
 
-debug:
+# testing
+
+debug: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
 ifeq ($(DEBUG),1)
-	@#qemu-system-x86_64 -s -S -hda bin/disk.dd -cpu IvyBridge,+ssse3,+avx,+x2apic -serial stdio
-	qemu-system-x86_64 -s -S -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -serial mon:stdio
+	@#qemu-system-x86_64 -s -S -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -cpu IvyBridge,+ssse3,+avx,+x2apic -serial stdio
+	qemu-system-x86_64 -s -S -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -serial mon:stdio
 else
 	@echo Compiled without debugging symbols! Set DEBUG = 1 in Config and recompile.
 endif
@@ -87,28 +103,29 @@ gdb:
 
 test: testq
 
-testesp: bin/disk.dd
+testesp: 
 	@echo "TEST"
 	@echo
 	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-teste: bin/disk.dd
+teste: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
 	@echo "TEST"
 	@echo
-	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
-	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/disk.dd -option-rom bin/initrd.rom -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
+	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
+	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom bin/initrd.rom -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-testq: bin/disk.dd
+testq: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
 	@echo "TEST"
 	@echo
-	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -cpu host,+avx,+x2apic,enforce -serial mon:stdio
-	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -option-rom loader/bootboot.bin -enable-kvm -machine kernel-irqchip=on -cpu host,+avx,+x2apic,enforce -serial mon:stdio
-	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/disk.dd -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
+	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom loader/bootboot.bin -enable-kvm -cpu host,+avx,+x2apic,enforce -serial mon:stdio
+	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom loader/bootboot.bin -enable-kvm -machine kernel-irqchip=on -cpu host,+avx,+x2apic,enforce -serial mon:stdio
+	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-testb: bin/disk.dd
+testb: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
 	@echo "TEST"
 	@echo
 	@rm bin/disk.dd.lock 2>/dev/null || true
+	@ln -s osZ-latest-$(ARCH)-$(PLATFORM).dd bin/disk.dd 2>/dev/null || true
 	@#stupid bochs panic when symbols not found...
 	@cat etc/bochs.rc | grep -v debug_symbols >etc/b
 	@mv etc/b etc/bochs.rc
@@ -121,6 +138,7 @@ else
 	bochs -f etc/bochs.rc -q
 endif
 	@rm bin/disk.dd.lock 2>/dev/null || true
+	@rm bin/disk.dd 2>/dev/null || true
 
 testv: bin/disk.vdi
 	@echo "TEST"
