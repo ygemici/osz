@@ -18,7 +18,7 @@ Valid combinations are:
 | ARCH   | PLATFORM | Description |
 | ----   | -------- | ----------- |
 | x86_64 | ibmpc    | For old machines, uses PIC and PIT (or RTC), enumerates PCI bus |
-| x86_64 | apci     | For new machines, APIC, x2APIC, IOAPIC, HPET and parses ACPI tables |
+| x86_64 | acpi     | For new machines, APIC, x2APIC, IOAPIC, HPET and parses ACPI tables |
 | AArch64 | rpi     | Raspberry Pi 3 |
 
 Compilation
