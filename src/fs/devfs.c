@@ -43,7 +43,7 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, blksize_t blksize
 {
     uint64_t i;
     fid_t f;
-    char tmp[70]="/dev/";
+    char tmp[64+sizeof(DEVPATH)]=DEVPATH;
     strncpy(&tmp[5], name, 64);
     for(i=0;i<ndev;i++)
         if(!strcmp(fcb[dev[i].fid].abspath, tmp))
@@ -76,7 +76,7 @@ void devfs_init()
     };
     fsdrv_reg(&devdrv);
 
-    fcb_add("/dev/",FCB_TYPE_REG_DIR);
+    fcb_add(DEVPATH, FCB_TYPE_REG_DIR);
     if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, __PAGESIZE, 1)==-1) abort();
     if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)==-1) abort();
     if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, __PAGESIZE, 1)==-1) abort();

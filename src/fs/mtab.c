@@ -28,6 +28,7 @@
 #include <osZ.h>
 #include "mtab.h"
 #include "fcb.h"
+#include "devfs.h"
 
 uint8_t rootmounted = false;
 
@@ -70,7 +71,7 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     dbg_printf("dev '%s' file '%s' opts '%s'\n",dev,file,opts);
     if(ff==0) {
         // when mounting root, also mount /dev. It's path is hardcoded, cannot be changed in OS/Z
-        mtab_add("/dev/","/dev/","");
+        mtab_add(DEVPATH, DEVPATH, "");
         rootmounted = true;
     }
     return 0;
@@ -126,7 +127,7 @@ void mtab_fstab(char *ptr, size_t size)
         }
         // if we haven't mounted root in the first pass, add initrd manually
         if(pass=='1' && !rootmounted)
-            mtab_add("/dev/root","/","");
+            mtab_add("/dev/root", "/", "");
     }
     free(fstab);
 }

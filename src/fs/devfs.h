@@ -27,6 +27,8 @@
 
 #include <osZ.h>
 
+#define DEVPATH "/dev/"
+
 #define MEMFS_MAJOR      0
 #define MEMFS_ZERO       0
 #define MEMFS_RAMDISK    1

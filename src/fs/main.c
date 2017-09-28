@@ -30,6 +30,7 @@
 #include "mtab.h"
 #include "devfs.h"
 #include "taskctx.h"
+#include "fcb.h"
 
 //#include "vfs.h"
 
