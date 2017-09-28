@@ -5,6 +5,7 @@ Drivers are shared libraries which are loaded into separate address spaces after
 common, platform independent event dispatcher, [service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
 They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
 are normal userspace applications. You can compile the `core` for a platform with ARCH and PLATFORM variables in [Config](https://github.com/bztsrc/osz/blob/master/Config).
+For supported platforms, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
 
 Supported devices
 -----------------
@@ -29,9 +30,9 @@ under these directories each driver has exactly one sub-directory. The compiled
 driver will be placed in `sys/drv/(class)/(sub-directory).so`. For example, `src/drivers/input/ps2/` will be compiled
 to `sys/drv/input/ps2.so`.
 
-Note that for performance, interrupt controllers (like PIC, IOAPIC) do not have separate drivers, they
-are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.S). To
-switch among them, you'll have to edit `ISR_CTRL` define in [isr.h](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.h) and recompile.
+Note that for performance, CPU, memory management and interrupt controllers (like PIC, IOAPIC) do not have separate drivers, they
+are built into [core](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh). To
+switch among them, you'll have to edit `PLATFORM` in [Config](https://github.com/bztsrc/osz/blob/master/Config) and recompile.
 
 Timers are also built into the core, but you can switch among HPET, PIT and RTC with a boot time configurable [environment variable](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 
@@ -49,7 +50,7 @@ Both files are newline (0x0A) separated list of words. The devices file has the 
 
 | Entry | Description |
 | ----- | ----------- |
-| *     | Any, means the driver should be loaded regardless to bus enumeration. Such as ISA devices and file system drivers. |
+| *     | Any, means the driver should be loaded regardless to bus enumeration. |
 | pciXXX:XXX | A PCI vendor and device id pair |
 | clsXXX:XXX | A PCI Class definition |
 | (etc) |  |
@@ -59,7 +60,7 @@ These informations along with the driver's path will be gathered to `sys/drivers
 will be looked up in order to find out which shared object should be loaded for a specific
 device.
 
-Platform files just list platforms, like "x86_64" or "AArch64". At compilation time it will be checked,
+Platform files just list platforms, like "x86_64-ibmpc" or "AArch64-rpi". At compilation time it will be checked,
 and if the platform it's compiling for not listed there, the driver won't be compiled. This
 is an easy way to avoid having platform specific drivers in non-compatible images, yet
 you won't have to rewrite multi-platform drivers for every architecture (like an usb storage

@@ -126,7 +126,7 @@ void sys_init()
             // skip filesystem drivers and network stack protocols
             if(f[0]=='*' && f[1]==9 && 
                 (f[2]!='f' || f[3]!='s') && 
-                (f[2]!='n' || f[3]!='e' || f[4]!='t' || f[5]!='/')) {
+                (f[2]!='i' || f[3]!='n' || f[4]!='e' || f[5]!='t')) {
                     f+=2;
                     if(c-f<255-8) {
                         kmemcpy(&fn[8], f, c-f);

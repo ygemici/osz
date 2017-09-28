@@ -31,6 +31,8 @@
 extern phy_t screen[2];
 extern phy_t pdpe;
 extern uint64_t *syslog_buf;
+extern char *drvs;
+extern char *drvs_end;
 
 /* pids of services. Negative pids are service ids and looked up in this */
 dataseg pid_t  services[NUMSRV];
@@ -50,6 +52,8 @@ dataseg virt_t buffer_ptr;
  */
 void service_init(int subsystem, char *fn)
 {
+    char *s, *f;
+    char so[256];
     char *cmd = fn;
     while(cmd[0]!='/')
         cmd++;
@@ -63,8 +67,37 @@ void service_init(int subsystem, char *fn)
     // little trick to support syslog buffer
     if(subsystem==SRV_syslog)
         buffer_ptr=task_mapbuf(syslog_buf,nrlogmax);
+    // map libc
+    elf_loadso("sys/lib/libc.so");
+    // little trick to support network protocols in net system service
+    if(subsystem==SRV_net) {
+        if(drvs==NULL) {
+            // hardcoded if driver list not found
+            // should not happen!
+            elf_loadso("sys/drv/inet/ipv4.so");
+            elf_loadso("sys/drv/inet/udp4.so");
+            elf_loadso("sys/drv/inet/tcp4.so");
+        } else {
+            kmemcpy(&so[0], "sys/drv/", 8);
+            for(s=drvs;s<drvs_end;) {
+                f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
+                if(f[0]=='*' && f[1]==9 && f[2]=='i' && f[3]=='n' && f[4]=='e' && f[5]=='t') {
+                    f+=2;
+                    if(s-f<255-8) {
+                        kmemcpy(&so[8], f, s-f);
+                        so[s-f+8]=0;
+                        elf_loadso(so);
+                    }
+                    continue;
+                }
+                // failsafe
+                if(s>=drvs_end || *s==0) break;
+                if(*s=='\n') s++;
+            }
+        }
+    }
     // map libc and other libraries
-    elf_neededso(0);
+    elf_neededso(1);
 
     // dynamic linker
     if(elf_rtlink()) {
@@ -89,11 +122,10 @@ void service_init(int subsystem, char *fn)
  */
 void fs_init()
 {
-    char *s, *f, *drvs = (char *)fs_locate("sys/drivers");
-    char *drvs_end = drvs + fs_size;
+    char *s, *f;
+    char fn[256];
     fstab = (uint64_t)fs_locate("sys/etc/fstab");
     fstab_size=fs_size;
-    char fn[256];
     tcb_t *tcb = task_new("FS", PRI_SRV);
     // map file system dispatcher
     if(elf_load("sys/fs") == (void*)(-1)) {

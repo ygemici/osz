@@ -19,7 +19,7 @@ For every application in OS/Z, one header must be included:
 
 That will include everything else required to access standard C library. Although I did everything to keep
 function call names and arguments from POSIX to ease porting existing software, OS/Z never
-intened to be and is [not POSIX compatible](https://github.com/bztsrc/osz/blob/master/docs/posix.md).
+intened to be and is [not POSIX compatible](https://github.com/bztsrc/osz/blob/master/docs/posix.md). OS/Z has it's own interface.
 
 Applications
 ------------
@@ -39,8 +39,9 @@ int main(int argc, char **argv)
 Device drivers
 --------------
 
-Drivers are shared libraries which use a common [event dispatcher](https://github.com/bztsrc/osz/blob/master/src/lib/libc/dispatch.c) mechanism. Also they use some privileged libc
-functions, and provide services therefore a minimal driver looks like
+Drivers are shared libraries which use a common [event dispatcher](https://github.com/bztsrc/osz/blob/master/src/lib/libc/dispatch.c) mechanism.
+Drivers are [categorized](https://github.com/bztsrc/osz/blob/master/src/drivers/README.md), each in it's own sub-directory.
+Also they use some privileged `libc` functions, and provide services therefore a minimal driver looks like
 
 ```c
 #include <osZ.h>
@@ -70,7 +71,7 @@ IRQs can be assigned three ways to tasks:
 
 In driver's `task_init()` function, it may register device files in "devfs" with `mknod()` calls.
 If a device driver requires a configuration, it can't load config files as filesystems are not mounted
-when their initialization code is called. Instead it should use a string defined in [sys/driver.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/driver.h):
+when their initialization code is running. Instead it should use a string defined in [sys/driver.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/driver.h):
 
 ```c
 extern unisgned char *_environment;
@@ -81,9 +82,9 @@ so that the driver can parse it looking for it's configuration.
 
 Note that you don't have to do any message receive calls, just create public functions for your message types.
 
-Additionaly to Makefile, the build system looks for two more files along with a device driver source.
+Additionaly to Makefile, the build system looks for [two more files](https://github.com/bztsrc/osz/blob/master/docs/drivers.md#files) along with a device driver source.
 
- * `platforms` - if this file exists, it can limit the driver for specific platforms
+ * `platforms` - if this file exists, it can limit the compilation of the driver for specific platform(s)
  * `devices` - specifies which devices the driver supports, used by `core` during system bus enumeration.
 
 Entry points
