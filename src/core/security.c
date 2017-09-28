@@ -47,26 +47,30 @@ bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
         if(g[0]==0)
             return false;
         if(!kmemcmp(g, grp, j))
-            return (g[15] & access)!=0;
+            return (g[15] & access)==access;
     }
     return false;
 }
 
 /**
- * check if current task has can send the message
+ * check if current task can send the message
  */
 bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event)
 {
     /* IRQ's SYS_ack only allowed for drivers, inlined check in isr_syscall */
-    if(dest == services[-SRV_FS]) {
+    /* emergency task allowed to bypass checks */
+    if(sender->priority==PRI_SYS)
+        return true;
+    if(dest == SRV_FS || dest == services[-SRV_FS]) {
         // only init allowed to send SYS_mountfs to FS
         if(event==SYS_mountfs && sender->pid!=services[-SRV_init]) goto noaccess;
         // only drivers and system services allowed to send SYS_mknod to FS
-        if(event==SYS_mknod && sender->priority!=PRI_DRV && sender->priority!=PRI_SRV) goto noaccess;
+        if((event==SYS_mknod || event==SYS_setblock) &&
+            sender->priority!=PRI_DRV && sender->priority!=PRI_SRV) goto noaccess;
         return true;
     }
-    if(dest == SRV_video && sender->pid != services[-SRV_UI]) goto noaccess;
-    if(event == SYS_stime && !(sender->priority == PRI_DRV || task_allowed(sender, "stime", A_WRITE))) goto noaccess;
+    if((dest == SRV_video || dest == services[-SRV_video]) && sender->pid != services[-SRV_UI]) goto noaccess;
+    if(event == SYS_stime && sender->priority != PRI_DRV && !task_allowed(sender, "stime", A_WRITE)) goto noaccess;
     if(event == SYS_setirq && sender->priority != PRI_DRV) goto noaccess;
     return true;
 noaccess:

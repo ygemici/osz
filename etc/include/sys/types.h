@@ -91,7 +91,7 @@ typedef uuid_t gid_t;
 typedef uint64_t mode_t;
 typedef uint32_t nlink_t;
 typedef uuid_t uid_t;
-typedef uint64_t off_t;
+typedef int64_t off_t;
 typedef uint64_t pid_t;
 typedef uint64_t id_t;
 typedef uint64_t ssize_t;
@@ -125,14 +125,12 @@ typedef struct {
     uint64_t arg5;
     uint64_t serial;
 } __attribute__((packed)) msg_t;
-// bits in evt: (63)TTT..TTT P QQQ FFFFFFFFFFFF(0)
+// bits in evt: (63)TTT..TTT P FFFFFFFFFFFFFFF(0)
 //  where T is a task id or subsystem id, P true if message has a pointer,
-//  Q is the sender task's priority queue (for quick security checks),
-//  F is a function number from 1 to 4095. Function number 0 and 4096 are reserved.
+//  F is a function number from 1 to 32766. Function number 0 and 32767 are reserved.
 #define EVT_DEST(t) ((uint64_t)(t)<<16)
 #define EVT_SENDER(m) ((pid_t)((m)>>16))
-#define EVT_SENDERPRIO(m) ((uint8_t)(((m)>>12)&0x7))
-#define EVT_FUNC(m) ((uint16_t)((m)&0xFFF))
+#define EVT_FUNC(m) ((uint16_t)((m)&0x7FFF))
 #define MSG_REGDATA (0)
 #define MSG_PTRDATA (0x8000)
 #define MSG_PTR(m) (m.arg0)

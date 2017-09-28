@@ -636,7 +636,7 @@ again:
         fg= ptr==rip?0xFFDD33:dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
-        kprintf("%2x %c%c ",!dbg_inst?((uint64_t)ptr)&0xffffffffffff:(uint64_t)ptr-lastsym,ptr==rip||ptr==dbg_lastrip?
+        kprintf("%2x %c%c ",!dbg_inst?((uint64_t)ptr)&0xffffffffffffULL:(uint64_t)ptr-lastsym,ptr==rip||ptr==dbg_lastrip?
             ((dbg_lastrip<rip?dbg_lastrip:rip)==ptr||dbg_lastrip==0?(dbg_lastrip==rip||dbg_lastrip==0?'-':'/'):'\\')
             :(
             dbg_lastrip!=0&&((dbg_lastrip<rip && ptr>dbg_lastrip && ptr<rip)||

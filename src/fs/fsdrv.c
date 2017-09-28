@@ -1,5 +1,5 @@
 /*
- * drivers/fs/vfat/main.c
+ * fs/fsdrv.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,37 +22,45 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Virtual File Allocation Table driver
+ * @brief File System drivers
  */
-
 #include <osZ.h>
-#include <cache.h>
+#include "fsdrv.h"
 
-ino_t detect(void *blk)
+/* filesystem parsers */
+uint16_t nfsdrv = 0;
+fsdrv_t *fsdrv = NULL;
+
+/**
+ * Register a filesystem parser
+ */
+public uint16_t fsdrv_reg(const fsdrv_t *fs)
 {
-    return
-     ((uint8_t*)blk)[510]==0x55 && ((uint8_t*)blk)[511]==0xAA &&
-     /* FAT12 / FAT16 */
-     (!memcmp(blk+54, "FAT1", 4)||
-     /* FAT32 */
-      !memcmp(blk+84, "FAT3", 4))
-    ? 0 : -1;
+    fsdrv=(fsdrv_t*)realloc(fsdrv,++nfsdrv*sizeof(fsdrv_t));
+    if(fsdrv==NULL || errno())
+        abort();
+    memcpy((void*)&fsdrv[nfsdrv-1], (void*)fs, sizeof(fsdrv_t));
+    return nfsdrv-1;
 }
 
-ino_t locate(mount_t *mnt, ino_t parent, char *path)
+/**
+ * return filesystem parser
+ */
+uint16_t fsdrv_get(char *name)
 {
-dbg_printf("FAT locate '%s'\n",path);
-    return -1;
+    int i;
+    for(i=0;i<nfsdrv;i++)
+        if(!strcmp(fsdrv[i].name, name))
+            return i;
+    return 0;
 }
 
-void _init()
+#if DEBUG
+void fsdrv_dump()
 {
-    fsdrv_t drv = {
-        "vfat",
-        "FAT12/16/32",
-        detect,
-        locate
-    };
-    //uint16_t id = 
-    fsdrv_reg(&drv);
+    int i;
+    dbg_printf("Filesystems %d:\n",nfsdrv);
+    for(i=0;i<nfsdrv;i++)
+        dbg_printf("%3d. '%s' %s %x\n",i,fsdrv[i].name,fsdrv[i].desc,fsdrv[i].detect);
 }
+#endif

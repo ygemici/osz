@@ -1,5 +1,5 @@
 /*
- * drivers/fs/gpt/main.c
+ * fs/fcb.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,31 +22,54 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief GUID Partition Table driver
+ * @brief File Control Block
  */
 
 #include <osZ.h>
-#include <cache.h>
 
-ino_t detect(void *blk)
-{
-    return !memcmp(blk+512, "EFI PART", 8) ? 0 : -1;
-}
+#define FCB_TYPE_REG_FILE   0
+#define FCB_TYPE_REG_DIR    1
+#define FCB_TYPE_DEVICE     2
+#define FCB_TYPE_PIPE       3
+#define FCB_TYPE_SOCKET     4
 
-ino_t locate(mount_t *mnt, ino_t parent, char *path)
-{
-dbg_printf("GPT locate '%s'\n",path);
-    return -1;
-}
+typedef struct {
+    uint64_t mount;
+    ino_t inode;
+    fpos_t filesize;
+} fcb_reg_t;
 
-void _init()
-{
-    fsdrv_t drv = {
-        "gpt",
-        "GUID Partition Table",
-        detect,
-        locate
+typedef struct {
+    uint64_t inode;
+} fcb_dev_t;
+
+typedef struct {
+} fcb_pipe_t;
+
+typedef struct {
+} fcb_socket_t;
+
+typedef struct {
+    char *abspath;
+    uint64_t nopen;
+    uint64_t fstype;
+    fpos_t filesize;
+    uint8_t type;
+    union {
+        fcb_reg_t reg;
+        fcb_dev_t device;
+        fcb_pipe_t pipe;
+        fcb_socket_t socket;
     };
-    //uint16_t id = 
-    fsdrv_reg(&drv);
-}
+} fcb_t;
+
+extern uint64_t nfcb;
+extern fcb_t *fcb;
+
+extern fid_t fcb_get(char *abspath);
+extern fid_t fcb_add(char *abspath, uint8_t type);
+extern void fcb_del(fid_t idx);
+
+#if DEBUG
+extern void fcb_dump();
+#endif

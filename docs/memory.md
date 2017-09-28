@@ -46,7 +46,7 @@ User interface has one half of a double screen buffer mapped at 128T-4G.
 
 The display driver has the other half of the double screen buffer mapped at 128T-4G, and on next page directory address, the framebuffer.
 The screen buffers among UI and the driver tasks swapped by the [vid_swapbuf()](https://github.com/bztsrc/osz/tree/master/src/lib/libc/x86_64/video.S) libc call
-(which sends a [SYS_swapbuf](https://github.com/bztsrc/osz/tree/master/src/core/syscall.c) message).
+(which sends a [SYS_swapbuf](https://github.com/bztsrc/osz/tree/master/src/core/msg.c#201) message).
 That call is issued by UI task when it finishes the composition on it's screen buffer.
 
 ### FS

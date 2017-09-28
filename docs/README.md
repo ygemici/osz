@@ -4,7 +4,7 @@ OS/Z Documentation
 Developer's Corner
 ------------------
 
-Materials interests for developers.
+Materials interesting for developers.
 
  * [Memory Management](https://github.com/bztsrc/osz/blob/master/docs/memory.md) in OS/Z
  * The [FS/Z](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h) file system's on disk format
@@ -12,8 +12,9 @@ Materials interests for developers.
  * [Scheduler](https://github.com/bztsrc/osz/blob/master/docs/scheduler.md)
  * Using [messages](https://github.com/bztsrc/osz/blob/master/docs/messages.md) at different levels (aka. syscalls in OS/Z)
  * How a [keypress](https://github.com/bztsrc/osz/blob/master/docs/keypress.md) is processed
+ * [Security](https://github.com/bztsrc/osz/blob/master/docs/security.md) checks
  * Differences to [POSIX](https://github.com/bztsrc/osz/blob/master/docs/posix.md)
- * [Porting](https://github.com/bztsrc/osz/blob/master/docs/porting.md) to new architecture
+ * [Porting](https://github.com/bztsrc/osz/blob/master/docs/porting.md) to new platforms
  * [Compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md)
  * [Boot procedure](https://github.com/bztsrc/osz/blob/master/docs/boot.md)
  * [Testing](https://github.com/bztsrc/osz/blob/master/docs/howto1-testing.md)

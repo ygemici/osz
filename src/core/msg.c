@@ -143,7 +143,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // send message to the mapped queue. Don't use EVT_FUNC, would
     // loose MSG_PTRDATA flag
     if(!ksend(msghdr,
-        EVT_DEST((uint64_t)task) | (event&0xFFF),
+        EVT_DEST((uint64_t)task) | (event&0xFFFF),
         arg0, arg1, arg2, arg3, arg4, arg5
     )) {
         if(srctcb->pid!=dsttcb->pid)

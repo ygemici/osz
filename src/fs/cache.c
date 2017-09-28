@@ -26,20 +26,6 @@
  */
 #include <osZ.h>
 #include "cache.h"
-#include "devfs.h"
-
-/* directory cache */
-uint64_t ncachedir = 0;
-cachedir_t *cachedir = NULL;
-
-/* cache index */
-uint64_t ncache = 0;
-cachedir_t *cache = NULL;
-
-/* cache blocks */
-cacheblk_t cacheblk[8];
-
-extern uint64_t delayanswer();
 
 void cache_init()
 {
@@ -50,34 +36,6 @@ void cache_init()
  */
 public void* cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
 {
-    void *ptr;
-    // devive file?
-    if(fs==devmtab) {
-        if(dev>=ndevdir)
-            return NULL;
-        /* built-in device? */
-        if(devdir[dev].drivertask==VFS_DEVICE_MEMFS) {
-            if(blk>=devdir[dev].size || devdir[dev].device==VFS_MEMFS_NULL_DEVICE)
-                return NULL;
-            switch(devdir[dev].device) {
-                case VFS_MEMFS_ZERO_DEVICE:
-                    ptr=(void*)malloc(devdir[dev].blksize);
-                    return ptr;
-                break;
-                case VFS_MEMFS_RAMDISK_DEVICE:
-                    return (void*)(devdir[dev].startsec+devdir[dev].blksize*blk);
-                break;
-            }
-        } else {
-            /* TODO: look for fs/dev/blk in cache and return block if found */
-            /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
-            delayanswer();
-            seterr(EAGAIN);
-            return NULL;
-        }
-    } else {
-        // simple file on another filesystem
-    }
     return NULL;
 }
 
@@ -91,16 +49,5 @@ public void cache_setblock(msg_t *msg)
 #if DEBUG
 void cache_dump()
 {
-    int i;
-    dbg_printf("Directory cache %x %d:\n",cachedir,ncachedir);
-    for(i=0;i<ncachedir;i++)
-        dbg_printf("%3d. %5d %s\n",i,cachedir[i].fid,cachedir[i].name);
-/*
-    dbg_printf("\nBlock cache %x %d:\n",cache,ncache);
-    for(i=0;i<ncache;i++)
-        dbg_printf("%3d. \n",i);
-
-    dbg_printf("\n");
-*/
 }
 #endif

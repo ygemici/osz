@@ -24,31 +24,30 @@
  *
  * @brief Device fs definitions
  */
-#include <osZ.h>
-#include "vfs.h"
 
-#define VFS_DEVICE_MEMFS            0
-#define VFS_MEMFS_ZERO_DEVICE       0
-#define VFS_MEMFS_RAMDISK_DEVICE    1
-#define VFS_MEMFS_RANDOM_DEVICE     2
-#define VFS_MEMFS_NULL_DEVICE       3
-#define VFS_MEMFS_TMPFS_DEVICE      4
+#include <osZ.h>
+
+#define MEMFS_MAJOR      0
+#define MEMFS_ZERO       0
+#define MEMFS_RAMDISK    1
+#define MEMFS_RANDOM     2
+#define MEMFS_NULL       3
+#define MEMFS_TMPFS      4
 
 /* device type */
 typedef struct {
-    char name[16];
+    fid_t fid;          //name in fcb
     pid_t drivertask;   //major
     dev_t device;       //minor
     blksize_t blksize;
-    blkcnt_t size;
-    fpos_t startsec;
-    uint64_t cacheidx;
+    blkcnt_t blkcnt;
 } device_t;
 
-extern uint64_t ndevdir;
-extern device_t *devdir;
+extern uint64_t ndev;
+extern device_t *dev;
 
-extern ino_t devfs_locate(mount_t *mnt, ino_t parent, char *file);
+extern void devfs_init();
+extern uint64_t defs_add();
 
 #if DEBUG
 extern void devfs_dump();

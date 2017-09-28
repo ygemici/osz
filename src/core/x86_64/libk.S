@@ -505,18 +505,12 @@ ksend:
     cmpq    16(%rdi), %rax
     jne     2f
     movq    $1, 8(%rdi)
-2:  /* replace destination pid with sender's and priority queue */
-    andq    $0x8FFF, %rsi
+2:  /* replace destination pid with sender's */
+    andq    $0xFFFF, %rsi
     /* tcb.pid<<16 */
     movq    tcb_pid, %rax
     shlq    $16, %rax
     orq     %rax, %rsi
-    /* tcb.prio<<12 */
-    xor     %ax, %ax
-    movb    tcb_priority, %al
-    andb    $7, %al
-    shlw    $12, %ax
-    orw     %ax, %si
     /* copy message */
     movq    (%rdi), %rax
     shlq    $6, %rax

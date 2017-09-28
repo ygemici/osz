@@ -1,5 +1,5 @@
 /*
- * fs/cache.h
+ * fs/taskctx.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,15 +22,42 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Cache definitions
+ * @brief Task context for file system services
  */
 
 #include <osZ.h>
 
-extern public void cache_init();
-extern public void *cache_getblock(uint64_t fs, ino_t dev, blkcnt_t blk);
-extern public void cache_setblock(msg_t *msg);
+/* describe an opened file */
+typedef struct {
+    fid_t fid;
+    uint8_t access;
+    fpos_t offs;
+} openfiles_t;
+
+/* task context for file system operations */
+typedef struct {
+    pid_t pid;
+    fid_t rootdir;
+    fid_t workdir;
+    uint64_t nopenfiles;
+    openfiles_t *openfiles;
+    msg_t msg;
+    void *next;
+} taskctx_t;
+
+extern uint64_t ntaskctx;
+extern taskctx_t *taskctx[];
+
+extern taskctx_t *ctx;
+
+extern taskctx_t *taskctx_get(pid_t pid);
+extern void taskctx_del(pid_t pid);
+extern void taskctx_rootdir(taskctx_t *tc, fid_t fid);
+extern void taskctx_workdir(taskctx_t *tc, fid_t fid);
+extern uint64_t taskctx_open(taskctx_t *tc, fid_t fid, uint8_t access, fpos_t offs);
+extern void taskctx_close(taskctx_t *tc, uint64_t idx);
+extern void taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence);
 
 #if DEBUG
-extern void cache_dump();
+extern void taskctx_dump();
 #endif

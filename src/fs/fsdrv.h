@@ -1,5 +1,5 @@
 /*
- * fs/fileop.c
+ * fs/fsdrv.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,17 +22,26 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief File operations
+ * @brief File System Drivers
  */
+
 #include <osZ.h>
 
-public size_t read(fid_t fid, void *buf, size_t size) { return 0; }
-public fid_t dup2(fid_t oldfd, fid_t newfd) { return 0; }
-public size_t write(void *buf, size_t size, fid_t fid) { return 0; }
-public fpos_t seek(fid_t fid, fpos_t offset, int whence) { return 0; }
-public fid_t dup(fid_t oldfd) { return 0; }
-public int stat(fid_t fd, stat_t *buf) { return 0; }
+typedef struct {
+    const char *name;
+    const char *desc;
+    ino_t (*detect)(void *blk);
+    ino_t (*locate)(fid_t mnt, ino_t parent, char *path);
+} fsdrv_t;
 
-public void pipe(){}
-public void ioctl(){}
+/* filesystem parsers */
+extern uint16_t nfsdrv;
+extern fsdrv_t *fsdrv;
+
+extern public uint16_t fsdrv_reg(const fsdrv_t *fs);
+extern uint16_t fsdrv_get(char *name);
+
+#if DEBUG
+extern void fsdrv_dump();
+#endif
 

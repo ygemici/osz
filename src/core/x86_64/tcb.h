@@ -30,6 +30,7 @@
 /* WARNING: must match tcb struct, for asm */
 #define tcb_priority 4
 #define tcb_state 5
+#define tcb_flags 6
 #define tcb_gpr   8
 #define tcb_fx  128
 #define tcb_pid 640
@@ -57,7 +58,8 @@
 typedef struct {
     uint32_t magic;     // Task Control Block magic, must be 'TASK'
     uint8_t priority;   // task priority                     tcb+   4
-    uint16_t state;     // task state                        tcb+   5
+    uint8_t state;      // task state                        tcb+   5
+    uint8_t flags;      // task flags                        tcb+   6
     uint8_t forklevel;  // fork level                        tcb+   7
     uint8_t gpr[120];   // general purpose registers area at tcb+   8
     uint8_t fx[512];    // media registers save area at      tcb+ 128

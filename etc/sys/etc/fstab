@@ -1,5 +1,5 @@
 #device       	mountpoint	opt/access	passno
-/dev/mem     	/        	ro		1
+/dev/root     	/        	ro		1
 /dev/tmp      	/tmp     	rw		1
 /dev/vol/esp  	/boot    	ro,wheel:rw	2
 /dev/vol/home 	/home    	users:rw	2

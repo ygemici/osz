@@ -71,10 +71,7 @@ _init:
 
 .getwork:
     call    mq_recv@PLT
-
-    movw    (%rax), %si
-    andw    $0xFFF, %si
-    cmpw    $VID_flush, %si
+    cmpw    $VID_flush, %di
     jne     1f
 .flush:
     /* copy screen to framebuffer */
@@ -93,12 +90,14 @@ _init:
     addq    %r9, %rbx
     dec     %r8d
     jnz     2b
-    callq   showcursor
+//    callq   showcursor
     jmp     .getwork
 
-1:  cmpw    $VID_movecursor, %si
+1:  cmpw    $VID_movecursor, %di
     jne     1f
 .movecursor:
+//FIXME
+jmp .getwork
     pushq   %rax
     callq   hidecursor
     popq    %rax
@@ -111,18 +110,20 @@ _init:
     jmp     3f
 2:  movl    %ecx, cursor_x+4(%rip)
     movl    %edx, cursor_y+4(%rip)
-3:  callq   showcursor
+3://  callq   showcursor
     jmp     .getwork
 
-1:  cmpw    $VID_loadcursor, %si
+1:  cmpw    $VID_loadcursor, %di
     jne     1f
     movq    8(%rax), %rdi
     callq   loadcursor
     jmp     .getwork
 
-1:  cmpw    $VID_setcursor, %si
+1:  cmpw    $VID_setcursor, %di
     jne     .getwork
 .setcursor:
+//FIXME
+jmp .getwork
     pushq   %rax
     callq   hidecursor
     popq    %rax

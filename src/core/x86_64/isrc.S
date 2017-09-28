@@ -121,7 +121,6 @@ isr_syscall:
 
     /* rbx: destination pid, ax: function */
     movq    %rax, %rbx
-    andb    $0xF, %ah
     shrq    $16, %rbx
 
     /* 'recv' */
@@ -130,8 +129,34 @@ isr_syscall:
     jnz     4f
     cmpw    $SYS_recv, %ax
     jne     1f
+    /* is there a message waiting? */
+7:  movq    $MQ_ADDRESS, %rbx
+    movq    8(%rbx), %rdx
+    cmpq    (%rbx), %rdx
+    je      2f
+    /* must match sizeof(msg_t) */
+    movq    %rdx, %rax
+    shlq    $msg_t_size_bits, %rax
+    addq    %rbx, %rax
+    /* mqhdr->mq_end++ */
+    incq    8(%rbx)
+    movq    8(%rbx), %rdx
+    cmpq    16(%rbx), %rdx
+    jne     3f
+    movq    $1, 8(%rbx)
+3:  /* rax = ptr to message. extract event info */
+    movq    (%rax), %rdi
+    /* rsi = sender */
+    movq    %rdi, %rsi
+    shrq    $16, %rsi
+    /* di = dest func */
+    andq    $0x7FFF, %rdi
+    jmp     9f
+2:  /* no message, block task */
     /* tcb->gpr */
     call    isr_savecontext
+    /* move rip to repeat recv syscall when awaken again */
+    subq    $2, __PAGESIZE-40
     xorq    %rdi, %rdi
     /* sched_block(tcb); */
     call    sched_block

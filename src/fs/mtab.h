@@ -1,5 +1,5 @@
 /*
- * drivers/fs/pax/main.c
+ * fs/mtab.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,38 +22,34 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Filesystem in pax archive driver
+ * @brief Mount points
  */
 
 #include <osZ.h>
-#include <cache.h>
 
-ino_t detect(void *blk)
-{
-    return
-     /* CPIO */
-    (!memcmp(blk,"070701",6) ||
-     !memcmp(blk,"070702",6) ||
-     !memcmp(blk,"070707",6) ||
-     /* USTAR */
-     !memcmp(blk+257,"ustar",5))
-     ? 0 : -1;
-}
+// mount point cache is not write-through
+#define MTAB_FLAG_ASYNC        (1<<0)
 
-ino_t locate(mount_t *mnt, ino_t parent, char *path)
-{
-dbg_printf("PAX locate '%s'\n",path);
-    return -1;
-}
+/* index to devfs in mtab */
+extern uint64_t devmtab;
 
-void _init()
-{
-    fsdrv_t drv = {
-        "paxfs",
-        "Archive",
-        detect,
-        locate
-    };
-    //uint16_t id = 
-    fsdrv_reg(&drv);
-}
+/** structure of mtab */
+typedef struct {
+    fid_t mountpoint;   //index to fcb, mount point
+    fid_t storage;      //index to fcb, storage device
+    uint64_t fstype;    //index to fsdrv
+    uint64_t fsflags;   //mount options
+    uint16_t len;       //number of access entries
+    gid_t *grp;         //access entries
+    uint8_t access;     //access for world
+    nlink_t nlink;      //number of fcb references
+    ino_t rootdir;      //root directory inode on storage
+} mtab_t;
+
+/* mount points */
+extern uint64_t nmtab;
+extern mtab_t *mtab;
+
+extern void mtab_fstab(char *ptr, size_t size);
+extern void mtab_init();
+extern uint64_t mtab_add(char *dev, char *file, char *opts);

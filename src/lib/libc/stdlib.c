@@ -87,7 +87,7 @@ unsigned char *stdlib_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t 
 int atoi(char *c)
 {
     uint64_t r;
-    stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFF);
+    stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFFULL);
     return r;
 }
 
@@ -95,7 +95,7 @@ int atoi(char *c)
 long atol(char *c)
 {
     uint64_t r;
-    stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFFFFFFFFFF);
+    stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFFFFFFFFFFULL);
     return r;
 }
 

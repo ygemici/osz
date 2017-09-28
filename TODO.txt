@@ -2,17 +2,11 @@
 ./src/ui/main.c:52:    // FIXME: once vfs ready, use fopen() and fread()
 ./src/core/msg.c:244:        // FIXME: remove mapfile once vfs ready
 ./src/core/msg.c:288:            /* FIXME: naive implementation, no checks */
-./src/lib/libc/x86_64/unistd.S:256:// FIXME: remove mapfile once vfs ready
+./src/lib/libc/x86_64/unistd.S:242:// FIXME: remove mapfile once vfs ready
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
 ./etc/include/sys/core.h:95:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
-./src/drivers/fs/fsz/main.c:84:            /* TODO: sector directory */
-./src/fs/vfs.c:83:    /* TODO: canonize path */
-./src/fs/main.c:67:            /* TODO: check if caller is a driver task, PRI_DRV and msg->argX valid delayedmsg index */
-./src/fs/main.c:69:            /* TODO: find delayedmsg, decrease numblk */
-./src/fs/cache.c:72:            /* TODO: look for fs/dev/blk in cache and return block if found */
-./src/fs/cache.c:73:            /* TODO: send an async SYS_getblock message to the driver with delayedmsg index */
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:107:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers

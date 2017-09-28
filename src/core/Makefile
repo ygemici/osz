@@ -54,6 +54,8 @@ endif
 	@# avoid accidental execution of core
 	@#echo -n "OS/Z" | dd conv=notrunc of=$(BINTARGET) bs=1 seek=0 1>/dev/null 2>/dev/null
 	@echo -ne '\003' | dd conv=notrunc of=$(BINTARGET) bs=1 seek=16 1>/dev/null 2>/dev/null
+	@# create an empty drivers file
+	@touch ../../bin/initrd/sys/drivers
 
 clean:
 	@rm *.o $(ARCH)/*.o $(ARCH)/$(PLATFORM)/*.o $(BINTARGET) ../../bin/*.sym 2>/dev/null || true

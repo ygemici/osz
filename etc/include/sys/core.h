@@ -59,7 +59,7 @@
 #define SYS_rand 26
 #define SYS_srand 27
 
-#define SYS_recv 0xFFF     // receive message
+#define SYS_recv 0x7FFF     // receive message
 
 
 // rax: FFFFFFFFFFFFxxxx File system services

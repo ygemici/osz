@@ -89,7 +89,7 @@ tcb_t *task_new(char *cmdline, uint8_t prio)
     // allocate message queue
     for(i=0;i<nrmqmax;i++) {
         ptr=pmm_alloc(1);
-        paging[i+(MQ_ADDRESS/__PAGESIZE)]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
+        paging[i+(MQ_ADDRESS/__PAGESIZE)]=((uint64_t)ptr+PG_USER_RO)|((uint64_t)1<<63);
     }
     // allocate stack
     ptr=pmm_alloc(1);

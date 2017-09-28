@@ -45,10 +45,6 @@ _init:
     /* wait for an IRQ message */
 1:  call    mq_recv@PLT
 
-    /* failsafe */
-    xorq    %rdi, %rdi
-    movw    (%rax), %di
-    andw    $0xFFF, %di
     cmpw    $SYS_IRQ, %di
     jne     1b
     xorq    %rdi, %rdi

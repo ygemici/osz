@@ -96,8 +96,8 @@ mymq_send:
     movq    16(%rsp), %r9
     /* this will call msg_sends() in core */
     syscall
-    call    myseterrno
     movq    tcb_serial, %rax
+    call    myseterrno
     ret
 
 /**
@@ -124,27 +124,13 @@ mymq_call:
  */
 mq_recv:
 mymq_recv:
-1:  movq    $MQ_ADDRESS, %rbx
-    movq    8(%rbx), %rax
-    cmpq    (%rbx), %rax
-    jne     2f
     /* block until we receive something */
     xorq    %rax, %rax
     movw    $SYS_recv, %ax
     syscall
-    /* failsafe, repeat if there's no message */
-    jmp      1b
-2:  /* must match sizeof(msg_t) */
-    movq    $MQ_ADDRESS, %rbx
-    shlq    $6, %rax
-    addq    %rbx, %rax
-    /* mqhdr->mq_end++ */
-    incq    8(%rbx)
-    movq    8(%rbx), %rcx
-    cmpq    16(%rbx), %rcx
-    jne     3f
-    movq    $1, 8(%rbx)
-3:  ret
+    /* ack nack sends errno */
+    call    myseterrno
+    ret
 
 /**
  * returns message serial or 0 if no message waiting

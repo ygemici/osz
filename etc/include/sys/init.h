@@ -25,8 +25,8 @@
  * @brief OS/Z system calls for init service. Include with osZ.h
  */
 
-#define SYS_stop	(0x09)
-#define SYS_start	(0x0c)
-#define SYS_restart	(0x0e)
-#define SYS_status	(0x0f)
+#define SYS_stop	(0x0a)
+#define SYS_start	(0x0d)
+#define SYS_restart	(0x0f)
+#define SYS_status	(0x10)
 

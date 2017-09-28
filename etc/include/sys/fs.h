@@ -25,17 +25,34 @@
  * @brief OS/Z system calls for fs service. Include with osZ.h
  */
 
-#define SYS_mountfs     (3)
-#define SYS_locate      (4)
-#define SYS_setblock    (5)
-
-#define SYS_seek	(0x19)
-#define SYS_dup		(0x1b)
-#define SYS_write	(0x1d)
-#define SYS_pipe	(0x21)
-#define SYS_mknod	(0x25)
-#define SYS_ioctl	(0x26)
-#define SYS_stat	(0x29)
-#define SYS_dup2	(0x2b)
-#define SYS_read	(0x2c)
+// file systems and cache
+#define SYS_mountfs     ( 3)
+#define SYS_mount       ( 4)
+#define SYS_umount      ( 5)
+#define SYS_setblock    ( 6)
+#define SYS_addvolume   ( 7)
+#define SYS_delvolume   ( 8)
+// file operations
+#define SYS_mknod       ( 9)
+#define SYS_stat        (10)
+#define SYS_open        (11)
+#define SYS_seek        (12)
+#define SYS_read        (13)
+#define SYS_write       (14)
+#define SYS_ioctl       (15)
+#define SYS_dup         (16)
+#define SYS_dup2        (17)
+#define SYS_pipe        (18)
+#define SYS_fstat       (19)
+#define SYS_close       (20)
+#define SYS_symlink     (21)
+#define SYS_readlink    (22)
+#define SYS_unlink      (23)
+// directory operations
+#define SYS_mkdir       (24)
+#define SYS_rmdir       (25)
+#define SYS_opendir     (26)
+#define SYS_readdir     (27)
+#define SYS_rewinddir   (28)
+#define SYS_closedir    (29)
 

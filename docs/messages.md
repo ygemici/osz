@@ -1,19 +1,22 @@
 OS/Z Message Queues
 ===================
 
+The main inter process communication form of OS/Z tasks are message queues.
+
 User level library
 ------------------
 
 Normally you won't see a thing about message queues. The `libc` library hides all the details from you, so you just
-use printf() and fopen() etc. as usual. It is required that you do not use the low level (like syscall) directly.
-The `libc` functions guarantee the [portability](https://github.com/bztsrc/osz/blob/master/docs/porting.md) of applications.
+use printf() and fopen() etc. as usual. For [security](https://github.com/bztsrc/osz/blob/master/docs/security.md) reasons, you cannot use message queues directly, and you should
+not use the syscall interface. The `libc` functions guarantee the [portability](https://github.com/bztsrc/osz/blob/master/docs/porting.md) of applications.
 
-But if there's really a need to use the messaging system, you have platform independent `libc` functions for that.
+But if there's really a need to use the messaging system (you are implementing a new message protocol), then you have platform
+independent `libc` functions for that.
 
 ### Low level user Library
 
 There are only five functions for messaging, variations on synchronisation. They are provided by `libc`, and defined in [etc/include/sys/core.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/core.h).
-You should not use them directly (unless you're implementing your own message protocol), use higher level functions instead.
+You should not use them directly (unless you're implementing your own message protocol), use one of the higher level functions instead.
 
 ```c
 /* async, send a message and return it's serial (non-blocking) */
@@ -32,7 +35,7 @@ msg_t *mq_recv();
 void mq_dispatch();
 ```
 While [mq_call()](https://github.com/bztsrc/osz/blob/master/src/lib/libc/x86_64/syscall.S) is a sequence of mq_send() and my_recv() calls, [mq_dispatch()](https://github.com/bztsrc/osz/blob/master/src/lib/libc/dispatch.c) is quite the opposite: it first
-receives a message with mq_recv(), calls the handler for it, and then uses mq_send() to send the result back.
+receives a message with mq_recv(), calls the handler for it, and then uses mq_send() to send the result back. For msg_t struct, see below.
 
 You can also pass a system service number as `dst`, they can be found in [etc/include/syscall.h](https://github.com/bztsrc/osz/blob/master/etc/include/syscall.h). The available function codes
 are defined in the corresponding header file under [etc/include/sys](https://github.com/bztsrc/osz/blob/master/etc/include/sys), all included in this header.
@@ -95,11 +98,11 @@ function calls it after it had mapped the destination's task message queue tempo
 
 From userspace the message queue routines can be accessed via `syscall` instruction on x86_64 platform. The low level user library
 builds on it (basically mq_send() and mq_recv() and all the other libc functions are just wrappers).
-The destination and function is passed in %rax. When destination is SRV_CORE (0) and function is SYS_recv (0xFFF), it receives
+The destination and function is passed in %rax. When destination is SRV_CORE (0) and function is SYS_recv (0x7FFF), it receives
 messages. Any other value sends.
 
-The arguments are stored and read in System V ABI way, with two exception: %rcx is clobbered by the syscall instruction, so
-it must be passed in %rbx. The destination task and the function code are aggregated into one argument in %rax.
+The arguments are stored and read in System V ABI way, with one exception: %rcx is clobbered by the syscall instruction, so
+it must be passed in %rbx.
 ```
 %rax= (pid_t task) << 16 | function,
 %rdi= arg0/ptr
@@ -116,14 +119,13 @@ Or even better, use higher level functions in `libc`.
 Structures
 ----------
 
-The main inter process communication form of OS/Z tasks are message queues.
 It's a so essential type that it's defined in [etc/include/sys/types.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/types.h#L117).
 
 ```c
 msg_t *mq;
 ```
 
-The first item in the array is the header. Because the exact implementation of msghdr_t is irrelevant to the queue's user, it scope is core only and defined
+The first item in the array is the queue header. Because the exact implementation of msghdr_t is irrelevant to the queue's user, it scope is core only and defined
 in [src/core/msg.h](https://github.com/bztsrc/osz/blob/master/src/core/msg.h).
 
 ```c
