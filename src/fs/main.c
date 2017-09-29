@@ -29,8 +29,10 @@
 #include "cache.h"
 #include "mtab.h"
 #include "devfs.h"
+#include "fsdrv.h"
 #include "taskctx.h"
 #include "fcb.h"
+#include "vfs.h"
 
 //#include "vfs.h"
 
@@ -38,9 +40,12 @@ public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory
 public uint64_t _initrd_size=0;     // initrd size in bytes
 public char *_fstab_ptr=NULL;       // pointer to /etc/fstab data
 public size_t _fstab_size=0;        // fstab size
+public uint32_t _pathmax;           // maximum length of path
 uint8_t ackdelayed;
-extern uint32_t _pathmax;           // maximum length of path
 
+/**
+ * File System task main procedure
+ */
 void _init(int argc, char **argv)
 {
     msg_t *msg;
@@ -50,15 +55,14 @@ void _init(int argc, char **argv)
         _pathmax=512;
     // initialize vfs structures
     mtab_init();    // registers "/" as first fcb
+    devfs_init();   // registers "/dev/" as second fcb
     cache_init();
-    devfs_init();
 
     /*** endless loop ***/
     while(1) {
         /* get work */
         msg = mq_recv();
         seterr(SUCCESS);
-dbg_printf("%x: %x\n",msg,msg->evt);
         ctx = taskctx_get(EVT_SENDER(msg->evt));
         ackdelayed = false;
         /* resume a posponed query */
@@ -70,11 +74,11 @@ dbg_printf("%x: %x\n",msg,msg->evt);
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
-dbg_printf("mountfs\n");
 devfs_dump();
-//cache_dump();
                 mtab_fstab(_fstab_ptr, _fstab_size);
 fcb_dump();
+fsdrv_dump();
+mtab_dump();
                 break;
 
             default:

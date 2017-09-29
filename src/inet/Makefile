@@ -1,7 +1,7 @@
-TARGET = sys/net
+TARGET = sys/inet
 LINKER = sharedlib
 EXTOBJ = ../../bin/service.o
-GENSYMS = net.sym
+GENSYMS = inet.sym
 
 include ../Makefile.rules
 

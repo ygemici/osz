@@ -179,6 +179,8 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
         case SYS_exit:
             /* is it a critical service that's exiting? */
             if(tcb->pid == services[-SRV_FS] || tcb->pid == services[-SRV_UI]) {
+                if(tcb->pid == services[-SRV_FS] && arg0==1)
+                    kpanic("unable to mount root file system");
                 kpanic("critical %s task exited",tcb->pid == services[-SRV_FS]?"FS":"UI");
             }
             /* is it init task exiting? */

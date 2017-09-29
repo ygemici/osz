@@ -81,8 +81,8 @@ void main()
         service_init(SRV_syslog, "sys/syslog")
     }
     if(networking) {
-        // initialize "net" task for ipv4 and ipv6 routing
-        service_init(SRV_net, "sys/net");
+        // initialize "inet" task for ipv4 and ipv6 routing
+        service_init(SRV_inet, "sys/inet");
     }
     if(sound) {
         // initialize "sound" task to handle audio channels

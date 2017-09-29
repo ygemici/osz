@@ -58,6 +58,7 @@ void service_init(int subsystem, char *fn)
     while(cmd[0]!='/')
         cmd++;
     cmd++;
+    int l=kstrlen(cmd);
     tcb_t *tcb = task_new(cmd, PRI_SRV);
     // map executable
     if(elf_load(fn) == (void*)(-1)) {
@@ -69,32 +70,22 @@ void service_init(int subsystem, char *fn)
         buffer_ptr=task_mapbuf(syslog_buf,nrlogmax);
     // map libc
     elf_loadso("sys/lib/libc.so");
-    // little trick to support network protocols in net system service
-    if(subsystem==SRV_net) {
-        if(drvs==NULL) {
-            // hardcoded if driver list not found
-            // should not happen!
-            elf_loadso("sys/drv/inet/ipv4.so");
-            elf_loadso("sys/drv/inet/udp4.so");
-            elf_loadso("sys/drv/inet/tcp4.so");
-        } else {
-            kmemcpy(&so[0], "sys/drv/", 8);
-            for(s=drvs;s<drvs_end;) {
-                f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
-                if(f[0]=='*' && f[1]==9 && f[2]=='i' && f[3]=='n' && f[4]=='e' && f[5]=='t') {
-                    f+=2;
-                    if(s-f<255-8) {
-                        kmemcpy(&so[8], f, s-f);
-                        so[s-f+8]=0;
-                        elf_loadso(so);
-                    }
-                    continue;
-                }
-                // failsafe
-                if(s>=drvs_end || *s==0) break;
-                if(*s=='\n') s++;
+    // load modules for system services
+    kmemcpy(&so[0], "sys/drv/", 8);
+    for(s=drvs;s<drvs_end;) {
+        f = s; while(s<drvs_end && *s!=0 && *s!='\n') s++;
+        if(f[0]=='*' && f[1]==9 && f+2+l<drvs_end && f[2+l]=='/' && !kmemcmp(f+2,cmd,l)) {
+            f+=2;
+            if(s-f<255-8) {
+                kmemcpy(&so[8], f, s-f);
+                so[s-f+8]=0;
+                elf_loadso(so);
             }
+            continue;
         }
+        // failsafe
+        if(s>=drvs_end || *s==0) break;
+        if(*s=='\n') s++;
     }
     // map libc and other libraries
     elf_neededso(1);

@@ -26,6 +26,9 @@
  */
 #include <osZ.h>
 #include "fsdrv.h"
+#include "vfs.h"
+
+uint16_t devfsidx = -1;
 
 /* filesystem parsers */
 uint16_t nfsdrv = 0;
@@ -40,19 +43,42 @@ public uint16_t fsdrv_reg(const fsdrv_t *fs)
     if(fsdrv==NULL || errno())
         abort();
     memcpy((void*)&fsdrv[nfsdrv-1], (void*)fs, sizeof(fsdrv_t));
+    if(!memcmp(fs->name,"devfs",6))
+        devfsidx = nfsdrv-1;
     return nfsdrv-1;
 }
 
 /**
  * return filesystem parser
  */
-uint16_t fsdrv_get(char *name)
+int16_t fsdrv_get(char *name)
 {
     int i;
     for(i=0;i<nfsdrv;i++)
         if(!strcmp(fsdrv[i].name, name))
             return i;
-    return 0;
+    return -1;
+}
+
+/**
+ * detect file system on a device (or in file)
+ */
+int16_t fsdrv_detect(fid_t dev)
+{
+    int i;
+    // little hack as devfs does not have a superblock
+    if(dev==DEVFCB)
+        return devfsidx;
+    // read the superblock
+    void *blk=readblock(dev, 0, __PAGESIZE);
+    if(blk!=NULL) {
+        // iterate on each fsdrv, see if one can recognize the superblock
+        for(i=0;i<nfsdrv;i++) {
+            if(fsdrv[i].detect!=NULL && (*fsdrv[i].detect)(blk))
+                return i;
+        }
+    }
+    return -1;
 }
 
 #if DEBUG

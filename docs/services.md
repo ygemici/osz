@@ -9,17 +9,17 @@ init system service, and they can be loaded from external disks as well.
 ### Service hierarchy
 
 ```
-        +-------------------------------------------------+
-ring 0  |                     CORE                        | (supervisor)
---------+---------+----+----+-----------------------------+---------------------
-ring 3  | Drivers | FS | UI | syslog | net | sound | init | (system services)
-        +------------------------------------------+      |
-        | logind | prnd | httpd | ...                     | (user services controlled by init)
-        +-------------------------------------------------+
+        +--------------------------------------------------+
+ring 0  |                      CORE                        | (supervisor)
+--------+---------+----+----+------------------------------+---------------------
+ring 3  | Drivers | FS | UI | syslog | inet | sound | init | (system services)
+        +-------------------------------------------+      |
+        | logind | prnd | httpd | ...                      | (user services controlled by init)
+        +--------------------------------------------------+
 
-        +-------------------------------------------------+
-        | identity | sh | sys | test | ...                | (normal user applications)
-        +-------------------------------------------------+
+        +--------------------------------------------------+
+        | identity | sh | sys | fsck | test | ...          | (normal user applications)
+        +--------------------------------------------------+
 ```
 
 CORE
@@ -71,8 +71,8 @@ boot paramter `syslog=false`.
 
 Typical functions: syslog(), setlogmask().
 
-Net
----
+Inet
+----
 
 Service that is responsible for handling interfaces and IP routes, and all other networking stuff. You can disable
 networking with the [boot environment](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) variable `networking=false`.

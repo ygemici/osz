@@ -36,7 +36,7 @@ That platform independent `main()` does the following:
 in [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c#123) (IRT).
  6. second service is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal system service, save it has the initrd entirely mapped in it's bss segment.
  7. user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). These first three service are mandatory, unlike the rest.
- 8. loads additional, non-critical tasks by several `service_init()` calls in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `net`, `sound` and `init` system services.
+ 8. loads additional, non-critical tasks by several `service_init()` calls in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `inet`, `sound` and `init` system services.
  9. switches to user space by calling `sys_enable()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c).
 
 That function switches to the "FS" task, and starts executing it. When it blocks, the scheduler,

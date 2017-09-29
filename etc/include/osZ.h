@@ -47,7 +47,7 @@
 # include <sysexits.h>
 # include <unistd.h>
 # include <sound.h>
-# include <net.h>
+# include <inet.h>
 # include <ui.h>
 # include <init.h>
 #endif

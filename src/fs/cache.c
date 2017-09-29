@@ -34,8 +34,9 @@ void cache_init()
 /**
  * read a block from cache
  */
-public void* cache_getblock(uint64_t fs, dev_t dev, blkcnt_t blk)
+public void* cache_getblock(dev_t idx, blkcnt_t blk)
 {
+    // TODO: use dev[idx].drivertask, dev[idx].device, dev[idx].blksize
     return NULL;
 }
 

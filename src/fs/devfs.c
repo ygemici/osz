@@ -28,13 +28,14 @@
 #include "devfs.h"
 #include "fsdrv.h"
 #include "fcb.h"
+#include "vfs.h"
 
 /* ramdisk position and size in memory */
 extern uint64_t _initrd_size;
 
 /* devices */
 uint64_t ndev = 0;
-device_t *dev = NULL;
+devfs_t *dev = NULL;
 
 /**
  * add a device
@@ -49,7 +50,7 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, blksize_t blksize
         if(!strcmp(fcb[dev[i].fid].abspath, tmp))
             return i;
     ndev++;
-    dev=(device_t*)realloc(dev, ndev*sizeof(device_t));
+    dev=(devfs_t*)realloc(dev, ndev*sizeof(devfs_t));
     if(dev==NULL)
         return -1;
     f=fcb_add(tmp, FCB_TYPE_DEVICE);

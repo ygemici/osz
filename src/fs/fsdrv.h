@@ -27,11 +27,14 @@
 
 #include <osZ.h>
 
+#ifndef _FSDRV_H_
+#define _FSDRV_H_
+
 typedef struct {
     const char *name;
     const char *desc;
-    ino_t (*detect)(void *blk);
-    ino_t (*locate)(fid_t mnt, ino_t parent, char *path);
+    bool_t (*detect)(void *blk);
+    ino_t (*locate)(fid_t storage, char *path);
 } fsdrv_t;
 
 /* filesystem parsers */
@@ -39,9 +42,11 @@ extern uint16_t nfsdrv;
 extern fsdrv_t *fsdrv;
 
 extern public uint16_t fsdrv_reg(const fsdrv_t *fs);
-extern uint16_t fsdrv_get(char *name);
+extern int16_t fsdrv_get(char *name);
+extern int16_t fsdrv_detect(fid_t dev);
 
 #if DEBUG
 extern void fsdrv_dump();
 #endif
 
+#endif

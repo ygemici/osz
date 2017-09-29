@@ -27,6 +27,7 @@ Boot Parameters
 | syslog    | true     | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
 | networking | true    | boolean | core | disable networking service |
 | sound     | true     | boolean | core | disable sound service |
+| pathmax   | 512      | number  | fs   | Maximum length of path, minimum 512 |
 | fps       | 10       | number  | ui   | requested frame rate |
 | display   | 0        | number  | ui   | selects output mode (see below) |
 | lefthanded | false   | boolean | ui   | swap pointers |

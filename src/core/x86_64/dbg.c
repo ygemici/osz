@@ -995,7 +995,7 @@ void dbg_msg()
                         default: kprintf("%2x?", *((uint64_t*)m) &0x7FFF); break;
                     }
                 } else
-                if(tcb->pid == services[-SRV_net]) {
+                if(tcb->pid == services[-SRV_inet]) {
                     switch(*((uint8_t*)m)) {
                         case SYS_recvfrom: kprintf("recvfrom"); break;
                         case SYS_connect: kprintf("connect"); break;

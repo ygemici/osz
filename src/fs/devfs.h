@@ -27,8 +27,6 @@
 
 #include <osZ.h>
 
-#define DEVPATH "/dev/"
-
 #define MEMFS_MAJOR      0
 #define MEMFS_ZERO       0
 #define MEMFS_RAMDISK    1
@@ -43,10 +41,10 @@ typedef struct {
     dev_t device;       //minor
     blksize_t blksize;
     blkcnt_t blkcnt;
-} device_t;
+} devfs_t;
 
 extern uint64_t ndev;
-extern device_t *dev;
+extern devfs_t *dev;
 
 extern void devfs_init();
 extern uint64_t defs_add();

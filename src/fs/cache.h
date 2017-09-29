@@ -28,7 +28,7 @@
 #include <osZ.h>
 
 extern public void cache_init();
-extern public void *cache_getblock(uint64_t fs, ino_t dev, blkcnt_t blk);
+extern public void *cache_getblock(dev_t idx, blkcnt_t blk);
 extern public void cache_setblock(msg_t *msg);
 
 #if DEBUG

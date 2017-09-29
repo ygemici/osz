@@ -56,7 +56,7 @@ BASE
   src		sys/syslog
   src		sys/sound
   src		sys/fs
-  src		sys/net
+  src		sys/inet
   src		sys/init
 DRIVERS
   src		sys/drv/fs/gpt.so

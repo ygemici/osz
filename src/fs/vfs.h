@@ -1,5 +1,5 @@
 /*
- * net/main.c
+ * fs/vfs.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,26 +22,22 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Internet service
+ * @brief Virtual File System functions. This header included by fs drivers too
  */
+
 #include <osZ.h>
+#include "fcb.h"
+#include "fsdrv.h"
 
-public void socket(){}
-public void connect(){}
-public void accept(){}
-public void sendto(){}
-public void recvfrom(){}
-public void sendmsg(){}
-public void recvmsg(){}
-public void shutdown(){}
-public void bind(){}
-public void listen(){}
-public void getsockname(){}
-public void getpeername(){}
-public void socketpair(){}
-public void getsockopt(){}
-public void setsockopt(){}
+#define ROOTMTAB 0
+#define ROOTFCB 0
+#define DEVFCB 1
+#define DEVPATH "/dev/"
 
-void task_init(int argc, char **argv)
-{
-}
+#define PATHEND(a) (a==';' || a=='#' || a==0)
+
+/* low level functions */
+extern char *canonize(const char *path, char *result);
+extern void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
+
+/* libc function implementations */

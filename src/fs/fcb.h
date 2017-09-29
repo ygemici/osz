@@ -27,6 +27,9 @@
 
 #include <osZ.h>
 
+#ifndef _FCB_H_
+#define _FCB_H_
+
 #define FCB_TYPE_REG_FILE   0
 #define FCB_TYPE_REG_DIR    1
 #define FCB_TYPE_DEVICE     2
@@ -52,7 +55,6 @@ typedef struct {
 typedef struct {
     char *abspath;
     uint64_t nopen;
-    uint64_t fstype;
     fpos_t filesize;
     uint8_t type;
     union {
@@ -69,7 +71,10 @@ extern fcb_t *fcb;
 extern fid_t fcb_get(char *abspath);
 extern fid_t fcb_add(char *abspath, uint8_t type);
 extern void fcb_del(fid_t idx);
+extern fid_t fcb_locate(char *abspath);
 
 #if DEBUG
 extern void fcb_dump();
+#endif
+
 #endif

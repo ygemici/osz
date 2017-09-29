@@ -33,7 +33,7 @@
 #define SRV_FS			-1
 #define SRV_UI			-2
 #define SRV_syslog		-3
-#define SRV_net			-4
+#define SRV_inet		-4
 #define SRV_sound		-5
 #define SRV_init		-6
 #define SRV_video		-7
@@ -45,7 +45,7 @@
 #include <sys/fs.h>
 #include <sys/ui.h>
 #include <sys/syslog.h>
-#include <sys/net.h>
+#include <sys/inet.h>
 #include <sys/sound.h>
 #include <sys/init.h>
 

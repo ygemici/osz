@@ -28,9 +28,12 @@
 #include <osZ.h>
 #include "mtab.h"
 #include "fcb.h"
-#include "devfs.h"
+#include "vfs.h"
+#include "fsdrv.h"
 
 uint8_t rootmounted = false;
+uint16_t nmtab = 0;
+mtab_t *mtab = NULL;
 
 void mtab_init()
 {
@@ -40,9 +43,10 @@ void mtab_init()
 /**
  * add a mount point to mount list
  */
-uint64_t mtab_add(char *dev, char *file, char *opts)
+int16_t mtab_add(char *dev, char *file, char *opts)
 {
     fid_t fd, ff;
+    int16_t fs;
     if(dev==NULL || dev[0]==0 || file==NULL || file[0]==0) {
         seterr(EINVAL);
         return -1;
@@ -50,31 +54,48 @@ uint64_t mtab_add(char *dev, char *file, char *opts)
     // get device fcb
     fd = fcb_get(dev);
     if(fd == -1) {
-        seterr(EINVAL);
+        seterr(ENODEV);
         return -1;
     }
     // get mount point fcb
     ff = fcb_get(file);
-    if(ff == -1) {
+    if(ff == -1 || fcb[ff].type!=FCB_TYPE_REG_DIR) {
+        seterr(ENOTDIR);
+        return -1;
+    }
+    // chicken and egg scenario, need /dev before / mounted
+    // also refuse to mount anything before root
+    if((fd==ff && rootmounted) || (ff!=ROOTFCB && nmtab==0)) {
         seterr(EINVAL);
         return -1;
     }
-    // chicken and egg scenario, /dev before /
-    if(fd==ff && rootmounted) {
-        seterr(EINVAL);
+    // detect file system
+    fs=fsdrv_detect(fd);
+    if(fs==-1) {
+        // extra check
+        if(!rootmounted || nmtab==0)
+            exit(1);
+        seterr(ENOTBLK);
         return -1;
     }
-    
+    mtab=(mtab_t*)realloc(mtab, (nmtab+1)*sizeof(mtab_t));
+    if(mtab==NULL)
+        return -1;
+
+    mtab[nmtab].storage=fd;
+    mtab[nmtab].mountpoint=ff;
+    mtab[nmtab].fstype=fs;
+    nmtab++;
     fcb[fd].nopen++;
     fcb[ff].nopen++;
 
-    dbg_printf("dev '%s' file '%s' opts '%s'\n",dev,file,opts);
-    if(ff==0) {
+//dbg_printf("dev '%s' file '%s' opts '%s' fs %d\n",dev,file,opts,fs);
+    if(ff==ROOTFCB) {
         // when mounting root, also mount /dev. It's path is hardcoded, cannot be changed in OS/Z
         mtab_add(DEVPATH, DEVPATH, "");
         rootmounted = true;
     }
-    return 0;
+    return -1;
 }
 
 /**
@@ -131,3 +152,16 @@ void mtab_fstab(char *ptr, size_t size)
     }
     free(fstab);
 }
+
+#if DEBUG
+void mtab_dump()
+{
+    int i;
+    dbg_printf("Mounts %d:\n",nmtab);
+    for(i=0;i<nmtab;i++) {
+        dbg_printf("%3d. %s %s %s\n", i, fcb[mtab[i].storage].abspath,
+            mtab[i].fstype==-1?"???":fsdrv[mtab[i].fstype].name,
+            fcb[mtab[i].mountpoint].abspath);
+    }
+}
+#endif

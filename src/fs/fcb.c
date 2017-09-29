@@ -27,10 +27,16 @@
 
 #include <osZ.h>
 #include "fcb.h"
+#include "vfs.h"
+#include "mtab.h"
+#include "fsdrv.h"
 
 uint64_t nfcb = 0;
 fcb_t *fcb = NULL;
 
+/**
+ * look up a path in fcb directory
+ */
 fid_t fcb_get(char *abspath)
 {
     fid_t i;
@@ -41,6 +47,9 @@ fid_t fcb_get(char *abspath)
     return -1;
 }
 
+/**
+ * look up a path in fcb directory and add it if not found
+ */
 fid_t fcb_add(char *abspath, uint8_t type)
 {
     fid_t i,j=-1;
@@ -67,6 +76,9 @@ fid_t fcb_add(char *abspath, uint8_t type)
     return i;
 }
 
+/**
+ * remove an fcb entry
+ */
 void fcb_del(fid_t idx)
 {
     // failsafe
@@ -82,12 +94,76 @@ void fcb_del(fid_t idx)
         nfcb--;
     }
 }
- 
+
+/**
+ * return an fcb index for an absolute path
+ */
+fid_t fcb_locate(char *path)
+{
+    char *abspath=canonize(path,NULL);
+    fid_t f=fcb_get(abspath),fd=-1;
+    int16_t fs=-1;
+    int i,j,l=0,k=0;
+    // if not found in cache
+    if(f==-1) {
+        // first, look at static mounts
+        // find the longest match in mtab, root fill always match
+        for(i=0;i<nmtab;i++) {
+            j=strlen(fcb[mtab[i].mountpoint].abspath);
+            if(j>l && !memcmp(fcb[mtab[i].mountpoint].abspath, abspath, j)) {
+                l=j;
+                k=i;
+            }
+        }
+        // get mount device
+        fd=mtab[k].storage;
+        // and filesystem driver
+        fs=mtab[k].fstype;
+        // if the longest match was "/", look for automount too
+        if(k==ROOTMTAB && !memcmp(abspath, DEVPATH, sizeof(DEVPATH))) {
+            i=sizeof(DEVPATH); while(abspath[i]!='/' && !PATHEND(abspath[i])) i++;
+            if(abspath[i]=='/') {
+                // okay, the path starts with "/dev/*/" Let's get the device fcb
+                abspath[i]=0;
+                fd=fcb_get(abspath);
+                abspath[i++]='/'; l=i;
+                fs=-1;
+            }
+        }
+        // only devices and files can serve as storage
+        if(fd>=nfcb || (fcb[fd].type!=FCB_TYPE_DEVICE && fcb[fd].type!=FCB_TYPE_REG_FILE)) {
+            free(abspath);
+            seterr(ENODEV);
+            return -1;
+        }
+        // detect file system on the fly
+        if(fs==-1) {
+            fs=fsdrv_detect(fd);
+            if(k!=ROOTMTAB && fs!=-1)
+                mtab[k].fstype=fs;
+        }
+        // if file system unknown, not much we can do
+        if(fs==-1) {
+            free(abspath);
+            seterr(ENOTBLK);
+            return -1;
+        }
+        // pass the remaining path to filesystem driver
+        // fd=device fcb, fs=fsdrv idx, l=longest mount length, 
+dbg_printf("locate dev '%s' mountpoint '%s' fstype '%s' path '%s'\n",
+fcb[fd].abspath,fcb[mtab[k].mountpoint].abspath,fsdrv[fs].name,abspath+l);
+        //in=(*fsdrvs[mtab[fsmtab].fs_type].locate)(&mtab[fsmtab], 0, canonpath+l);
+
+    }
+    free(abspath);
+    return f;
+}
+
 #if DEBUG
 void fcb_dump()
 {
     uint64_t i;
-    dbg_printf("File Control Blocks (%d):\n",nfcb);
+    dbg_printf("File Control Blocks %d:\n",nfcb);
     for(i=0;i<nfcb;i++) {
         dbg_printf("%3d. %3d %01x %s\n",i,fcb[i].nopen,fcb[i].type,fcb[i].abspath);
     }

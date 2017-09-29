@@ -40,12 +40,10 @@ separators (device ':', directory '/', version ';' and offset '#'), as well as i
 UNICODE characters allowed.
 
 Version part by default is ';0' which points to the current version of the file. The version ';-1' refers to the version
-before the current one, ';-2' the version before that and so forth. Providing positive numbers as version refers to a date
-in the form ';mmdd' or ';yyyymmdd' or ';yyyymmddHHii'. The actual version for that date will be returned, or the oldest one
-if such version is not found. For dates in the future the current version is used.
+before the current one, ';-2' the version before that and so forth up to 5 pervious versions.
 
-Offset part defaults to '#0' which is the beginning of the file. Positive numbers are offsets into the file, while negative
-ones are relative offsets from the end of the file.
+Offset part defaults to '#0' which is the beginning of the file.
+Positive numbers are offsets into the file, while negative ones are relative offsets from the end of the file.
 
 Super Block
 -----------

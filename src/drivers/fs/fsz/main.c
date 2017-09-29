@@ -1,5 +1,5 @@
 /*
- * fs/mtab.h
+ * drivers/fs/fsz/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,33 +22,40 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Mount points
+ * @brief FS/Z filesystem driver
  */
 
 #include <osZ.h>
+#include <vfs.h>
+#include <fsZ.h>
+#include <crc32.h>
 
-// mount point cache is not write-through
-#define MTAB_FLAG_ASYNC        (1<<0)
+bool_t detect(void *blk)
+{
+    return
+     !memcmp(((FSZ_SuperBlock *)blk)->magic, FSZ_MAGIC,4) &&
+     !memcmp(((FSZ_SuperBlock *)blk)->magic2,FSZ_MAGIC,4) &&
+     ((FSZ_SuperBlock *)blk)->checksum == crc32_calc((char*)((FSZ_SuperBlock *)blk)->magic, 508)
+     ? true : false;
+}
 
-/** structure of mtab */
-typedef struct {
-    fid_t mountpoint;   //index to fcb, mount point
-    fid_t storage;      //index to fcb, storage device
-    uint64_t fstype;    //index to fsdrv
-    uint64_t fsflags;   //mount options
-    uint16_t len;       //number of access entries
-    gid_t *grp;         //access entries
-    uint8_t access;     //access for world
-} mtab_t;
+ino_t locate(fid_t storage, char *path)
+{
+    /* failsafe */
+    if(path==NULL || path[0]==0)
+        return -1;
+dbg_printf("FS/Z locate %d '%s'\n",storage,path);
+    return -1;
+}
 
-/* mount points */
-extern uint16_t nmtab;
-extern mtab_t *mtab;
-
-extern void mtab_fstab(char *ptr, size_t size);
-extern void mtab_init();
-extern int16_t mtab_add(char *dev, char *file, char *opts);
-
-#if DEBUG
-extern void mtab_dump();
-#endif
+void _init()
+{
+    fsdrv_t drv = {
+        "fsz",
+        "FS/Z",
+        detect,
+        locate
+    };
+    //uint16_t id = 
+    fsdrv_reg(&drv);
+}

@@ -1,5 +1,5 @@
 /*
- * fs/mtab.h
+ * inet/main.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,33 +22,26 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Mount points
+ * @brief Internet service
  */
-
 #include <osZ.h>
 
-// mount point cache is not write-through
-#define MTAB_FLAG_ASYNC        (1<<0)
+public void socket(){}
+public void connect(){}
+public void accept(){}
+public void sendto(){}
+public void recvfrom(){}
+public void sendmsg(){}
+public void recvmsg(){}
+public void shutdown(){}
+public void bind(){}
+public void listen(){}
+public void getsockname(){}
+public void getpeername(){}
+public void socketpair(){}
+public void getsockopt(){}
+public void setsockopt(){}
 
-/** structure of mtab */
-typedef struct {
-    fid_t mountpoint;   //index to fcb, mount point
-    fid_t storage;      //index to fcb, storage device
-    uint64_t fstype;    //index to fsdrv
-    uint64_t fsflags;   //mount options
-    uint16_t len;       //number of access entries
-    gid_t *grp;         //access entries
-    uint8_t access;     //access for world
-} mtab_t;
-
-/* mount points */
-extern uint16_t nmtab;
-extern mtab_t *mtab;
-
-extern void mtab_fstab(char *ptr, size_t size);
-extern void mtab_init();
-extern int16_t mtab_add(char *dev, char *file, char *opts);
-
-#if DEBUG
-extern void mtab_dump();
-#endif
+void task_init(int argc, char **argv)
+{
+}
