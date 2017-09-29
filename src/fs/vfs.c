@@ -26,15 +26,20 @@
  */
 
 #include <osZ.h>
+#include <sys/driver.h>
 #include "fcb.h"
 #include "vfs.h"
 #include "cache.h"
 #include "devfs.h"
 #include "taskctx.h"
 
-extern uint32_t _pathmax;
-extern uint64_t _initrd_ptr;
+extern uint8_t ackdelayed;      // flag to indicate async block read
+extern uint32_t _pathmax;       // max length of path
+extern uint64_t _initrd_ptr;    // /dev/root pointer and size
 extern uint64_t _initrd_size;
+
+void *zeroblk = NULL;
+void *rndblk = NULL;
 
 /**
  * similar to realpath() but only uses memory, does not resolve symlinks
@@ -126,6 +131,7 @@ char *canonize(const char *path, char *result)
         result[j++]='/';
     result[j]=0;
     if(l) {
+        // no need to shrink memory as this buffer will be freed soon enough
 //        result=(char*)realloc(result, j+1);
     }
     return result;
@@ -134,9 +140,10 @@ char *canonize(const char *path, char *result)
 /**
  * read a block from an fcb entry
  */
-void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
+public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
 {
     devfs_t *device;
+    void *blk=NULL;
     // failsafe
     if(fd>=nfcb)
         return NULL;
@@ -153,13 +160,18 @@ void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                 if(device->drivertask==MEMFS_MAJOR) {
                     switch(device->device) {
                         case MEMFS_NULL:
+                            //eof?
                             return NULL;
-                        // TODO: implement in memory devices
                         case MEMFS_ZERO:
-                            return NULL;
+                            zeroblk=(void*)realloc(zeroblk, bs);
+                            return zeroblk;
                         case MEMFS_RANDOM:
-                            return NULL;
+                            rndblk=(void*)realloc(rndblk, bs);
+                            if(rndblk!=NULL)
+                                getentropy(rndblk, bs);
+                            return rndblk;
                         case MEMFS_TMPFS:
+                            // TODO: implement in tmpfs memory device
                             return NULL;
                         case MEMFS_RAMDISK:
                             if((offs+1)*device->blksize>_initrd_size)
@@ -168,12 +180,18 @@ void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                     }
                 }
                 // real device, use block cache
-                return cache_getblock(fcb[fd].device.inode, offs);
+                blk=cache_getblock(fcb[fd].device.inode, offs);
+                if(blk==NULL && errno()==EAGAIN) {
+                    // block not found in cache. Send a message to a driver
+                    mq_send(device->drivertask, DRV_read, device->device, offs, ctx->pid, 0);
+                    // delay ack message to the original caller
+                    ackdelayed = true;
+                }
             }
             break;
         default:
             // invalid request
             break;
     }
-    return NULL;
+    return blk;
 }

@@ -44,7 +44,10 @@ ino_t locate(fid_t storage, char *path)
     /* failsafe */
     if(path==NULL || path[0]==0)
         return -1;
+    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(storage, 0, __PAGESIZE);
 dbg_printf("FS/Z locate %d '%s'\n",storage,path);
+    if(sb==NULL)
+        return -1;
     return -1;
 }
 

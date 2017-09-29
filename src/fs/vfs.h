@@ -38,6 +38,6 @@
 
 /* low level functions */
 extern char *canonize(const char *path, char *result);
-extern void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
+extern public void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
 
 /* libc function implementations */

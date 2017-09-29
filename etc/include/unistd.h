@@ -45,11 +45,6 @@
 #ifndef _AS
 #include <stdio.h>
 
-/* thread-safe libc errno */
-uint64_t errno();
-/* Set libc errno */
-void seterr(int errno);
-
 /* Return only when the bit is set and was clear, yield otherwise */
 void lockacquire(int bit, uint64_t *ptr);
 /* Clear a bit */
@@ -80,6 +75,10 @@ extern fid_t chroot (const char *__path);
 
 /* Change the process's working directory to PATH.  */
 extern fid_t chdir (const char *path);
+
+/* Write LENGTH bytes of randomness starting at BUFFER.  Return 0 on
+   success or -1 on error.  */
+int getentropy (void *__buffer, size_t __length);
 
 /*** unimplemented ***/
 #if 0
@@ -267,10 +266,6 @@ extern char *crypt (const char *__key, const char *__salt);
 /* Encrypt data in BLOCK in place if EDFLAG is zero; otherwise decrypt
    block in place.  */
 extern void encrypt (char *__glibc_block, int __edflag);
-
-/* Write LENGTH bytes of randomness starting at BUFFER.  Return 0 on
-   success or -1 on error.  */
-int getentropy (void *__buffer, size_t __length);
 
 #endif
 #endif

@@ -34,7 +34,7 @@ void cache_init()
 /**
  * read a block from cache
  */
-public void* cache_getblock(dev_t idx, blkcnt_t blk)
+public void* cache_getblock(dev_t idx, blkcnt_t offs)
 {
     // TODO: use dev[idx].drivertask, dev[idx].device, dev[idx].blksize
     return NULL;
@@ -43,7 +43,7 @@ public void* cache_getblock(dev_t idx, blkcnt_t blk)
 /**
  * store a block in cache, called by drivers
  */
-public void cache_setblock(msg_t *msg)
+public void cache_setblock(void *blk, blksize_t bs, dev_t idx, blkcnt_t offs)
 {
 }
 

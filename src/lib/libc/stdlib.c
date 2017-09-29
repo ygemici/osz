@@ -31,8 +31,6 @@
 public uint32_t _debug;
 #endif
 
-extern void _exit(int status);
-
 typedef void (*atexit_t)(void);
 
 public int atexit_num = 0;
@@ -143,16 +141,13 @@ int atexit (void (*func) (void))
  *  in the reverse of the order in which they were registered,
  *  perform stdio cleanup, and terminate program execution with STATUS.
  */
-void exit(int status)
+void _atexit(int status)
 {
     int i;
     /* call atexit handlers in reverse order */
     if(atexit_num>0)
         for(i=atexit_num;i>=0;--i)
             (*atexit_hooks[i])();
-    _exit(status);
-    /* make gcc happy */
-    while(1);
 }
 
 /**

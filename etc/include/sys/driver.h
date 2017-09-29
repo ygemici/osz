@@ -28,6 +28,13 @@
 #ifndef _SYS_DRIVER_H
 #define _SYS_DRIVER_H 1
 
+#define DRV_IRQ         (0)
+#define DRV_ack         (1)
+#define DRV_nack        (2)
+#define DRV_read        (3|MSG_PTRDATA)
+#define DRV_write       (4|MSG_PTRDATA)
+#define DRV_ioctl       (5)
+
 /*** libc implementation prototypes */
 #ifndef _AS
 

@@ -75,7 +75,7 @@ int16_t mtab_add(char *dev, char *file, char *opts)
         // extra check
         if(!rootmounted || nmtab==0)
             exit(1);
-        seterr(ENOTBLK);
+        seterr(ENOFS);
         return -1;
     }
     mtab=(mtab_t*)realloc(mtab, (nmtab+1)*sizeof(mtab_t));

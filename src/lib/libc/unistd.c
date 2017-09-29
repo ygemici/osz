@@ -27,11 +27,6 @@
 #include <osZ.h>
 #include <sys/stat.h>
 
-//failsafe
-#ifndef SYS_vfslocate
-#define SYS_vfslocate 1
-#endif
-
 public uint64_t _bogomips = 1000;
 public uint64_t _alarmstep = 1000;
 public uint64_t errn = SUCCESS;
@@ -47,7 +42,7 @@ public void seterr(int e)
 /**
  * get error status, errno
  */
-public uint64_t errno()
+public int errno()
 {
     return errn;
 }

@@ -34,7 +34,7 @@ extern uint64_t *syslog_buf;
 extern char *drvs;
 extern char *drvs_end;
 
-/* pids of services. Negative pids are service ids and looked up in this */
+/* pids of services. Negative pids are service ids and looked up in this table */
 dataseg pid_t  services[NUMSRV];
 
 /* needs screen pointer mapping */

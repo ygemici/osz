@@ -29,7 +29,7 @@
 #define SYS_mountfs     ( 3)
 #define SYS_mount       ( 4)
 #define SYS_umount      ( 5)
-#define SYS_setblock    ( 6)
+#define SYS_setblock    ( 6|MSG_PTRDATA)
 #define SYS_addvolume   ( 7)
 #define SYS_delvolume   ( 8)
 // file operations

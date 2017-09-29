@@ -65,10 +65,12 @@ void _init(int argc, char **argv)
         seterr(SUCCESS);
         ctx = taskctx_get(EVT_SENDER(msg->evt));
         ackdelayed = false;
-        /* resume a posponed query */
+        // if it's a block ready message
         if(EVT_FUNC(msg->evt) == SYS_setblock) {
-            cache_setblock(msg);
-            ctx = taskctx_get(msg->arg3);
+            // save it to block cache
+            cache_setblock((void*)msg->arg0/*blk*/, msg->arg1/*size*/, msg->arg2/*dev*/, msg->arg3/*offs*/);
+            // resume original message that caused the block read
+            ctx = taskctx_get(msg->arg4);
             msg = &ctx->msg;
         }
         /* serve requests */
@@ -79,6 +81,7 @@ devfs_dump();
 fcb_dump();
 fsdrv_dump();
 mtab_dump();
+fcb_locate("/etc/kbd/en_us");
                 break;
 
             default:
@@ -95,7 +98,7 @@ mtab_dump();
             // clear delayed message buffer
             ctx->msg.evt = 0;
         } else {
-            // save delayed message for later
+            // save message for later
             memcpy(&ctx->msg, msg, sizeof(msg_t));
         }
     }

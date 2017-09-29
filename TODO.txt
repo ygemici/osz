@@ -2,13 +2,13 @@
 ./src/ui/main.c:52:    // FIXME: once vfs ready, use fopen() and fread()
 ./src/core/msg.c:246:        // FIXME: remove mapfile once vfs ready
 ./src/core/msg.c:290:            /* FIXME: naive implementation, no checks */
-./src/lib/libc/x86_64/unistd.S:242:// FIXME: remove mapfile once vfs ready
+./src/lib/libc/x86_64/unistd.S:243:// FIXME: remove mapfile once vfs ready
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
 ./etc/include/sys/core.h:95:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
-./src/fs/vfs.c:146:            //TODO: reading a block from a regular file
-./src/fs/vfs.c:157:                        // TODO: implement in memory devices
+./src/fs/vfs.c:153:            //TODO: reading a block from a regular file
+./src/fs/vfs.c:174:                            // TODO: implement in tmpfs memory device
 ./src/fs/cache.c:39:    // TODO: use dev[idx].drivertask, dev[idx].device, dev[idx].blksize
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:107:// TODO: enumerate bus and load drivers
@@ -16,4 +16,5 @@
 ./src/core/msg.c:110:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
+./src/lib/libc/x86_64/unistd.S:320:    /* TODO: getentropy */
 ./src/lib/libc/x86_64/crt0.S:43:    /* TODO: call ctors */

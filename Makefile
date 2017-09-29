@@ -83,6 +83,8 @@ vmdk: images
 	@make -e --no-print-directory -C tools vmdk | grep -v 'Nothing to be done' || true
 
 clean:
+	@rm bin/disk.dd.lock 2>/dev/null || true
+	@rm bin/disk.dd 2>/dev/null || true
 	@make -e --no-print-directory -C src clean
 	@make -e --no-print-directory -C tools clean
 	@make -e --no-print-directory -C tools imgclean

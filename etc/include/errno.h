@@ -29,6 +29,7 @@
 
 #ifndef _AS
 extern void seterr(int errno);
+extern int errno();
 #endif
 
 #define SUCCESS		 0	/* No error */

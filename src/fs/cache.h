@@ -28,8 +28,8 @@
 #include <osZ.h>
 
 extern public void cache_init();
-extern public void *cache_getblock(dev_t idx, blkcnt_t blk);
-extern public void cache_setblock(msg_t *msg);
+extern public void *cache_getblock(dev_t idx, blkcnt_t offs);
+extern public void cache_setblock(void *blk, blksize_t bs, dev_t idx, blkcnt_t offs);
 
 #if DEBUG
 extern void cache_dump();

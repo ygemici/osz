@@ -47,8 +47,9 @@
 .global sleep
 .global usleep
 .global meminfo
+.global getentropy
 .global abort
-.global _exit
+.global exit
 #if DEBUG
 .global dbg_printf
 #endif
@@ -313,11 +314,19 @@ meminfo:
     ret
 
 /**
+ * int getentropy (void *__buffer, size_t __length);
+ */
+getentropy:
+    /* TODO: getentropy */
+    ret
+
+/**
  * Exit process.
  *
- * void _exit(status)
+ * void exit(status)
  */
-_exit:
+exit:
+    callq   _atexit@PLT
     xorq    %rax, %rax
     xorq    %rsi, %rsi
     movb    $SYS_exit, %al

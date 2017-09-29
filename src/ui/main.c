@@ -50,7 +50,7 @@ void task_init(int argc, char **argv)
 
     /* map keymap */
     // FIXME: once vfs ready, use fopen() and fread()
-    len = mapfile((void*)bss, "/etc/kbd/en_us");
+    len = mapfile((void*)bss, "/sys/etc/kbd/en_us");
     keymap_parse(0, (char*)bss, (size_t)len);
     bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);
 

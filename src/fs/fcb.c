@@ -145,7 +145,7 @@ fid_t fcb_locate(char *path)
         // if file system unknown, not much we can do
         if(fs==-1) {
             free(abspath);
-            seterr(ENOTBLK);
+            seterr(ENOFS);
             return -1;
         }
         // pass the remaining path to filesystem driver
