@@ -8,7 +8,7 @@
 ./etc/include/sys/core.h:95:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
 ./src/fs/vfs.c:153:            //TODO: reading a block from a regular file
-./src/fs/vfs.c:174:                            // TODO: implement in tmpfs memory device
+./src/fs/vfs.c:174:                            // TODO: implement tmpfs memory device
 ./src/fs/cache.c:39:    // TODO: use dev[idx].drivertask, dev[idx].device, dev[idx].blksize
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:107:// TODO: enumerate bus and load drivers

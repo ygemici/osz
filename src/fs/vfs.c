@@ -171,7 +171,7 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                                 getentropy(rndblk, bs);
                             return rndblk;
                         case MEMFS_TMPFS:
-                            // TODO: implement in tmpfs memory device
+                            // TODO: implement tmpfs memory device
                             return NULL;
                         case MEMFS_RAMDISK:
                             if((offs+1)*device->blksize>_initrd_size)
@@ -180,6 +180,7 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                     }
                 }
                 // real device, use block cache
+                seterr(SUCCESS);
                 blk=cache_getblock(fcb[fd].device.inode, offs);
                 if(blk==NULL && errno()==EAGAIN) {
                     // block not found in cache. Send a message to a driver
