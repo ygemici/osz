@@ -296,6 +296,7 @@ typedef struct {
 
 #define FSZ_DIR_MAGIC "FSDR"
 #define FSZ_DIR_FLAG_UNSORTED (1<<0)
+#define FSZ_DIR_FLAG_HASHED   (2<<0)
 
 //directory entries are fixed in size and lexicographically ordered.
 //this means a bit slower writes, but also incredibly faster look ups.

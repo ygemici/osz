@@ -81,7 +81,7 @@ devfs_dump();
 fcb_dump();
 fsdrv_dump();
 mtab_dump();
-fcb_locate("/etc/kbd/en_us");
+lookup("/etc/kbd/en_us");
                 break;
 
             default:

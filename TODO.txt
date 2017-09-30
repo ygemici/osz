@@ -1,4 +1,5 @@
  --- Error fixes ---
+./src/drivers/fs/fsz/main.c:143:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
 ./src/ui/main.c:52:    // FIXME: once vfs ready, use fopen() and fread()
 ./src/core/msg.c:246:        // FIXME: remove mapfile once vfs ready
 ./src/core/msg.c:290:            /* FIXME: naive implementation, no checks */
@@ -7,8 +8,9 @@
 ./docs/howto4-rescueshell.md:20:TODO: write howto
 ./etc/include/sys/core.h:95:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
-./src/fs/vfs.c:153:            //TODO: reading a block from a regular file
-./src/fs/vfs.c:174:                            // TODO: implement tmpfs memory device
+./src/drivers/fs/fsz/main.c:104:            // TODO: extents
+./src/fs/vfs.c:215:            //TODO: reading a block from a regular file
+./src/fs/vfs.c:236:                            // TODO: implement tmpfs memory device
 ./src/fs/cache.c:39:    // TODO: use dev[idx].drivertask, dev[idx].device, dev[idx].blksize
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:107:// TODO: enumerate bus and load drivers

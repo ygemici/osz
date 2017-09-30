@@ -31,6 +31,7 @@
 #include "vfs.h"
 #include "cache.h"
 #include "devfs.h"
+#include "mtab.h"
 #include "taskctx.h"
 
 extern uint8_t ackdelayed;      // flag to indicate async block read
@@ -41,8 +42,57 @@ extern uint64_t _initrd_size;
 void *zeroblk = NULL;
 void *rndblk = NULL;
 
+int pathstackidx = 0;
+ino_t pathstack[PATHSTACKSIZE];
+
 /**
- * similar to realpath() but only uses memory, does not resolve symlinks
+ * add an inode reference to path stack. Rotate if stack grows too big
+ */
+public void pathpush(ino_t lsn)
+{
+    if(pathstackidx==PATHSTACKSIZE) {
+        memcpy(&pathstack[0], &pathstack[1], (PATHSTACKSIZE-1)*sizeof(ino_t));
+        pathstack[PATHSTACKSIZE-1] = lsn;
+        return;
+    }
+    pathstack[pathstackidx++] = lsn;
+}
+
+/**
+ * pop the last inode from path stack
+ */
+public ino_t pathpop()
+{
+    if(pathstackidx==0)
+        return 0;
+    pathstackidx--;
+    return pathstack[pathstackidx];
+}
+
+/**
+ * append a filename to a directory path
+ * path must be a sufficiently big buffer
+ */
+char *pathcat(char *path, char *filename)
+{
+    int i;
+    if(path==NULL || path[0]==0)
+        return NULL;
+    if(filename==NULL || filename[0]==0)
+        return path;
+    i=strlen(path);
+    if(i+strlen(filename)>=_pathmax)
+        return NULL;
+    if(path[i-1]!='/') {
+        path[i++]='/'; path[i]=0;
+    }
+    strcpy(path+i, filename + (filename[0]=='/'?1:0));
+    return path;
+}
+
+/**
+ * similar to realpath() but only uses memory, does not resolve
+ * symlinks and directory up entries
  */
 char *canonize(const char *path, char *result)
 {
@@ -80,10 +130,15 @@ char *canonize(const char *path, char *result)
     }
 
     // parse the remaining part of the path
-    while(i<k && PATHEND(path[i])) {
+    while(i<k && !PATHEND(path[i])) {
         if(result[j-1]!='/') result[j++]='/';
         while(i<k && path[i]=='/') i++;
-        // relative paths
+        // skip current dir paths
+        if(path[i]=='.' && i+1<k && path[i+1]=='/') {
+            i+=2; continue;
+/*
+        // do not handle directory up here, as last directory in result
+        // could be a symlink
         if(path[i]=='.') {
             i++;
             if(path[i]=='.') {
@@ -91,6 +146,7 @@ char *canonize(const char *path, char *result)
                 for(j--;j>m && result[j-1]!='/';j--);
                 result[j]=0;
             }
+*/
         } else {
             // copy directory name
             while(i<k && path[i]!='/' && !PATHEND(path[i]))
@@ -98,22 +154,27 @@ char *canonize(const char *path, char *result)
             // canonize version (we do not use versioning for directories, as it would be
             // extremely costy. So only the last part, the filename may have version)
             if(path[i]==';') {
+                // not for directories
                 if(result[j-1]=='/')
                     break;
+                // skip sign
                 i++; if(i<k && path[i]=='-') i++;
+                // only append if it's a valid number
                 if(i+1<k && path[i]>='1' && path[i]<='9' && (path[i+1]=='#' || path[i+1]==0)) {
                     result[j++]=';';
                     result[j++]=path[i];
                     i++;
                 }
+                // no break, because offset may follow
             }
             // canonize offset (again, only the last filename may have offset)
             if(path[i]=='#') {
+                // not for directories
                 if(result[j-1]=='/')
                     break;
-                i++;
-                if(i<k && path[i]=='-')
-                    i++;
+                // skip sign
+                i++; if(i<k && path[i]=='-') i++;
+                // only append if it's a valid number
                 if(i<k && path[i]>='1' && path[i]<='9') {
                     result[j++]='#';
                     if(path[i-1]=='-')
@@ -121,6 +182,7 @@ char *canonize(const char *path, char *result)
                     while(i<k && path[i]!=0 && path[i]>='0' && path[i]<='9')
                         result[j++]=path[i++];
                 }
+                // end of path for sure
                 break;
             }
         }
@@ -174,9 +236,14 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                             // TODO: implement tmpfs memory device
                             return NULL;
                         case MEMFS_RAMDISK:
-                            if((offs+1)*device->blksize>_initrd_size)
+                            if((offs+1)*device->blksize>_initrd_size) {
+                                seterr(ENXIO);
                                 return NULL;
+                            }
                             return (void *)(_initrd_ptr + offs*device->blksize);
+                        default:
+                            // should never reach this
+                            return NULL;
                     }
                 }
                 // real device, use block cache
@@ -195,4 +262,99 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
             break;
     }
     return blk;
+}
+
+/**
+ * return an fcb index for an absolute path. May set errno to EAGAIN on cache miss
+ */
+fid_t lookup(char *path)
+{
+    if(path==NULL || path[0]==0)
+        return -1;
+    locate_t loc;
+    char *abspath=canonize(path,NULL);
+    fid_t f=fcb_get(abspath),fd=-1,ff=-1;
+    int16_t fs=-1;
+    int i,j,l=0,k=0;
+    // if not found in cache
+    if(f==-1) {
+        // first, look at static mounts
+        // find the longest match in mtab, root fill always match
+        for(i=0;i<nmtab;i++) {
+            j=strlen(fcb[mtab[i].mountpoint].abspath);
+            if(j>l && !memcmp(fcb[mtab[i].mountpoint].abspath, abspath, j)) {
+                l=j;
+                k=i;
+            }
+        }
+        // get mount device
+        fd=mtab[k].storage;
+        // get mount point
+        ff=mtab[k].mountpoint;
+        // and filesystem driver
+        fs=mtab[k].fstype;
+        // if the longest match was "/", look for automount too
+        if(k==ROOTMTAB && !memcmp(abspath, DEVPATH, sizeof(DEVPATH))) {
+            i=sizeof(DEVPATH); while(abspath[i]!='/' && !PATHEND(abspath[i])) i++;
+            if(abspath[i]=='/') {
+                // okay, the path starts with "/dev/*/" Let's get the device fcb
+                abspath[i]=0;
+                fd=ff=fcb_get(abspath);
+                abspath[i++]='/'; l=i;
+                fs=-1;
+            }
+        }
+        // only devices and files can serve as storage
+        if(fd>=nfcb || (fcb[fd].type!=FCB_TYPE_DEVICE && fcb[fd].type!=FCB_TYPE_REG_FILE)) {
+            free(abspath);
+            seterr(ENODEV);
+            return -1;
+        }
+        // detect file system on the fly
+        if(fs==-1) {
+            fs=fsdrv_detect(fd);
+            if(k!=ROOTMTAB && fs!=-1)
+                mtab[k].fstype=fs;
+        }
+        // if file system unknown, not much we can do
+        if(fs==-1 || fsdrv[fs].locate==NULL) {
+            free(abspath);
+            seterr(ENOFS);
+            return -1;
+        }
+        // pass the remaining path to filesystem driver
+        // fd=device fcb, fs=fsdrv idx, ff=mount point, l=longest mount length
+/*dbg_printf("locate '%s': '%s' mp '%s' fstype '%s' path '%s'\n",
+  abspath,fcb[fd].abspath,fcb[mtab[k].mountpoint].abspath,fsdrv[fs].name,abspath+l);*/
+        loc.path=abspath+l;
+        loc.result=-1;
+        loc.fileblk=NULL;
+        switch((*fsdrv[fs].locate)(fd, &loc)) {
+            case SUCCESS:
+                f=loc.result;
+                break;
+            case NOBLOCK:
+                // errno set to EAGAIN on block cache miss
+                f=-1;
+                break;
+            case NOTFOUND:
+                seterr(ENOENT);
+                f=-1;
+                break;
+            case FSERROR:
+                seterr(ENOFS);
+                f=-1;
+                break;
+            case UPDIR:
+                break;
+            case FILEINPATH:
+                break;
+            case SYMINPATH:
+                break;
+            case UNIONINPATH:
+                break;
+        }
+    }
+    free(abspath);
+    return f;
 }

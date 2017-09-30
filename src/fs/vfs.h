@@ -33,11 +33,16 @@
 #define ROOTFCB 0
 #define DEVFCB 1
 #define DEVPATH "/dev/"
+#define PATHSTACKSIZE 64
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
 /* low level functions */
-extern char *canonize(const char *path, char *result);
 extern public void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
+extern public void pathpush(ino_t lsn);
+extern public ino_t pathpop();
+extern char *pathcat(char *path, char *filename);
+extern char *canonize(const char *path, char *result);
+extern fid_t lookup(char *abspath);
 
 /* libc function implementations */

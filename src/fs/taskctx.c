@@ -35,7 +35,7 @@ uint64_t ntaskctx = 0;
 taskctx_t *taskctx[256];
 
 // current context
-taskctx_t *ctx;
+public taskctx_t *ctx;
 
 /**
  * get a task context (add a new one if not found)

@@ -37,9 +37,7 @@
 #define FCB_TYPE_SOCKET     4
 
 typedef struct {
-    uint64_t mount;
     ino_t inode;
-    fpos_t filesize;
 } fcb_reg_t;
 
 typedef struct {
@@ -71,7 +69,6 @@ extern fcb_t *fcb;
 extern fid_t fcb_get(char *abspath);
 extern fid_t fcb_add(char *abspath, uint8_t type);
 extern void fcb_del(fid_t idx);
-extern fid_t fcb_locate(char *abspath);
 
 #if DEBUG
 extern void fcb_dump();
