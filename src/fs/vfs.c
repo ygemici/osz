@@ -43,30 +43,32 @@ void *zeroblk = NULL;
 void *rndblk = NULL;
 
 int pathstackidx = 0;
-ino_t pathstack[PATHSTACKSIZE];
+pathstack_t pathstack[PATHSTACKSIZE];
 
 /**
  * add an inode reference to path stack. Rotate if stack grows too big
  */
-public void pathpush(ino_t lsn)
+public void pathpush(ino_t lsn, char *path)
 {
     if(pathstackidx==PATHSTACKSIZE) {
-        memcpy(&pathstack[0], &pathstack[1], (PATHSTACKSIZE-1)*sizeof(ino_t));
-        pathstack[PATHSTACKSIZE-1] = lsn;
+        memcpy(&pathstack[0], &pathstack[1], (PATHSTACKSIZE-1)*sizeof(pathstack_t));
+        pathstack[PATHSTACKSIZE-1].inode = lsn;
+        pathstack[PATHSTACKSIZE-1].path = path;
         return;
     }
-    pathstack[pathstackidx++] = lsn;
+    pathstack[pathstackidx].inode = lsn;
+    pathstack[pathstackidx++].path = path;
 }
 
 /**
  * pop the last inode from path stack
  */
-public ino_t pathpop()
+public pathstack_t *pathpop()
 {
     if(pathstackidx==0)
-        return 0;
+        return NULL;
     pathstackidx--;
-    return pathstack[pathstackidx];
+    return &pathstack[pathstackidx];
 }
 
 /**
@@ -223,6 +225,7 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                     switch(device->device) {
                         case MEMFS_NULL:
                             //eof?
+                            seterr(EFAULT);
                             return NULL;
                         case MEMFS_ZERO:
                             zeroblk=(void*)realloc(zeroblk, bs);
@@ -237,16 +240,21 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                             return NULL;
                         case MEMFS_RAMDISK:
                             if((offs+1)*device->blksize>_initrd_size) {
-                                seterr(ENXIO);
+                                seterr(EFAULT);
                                 return NULL;
                             }
                             return (void *)(_initrd_ptr + offs*device->blksize);
                         default:
                             // should never reach this
+                            seterr(ENODEV);
                             return NULL;
                     }
                 }
                 // real device, use block cache
+                if((offs+1)*device->blksize>fcb[fd].device.filesize) {
+                    seterr(EFAULT);
+                    return NULL;
+                }
                 seterr(SUCCESS);
                 blk=cache_getblock(fcb[fd].device.inode, offs);
                 if(blk==NULL && errno()==EAGAIN) {
@@ -269,13 +277,22 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
  */
 fid_t lookup(char *path)
 {
+    locate_t loc;
+    char *abspath,*tmp=NULL, *c;
+    fid_t f,fd,ff;
+    int16_t fs;
+    int i,j,l,k;
+again:
     if(path==NULL || path[0]==0)
         return -1;
-    locate_t loc;
-    char *abspath=canonize(path,NULL);
-    fid_t f=fcb_get(abspath),fd=-1,ff=-1;
-    int16_t fs=-1;
-    int i,j,l=0,k=0;
+    abspath=canonize(path,NULL);
+    if(tmp!=NULL) {
+        free(tmp);
+        tmp=NULL;
+    }
+    f=fcb_get(abspath);
+    fd=ff=fs=-1;
+    i=j=l=k=0;
     // if not found in cache
     if(f==-1) {
         // first, look at static mounts
@@ -324,37 +341,73 @@ fid_t lookup(char *path)
         }
         // pass the remaining path to filesystem driver
         // fd=device fcb, fs=fsdrv idx, ff=mount point, l=longest mount length
-/*dbg_printf("locate '%s': '%s' mp '%s' fstype '%s' path '%s'\n",
-  abspath,fcb[fd].abspath,fcb[mtab[k].mountpoint].abspath,fsdrv[fs].name,abspath+l);*/
         loc.path=abspath+l;
-        loc.result=-1;
+        loc.inode=f=-1;
         loc.fileblk=NULL;
-        switch((*fsdrv[fs].locate)(fd, &loc)) {
+        pathstackidx=0;
+        switch((*fsdrv[fs].locate)(fd, 0, &loc)) {
             case SUCCESS:
-                f=loc.result;
+                f=fcb_add(abspath,loc.type);
+                fcb[f].reg.inode=loc.inode;
+                fcb[f].reg.filesize=loc.filesize;
+                fcb[f].reg.storage=fd;
                 break;
             case NOBLOCK:
-                // errno set to EAGAIN on block cache miss
-                f=-1;
+                // errno set to EAGAIN on block cache miss and ENOMEM on memory shortage
                 break;
             case NOTFOUND:
                 seterr(ENOENT);
-                f=-1;
                 break;
             case FSERROR:
-                seterr(ENOFS);
-                f=-1;
+                seterr(EBADFS);
                 break;
             case UPDIR:
                 break;
             case FILEINPATH:
                 break;
             case SYMINPATH:
-                break;
+//dbg_printf("SYMLINK %s %s\n",loc.fileblk,loc.path);
+                if(((char*)loc.fileblk)[0]!='/') {
+                    // relative symlinks
+                    tmp=(char*)malloc(_pathmax);
+                    if(tmp==NULL) break;
+                    c=loc.path-1; while(c>abspath && c[-1]!='/') c--;
+                    memcpy(tmp,abspath,c-abspath);
+                    tmp[c-abspath]=0;
+                    tmp=pathcat(tmp,(char*)loc.fileblk);
+                } else {
+                    // absolute symlinks
+                    tmp=canonize(loc.fileblk,NULL);
+                }
+                if(tmp==NULL) break;
+                tmp=pathcat(tmp, loc.path);
+                if(tmp==NULL) break;
+                path=tmp;
+                free(abspath);
+                goto again;
             case UNIONINPATH:
-                break;
+                // iterate on union members
+                c=(char*)loc.fileblk;
+                while(f==-1 && *c!=0 && (c-(char*)loc.fileblk)<__PAGESIZE-1024) {
+//dbg_printf("UNION %s %s\n",c,loc.path);
+                    // unions must be absolute paths
+                    if(*c!='/') {
+                        seterr(EBADFS);
+                        break;
+                    }
+                    tmp=canonize(c,NULL);
+                    if(tmp==NULL) break;
+                    tmp=pathcat(tmp, loc.path);
+                    if(tmp==NULL) break;
+                    f=lookup(tmp);
+                    free(tmp);
+                    c+=strlen(c)+1;
+                }
+                free(abspath);
+                return f;
         }
     }
+dbg_printf("lookup result %s = %d (err %d)\n",abspath,f,errno());
     free(abspath);
     return f;
 }

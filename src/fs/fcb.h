@@ -38,10 +38,14 @@
 
 typedef struct {
     ino_t inode;
+    fpos_t filesize;
+    fid_t storage;
 } fcb_reg_t;
 
 typedef struct {
     uint64_t inode;
+    fpos_t filesize;
+    fid_t storage;
 } fcb_dev_t;
 
 typedef struct {
@@ -53,7 +57,6 @@ typedef struct {
 typedef struct {
     char *abspath;
     uint64_t nopen;
-    fpos_t filesize;
     uint8_t type;
     union {
         fcb_reg_t reg;

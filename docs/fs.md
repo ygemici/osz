@@ -33,11 +33,14 @@ Drive specifies the media where the filesystem is stored. It's optional, and fal
 Drives will be translated to `/dev/(drive)/` where automount will take care of the rest. It is useful for removable media,
 like `dvd0:`.
 
-Directory part is a list of directories, separated by '/'.
+Directory part is a list of directories, separated by '/'. A special joker directory name '...' can be used to dive into every
+sub-directories. In that case the first full path that matched will be used. Directories can be unions, a special
+construct [unknown to UNIX](https://github.com/bztsrc/osz/blob/master/docs/posix.md)es. It works like the joker, but
+limits the match to the listed directories.
 
 Filename can be 111 bytes in length, and may consist of any characters save control characters (<32), delete control (127),
-separators (device ':', directory '/', version ';' and offset '#'), as well as invalid UTF-8 sequences. All other
-UNICODE characters allowed.
+separators (device ':', directory '/', version ';', offset '#'), as well as invalid UTF-8 sequences.
+Any other UTF-8 encoded UNICODE character allowed.
 
 Version part by default is ';0' which points to the current version of the file. The version ';-1' refers to the version
 before the current one, ';-2' the version before that and so forth up to 5 pervious versions.

@@ -32,42 +32,46 @@ extern void seterr(int errno);
 extern int errno();
 #endif
 
-#define SUCCESS		 0	/* No error */
-#define	EPERM		 1	/* Operation not permitted */
-#define	ENOENT		 2	/* No such file or directory */
-#define	ESRCH		 3	/* No such process */
-#define	EINTR		 4	/* Interrupted system call */
-#define	EIO			 5	/* I/O error */
-#define	ENXIO		 6	/* No such device or address */
-#define	E2BIG		 7	/* Argument list too long */
-#define	ENOEXEC		 8	/* Exec format error */
-#define	EBADF		 9	/* Bad file number */
-#define	ECHILD		10	/* No child processes */
-#define	EAGAIN		11	/* Try again */
-#define	ENOMEM		12	/* Out of memory */
-#define	EACCES		13	/* Permission denied */
-#define	EFAULT		14	/* Bad address */
-#define	ENOTBLK		15	/* Block device required */
-#define	EBUSY		16	/* Device or resource busy */
-#define	EEXIST		17	/* File exists */
-#define	EXDEV		18	/* Cross-device link */
-#define	ENODEV		19	/* No such device */
-#define	ENOTDIR		20	/* Not a directory */
-#define	EISDIR		21	/* Is a directory */
-#define	EINVAL		22	/* Invalid argument */
-#define	ENFILE		23	/* File table overflow */
-#define	EMFILE		24	/* Too many open files */
-#define	ENOTTY		25	/* Not a typewriter */
-#define	ETXTBSY		26	/* Text file busy */
-#define	EFBIG		27	/* File too large */
-#define	ENOSPC		28	/* No space left on device */
-#define	ESPIPE		29	/* Illegal seek */
-#define	EROFS		30	/* Read-only file system */
-#define	EMLINK		31	/* Too many links */
-#define	EPIPE		32	/* Broken pipe */
-#define	EDOM		33	/* Math argument out of domain of func */
-#define	ERANGE		34	/* Math result not representable */
-#define ENOFS		35	/* No filesystem found */
-#define EUNKWN		255	/* Unknown reason */
+#define SUCCESS      0  // No error
+#define EPERM        1  // Operation not permitted
+#define EAGAIN       2  // Try again
+#define ESRCH        3  // No such process
+#define EFAULT       4  // Bad address
+#define EINVAL       5  // Invalid argument
+#define EBUSY        6  // Device or resource busy
+#define EACCES       7  // Access denied
+#define ENOMEM       8  // Out of memory
+#define ENOEXEC      9  // Exec format error
+#define EEXIST      10  // File exists
+#define ENOENT      11  // No such file or directory
+#define ENODEV      12  // No such device
+#define ENOTDIR     13  // Not a directory
+#define ENOFS       14  // No filesystem found
+#define EBADFS      15  // Corrupt filesystem
+#define EROFS       16  // Read-only file system
+#define ENOSPC      17  // No space left on device
+#define EIO         18  // I/O error
+#define EPIPE       19  // Broken pipe
+#define ESPIPE      20  // Illegal seek
+
+/*
+#define EINTR        4  // Interrupted system call
+#define ENXIO        6  // No such device or address
+#define E2BIG        7  // Argument list too long
+#define EBADF        9  // Bad file number
+#define ECHILD      10  // No child processes
+#define ENOTBLK     15  // Block device required
+#define EXDEV       18  // Cross-device link
+#define EISDIR      21  // Is a directory
+#define ENFILE      23  // File table overflow
+#define EMFILE      24  // Too many open files
+#define ENOTTY      25  // Not a typewriter
+#define ETXTBSY     26  // Text file busy
+#define EFBIG       27  // File too large
+#define EMLINK      31  // Too many links
+#define EDOM        33  // Math argument out of domain of func
+#define ERANGE      34  // Math result not representable
+*/
+#define EUNKWN      255 // Unknown reason
 
 #endif /* errno.h */

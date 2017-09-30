@@ -37,10 +37,15 @@
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
+typedef struct {
+    ino_t inode;
+    char *path;
+} pathstack_t;
+
 /* low level functions */
 extern public void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
-extern public void pathpush(ino_t lsn);
-extern public ino_t pathpop();
+extern public void pathpush(ino_t lsn, char *path);
+extern public pathstack_t *pathpop();
 extern char *pathcat(char *path, char *filename);
 extern char *canonize(const char *path, char *result);
 extern fid_t lookup(char *abspath);

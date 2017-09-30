@@ -47,7 +47,7 @@ bool_t detect(void *blk)
 /**
  * locate a file on a specific device with this file system
  */
-uint8_t locate(fid_t storage, locate_t *loc)
+uint8_t locate(fid_t storage, ino_t parent, locate_t *loc)
 {
     // failsafe
     if(loc==NULL || loc->path==NULL || loc->path[0]==0)
@@ -63,26 +63,48 @@ uint8_t locate(fid_t storage, locate_t *loc)
     uint64_t bs,bp,sdmax,i;
     char *e;
 
-    // start with root directory
+    // start with root directory if parent not given
     bs=1<<(sb->logsec+11);
-    lsn=sb->rootdirfid;
+    lsn=parent==0? sb->rootdirfid : parent;
     sdmax=bs/16;
 nextdir:
-dbg_printf("FS/Z locate %s %d.'%s'\n",fcb[storage].abspath,lsn,loc->path);
-    for(e=loc->path;*e!='/' && *e!=0;e++);
+//dbg_printf("FS/Z locate %s %d.'%s'\n",fcb[storage].abspath,lsn,loc->path);
+    for(e=loc->path;*e!='/' && !PATHEND(*e);e++);
     if(*e=='/') e++;
+    // handle up directory
+    if(e-loc->path>=2 && loc->path[0]=='.' && loc->path[1]=='.' && loc->path[2]!='.') {
+        pathstack_t *last=pathpop();
+        if(last==NULL) {
+            return UPDIR;
+        }
+        lsn=last->inode;
+        loc->path=last->path;
+        strcpy(last->path,e);
+        goto nextdir;
+    }
     // read inode
     in=(FSZ_Inode*)readblock(storage,lsn,bs);
     if(in==NULL)
         return NOBLOCK;
     if(memcmp(in->magic, FSZ_IN_MAGIC, 4))
         return FSERROR;
-dbg_printf("  %04d: %x '%s' %x\n", lsn, in, in->filetype, FLAG_TRANSLATION(in->flags));
+//dbg_printf("  %04d: %x '%s' %x\n", lsn, in, in->filetype, FLAG_TRANSLATION(in->flags));
 
     // inode types with inlined data
     if(!memcmp(in->filetype, FILETYPE_SYMLINK, 4)) {
         loc->fileblk=in->inlinedata;
         return SYMINPATH;
+    }
+
+    // end of path
+    if(PATHEND(*loc->path)) {
+        loc->inode = lsn;
+        loc->filesize = in->size;
+        if(!memcmp(in->filetype, FILETYPE_DIR, 4) || !memcmp(in->filetype, FILETYPE_UNION, 4))
+            loc->type = FCB_TYPE_REG_DIR;
+        else
+            loc->type = FCB_TYPE_REG_FILE;
+        return SUCCESS;
     }
 
     if(!memcmp(in->filetype, FILETYPE_UNION, 4)) {
@@ -141,26 +163,44 @@ dbg_printf("  %04d: %x '%s' %x\n", lsn, in, in->filetype, FLAG_TRANSLATION(in->f
             dirent++; bp+=sizeof(FSZ_DirEnt);
             if(bp>=bs) {
                 // FIXME: block end reached, load next block from sdblk and alter dirent pointer
+                // make gcc happy until then
+                sdmax--; sdmax++;
             }
             if(dirent->name[0]==0) break;
-            if(!memcmp(dirent->name,loc->path,e-loc->path)) {
-                // end of path
-                if(*e==0 && (dirent->name[e-loc->path]==0 || dirent->name[e-loc->path]=='/')) {
-                    loc->result = dirent->fid;
-                    return SUCCESS;
+            // check for '...' joker in path
+            if(e-loc->path>=3 && loc->path[0]=='.' && loc->path[1]=='.' && loc->path[2]=='.') {
+                // only dive into sub-directories
+                if(dirent->name[strlen((char*)dirent->name)-1]=='/') {
+                    locate_t l;
+                    l.path=e;
+                    if(locate(storage, dirent->fid, &l)==SUCCESS) {
+                        char *c=strdup(e);
+                        if(c==NULL) {
+                            // keeps errno which is set to ENOMEM
+                            return NOBLOCK;
+                        }
+                        strcpy(loc->path, (char*)dirent->name);
+                        strcat(loc->path, c);
+                        free(c);
+                        loc->fileblk=l.fileblk;
+                        loc->filesize=l.filesize;
+                        loc->inode=l.inode;
+                        loc->type=l.type;
+                        return SUCCESS;
+                    }
                 }
-                // path continues
-                pathpush(lsn);
+            } else
+            // simple filename match
+            if(!memcmp(dirent->name,loc->path,e-loc->path)) {
+                pathpush(lsn, loc->path);
                 lsn=dirent->fid;
                 loc->path=e;
                 goto nextdir;
             }
             i--;
         }
-    } else
-        return NOTFOUND;
-
-    return SUCCESS;
+    }
+    return NOTFOUND;
 }
 
 void _init()

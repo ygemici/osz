@@ -98,9 +98,11 @@ void fcb_del(fid_t idx)
 void fcb_dump()
 {
     uint64_t i;
+    char *types[]={"file", "dir ", "dev ", "pipe", "sock"};
     dbg_printf("File Control Blocks %d:\n",nfcb);
     for(i=0;i<nfcb;i++) {
-        dbg_printf("%3d. %3d %01x %s\n",i,fcb[i].nopen,fcb[i].type,fcb[i].abspath);
+        dbg_printf("%3d. %3d %s ",i,fcb[i].nopen,types[fcb[i].type]);
+        dbg_printf("%3d:%3d %8d %s\n",fcb[i].reg.storage,fcb[i].reg.inode,fcb[i].reg.filesize,fcb[i].abspath);
     }
 }
 #endif

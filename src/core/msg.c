@@ -69,7 +69,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         if(-task >= NUMSRV || services[-task]!=0) {
             task = services[-task];
         } else {
-            coreerrno = EFAULT;
+            coreerrno = ESRCH;
             return false;
         }
     }
@@ -81,7 +81,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     // map destination task's message queue
     kmap((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->pid)*__PAGESIZE), PG_CORE_NOCACHE);
     if(dsttcb->magic != OSZ_TCB_MAGICH) {
-        coreerrno = EINVAL;
+        coreerrno = ESRCH;
         return false;
     }
     isr_next = dsttcb->memroot;
@@ -116,7 +116,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
             msghdr->mq_buffstart = (nrmqmax + 1)*__PAGESIZE;
         // core memory cannot be sent in range -64M..0
         if((int64_t)p < 0 && (uint64_t)p > FBUF_ADDRESS) {
-            coreerrno = EACCES;
+            coreerrno = EFAULT;
             return false;
         }
         // not mapping shared memory (not in the range -2^56..-64M).

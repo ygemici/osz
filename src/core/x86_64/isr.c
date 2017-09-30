@@ -215,7 +215,7 @@ int isr_installirq(uint8_t irq, phy_t memroot)
     if(irq>=0 && irq<isr_maxirq) {
         if(irq_routing_table[irq]!=0) {
             syslog_early("too many IRQ handlers for %d\n", irq);
-            return EIO;
+            return EBUSY;
         }
 #if DEBUG
     if(debug&DBG_IRQ)

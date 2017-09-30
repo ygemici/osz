@@ -65,20 +65,20 @@ ifneq ("$(wildcard ../loader/bootboot.bin)","")
 	$(O)cp ../loader/bootboot.bin ../bin/initrd/sys/loader || true
 endif
 	$(O)./mkfs.o $(SYSFILE) ../bin/initrd
-	@./mkfs.o $(SYSFILE) union bin/ "/sys/bin/" "/usr/*/bin/"
-	@./mkfs.o $(SYSFILE) union etc/ "/sys/etc/" "/usr/*/etc/"
-	@./mkfs.o $(SYSFILE) union lib/ "/sys/lib/" "/usr/*/lib/"
+	@./mkfs.o $(SYSFILE) union bin/ "/sys/bin/" "/usr/.../bin/"
+	@./mkfs.o $(SYSFILE) union etc/ "/sys/etc/" "/usr/.../etc/"
+	@./mkfs.o $(SYSFILE) union lib/ "/sys/lib/" "/usr/.../lib/"
 else
 ifeq ($(INITRDFMT),fsz)
 	$(O)./mkfs.o $(INITRD) ../bin/initrd
-	@./mkfs.o $(INITRD) union bin/ "/sys/bin/" "/usr/*/bin/"
-	@./mkfs.o $(INITRD) union etc/ "/sys/etc/" "/usr/*/etc/"
-	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/*/lib/"
+	@./mkfs.o $(INITRD) union bin/ "/sys/bin/" "/usr/.../bin/"
+	@./mkfs.o $(INITRD) union etc/ "/sys/etc/" "/usr/.../etc/"
+	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/.../lib/"
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
 else
-	@echo -e "uni:/sys/bin/\00/usr/*/bin/\00\00" >../bin/initrd/bin
-	@echo -e "uni:/sys/etc/\00/usr/*/etc/\00\00" >../bin/initrd/etc
-	@echo -e "uni:/sys/lib/\00/usr/*/lib/\00\00" >../bin/initrd/lib
+	@echo -e "uni:/sys/bin/\00/usr/.../bin/\00\00" >../bin/initrd/bin
+	@echo -e "uni:/sys/etc/\00/usr/.../etc/\00\00" >../bin/initrd/etc
+	@echo -e "uni:/sys/lib/\00/usr/.../lib/\00\00" >../bin/initrd/lib
 ifeq ($(INITRDFMT),crc)
 	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
 endif
@@ -103,10 +103,10 @@ $(USRFILE): ../bin/usr
 	@cp -r ../etc/include ../bin/usr/core || true
 	@dd if=/dev/zero of=$(USRFILE) bs=1024 count=$(USRSIZE) >/dev/null 2>/dev/null
 	$(O)./mkfs.o $(USRFILE) ../bin/usr
-	@./mkfs.o $(USRFILE) union bin/ "/bin" "/usr/*/bin"
-	@./mkfs.o $(USRFILE) union include/ "/usr/*/include"
-	@./mkfs.o $(USRFILE) union lib/ "/usr/*/lib"
-	@./mkfs.o $(USRFILE) union share/ "/usr/*/share"
+	@./mkfs.o $(USRFILE) union bin/ "/usr/.../bin"
+	@./mkfs.o $(USRFILE) union include/ "/usr/.../include"
+	@./mkfs.o $(USRFILE) union lib/ "/usr/.../lib"
+	@./mkfs.o $(USRFILE) union share/ "/usr/.../share"
 
 var: $(VARFILE)
 

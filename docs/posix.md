@@ -15,7 +15,19 @@ In OS/Z's libc, `errno()` is a function and not a global variable. You can set i
 Paths
 -----
 
-OS/Z does not use `.` and `..` directories. Instead it will try to resolve paths with string manipulations as far as possible,
-eliminating a lot of disk access and speed up things. It's similar how VMS worked. OS/Z also implemented per file
-versioning from FILES11 (the revision the author used and liked a lot at the university).
+OS/Z does not store `.` and `..` directories on disk. Instead it will resolve paths with string manipulations, eliminating a
+lot of disk access and speed up things. For that it is mandatory to end directory names with the '/' character. It's very
+similar how VMS worked. OS/Z also implements per file versioning from FILES11 (the file system the author used and liked a lot
+at his university times).
+
+As an addition, OS/Z handles a special `...` directory as a joker. It means all sub-directories at that level, and will be
+resolved as the first full path that matches. For example, assuming we have '/a/b/c', '/a/d/a' and '/a/e/a' directories, then
+'/a/.../a' will return '/a/d/a' only. Unlike in VMS, the three dots only matches one directory level, and does not dive into
+their sub-directories recursively.
+
+Another addition, called directory unions. These are symbolic link like constructs (not like Plan9 unions which are overloaded
+mounts on the same directory). They have one or more absolute paths (in which the joker directory also allowed). All paths listed
+in an union will be checked looking for a full path match. Example: the '/bin' directory in OS/Z is an union of '/sys/bin' and
+'/usr/.../bin'. All files under these directories show up in '/bin'. Therefore OS/Z does not use the classic PATH environment
+variable at all, since all executables can be found in '/bin'.
 

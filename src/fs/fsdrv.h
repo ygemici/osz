@@ -40,16 +40,18 @@
 #define UNIONINPATH 7   // union in path
 
 typedef struct {
-    fid_t result;
+    fid_t inode;
+    fpos_t filesize;
     void *fileblk;
     char *path;
+    uint8_t type;
 } locate_t;
 
 typedef struct {
     const char *name;
     const char *desc;
     bool_t (*detect)(void *blk);
-    uint8_t (*locate)(fid_t storage, locate_t *loc);
+    uint8_t (*locate)(fid_t storage, ino_t parent, locate_t *loc);
 } fsdrv_t;
 
 /* filesystem parsers */

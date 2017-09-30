@@ -184,7 +184,7 @@ void taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
             tc->openfiles[idx].offs += offs;
             break;
         case SEEK_END:
-            tc->openfiles[idx].offs = fcb[tc->openfiles[idx].fid].filesize + offs;
+            tc->openfiles[idx].offs = fcb[tc->openfiles[idx].fid].reg.filesize + offs;
             break;
         default:
             tc->openfiles[idx].offs = offs;
