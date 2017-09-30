@@ -44,7 +44,7 @@ taskctx_t *taskctx_get(pid_t pid)
 {
     taskctx_t *tc=taskctx[pid & 0xFF], *ntc;
     // find in hash
-    while(tc!=NULL && tc->next!=NULL) {
+    while(tc!=NULL) {
         if(tc->pid==pid)
             return tc;
         tc=tc->next;
@@ -125,7 +125,7 @@ void taskctx_workdir(taskctx_t *tc, fid_t fid)
 /**
  * add a file to open file descriptors
  */
-uint64_t taskctx_open(taskctx_t *tc, fid_t fid, uint8_t access, fpos_t offs)
+uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs)
 {
     uint64_t i;
     if(fid>=nfcb)
@@ -145,7 +145,7 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, uint8_t access, fpos_t offs)
     // add new open file descriptor
 found:
     tc->openfiles[i].fid=fid;
-    tc->openfiles[i].access=access;
+    tc->openfiles[i].mode=mode;
     tc->openfiles[i].offs=offs;
     tc->nopenfiles++;
     fcb[fid].nopen++;
@@ -155,30 +155,35 @@ found:
 /**
  * remove a file from open file descriptors
  */
-void taskctx_close(taskctx_t *tc, uint64_t idx)
+bool_t taskctx_close(taskctx_t *tc, uint64_t idx)
 {
-    if(tc->openfiles==NULL || tc->nopenfiles==0 || tc->openfiles[idx].fid==-1)
-        return;
+    if(tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1)
+        return false;
     fcb_del(tc->openfiles[idx].fid);
     tc->nopenfiles--;
-    if(idx<tc->nopenfiles)
+    if(idx<=tc->nopenfiles)
         tc->openfiles[idx].fid=-1;
     else {
-        if(tc->nopenfiles==0)
+        if(tc->nopenfiles==0) {
             free(tc->openfiles);
-        else
+            tc->openfiles=NULL;
+        } else {
             tc->openfiles=(openfiles_t*)realloc(tc->openfiles,tc->nopenfiles*sizeof(openfiles_t));
+            if(tc->openfiles==NULL)
+                return false;
+        }
     }
+    return true;
 }
 
 /**
  * change position on a open file descriptor
  */
-void taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
+bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
 {
-    if(tc->openfiles==NULL || tc->nopenfiles==0 || tc->openfiles[idx].fid==-1 ||
+    if(tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
         fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE)
-        return;
+        return false;
     switch(whence) {
         case SEEK_CUR:
             tc->openfiles[idx].offs += offs;
@@ -190,10 +195,32 @@ void taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
             tc->openfiles[idx].offs = offs;
             break;
     }
+    if((off_t)tc->openfiles[idx].offs<0) {
+        tc->openfiles[idx].offs = 0;
+        seterr(EINVAL);
+        return false;
+    }
+    return true;
 }
 
 #if DEBUG
 void taskctx_dump()
 {
+    int i,j;
+    taskctx_t *tc;
+    dbg_printf("Task Contexts %d:\n",ntaskctx);
+    for(i=0;i<256;i++) {
+        if(taskctx[i]==NULL)
+            continue;
+        tc=taskctx[i];
+        while(tc!=NULL) {
+            dbg_printf(" %x %s%02x ", tc, ctx==tc?"*":" ", tc->pid);
+            dbg_printf("root %3d pwd %3d open %2d:", tc->rootdir, tc->workdir, tc->nopenfiles);
+            for(j=0;j<tc->nopenfiles;j++)
+                dbg_printf(" (%d,%1x,%d)", tc->openfiles[j].fid, tc->openfiles[j].mode, tc->openfiles[j].offs);
+            dbg_printf("\n");
+            tc=tc->next;
+        }
+    }
 }
 #endif

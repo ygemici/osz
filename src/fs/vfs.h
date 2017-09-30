@@ -47,7 +47,9 @@ extern public void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
 extern public void pathpush(ino_t lsn, char *path);
 extern public pathstack_t *pathpop();
 extern char *pathcat(char *path, char *filename);
-extern char *canonize(const char *path, char *result);
+extern char *canonize(const char *path);
 extern fid_t lookup(char *abspath);
+extern public uint8_t getver(char *abspath);
+extern public fpos_t getoffs(char *abspath);
 
 /* libc function implementations */

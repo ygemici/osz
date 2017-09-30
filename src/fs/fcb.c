@@ -39,10 +39,26 @@ public fcb_t *fcb = NULL;
 fid_t fcb_get(char *abspath)
 {
     fid_t i;
-    for(i=0;i<nfcb;i++) {
-        if(fcb[i].abspath!=NULL && !strcmp(fcb[i].abspath, abspath))
-            return i;
+    char *ap=NULL;
+    if(abspath==NULL || abspath[0]==0)
+        return -1;
+    i=strlen(abspath);
+    if(abspath[i-1]!='/') {
+        ap=(char*)malloc(i+2);
+        if(ap!=NULL) {
+            memcpy(ap, abspath, i);
+            ap[i++]='/'; ap[i]=0;
+        }
     }
+    for(i=0;i<nfcb;i++) {
+        if(fcb[i].abspath!=NULL && (!strcmp(fcb[i].abspath, abspath) || (ap!=NULL && !strcmp(fcb[i].abspath, ap)))) {
+            if(ap!=NULL)
+                free(ap);
+            return i;
+        }
+    }
+    if(ap!=NULL)
+        free(ap);
     return -1;
 }
 

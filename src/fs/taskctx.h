@@ -30,7 +30,7 @@
 /* describe an opened file */
 typedef struct {
     fid_t fid;
-    uint8_t access;
+    mode_t mode;
     fpos_t offs;
 } openfiles_t;
 
@@ -54,9 +54,9 @@ extern taskctx_t *taskctx_get(pid_t pid);
 extern void taskctx_del(pid_t pid);
 extern void taskctx_rootdir(taskctx_t *tc, fid_t fid);
 extern void taskctx_workdir(taskctx_t *tc, fid_t fid);
-extern uint64_t taskctx_open(taskctx_t *tc, fid_t fid, uint8_t access, fpos_t offs);
-extern void taskctx_close(taskctx_t *tc, uint64_t idx);
-extern void taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence);
+extern uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs);
+extern bool_t taskctx_close(taskctx_t *tc, uint64_t idx);
+extern bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence);
 
 #if DEBUG
 extern void taskctx_dump();

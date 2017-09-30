@@ -34,7 +34,7 @@ public uint32_t translatelower[] = {
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 char *strerror(int errnum)
 {
-    return errnum>=0 && errnum<sizeof(errnums) ? errnums[errnum] : "EUNKWN";
+    return errnum>=0 && errnum<sizeof(errstrs) ? errstrs[errnum] : "Unknown error";
 }
 
 /* Return a string describing the meaning of the signal number in SIG.  */

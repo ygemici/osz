@@ -49,7 +49,7 @@ public uint64_t mq_dispatch()
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)TEXT_ADDRESS;
     Elf64_Phdr *phdr = (Elf64_Phdr *)((uint8_t *)ehdr+(uint32_t)ehdr->e_phoff);
     Elf64_Sym *sym = NULL, *sym_end = NULL;
-    uint64_t i, syment = 0;
+    uint64_t i, j, syment = 0;
     uint16_t func, maxfunc;
     msg_t *msg;
     Elf64_Sym *symfunc;
@@ -118,8 +118,8 @@ public uint64_t mq_dispatch()
             i = false;
         }
         /* send positive or negative acknowledgement back to the caller */
-        mq_send(EVT_SENDER(msg->evt), errno() == SUCCESS ? SYS_ack : SYS_nack,
-            i/*return value*/, errno(), func+3, msg->serial);
+        j = errno();
+        mq_send(EVT_SENDER(msg->evt), j?SYS_nack:SYS_ack, j?j/*errno*/:i/*return value*/, func+3, msg->serial);
     }
     /* should never reach this */
     return EX_OK;

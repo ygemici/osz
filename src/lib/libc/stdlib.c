@@ -85,16 +85,20 @@ unsigned char *stdlib_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t 
 int atoi(char *c)
 {
     uint64_t r;
+    int s=false;
+    if(*c=='-') { s=true; c++; }
     stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFFULL);
-    return r;
+    return s? -r : r;
 }
 
 /* Convert a string to a long integer.  */
 long atol(char *c)
 {
     uint64_t r;
+    int s=false;
+    if(*c=='-') { s=true; c++; }
     stdlib_dec((uchar *)c, &r, 0, 0xFFFFFFFFFFFFFFFFULL);
-    return r;
+    return s? -r : r;
 }
 
 /* Convert a string to a long long integer.  */

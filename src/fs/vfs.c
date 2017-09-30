@@ -96,17 +96,15 @@ char *pathcat(char *path, char *filename)
  * similar to realpath() but only uses memory, does not resolve
  * symlinks and directory up entries
  */
-char *canonize(const char *path, char *result)
+char *canonize(const char *path)
 {
-    int i=0,j=0,k,l=false,m;
+    int i=0,j=0,k,m;
+    char *result;
     if(path==NULL || path[0]==0)
         return NULL;
-    if(result==NULL) {
-        result=(char*)malloc(_pathmax);
-        if(result==NULL)
-            return NULL;
-        l=true;
-    }
+    result=(char*)malloc(_pathmax);
+    if(result==NULL)
+        return NULL;
     k=strlen(path);
     // translate dev: paths
     while(i<k && path[i]!=':' && path[i]!='/' && !PATHEND(path[i])) i++;
@@ -194,10 +192,6 @@ char *canonize(const char *path, char *result)
     if(path[i-1]=='/')
         result[j++]='/';
     result[j]=0;
-    if(l) {
-        // no need to shrink memory as this buffer will be freed soon enough
-//        result=(char*)realloc(result, j+1);
-    }
     return result;
 }
 
@@ -283,9 +277,11 @@ fid_t lookup(char *path)
     int16_t fs;
     int i,j,l,k;
 again:
-    if(path==NULL || path[0]==0)
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
         return -1;
-    abspath=canonize(path,NULL);
+    }
+    abspath=canonize(path);
     if(tmp!=NULL) {
         free(tmp);
         tmp=NULL;
@@ -347,6 +343,10 @@ again:
         pathstackidx=0;
         switch((*fsdrv[fs].locate)(fd, 0, &loc)) {
             case SUCCESS:
+                f=strlen(abspath);
+                if(loc.type==FCB_TYPE_REG_DIR && abspath[f-1]!='/') {
+                    abspath[f++]='/'; abspath[f]=0;
+                }
                 f=fcb_add(abspath,loc.type);
                 fcb[f].reg.inode=loc.inode;
                 fcb[f].reg.filesize=loc.filesize;
@@ -377,7 +377,7 @@ again:
                     tmp=pathcat(tmp,(char*)loc.fileblk);
                 } else {
                     // absolute symlinks
-                    tmp=canonize(loc.fileblk,NULL);
+                    tmp=canonize(loc.fileblk);
                 }
                 if(tmp==NULL) break;
                 tmp=pathcat(tmp, loc.path);
@@ -395,7 +395,7 @@ again:
                         seterr(EBADFS);
                         break;
                     }
-                    tmp=canonize(c,NULL);
+                    tmp=canonize(c);
                     if(tmp==NULL) break;
                     tmp=pathcat(tmp, loc.path);
                     if(tmp==NULL) break;
@@ -403,11 +403,34 @@ again:
                     free(tmp);
                     c+=strlen(c)+1;
                 }
-                free(abspath);
-                return f;
+                break;
         }
     }
 dbg_printf("lookup result %s = %d (err %d)\n",abspath,f,errno());
     free(abspath);
+    // failsafe
+    if(f==-1 && !errno())
+        seterr(ENOENT);
     return f;
 }
+
+public uint8_t getver(char *abspath)
+{
+    int i=0;
+    if(abspath==NULL || abspath[0]==0)
+        return 0;
+    while(abspath[i]!=';' && abspath[i]!=0) i++;
+    return abspath[i]==';' && abspath[i+1]>'0' && abspath[i+1]<='9' ? abspath[i+1]-'0' : 0;
+}
+
+public fpos_t getoffs(char *abspath)
+{
+    int i=0;
+    if(abspath==NULL || abspath[0]==0)
+        return 0;
+    while(abspath[i]!='#' && abspath[i]!=0) i++;
+    if(abspath[i]=='#')
+        return atoll(&abspath[i+1]);
+    return 0;
+}
+

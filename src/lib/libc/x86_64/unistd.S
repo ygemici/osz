@@ -70,10 +70,12 @@ dbg_printf:
 /* in: rbx: errno */
 myseterrno:
     push    %rax
+    push    %rdx
     push    %rdi
     movq    %rbx, %rdi
     call    seterr@PLT
     pop     %rdi
+    pop     %rdx
     pop     %rax
     ret
 
@@ -115,8 +117,10 @@ mymq_call:
     call    myyield
     jmp     1b
 1:  /* receive result */
+    orb     %bl, %bl
+    jnz     1f
     call    mymq_recv
-    ret
+1:  ret
 
 /**
  * blocking if there's no message waiting
@@ -129,8 +133,14 @@ mymq_recv:
     xorq    %rax, %rax
     movw    $SYS_recv, %ax
     syscall
-    /* ack nack sends errno */
-    call    myseterrno
+    /* errno from recv call itself */
+    orb     %bl, %bl
+    jnz     1f
+    /* nack message sends errno in argument */
+    cmpw    $SYS_nack, %di
+    jne     1f
+2:  movb    8(%rax), %bl
+1:  call    myseterrno
     ret
 
 /**

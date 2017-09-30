@@ -83,25 +83,24 @@ typedef struct {
 typedef unsigned char uchar;
 typedef unsigned int uint;
 typedef uint8_t bool_t;
-typedef uint64_t size_t;
-typedef uint64_t fid_t;
-typedef uint64_t ino_t;
-typedef uint64_t dev_t;
-typedef uuid_t gid_t;
-typedef uint64_t mode_t;
-typedef uint32_t nlink_t;
-typedef uuid_t uid_t;
-typedef int64_t off_t;
-typedef uint64_t pid_t;
-typedef uint64_t id_t;
-typedef uint64_t ssize_t;
-typedef uint64_t key_t;
-typedef int register_t;
-typedef uint64_t blksize_t;
-typedef uint64_t blkcnt_t;	 /* Type to count number of disk blocks.  */
-typedef uint64_t fsblkcnt_t; /* Type to count file system blocks.  */
-typedef uint64_t fpos_t;
-typedef uint32_t keymap_t;
+typedef uint64_t size_t;    // buffer size
+typedef uint64_t fid_t;     // file index
+typedef uint64_t ino_t;     // inode number
+typedef uint64_t dev_t;     // device index
+typedef uuid_t gid_t;       // group id
+typedef uint64_t mode_t;    // mode
+typedef uint64_t nlink_t;   // number of links
+typedef uuid_t uid_t;       // user id
+typedef int64_t off_t;      // offset
+typedef uint64_t pid_t;     // process id
+typedef uint64_t id_t;      // identify
+typedef uint64_t ssize_t;   // ?
+typedef uint64_t key_t;     // ?
+typedef int register_t;     // register type
+typedef uint64_t blksize_t; // block size
+typedef uint64_t blkcnt_t;  // number of disk blocks.
+typedef uint64_t fpos_t;    // file position
+typedef uint32_t keymap_t;  // keymap selector
 /*
 typedef void __signalfn(int);
 typedef __signalfn *sighandler_t;
@@ -110,24 +109,38 @@ typedef void (*sighandler_t) (int);
 
 #define c_assert(c) extern char cassert[(c)?0:-1]
 
-typedef uint64_t evt_t;
-typedef uint64_t phy_t;
-typedef uint64_t virt_t;
+typedef uint64_t phy_t;     // physical address
+typedef uint64_t virt_t;    // virtual address
+typedef uint64_t evt_t;     // event type
 
 // type returned by syscalls mq_call() and mq_recv()
 typedef struct {
     evt_t evt;     //MSG_DEST(pid) | MSG_FUNC(funcnumber) | MSG_PTRDATA
-    uint64_t arg0; //Buffer address if MSG_PTRDATA, otherwise undefined
-    uint64_t arg1; //Buffer size if MSG_PTRDATA
-    uint64_t arg2; //Buffer type if MSG_PTRDATA
-    uint64_t arg3;
-    uint64_t arg4;
-    uint64_t arg5;
+    union {
+        // !MSG_PTRDATA, only scalar values
+        struct {
+            uint64_t arg0;
+            uint64_t arg1;
+            uint64_t arg2;
+            uint64_t arg3;
+            uint64_t arg4;
+            uint64_t arg5;
+        };
+        // MSG_PTRDATA, buffer mapped along with message
+        struct {
+            void *ptr;      //Buffer address if MSG_PTRDATA, otherwise undefined
+            uint64_t size;  //Buffer size if MSG_PTRDATA
+            uint64_t type;  //Buffer type if MSG_PTRDATA
+            uint64_t attr0;
+            uint64_t attr1;
+            uint64_t attr2;
+        };
+    };
     uint64_t serial;
 } __attribute__((packed)) msg_t;
 // bits in evt: (63)TTT..TTT P FFFFFFFFFFFFFFF(0)
 //  where T is a task id or subsystem id, P true if message has a pointer,
-//  F is a function number from 1 to 32766. Function number 0 and 32767 are reserved.
+//  F is a function number from 1 to 32766. Function numbers 0 and 32767 are reserved.
 #define EVT_DEST(t) ((uint64_t)(t)<<16)
 #define EVT_SENDER(m) ((pid_t)((m)>>16))
 #define EVT_FUNC(m) ((uint16_t)((m)&0x7FFF))

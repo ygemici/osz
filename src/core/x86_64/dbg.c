@@ -964,11 +964,11 @@ void dbg_msg()
             } else {
                 if(tcb->pid == services[-SRV_FS]) {
                     switch(*((uint8_t*)m)) {
-                        case SYS_read: kprintf("read"); break;
+                        case SYS_fread: kprintf("read"); break;
                         case SYS_dup2: kprintf("dup2"); break;
                         case SYS_pipe: kprintf("pipe"); break;
-                        case SYS_write: kprintf("write"); break;
-                        case SYS_seek: kprintf("seek"); break;
+                        case SYS_fwrite: kprintf("write"); break;
+                        case SYS_fseek: kprintf("seek"); break;
                         case SYS_dup: kprintf("dup"); break;
                         case SYS_stat: kprintf("stat"); break;
                         case SYS_ioctl: kprintf("ioctl"); break;

@@ -26,10 +26,13 @@
  */
 
 /* must match errno.h */
-char *errnums[] = { "SUCCESS", "EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", "E2BIG", "ENOEXEC",
-    "EBADF", "ECHILD", "EAGAIN", "ENOMEM", "EACCES", "EFAULT", "ENOTBLK", "EBUSY", "EEXIST", "EXDEV",
-    "ENODEV", "ENOTDIR", "EISDIR", "EINVAL", "ENFILE", "EMFILE", "ENOTTY", "ETXTBSY", "EFBIG", "ENOSPC",
-    "ESPIPE", "EROFS", "EMLNK", "EPIPE", "EDOM", "ERANGE" };
+char *errnums[] = { "SUCCESS", "EPERM", "EAGAIN", "ESRCH", "EFAULT", "EINVAL", "EBUSY", "EACCESS", "ENOMEM",
+    "ENOEXEC", "EEXIST", "ENOENT", "ENODEV", "ENOTDIR", "ENOFS", "EBADFS", "EROFS", "ENOSPC", "EIO",
+    "EPIPE", "ESPIPE" };
+char *errstrs[] = { "", "Operation not permitted.", "Try again", "No such task", "Bad address", "Invalid argument",
+    "Device or resource busy", "Access denied", "Out of memory", "Exec format error", "File exists",
+    "No such file or directory", "No such device", "Not a directory", "Unknown file system", "Corrupt file system",
+    "Read-only file system", "No space left on device", "I/O error", "Broken pipe", "Illegal seek" };
 
 /* must match signal.h */
 char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EMT", "FPE", "KILL", "BUS", "SEGV",

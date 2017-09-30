@@ -53,7 +53,14 @@ public int errno()
  */
 public fid_t chroot(const char *path)
 {
-    return 0;
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_chroot|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return -1;
+    return msg->arg0;
 }
 
 /**
@@ -61,5 +68,23 @@ public fid_t chroot(const char *path)
  */
 public fid_t chdir(const char *path)
 {
-    return 0;
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_chdir|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * return the current working directory in a malloc'd buffer
+ */
+public char *getcwd()
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_getcwd);
+    if(errno())
+        return NULL;
+    return strdup(msg->ptr);
 }

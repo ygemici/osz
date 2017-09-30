@@ -42,9 +42,42 @@
 #define SEEK_SET	0	/* Seek from beginning of file.  */
 #define SEEK_CUR	1	/* Seek from current position.  */
 #define SEEK_END	2	/* Seek from end of file.  */
-#define SEEK_DATA	3	/* Seek to next data.  */
-#define SEEK_HOLE	4	/* Seek to next hole.  */
 
+/* Print a message describing the meaning of the value of errno. */
+extern void perror (char *s, ...);
+
+/* open flags */
+#define O_READ      (1<<0)  // read
+#define O_WRITE     (1<<1)  // write
+#define O_CREAT     (1<<2)  // create if not exists
+#define O_APPEND    (1<<3)  // append only
+#define O_EXCL      (1<<4)  // exclusive access (lock)
+#define O_TRUNC     (1<<5)  // truncate
+#define O_NONBLOCK  (1<<6)  // non blocking
+#define O_ASYNC     (1<<7)  // no cache write-through
+#define O_TMPFILE   (1<<8)  // delete on close
+#define O_RDONLY    O_READ
+#define O_WRONLY    O_WRITE
+#define O_RDWR      (O_READ|O_WRITE)
+/* Open a file and create a new STREAM for it. */
+extern fid_t fopen (char *filename, mode_t oflag);
+/* Close STREAM. */
+extern int fclose (fid_t stream);
+/* Seek to a certain position on STREAM. */
+extern int fseek (fid_t stream, off_t off, int whence);
+/* Rewind to the beginning of STREAM or opendir handle. */
+extern void rewind (fid_t stream);
+/* Return the current position of STREAM. */
+extern fpos_t ftell (fid_t stream);
+/* Clear the error and EOF indicators for STREAM.  */
+extern void fclrerr (fid_t stream);
+/* Return the EOF indicator for STREAM.  */
+extern int feof (fid_t stream);
+/* Return the error indicator for STREAM.  */
+extern int ferror (fid_t stream);
+
+/* unimplemented */
+#if 0
 /* The possibilities for the third argument to `setvbuf'.  */
 #define _IOFBF 0		/* Fully buffered.  */
 #define _IOLBF 1		/* Line buffered.  */
@@ -53,8 +86,6 @@
 /* Default path prefix for `tempnam' and `tmpnam'.  */
 #define P_tmpdir	"/tmp"
 
-/* unimplemented */
-#if 0
 /* Remove file FILENAME.  */
 extern int remove (char *filename);
 /* Rename file OLD to NEW.  */
@@ -67,14 +98,10 @@ extern FILE *tmpfile (void);
 /* Generate a temporary filename.  */
 extern char *tmpnam (char *s);
 extern char *tempnam (char *dir, char *pfx);
-/* Close STREAM. */
-extern int fclose (FILE *stream);
 /* Flush STREAM, or all streams if STREAM is NULL. */
 extern int fflush (FILE *stream);
 /* Close all streams. */
 extern int fcloseall (void);
-/* Open a file and create a new stream for it. */
-extern FILE *fopen (char *filename, char *modes);
 /* Open a file, replacing an existing stream with it. */
 extern FILE *freopen (char *filename, char *modes, FILE *stream);
 /* Create a new stream that refers to a memory buffer.  */
@@ -159,24 +186,10 @@ extern int ungetc (int c, FILE *stream);
 extern size_t fread (void *ptr, size_t size, size_t n, FILE *stream);
 /* Write chunks of generic data to STREAM. */
 extern size_t fwrite (void *ptr, size_t size, size_t n, FILE *stream);
-/* Seek to a certain position on STREAM. */
-extern int fseek (FILE *stream, fpos_t off, int whence);
-/* Return the current position of STREAM. */
-extern fpos_t ftell (FILE *stream);
-/* Rewind to the beginning of STREAM. */
-extern void rewind (FILE *stream);
 /* Get STREAM's position. */
 extern int fgetpos (FILE *stream, fpos_t *pos);
 /* Set STREAM's position. */
 extern int fsetpos (FILE *stream, fpos_t *pos);
-/* Clear the error and EOF indicators for STREAM.  */
-extern void clearerr (FILE *stream);
-/* Return the EOF indicator for STREAM.  */
-extern int feof (FILE *stream);
-/* Return the error indicator for STREAM.  */
-extern int ferror (FILE *stream);
-/* Print a message describing the meaning of the value of errno. */
-extern void perror (char *s);
 /* Return the system file descriptor for STREAM.  */
 extern int fileno (FILE *stream);
 /* Create a new stream connected to a pipe running the given command. */

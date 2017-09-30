@@ -76,6 +76,9 @@ extern fid_t chroot (const char *__path);
 /* Change the process's working directory to PATH.  */
 extern fid_t chdir (const char *path);
 
+/* Get the pathname of the current working directory in a malloc'd buffer */
+extern char *getcwd ();
+
 /* Write LENGTH bytes of randomness starting at BUFFER.  Return 0 on
    success or -1 on error.  */
 int getentropy (void *__buffer, size_t __length);
@@ -109,15 +112,6 @@ extern void ualarm (__useconds_t __value, __useconds_t __interval);
 /* Suspend the process until a signal arrives.
    This always returns -1 and sets `errno' to EINTR.  */
 extern int pause (void);
-
-/* Get the pathname of the current working directory,
-   and put it in SIZE bytes of BUF.  Returns NULL if the
-   directory couldn't be determined or SIZE was too small.
-   If successful, returns BUF.  In GNU, if BUF is NULL,
-   an array is allocated with `malloc'; the array is SIZE
-   bytes long, unless SIZE == 0, in which case it is as
-   big as necessary.  */
-extern char *getcwd (char *buf, size_t size);
 
 /* Duplicate FD, returning a new file descriptor on the same file.  */
 extern int dup (int __fd);

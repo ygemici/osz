@@ -49,7 +49,10 @@ uint8_t ackdelayed;
 void _init(int argc, char **argv)
 {
     msg_t *msg;
-    uint64_t ret = 0;
+    uint64_t ret = 0, j;
+    off_t o;
+    char *ptr;
+
     // failsafes
     if(_pathmax<512)
         _pathmax=512;
@@ -76,13 +79,119 @@ void _init(int argc, char **argv)
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
-devfs_dump();
                 mtab_fstab(_fstab_ptr, _fstab_size);
-fcb_dump();
-fsdrv_dump();
-mtab_dump();
-lookup("/etc/kbd/../../etc/.../en_us");
-fcb_dump();
+                break;
+
+            case SYS_chroot:
+                ret=lookup(msg->ptr);
+                if(ret!=-1 && !errno()) {
+                    fcb_del(ctx->rootdir);
+                    fcb[ret].nopen++;
+                    ctx->rootdir = ret;
+                    // if workdir outside of new rootdir, use rootdir as workdir
+                    if(memcmp(fcb[ctx->workdir].abspath, fcb[ctx->rootdir].abspath, strlen(fcb[ctx->rootdir].abspath))) {
+                        fcb_del(ctx->workdir);
+                        fcb[ret].nopen++;
+                        ctx->workdir = ret;
+                    }
+                    ret = 0;
+                }
+                break;
+
+            case SYS_chdir:
+                ret=lookup(msg->ptr);
+                if(ret!=-1 && !errno()) {
+                    fcb_del(ctx->workdir);
+                    // if new workdir outside of rootdir, use rootdir as workdir
+                    if(memcmp(fcb[ret].abspath, fcb[ctx->rootdir].abspath, strlen(fcb[ctx->rootdir].abspath)))
+                        ret=ctx->rootdir;
+                    fcb[ret].nopen++;
+                    ctx->workdir = ret;
+                    ret = 0;
+                }
+                break;
+
+            case SYS_getcwd:
+                ptr=fcb[ctx->workdir].abspath;
+                ret=strlen(fcb[ctx->rootdir].abspath);
+                if(!memcmp(ptr, fcb[ctx->rootdir].abspath, ret))
+                    ptr+=ret-1;
+                else
+                    ptr="/";
+                mq_send(EVT_SENDER(msg->evt), SYS_ack | MSG_PTRDATA, ptr, strlen(ptr)+1);
+                ctx->msg.evt = 0;
+                continue;
+
+            case SYS_fopen:
+dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->attr0);
+                ptr=canonize(msg->ptr);
+                if(ptr==NULL)
+                    break;
+                ret=lookup(msg->ptr);
+                if(ret!=-1 && !errno()) {
+                    o=getoffs(ptr);
+                    if(o<0) o+=fcb[ret].reg.filesize;
+                    if(msg->attr0&O_APPEND) o=fcb[ret].reg.filesize;
+                    ret=taskctx_open(ctx,ret,msg->attr0,o);
+                }
+                free(ptr);
+taskctx_dump();
+                break;
+
+            case SYS_fclose:
+                if(taskctx_close(ctx, msg->arg0))
+                    ret=0;
+                else
+                    ret=-1;
+                break;
+
+            case SYS_fseek:
+                if(taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2))
+                    ret=0;
+                else
+                    ret=-1;
+                break;
+
+            case SYS_rewind:
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                    seterr(EINVAL);
+                    ret=-1;
+                } else {
+                    ctx->openfiles[msg->arg0].offs = 0;
+                    ret=0;
+                }
+                break;
+
+            case SYS_ftell:
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                    seterr(EINVAL);
+                    ret=0;
+                } else
+                    ret=ctx->openfiles[msg->arg0].offs;
+                break;
+
+            case SYS_feof:
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                    seterr(EINVAL);
+                    ret=1;
+                } else
+                    ret=ctx->openfiles[msg->arg0].mode&0x10000 || 
+                        ctx->openfiles[msg->arg0].offs >= fcb[ctx->openfiles[msg->arg0].fid].reg.filesize;
+                break;
+
+            case SYS_ferror:
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                    seterr(EINVAL);
+                    ret=1;
+                } else
+                    ret=ctx->openfiles[msg->arg0].mode >> 16;
+                break;
+
+            case SYS_fclrerr:
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                    seterr(EINVAL);
+                } else
+                    ctx->openfiles[msg->arg0].mode &= 0xffff;
                 break;
 
             default:
@@ -94,8 +203,9 @@ fcb_dump();
         }
         if(!ackdelayed) {
             // send result back to caller
-            mq_send(EVT_SENDER(msg->evt), errno() == SUCCESS ? SYS_ack : SYS_nack,
-                ret, errno(), EVT_FUNC(msg->evt), msg->serial);
+            j = errno();
+            mq_send(EVT_SENDER(msg->evt), j?SYS_nack:SYS_ack, j?j/*errno*/:ret/*return value*/,
+                EVT_FUNC(msg->evt), msg->serial);
             // clear delayed message buffer
             ctx->msg.evt = 0;
         } else {
