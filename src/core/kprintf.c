@@ -348,7 +348,7 @@ void kprintf_putfps()
 {
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
-    fg=isr_lastfps>=fps+fps/2?0x108010:(isr_lastfps>=fps?0x101080:0x801010);
+    fg=0x801010;
     kprintf(" %d fps, ts %d",isr_lastfps,ticks[TICKS_TS]);
 #if DEBUG
     dbg_putchar(13);

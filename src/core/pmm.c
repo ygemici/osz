@@ -227,7 +227,7 @@ addregion2:
  */
 void pmm_init()
 {
-    char *types[] = { "????", "free", "resv", "ACPI", "ANVS", "used", "MMIO" };
+    char *types[] = { "????", "free", "resv", "ACPI", "ANVS", "MMIO" };
 
     // memory map provided by the loader
     MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
@@ -271,7 +271,7 @@ void pmm_init()
 #if DEBUG
         if(debug&DBG_MEMMAP)
             kprintf("  %s %8x %8x %9d\n",
-                MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
+                MMapEnt_Type(entry)<6?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Ptr(entry)+MMapEnt_Size(entry), MMapEnt_Size(entry)
             );
 #endif

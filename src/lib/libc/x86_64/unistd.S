@@ -97,6 +97,7 @@ mymq_send:
     movq    %r9, %rbx
     movq    8(%rsp), %r8
     movq    16(%rsp), %r9
+    movq    24(%rsp), %r10
     /* this will call msg_sends() in core */
     syscall
     movq    tcb_serial, %rax

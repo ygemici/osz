@@ -24,7 +24,7 @@ extern "C" {
 //  kernel name parsed from environment, static kernel memory addresses
 #define PROTOCOL_STATIC  1
 // dynamic protocol level:
-//  kernel name parsed from environment, kernel memory addresses parsed from ELF or PE symbols
+//  kernel name parsed, kernel memory addresses from ELF or PE symbols
 #define PROTOCOL_DYNAMIC 2
 
 // loader types, just informational
@@ -38,7 +38,9 @@ extern "C" {
 #define FB_ABGR   2
 #define FB_BGRA   3
 
-// mmap entry, type is stored in least significant byte of size
+// mmap entry, type is stored in least significant tetrad (half byte) of size
+// this means size described in 16 bytes units (not a problem, most modern
+// firmware reports memory in 4096 bytes units anyway.
 typedef struct {
   uint64_t   ptr;
   uint64_t   size;
@@ -48,17 +50,16 @@ typedef struct {
 #define MMapEnt_Type(a) (a->size & 0xF)
 #define MMapEnt_IsFree(a) ((a->size&0xF)==1||(a->size&0xF)==3)
 
-#define MMAP_FREE     1
-#define MMAP_RESERVED 2
-#define MMAP_ACPIFREE 3
-#define MMAP_ACPINVS  4
-#define MMAP_USED     5
-#define MMAP_MMIO     6
+#define MMAP_FREE     1     // usable memory
+#define MMAP_RESERVED 2     // don't use. Reserved or unknown regions
+#define MMAP_ACPIFREE 3     // free to use after acpi tables are parsed
+#define MMAP_ACPINVS  4     // don't use. Acpi non-volatile
+#define MMAP_MMIO     5     // memory mapped IO region
 
 #define INITRD_MAXSIZE 16 //Mb
 
 typedef struct {
-  uint8_t    magic[4];    // BOOT, first 72 bytes platform independent
+  uint8_t    magic[4];    // 'BOOT', first 72 bytes are platform independent
   uint32_t   size;        // length of bootboot structure
 
   uint8_t    protocol;    // 1, static addresses, see PROTOCOL_* above
@@ -81,7 +82,7 @@ typedef struct {
   uint32_t   fb_height;
   uint32_t   fb_scanline;
 
-  // the rest (56 bytes) is platform specific pointers
+  // the rest (56 bytes) is platform specific
   union {
     struct {
       uint64_t acpi_ptr;
@@ -103,8 +104,11 @@ typedef struct {
     } AArch64;
   };
 
-  MMapEnt    mmap; /* MMapEnt[], more records may follow, all the rest of the page */
-  /* use like this: MMapEnt *mmap_ent = &bootboot.mmap; mmap_ent++; */
+  /* from 128th byte, MMapEnt[], more records may follow */
+  MMapEnt    mmap;
+  /* use like this: 
+   * MMapEnt *mmap_ent = &bootboot.mmap; mmap_ent++; 
+   * until you reach the end of the page */
 } __attribute__((packed)) BOOTBOOT;
 
 

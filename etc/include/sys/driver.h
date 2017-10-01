@@ -31,15 +31,12 @@
 #define DRV_IRQ         (0)
 #define DRV_ack         (1)
 #define DRV_nack        (2)
-#define DRV_read        (3|MSG_PTRDATA)
-#define DRV_write       (4|MSG_PTRDATA)
+#define DRV_read        (3)
+#define DRV_write       (4)
 #define DRV_ioctl       (5)
 
 /*** libc implementation prototypes */
 #ifndef _AS
-
-// import environment configuration
-extern unsigned char *_environment;
 
 typedef struct {
     uint64_t freepages;
@@ -51,6 +48,10 @@ meminfo_t meminfo();                    // get memory info
 size_t mapfile(void *bss, char *fn);    // map a file on initrd
 /* create a device link */
 extern int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size);
+/* parse environment */
+extern uint64_t env_num(char *key, uint64_t def, uint64_t min, uint64_t max);
+extern bool_t env_bool(char *key, bool_t def);
+extern char *env_str(char *key, char *def);
 
 #endif
 

@@ -234,14 +234,14 @@ isr_syscall:
     call    msg_syscall
     jmp     9f
 4:  pushq   %r9
-    movq    %r8, %r9
+    pushq   %r10
     movq    %rcx, %r8
     movq    %rdx, %rcx
     movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    %rax, %rdi
     call    msg_sends
-    addq    $8, %rsp
+    addq    $16, %rsp
     jmp     9f
 
 8:  call    isr_loadcontext

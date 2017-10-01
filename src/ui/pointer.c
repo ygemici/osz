@@ -29,7 +29,7 @@
 
 extern uint64_t _fb_width;
 extern uint64_t _fb_height;
-extern uint8_t _lefthanded;
+extern uint8_t lefthanded;
 
 // current modifier status
 extern uint8_t keyflags;
@@ -51,12 +51,12 @@ void reset_pointers()
     pointers[0].x = _fb_width/2;
     pointers[0].y = _fb_height/2+64;
     pointers[0].z = 0;
-    vid_movecursor(_lefthanded?1:0,pointers[0].x,pointers[0].y);
+    vid_movecursor(lefthanded?1:0,pointers[0].x,pointers[0].y);
     pointers[1].btn = 0;
-    pointers[1].x = _lefthanded?_fb_width:0;
+    pointers[1].x = lefthanded?_fb_width:0;
     pointers[1].y = _fb_height;
     pointers[1].z = 0;
-    vid_movecursor(_lefthanded?0:1,pointers[1].x,pointers[1].y);
+    vid_movecursor(lefthanded?0:1,pointers[1].x,pointers[1].y);
 }
 
 public void setcursor(uint8_t hand, uint8_t shape)
@@ -64,7 +64,7 @@ public void setcursor(uint8_t hand, uint8_t shape)
     if(hand>1) hand=1;
     if(shape<33) {
         pointers[hand].shape=shape;
-        vid_setcursor(_lefthanded?1-hand:hand,shape);
+        vid_setcursor(lefthanded?1-hand:hand,shape);
     }
 }
 
@@ -72,7 +72,7 @@ public void pointer(uint64_t btn, int32_t dx, int32_t dy, int32_t dz, uint8_t ha
 {
     if(hand>1) hand=1;
     if(hand==0 && keyflags&KEYFLAG_CTRL) hand=1;
-    pointers[hand].btn = ((btn & (_lefthanded?2:1))?1+hand:0) | ((btn & (_lefthanded?1:2))?2-hand:0) | (btn & 4);
+    pointers[hand].btn = ((btn & (lefthanded?2:1))?1+hand:0) | ((btn & (lefthanded?1:2))?2-hand:0) | (btn & 4);
     pointers[hand].x += dx;
     if(pointers[hand].x<0) pointers[hand].x=0;
     if(pointers[hand].x>(int32_t)_fb_width) pointers[hand].x=(int32_t)_fb_width;
@@ -84,7 +84,7 @@ public void pointer(uint64_t btn, int32_t dx, int32_t dy, int32_t dz, uint8_t ha
     dbg_printf("pointer %4x  %d ", btn, hand);
     dbg_printf("%x %d,%d,%d\n", pointers[hand].btn,pointers[hand].x,pointers[hand].y,pointers[hand].z);
 #endif
-    vid_movecursor(_lefthanded?1-hand:hand,pointers[hand].x,pointers[hand].y);
+    vid_movecursor(lefthanded?1-hand:hand,pointers[hand].x,pointers[hand].y);
     if(pointers[hand].shape==VC_default && pointers[hand].btn&1) setcursor(hand,VC_clicked);
     if(pointers[hand].shape==VC_clicked && !pointers[hand].btn&1) setcursor(hand,VC_default);
     if(pointers[hand].shape==VC_grab && pointers[hand].btn&1) setcursor(hand,VC_grabbing);

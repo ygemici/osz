@@ -96,17 +96,6 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
     size_t s;
     int bs = 0;
     void *p = (void *)(arg0 & ~(__PAGESIZE-1));
-#if DEBUG
-    if(debug&DBG_MSG) {
-        kprintf(" msg pid %x sending to pid %x (%d), event #%x",
-            srctcb->pid, task, msghdr->mq_start, EVT_FUNC(event));
-        if(event & MSG_PTRDATA)
-            kprintf(" *%x[%d] (%x)",arg0,arg1,arg2);
-        else
-            kprintf("(%x,%x,%x,%x)",arg0,arg1,arg2,arg3);
-        kprintf("\n");
-    }
-#endif
     /* TODO: use mq_buffstart properly as a circular buffer */
     // we have to save message buffer's address first
     if(event & MSG_PTRDATA){
@@ -139,6 +128,17 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         }
     }
 
+#if DEBUG
+    if(debug&DBG_MSG) {
+        kprintf(" msg %2x -> %2x (%d), event #%x",
+            srctcb->pid, task, msghdr->mq_start, EVT_FUNC(event));
+        if(event & MSG_PTRDATA)
+            kprintf("(*%x[%d]",arg0,arg1);
+        else
+            kprintf("(%x,%x",arg0,arg1);
+        kprintf(",%x,%x,%x,%x)\n",arg2,arg3,arg4,arg5);
+    }
+#endif
     coreerrno = EBUSY;
     // send message to the mapped queue. Don't use EVT_FUNC, would
     // loose MSG_PTRDATA flag

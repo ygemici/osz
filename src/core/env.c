@@ -142,14 +142,14 @@ unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max
 /** parse a true boolean that defaults to false */
 unsigned char *env_boolt(unsigned char *s, uint8_t *v)
 {
-    *v = (*s=='1'||*s=='t'||*s=='T');
+    *v = (*s=='1'||*s=='t'||*s=='T'||*s=='e'||*s=='E'||(*s=='o'&&*(s+1)=='n')||(*s=='O'&&*(s+1)=='N'));
     return s+1;
 }
 
 /** parse a false boolean that defaults to true */
 unsigned char *env_boolf(unsigned char *s, uint8_t *v)
 {
-    *v = !(*s=='0'||*s=='f'||*s=='F');
+    *v = !(*s=='0'||*s=='f'||*s=='F'||*s=='d'||*s=='D'||(*s=='o'&&*(s+1)=='f')||(*s=='O'&&*(s+1)=='F'));
     return s+1;
 }
 
@@ -259,14 +259,16 @@ void env_init()
     while(env < env_end && *env!=0) {
         // skip comments
         if((env[0]=='/'&&env[1]=='/') || env[0]=='#') {
-            while(env[0]!=0 && env[0]!='\n')
+            while(env<env_end && env[0]!=0 && env[0]!='\n')
                 env++;
         }
         if(env[0]=='/'&&env[1]=='*') {
             env+=2;
-            while(env[0]!=0 && env[-1]!='*' && env[0]!='/')
+            while(env<env_end && env[0]!=0 && env[-1]!='*' && env[0]!='/')
                 env++;
         }
+        if(env>=env_end)
+            break;
         // number of physical memory fragment pages
         if(!kmemcmp(env, "nrphymax=", 9)) {
             env += 9;
@@ -281,11 +283,6 @@ void env_init()
         if(!kmemcmp(env, "nrlogmax=", 9)) {
             env += 9;
             env = env_dec(env, &nrlogmax, 4, 128);
-        } else
-        // maximum length of path in bytes
-        if(!kmemcmp(env, "pathmax=", 8)) {
-            env += 8;
-            env = env_dec(env, &pathmax, 512, 1024*1024);
         } else
         // disable syslog
         if(!kmemcmp(env, "syslog=", 7)) {
@@ -302,21 +299,6 @@ void env_init()
             env += 6;
             env = env_boolf(env, &sound);
         } else
-        // rescue shell
-        if(!kmemcmp(env, "rescueshell=", 12)) {
-            env += 12;
-            env = env_boolt(env, &rescueshell);
-        } else
-        // left handed
-        if(!kmemcmp(env, "lefthanded=", 11)) {
-            env += 11;
-            env = env_boolt(env, &lefthanded);
-        } else
-        // run first time turn on's ask for identity task
-        if(!kmemcmp(env, "identity=", 9)) {
-            env += 9;
-            env = env_boolf(env, &identity);
-        } else
         // maximum timeslice a task can allocate
         // CPU continously in timer interrupts
         if(!kmemcmp(env, "quantum=", 8)) {
@@ -324,21 +306,10 @@ void env_init()
             env = env_dec(env, &tmp, 10, 10000);
             quantum=(uint32_t)tmp;
         } else
-        // maximum frame rate per second
-        // suggested values 60-1000
-        if(!kmemcmp(env, "fps=", 4)) {
-            env += 4;
-            env = env_dec(env, &fps, 10, 10000);
-        } else
         // display layout
         if(!kmemcmp(env, "display=", 8)) {
             env += 8;
             env = env_display(env);
-        } else
-        // keyboard layout
-        if(!kmemcmp(env, "keymap=", 7)) {
-            env += 7;
-            env = env_keymap(env);
         } else
         // output verbosity level
         if(!kmemcmp(env, "debug=", 6)) {

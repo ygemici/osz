@@ -38,7 +38,9 @@ FB_RGBA       equ 1
 FB_ABGR       equ 2
 FB_BGRA       equ 3
 
-;  mmap entry, type is stored in least significant byte of size
+
+
+;  mmap entry, type is stored in least significant tetrad of size
 virtual at 0
     mmap_ent.ptr:         dq	0
     mmap_ent.size:        dq	0
@@ -52,8 +54,7 @@ MMAP_FREE         equ 1
 MMAP_RESERVED     equ 2
 MMAP_ACPIFREE     equ 3
 MMAP_ACPINVS      equ 4
-MMAP_USED         equ 5
-MMAP_MMIO         equ 6
+MMAP_MMIO         equ 5
 
 INITRD_MAXSIZE     equ 16 ; Mb
 
@@ -92,3 +93,7 @@ virtual at bootboot
 
      bootboot.mmap:
 end virtual
+
+
+
+

@@ -1,22 +1,23 @@
 OS/Z Boot Options
 =================
 
-Configuration file
-------------------
+Environment configuration file
+------------------------------
 
 The boot options are kept on the first bootable partition on the first bootable disk under `FS0:\BOOTBOOT\CONFIG` or `/sys/config`. When you're
 creating a disk image, the contents of that file are taken from [etc/sys/config](https://github.com/bztsrc/osz/blob/master/etc/sys/config).
 
-This file is a plain ASCII file with key=value pairs parsed by [core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c). No whitespaces allowed, and each pair is separated by a newline (0x0A) character.
+This file is a plain ASCII file with `key=value` pairs, parsed by [core/env.c](https://github.com/bztsrc/osz/blob/master/src/core/env.c)
+and [libc/env.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/env.c). No whitespaces allowed, and each pair is separated by a newline (0x0A) character.
 The file can't be longer than a page (4096 bytes on x86_64). You can put comments in it with '#", '//' and '/*'.
 
-Keys are ASCII names without spaces, values can be decimal and hexadecimal numbers, booleans or strings.
+Keys are ASCII names without spaces, values can be decimal and hexadecimal [numbers, booleans or strings](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md#configure).
 
 Boot Parameters
 ---------------
 
-| Parameter | Default  | Type | Parsed by | Description |
-| --------- | :------: | ---- | --------- | ----------- |
+| Parameter | Default  | Type | Used by | Description |
+| --------- | :------: | ---- | ------- | ----------- |
 | screen    | 1024x768 | num<i>x</i>num | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
 | kernel    | sys/core | string  | loader | the name of kernel executable on initrd |
 | debug     | 0        | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
@@ -25,9 +26,9 @@ Boot Parameters
 | nrlogmax  | 8        | number  | core | the number of pages for early syslog buffer |
 | quantum   | 100      | number  | core | scheduler frequency, a task can allocate CPU continously for (quantum) timer interrupts. |
 | syslog    | true     | boolean | core | disable syslog [service](https://github.com/bztsrc/osz/blob/master/docs/services.md) |
-| networking | true    | boolean | core | disable networking service |
+| networking | true    | boolean | core | disable inet service |
 | sound     | true     | boolean | core | disable sound service |
-| pathmax   | 512      | number  | fs   | Maximum length of path, minimum 512 |
+| pathmax   | 512      | number  | fs   | Maximum length of path, minimum 256 |
 | fps       | 10       | number  | ui   | requested frame rate |
 | display   | 0        | number  | ui   | selects output mode (see below) |
 | lefthanded | false   | boolean | ui   | swap pointers |

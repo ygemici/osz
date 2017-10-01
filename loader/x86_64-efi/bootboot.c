@@ -955,7 +955,7 @@ get_memory_map:
             mmapent->ptr=mement->PhysicalStart;
             mmapent->size=(mement->NumberOfPages*PAGESIZE)+
                 ((mement->Type>0&&mement->Type<5)||mement->Type==7?MMAP_FREE:
-                (mement->Type==8?MMAP_USED:
+                (mement->Type==8?MMAP_RESERVED:
                 (mement->Type==9?MMAP_ACPIFREE:
                 (mement->Type==10?MMAP_ACPINVS:
                 (mement->Type==11||mement->Type==12?MMAP_MMIO:

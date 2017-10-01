@@ -32,16 +32,10 @@ extern uint64_t nrlogmax;   // number of syslog_buf pages
 extern uint8_t syslog;      // should start syslog service on boot?
 extern uint8_t networking;  // should start net service on boot?
 extern uint8_t sound;       // should start sound service?
-extern uint8_t rescueshell; // boot rescue shell instead of init?
-extern uint8_t identity;    // run first time setup utility
-extern uint8_t lefthanded;  // swap pointers?
 extern uint64_t clocksource;// clock source
 extern uint64_t debug;      // debug flags
 extern uint64_t quantum;    // max CPU allocation time in timer interrupts
-extern uint64_t fps;        // max frame per sec
 extern uint64_t display;    // display type
-extern uint64_t keymap;     // keymap
-extern uint64_t pathmax;    // maximum length of path in bytes
 #endif
 
 /* debug levels */

@@ -27,16 +27,19 @@
 #include <osZ.h>
 #include <sys/driver.h>
 
-public uint8_t _identity = false;
-public uint8_t _rescueshell = false;
+public uint8_t identity = false;
+public uint8_t rescueshell = false;
 
 extern void services_init();
 
 void task_init(int argc, char **argv)
 {
+    // environment
+    identity = env_bool("identity",false);
+    rescueshell = env_bool("rescueshell",false);
+
     /* sys_ready() will fake a mountfs call to FS, wait for it's ack */
     mq_recv();
-
 
 fid_t f=fopen("/etc/kbd/en_us", O_RDWR | O_EXCL);
 dbg_printf("fopen ret %d errno %d\n", f, errno());
@@ -58,14 +61,14 @@ dbg_printf("mount ret %d errno %d\n", f, errno());
 f=mknod("stdin",31,O_RDWR,1);
 dbg_printf("mknod ret %d errno %d\n", f, errno());
 
-    if(_rescueshell) {
+    if(rescueshell) {
         /* create a TTY window for rescue shell */
 //        ui_createwindow();
         /* replace ourself with shell */
 //        exec("/bin/sh");
         // never return here.
     } else {
-        if(_identity) {
+        if(identity/* || !stat("/etc/hostname")*/) {
             /* start first time turn on's set up task, wait until it returns */
 //            system("/sys/bin/identity");
         }

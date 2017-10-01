@@ -35,7 +35,7 @@
 #include "taskctx.h"
 
 extern uint8_t ackdelayed;      // flag to indicate async block read
-extern uint32_t _pathmax;       // max length of path
+extern uint32_t pathmax;        // max length of path
 extern uint64_t _initrd_ptr;    // /dev/root pointer and size
 extern uint64_t _initrd_size;
 
@@ -83,7 +83,7 @@ char *pathcat(char *path, char *filename)
     if(filename==NULL || filename[0]==0)
         return path;
     i=strlen(path);
-    if(i+strlen(filename)>=_pathmax)
+    if(i+strlen(filename)>=pathmax)
         return NULL;
     if(path[i-1]!='/') {
         path[i++]='/'; path[i]=0;
@@ -102,7 +102,7 @@ char *canonize(const char *path)
     char *result;
     if(path==NULL || path[0]==0)
         return NULL;
-    result=(char*)malloc(_pathmax);
+    result=(char*)malloc(pathmax);
     if(result==NULL)
         return NULL;
     k=strlen(path);
@@ -369,7 +369,7 @@ again:
 //dbg_printf("SYMLINK %s %s\n",loc.fileblk,loc.path);
                 if(((char*)loc.fileblk)[0]!='/') {
                     // relative symlinks
-                    tmp=(char*)malloc(_pathmax);
+                    tmp=(char*)malloc(pathmax);
                     if(tmp==NULL) break;
                     c=loc.path-1; while(c>abspath && c[-1]!='/') c--;
                     memcpy(tmp,abspath,c-abspath);

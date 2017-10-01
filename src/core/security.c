@@ -72,7 +72,7 @@ return true;
         // only drivers can set entries in IRT
         if(e == SYS_setirq && sender->priority != PRI_DRV) goto noaccess;
         // IRQ's SYS_ack to core only allowed for drivers, inlined check in isr_syscall for performance
-        /*** service cheks ***/
+        /*** service checks ***/
         // root user allowed to call all services
         if(!kmemcmp((void*)&sender->owner, rootuid, 15)) return true;
         if(e == SYS_stime && sender->priority != PRI_DRV && !task_allowed(sender, "stime", A_WRITE)) goto noaccess;
@@ -86,42 +86,42 @@ return true;
         // only drivers and system services allowed to send SYS_mknod to FS
         if((e==SYS_mknod || e==SYS_setblock) &&
             sender->priority!=PRI_DRV && sender->priority!=PRI_SRV) goto noaccess;
-        /*** service cheks ***/
+        /*** service checks ***/
         // root user allowed to call all services
         if(!kmemcmp((void*)&sender->owner, rootuid, 15)) return true;
         if(e==SYS_chroot && !task_allowed(sender, "chroot", A_WRITE)) goto noaccess;
         if((e==SYS_mount||e==SYS_umount) && !task_allowed(sender, "mount", A_WRITE)) goto noaccess;
-        // other servies (fopen, fclose, fread etc.) allowed to everyone
+        // other servies (fopen, fclose, fread etc.) allowed for everyone
         return true;
     }
     // UI task
     if(dest == SRV_UI || dest == services[-SRV_UI]) {
         if(task_allowed(sender, "noui", 0)) goto noaccess;
-        // other services allowed to everyone
+        // other services allowed for everyone
         return true;
     }
     // syslog task
     if(dest == SRV_syslog || dest == services[-SRV_syslog]) {
         if(task_allowed(sender, "nosyslog", 0)) goto noaccess;
-        // other services allowed to everyone
+        // other services allowed for everyone
         return true;
     }
     // inet task
     if(dest == SRV_inet || dest == services[-SRV_inet]) {
         if(task_allowed(sender, "noinet", 0)) goto noaccess;
-        // other services allowed to everyone
+        // other services allowed for everyone
         return true;
     }
     // sound task
     if(dest == SRV_inet || dest == services[-SRV_inet]) {
         if(task_allowed(sender, "nosound", 0)) goto noaccess;
-        // other services allowed to everyone
+        // other services allowed for everyone
         return true;
     }
     // init task
     if(dest == SRV_init || dest == services[-SRV_init]) {
         if(task_allowed(sender, "noinit", 0)) goto noaccess;
-        // other services allowed to everyone
+        // other services allowed for everyone
         return true;
     }
     // video driver task

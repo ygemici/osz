@@ -139,7 +139,7 @@ void dbg_putchar(int c)
         "inb %%dx, %%al;"
         "cmpb $0xff,%%al;je 2f;"
         "dec %%ecx;jz 2f;"
-        "andb $0x40,%%al;jz 1b;"
+        "andb $0x20,%%al;jz 1b;"
         "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx;2:"
     ::"r"(c));
 }
@@ -1225,10 +1225,8 @@ void dbg_sysinfo()
     
         kprintf("cpu: %d bogomips, quantum: %d ticks\nnrphymax: %d, nrmqmax: %d, nrlogmax: %d, ",
             bogomips, quantum, nrphymax, nrmqmax, nrlogmax);
-        kprintf("keyboard map: %a, debug flags: %x\nidentity: %s, rescueshell: %s, lefthanded: %s, ",
-            keymap, debug, identity?"true":"false", rescueshell?"true":"false", lefthanded?"true":"false");
-        kprintf("display: %d %s\n",
-            display, disp[display]);
+        kprintf("debug flags: %x, display: %d %s\n",
+            debug, display, disp[display]);
         kprintf("framebuffer: @%8x, %dx%d, scanline %d,",
             bootboot.fb_ptr, bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline);
         kprintf(" type: %d %s, fps: %d\n\n",bootboot.fb_type,fbt[bootboot.fb_type], isr_lastfps);

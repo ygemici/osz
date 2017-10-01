@@ -63,6 +63,8 @@ typedef struct {
     char name[56];
 } elfcache_t;
 dataseg elfcache_t *alignedelf = NULL;
+/* environemnt buffer */
+dataseg virt_t env_ptr = 0;
 
 /**
  * load an ELF64 binary into text segment starting at 2M
@@ -153,7 +155,13 @@ void *elf_load(char *fn)
         tcb->allocmem++;
         i++;
     }
-
+    /* if we are loading libc, also map environment */
+    if(!kstrcmp(fn,"sys/lib/libc.so")) {
+        env_ptr = TEXT_ADDRESS + i*__PAGESIZE;
+        paging[i++] = ((*((uint64_t*)kmap_getpte((uint64_t)environment))) & ~(__PAGESIZE-1)) + PG_USER_RO;
+        tcb->linkmem++;
+        i++;
+    }
     /* return start offset within text segment */
     return (void*)((uint64_t)ret * __PAGESIZE);
 }
@@ -727,8 +735,6 @@ bool_t elf_rtlink()
                             {k=8; *objptr=(fstab-bootboot.initrd_ptr+BUF_ADDRESS);}
                         if(!kmemcmp(strtable + s->st_name,"_fstab_size",12) && s->st_size==8)
                             {k=8; *objptr=fstab_size;}
-                        if(!kmemcmp(strtable + s->st_name,"_pathmax",9) && s->st_size>=4)
-                            {k=4; kmemcpy(objptr,&pathmax,4);}
                         if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
                             {k=4; kmemcpy(objptr,&bootboot.fb_width,4);}
                         if(!kmemcmp(strtable + s->st_name,"_fb_height",11) && s->st_size>=4)
@@ -739,16 +745,8 @@ bool_t elf_rtlink()
                             {k=1; kmemcpy(objptr,&bootboot.fb_type,1);}
                         if(!kmemcmp(strtable + s->st_name,"_display_type",14) && s->st_size>0)
                             {k=1; kmemcpy(objptr,&display,1);}
-                        if(!kmemcmp(strtable + s->st_name,"_lefthanded",12) && s->st_size>0)
-                            {k=1; kmemcpy(objptr,&lefthanded,1);}
                         if(!kmemcmp(strtable + s->st_name,"_debug",7) && s->st_size>0)
                             {k=4; kmemcpy(objptr,&debug,4);}
-                        if(!kmemcmp(strtable + s->st_name,"_identity",10) && s->st_size>0)
-                            {k=1; kmemcpy(objptr,&identity,1);}
-                        if(!kmemcmp(strtable + s->st_name,"_rescueshell",13) && s->st_size>0)
-                            {k=1; kmemcpy(objptr,&rescueshell,1);}
-                        if(!kmemcmp(strtable + s->st_name,"_keymap",8) && s->st_size==8)
-                            {k=8; kmemcpy(objptr,&keymap,8);}
                         if(!kmemcmp(strtable + s->st_name,"_screen_ptr",12) && s->st_size==8)
                             {k=8; *objptr=BUF_ADDRESS;scrptr=true;}
                         if(!kmemcmp(strtable + s->st_name,"_fb_ptr",8) && s->st_size==8)
@@ -758,7 +756,7 @@ bool_t elf_rtlink()
                         if(!kmemcmp(strtable + s->st_name,"_syslog_size",13) && s->st_size>=4)
                             {k=4; *objptr=nrlogmax*__PAGESIZE;}
                         if(!kmemcmp(strtable + s->st_name,"_environment",13) && s->st_size==8)
-                            {k=8; *objptr=buffer_ptr;}
+                            {k=8; *objptr=env_ptr;}
                         if(k && (s->st_value%__PAGESIZE)+k>__PAGESIZE)
                             syslog_early("pid %x: exporting %s on page boundary",
                                 ((tcb_t*)(pmm.bss_end))->pid,strtable + s->st_name);

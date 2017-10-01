@@ -32,12 +32,12 @@ extern void keymap_parse(bool_t alt, char *keymap, size_t len);
 extern void reset_pointers();
 
 // filled by run-time linker
-public char _keymap[8];
 public void* _screen_ptr;
 public uint64_t _fb_width;
 public uint64_t _fb_height;
 public uint8_t _display_type;
-public uint8_t _lefthanded;
+public uint8_t lefthanded=false;
+public char *keymap_type;
 
 public void opentty(){}
 public void openwin(){}
@@ -45,6 +45,10 @@ public void openwrd(){}
 
 void task_init(int argc, char **argv)
 {
+    //environment
+    lefthanded = env_bool("lefthanded",false);
+//    keymap_type = env_str("keymap","en_us");
+
     uint64_t bss = BSS_ADDRESS+__SLOTSIZE;
     uint64_t len;
 

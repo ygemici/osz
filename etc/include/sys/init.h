@@ -26,7 +26,7 @@
  */
 
 #define SYS_stop	(0x10)
-#define SYS_start	(0x13)
-#define SYS_restart	(0x15)
-#define SYS_status	(0x16)
+#define SYS_start	(0x12)
+#define SYS_restart	(0x16)
+#define SYS_status	(0x17)
 

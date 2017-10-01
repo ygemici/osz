@@ -386,17 +386,10 @@ getmemmap:
             add         dword [di], eax
             sub         dword [di+8], eax
 .notfirst:  mov         al, byte [di+16]
-            cmp         al, 2
-            jne         .noov
-            mov         al, 5
-            ;hardcoded mmio for VGA and BIOS ROM
-            mov         ecx, dword [di]
-            cmp         ecx, 0A0000h
-            ja          .noov
-            add         ecx, dword [di+8]
-            cmp         ecx, 0A0000h
+            ; types >4 handled as reserved
+            cmp         al, 4
             jbe         .noov
-            mov         al, 6
+            mov         al, 2
 .noov:      ;copy memory type to size's least significant byte
             mov         byte [di+8], al
             xor         ecx, ecx

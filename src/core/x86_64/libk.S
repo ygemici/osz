@@ -298,7 +298,7 @@ kmap:
     movq    kmap_tmp, %rax
     addq    $32, %rax
     jmp     2f
-    /* shortcut for tmpxf */
+    /* shortcut for tmpfx */
 1:  cmpq    $tmpfx, %rdi
     jne     1f
     movq    kmap_tmp, %rax
@@ -519,11 +519,10 @@ ksend:
     movq    %rdx, 8(%rax)
     movq    %rcx, 16(%rax)
     movq    %r8, 24(%rax)
-    movq    16(%rbp), %r9
     movq    %r9, 32(%rax)
     movq    24(%rbp), %r9
     movq    %r9, 40(%rax)
-    movq    32(%rbp), %r9
+    movq    16(%rbp), %r9
     movq    %r9, 48(%rax)
     incq    tcb_serial
     movq    tcb_serial, %r9

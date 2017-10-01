@@ -70,15 +70,23 @@ IRQs can be assigned three ways to tasks:
  3. or autodetected from system tables, in which case implement `irq()`.
 
 In driver's `task_init()` function, it may register device files in "devfs" with `mknod()` calls.
+
+Configure
+---------
+
 If a device driver requires a configuration, it can't load config files as filesystems are not mounted
-when their initialization code is running. Instead it should use a string defined in [sys/driver.h](https://github.com/bztsrc/osz/blob/master/etc/include/sys/driver.h):
+when their initialization code is running. Instead it should use the following `libc` functions:
 
 ```c
-extern unisgned char *_environment;
+uint64_t env_num(char *key, uint64_t default, uint64_t min, uint64_t max);
+bool_t env_bool(char *key, bool_t default);
+char *env_str(char *key, char *default);
 ```
 
-Which is the [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) file mapped by the run-time linker,
-so that the driver can parse it looking for it's configuration.
+to parse the [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) file mapped by the run-time linker. These
+functions will return the appropirate value for the key, or `default` if key not found. Number format can be decimal or
+hexadecimal (with the '0x' prefix). Boolean understands 0,1,true,false,enabled,disabled,on,off. The `env_str` returns a
+malloc'd string, which must be freed later by the caller.
 
 Note that you don't have to do any message receive calls, just create public functions for your message types.
 

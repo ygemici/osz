@@ -26,6 +26,7 @@
  */
 
 #include <osZ.h>
+#include <sys/driver.h>
 #include "cache.h"
 #include "mtab.h"
 #include "devfs.h"
@@ -40,7 +41,7 @@ public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory
 public uint64_t _initrd_size=0;     // initrd size in bytes
 public char *_fstab_ptr=NULL;       // pointer to /etc/fstab data
 public size_t _fstab_size=0;        // fstab size
-public uint32_t _pathmax;           // maximum length of path
+public uint32_t pathmax;            // maximum length of path
 uint8_t ackdelayed;
 
 /**
@@ -53,9 +54,9 @@ void _init(int argc, char **argv)
     off_t o;
     char *ptr;
 
-    // failsafes
-    if(_pathmax<512)
-        _pathmax=512;
+    // environment
+    pathmax=env_num("pathmax",512,256,1024*1024);
+
     // initialize vfs structures
     mtab_init();    // registers "/" as first fcb
     devfs_init();   // registers "/dev/" as second fcb
@@ -105,7 +106,7 @@ mtab_dump();
                 break;
 
             case SYS_mknod:
-dbg_printf("fs mknod(%s,%d,%02x,%d)\n",msg->ptr,msg->attr0,msg->attr1,msg->attr2);
+dbg_printf("fs mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
                 break;
 
             case SYS_chroot:
