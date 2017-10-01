@@ -31,6 +31,7 @@
 #include "fsdrv.h"
 
 public uint64_t nfcb = 0;
+public uint64_t nfiles = 0;
 public fcb_t *fcb = NULL;
 
 /**
@@ -77,8 +78,9 @@ fid_t fcb_add(char *abspath, uint8_t type)
                 j=i;
         }
     }
-    nfcb++;
+    nfiles++;
     if(j==-1) {
+        nfcb++;
         fcb=(fcb_t*)realloc(fcb, nfcb*sizeof(fcb_t));
         if(fcb==NULL)
             return -1;
@@ -106,7 +108,13 @@ void fcb_del(fid_t idx)
         if(fcb[idx].abspath!=NULL)
             free(fcb[idx].abspath);
         fcb[idx].abspath=NULL;
-        nfcb--;
+        nfiles--;
+        idx=nfcb;
+        while(idx>0 && fcb[idx-1].abspath==NULL) idx--;
+        if(idx!=nfcb) {
+            nfcb=idx;
+            fcb=(fcb_t*)realloc(fcb, nfcb*sizeof(fcb_t));
+        }
     }
 }
 

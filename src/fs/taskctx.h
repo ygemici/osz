@@ -27,6 +27,8 @@
 
 #include <osZ.h>
 
+#define OF_MODE_EOF (1<<16)
+
 /* describe an opened file */
 typedef struct {
     fid_t fid;
@@ -40,6 +42,7 @@ typedef struct {
     fid_t rootdir;
     fid_t workdir;
     uint64_t nopenfiles;
+    uint64_t nfiles;
     openfiles_t *openfiles;
     msg_t msg;
     void *next;

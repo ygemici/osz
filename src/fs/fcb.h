@@ -67,6 +67,7 @@ typedef struct {
 } fcb_t;
 
 extern uint64_t nfcb;
+extern uint64_t nfiles;
 extern fcb_t *fcb;
 
 extern fid_t fcb_get(char *abspath);

@@ -88,10 +88,11 @@ typedef struct {
     uint32_t memmax;    // number of maximum allocated pages tcb+ 812
     uint64_t serial;    // message serial                    tcb+ 816
     sighandler_t sighandler[32]; // for receiving signals    tcb+ 824
-    uuid_t acl[TCB_MAXACE];// access control list            tcb+ 1080
+    uuid_t owner;       // owner uuid                        tcb+1080
+    uuid_t acl[TCB_MAXACE];// access control list            tcb+1096
 
     // compile time check for minimum stack size
-    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 1080 ];
+    uint8_t padding[__PAGESIZE-TCB_MAXACE*16-TCB_ISRSTACK- 1096 ];
 
     // ISR stack
     uint8_t irqhandlerstack[TCB_ISRSTACK-40];

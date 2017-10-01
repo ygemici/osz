@@ -25,6 +25,7 @@
  * @brief Init System Service
  */
 #include <osZ.h>
+#include <sys/driver.h>
 
 public uint8_t _identity = false;
 public uint8_t _rescueshell = false;
@@ -39,15 +40,23 @@ void task_init(int argc, char **argv)
 
 fid_t f=fopen("/etc/kbd/en_us", O_RDWR | O_EXCL);
 dbg_printf("fopen ret %d errno %d\n", f, errno());
-fseek(f,10,SEEK_SET);
-fseek(f,8,SEEK_CUR);
-fseek(f,-10,SEEK_CUR);
-fseek(f,-10,SEEK_END);
-rewind(f);
-dbg_printf("ftell ret %d errno %d\n", ftell(f), errno());
 f=fclose(f);
 dbg_printf("fclose ret %d errno %d\n", f, errno());
-dbg_printf("ftell ret %d errno %d\n", ftell(0), errno());
+
+f=mount("/dev/valami", "/etc", NULL);
+dbg_printf("mount ret %d errno %d\n", f, errno());
+
+f=mount("/dev/zero", "/valami", NULL);
+dbg_printf("mount ret %d errno %d\n", f, errno());
+
+f=mount("/dev/zero", "/etc", NULL);
+dbg_printf("mount ret %d errno %d\n", f, errno());
+
+f=mount("/dev/root", "/", NULL);
+dbg_printf("mount ret %d errno %d\n", f, errno());
+
+f=mknod("stdin",31,O_RDWR,1);
+dbg_printf("mknod ret %d errno %d\n", f, errno());
 
     if(_rescueshell) {
         /* create a TTY window for rescue shell */

@@ -49,7 +49,7 @@ uint8_t ackdelayed;
 void _init(int argc, char **argv)
 {
     msg_t *msg;
-    uint64_t ret = 0, j;
+    uint64_t ret = 0, j, k;
     off_t o;
     char *ptr;
 
@@ -65,21 +65,47 @@ void _init(int argc, char **argv)
     while(1) {
         /* get work */
         msg = mq_recv();
+        // clear state
         seterr(SUCCESS);
-        ctx = taskctx_get(EVT_SENDER(msg->evt));
         ackdelayed = false;
+        ret=0;
         // if it's a block ready message
         if(EVT_FUNC(msg->evt) == SYS_setblock) {
             // save it to block cache
-            cache_setblock((void*)msg->arg0/*blk*/, msg->arg1/*size*/, msg->arg2/*dev*/, msg->arg3/*offs*/);
-            // resume original message that caused the block read
-            ctx = taskctx_get(msg->arg4);
+            cache_setblock(msg->ptr/*blk*/, msg->size, msg->attr0/*dev*/, msg->attr1/*offs*/);
+            // resume original message that caused it. Don't use taskctx_get here,
+            // as that would always return a valid context
+            ctx=taskctx[msg->arg4 & 0xFF]; if(ctx==NULL) continue;
+            while(ctx!=NULL) { if(ctx->pid==msg->arg4) break; ctx=ctx->next; }
+            if(ctx==NULL || EVT_FUNC(ctx->msg.evt)==0) continue;
+            // ok, msg->arg4 points to a pid with a valid context and with a suspended message
             msg = &ctx->msg;
+        } else {
+            // get task context and create it on demand
+            ctx = taskctx_get(EVT_SENDER(msg->evt));
         }
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
                 mtab_fstab(_fstab_ptr, _fstab_size);
+                break;
+
+            case SYS_mount:
+                j=strlen(msg->ptr);
+                k=strlen(msg->ptr + j+1);
+dbg_printf("fs mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
+                ret = mtab_add(msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1)!=-1 ? 0 : -1;
+mtab_dump();
+                break;
+
+            case SYS_umount:
+dbg_printf("fs umount(%s)\n",msg->ptr);
+                ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
+mtab_dump();
+                break;
+
+            case SYS_mknod:
+dbg_printf("fs mknod(%s,%d,%02x,%d)\n",msg->ptr,msg->attr0,msg->attr1,msg->attr2);
                 break;
 
             case SYS_chroot:
@@ -125,13 +151,17 @@ void _init(int argc, char **argv)
             case SYS_fopen:
 dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->attr0);
                 ptr=canonize(msg->ptr);
-                if(ptr==NULL)
+                if(ptr==NULL) {
+                    ret=-1;
                     break;
+                }
                 ret=lookup(msg->ptr);
                 if(ret!=-1 && !errno()) {
+                    // get offset part of path
                     o=getoffs(ptr);
                     if(o<0) o+=fcb[ret].reg.filesize;
-                    if(msg->attr0&O_APPEND) o=fcb[ret].reg.filesize;
+                    // append flag overwrites it
+                    if(msg->attr0 & O_APPEND) o=fcb[ret].reg.filesize;
                     ret=taskctx_open(ctx,ret,msg->attr0,o);
                 }
                 free(ptr);
@@ -139,21 +169,20 @@ taskctx_dump();
                 break;
 
             case SYS_fclose:
-                if(taskctx_close(ctx, msg->arg0))
-                    ret=0;
-                else
-                    ret=-1;
+                ret=taskctx_close(ctx, msg->arg0) ? 0 : -1;
+dbg_printf("fs fclose ret %d\n",ret);
+taskctx_dump();
                 break;
 
             case SYS_fseek:
-                if(taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2))
-                    ret=0;
-                else
-                    ret=-1;
+                ret=taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2) ? 0 : -1;
                 break;
 
             case SYS_rewind:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                // don't use taskctx_seek here, as it only allows regular files, and we want to use
+                // rewind() on directories too for readdir()
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1 ||
+                    fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL) {
                     seterr(EINVAL);
                     ret=-1;
                 } else {
@@ -163,7 +192,8 @@ taskctx_dump();
                 break;
 
             case SYS_ftell:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1 ||
+                    fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL) {
                     seterr(EINVAL);
                     ret=0;
                 } else
@@ -175,7 +205,8 @@ taskctx_dump();
                     seterr(EINVAL);
                     ret=1;
                 } else
-                    ret=ctx->openfiles[msg->arg0].mode&0x10000 || 
+                    ret=fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL || 
+                        ctx->openfiles[msg->arg0].mode&OF_MODE_EOF || 
                         ctx->openfiles[msg->arg0].offs >= fcb[ctx->openfiles[msg->arg0].fid].reg.filesize;
                 break;
 
@@ -184,11 +215,12 @@ taskctx_dump();
                     seterr(EINVAL);
                     ret=1;
                 } else
-                    ret=ctx->openfiles[msg->arg0].mode >> 16;
+                    ret=ctx->openfiles[msg->arg0].mode >> 16 | (fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL?1:0);
                 break;
 
             case SYS_fclrerr:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1 ||
+                    fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL) {
                     seterr(EINVAL);
                 } else
                     ctx->openfiles[msg->arg0].mode &= 0xffff;
@@ -199,6 +231,7 @@ taskctx_dump();
                 dbg_printf("FS: unknown event: %x\n",EVT_FUNC(msg->evt));
 #endif
                 seterr(EPERM);
+                ret=-1;
                 break;
         }
         if(!ackdelayed) {

@@ -47,7 +47,7 @@ extern uint64_t ndev;
 extern devfs_t *dev;
 
 extern void devfs_init();
-extern uint64_t defs_add();
+extern uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, blksize_t blksize, blkcnt_t blkcnt);
 
 #if DEBUG
 extern void devfs_dump();

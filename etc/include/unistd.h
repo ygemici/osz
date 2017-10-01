@@ -79,9 +79,15 @@ extern fid_t chdir (const char *path);
 /* Get the pathname of the current working directory in a malloc'd buffer */
 extern char *getcwd ();
 
+/* create a static mount point */
+extern int mount(const char *dev, const char *file, const char *opts);
+
+/* remove a static mount point */
+extern int umount(const char *devorfile);
+
 /* Write LENGTH bytes of randomness starting at BUFFER.  Return 0 on
    success or -1 on error.  */
-int getentropy (void *__buffer, size_t __length);
+int getentropy (void *buffer, size_t length);
 
 /*** unimplemented ***/
 #if 0

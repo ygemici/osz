@@ -47,6 +47,7 @@ int16_t mtab_add(char *dev, char *file, char *opts)
 {
     fid_t fd, ff;
     int16_t fs;
+    int i;
     if(dev==NULL || dev[0]==0 || file==NULL || file[0]==0) {
         seterr(EINVAL);
         return -1;
@@ -78,16 +79,24 @@ int16_t mtab_add(char *dev, char *file, char *opts)
         seterr(ENOFS);
         return -1;
     }
-    mtab=(mtab_t*)realloc(mtab, (nmtab+1)*sizeof(mtab_t));
-    if(mtab==NULL)
-        return -1;
-
-    mtab[nmtab].storage=fd;
-    mtab[nmtab].mountpoint=ff;
-    mtab[nmtab].fstype=fs;
-    nmtab++;
+    // check if it's already mounted
+    for(i=0;i<nmtab;i++) {
+        if(mtab[i].mountpoint==ff) {
+            fcb[mtab[i].storage].nopen--;
+            break;
+        }
+    }
+    if(i==nmtab) {
+        nmtab++;
+        mtab=(mtab_t*)realloc(mtab, nmtab*sizeof(mtab_t));
+        if(mtab==NULL)
+            return -1;
+        fcb[ff].nopen++;
+    }
+    mtab[i].storage=fd;
+    mtab[i].mountpoint=ff;
+    mtab[i].fstype=fs;
     fcb[fd].nopen++;
-    fcb[ff].nopen++;
 
 //dbg_printf("dev '%s' file '%s' opts '%s' fs %d\n",dev,file,opts,fs);
     if(ff==ROOTFCB) {
@@ -96,6 +105,37 @@ int16_t mtab_add(char *dev, char *file, char *opts)
         rootmounted = true;
     }
     return -1;
+}
+
+/**
+ * remove a mount point from mount list
+ */
+bool_t mtab_del(char *dev, char *file)
+{
+    int i;
+    char *absdev=canonize(dev), *absmnt=canonize(file);
+    if(absdev==NULL && absmnt==NULL) {
+        seterr(EINVAL);
+        if(absdev!=NULL) free(absdev);
+        if(absmnt!=NULL) free(absmnt);
+        return false;
+    }
+    for(i=0;i<nmtab;i++) {
+        if( (absdev!=NULL && !strcmp(absdev, fcb[mtab[i].storage].abspath)) ||
+            (absmnt!=NULL && !strcmp(absmnt, fcb[mtab[i].mountpoint].abspath))) {
+                if(absdev!=NULL) free(absdev);
+                if(absmnt!=NULL) free(absmnt);
+                nmtab--;
+                memcpy(&mtab[i], &mtab[i+1], (nmtab-i)*sizeof(mtab_t));
+                mtab=(mtab_t*)realloc(mtab, nmtab*sizeof(mtab_t));
+                if(mtab==NULL)
+                    return false;
+                return true;
+        }
+    }
+    if(absdev!=NULL) free(absdev);
+    if(absmnt!=NULL) free(absmnt);
+    return false;
 }
 
 /**

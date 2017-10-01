@@ -103,7 +103,7 @@ void taskctx_del(pid_t pid)
  */
 void taskctx_rootdir(taskctx_t *tc, fid_t fid)
 {
-    if(fid>=nfcb)
+    if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL)
         return;
     fcb_del(tc->rootdir);
     tc->rootdir=fid;
@@ -115,7 +115,7 @@ void taskctx_rootdir(taskctx_t *tc, fid_t fid)
  */
 void taskctx_workdir(taskctx_t *tc, fid_t fid)
 {
-    if(fid>=nfcb)
+    if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL)
         return;
     fcb_del(tc->workdir);
     tc->workdir=fid;
@@ -128,7 +128,7 @@ void taskctx_workdir(taskctx_t *tc, fid_t fid)
 uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs)
 {
     uint64_t i;
-    if(fid>=nfcb)
+    if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL)
         return -1;
     // find an empty slot
     if(tc->openfiles!=NULL) {
@@ -139,7 +139,8 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs)
         tc->nopenfiles=0;
     // if not found, allocate a new slot
     i=tc->nopenfiles;
-    tc->openfiles=(openfiles_t*)realloc(tc->openfiles,(tc->nopenfiles+1)*sizeof(openfiles_t));
+    tc->nopenfiles++;
+    tc->openfiles=(openfiles_t*)realloc(tc->openfiles,tc->nopenfiles*sizeof(openfiles_t));
     if(tc->openfiles==NULL)
         return -1;
     // add new open file descriptor
@@ -147,7 +148,7 @@ found:
     tc->openfiles[i].fid=fid;
     tc->openfiles[i].mode=mode;
     tc->openfiles[i].offs=offs;
-    tc->nopenfiles++;
+    tc->nfiles++;
     fcb[fid].nopen++;
     return i;
 }
@@ -157,14 +158,16 @@ found:
  */
 bool_t taskctx_close(taskctx_t *tc, uint64_t idx)
 {
-    if(tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1)
+    if(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1)
         return false;
     fcb_del(tc->openfiles[idx].fid);
-    tc->nopenfiles--;
-    if(idx<=tc->nopenfiles)
-        tc->openfiles[idx].fid=-1;
-    else {
-        if(tc->nopenfiles==0) {
+    tc->nfiles--;
+    tc->openfiles[idx].fid=-1;
+    idx=tc->nopenfiles;
+    while(idx>0 && tc->openfiles[idx-1].fid==-1) idx--;
+    if(idx!=tc->nopenfiles) {
+        tc->nopenfiles=idx;
+        if(idx==0) {
             free(tc->openfiles);
             tc->openfiles=NULL;
         } else {
@@ -181,8 +184,8 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx)
  */
 bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
 {
-    if(tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
-        fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE)
+    if(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
+        fcb[tc->openfiles[idx].fid].abspath==NULL || fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE)
         return false;
     switch(whence) {
         case SEEK_CUR:

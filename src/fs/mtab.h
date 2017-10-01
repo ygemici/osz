@@ -48,6 +48,7 @@ extern mtab_t *mtab;
 extern void mtab_fstab(char *ptr, size_t size);
 extern void mtab_init();
 extern int16_t mtab_add(char *dev, char *file, char *opts);
+extern bool_t mtab_del(char *dev, char *file);
 
 #if DEBUG
 extern void mtab_dump();

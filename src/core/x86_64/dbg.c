@@ -259,12 +259,12 @@ void dbg_tcb()
         if(dbg_tui)
             dbg_settheme();
         kprintf("pid: %4x, name: %s\nRunning on cpu core: %x, ",tcb->pid, tcb->name, tcb->cpu);
-        kprintf("priority: %s (%d), state: %s (%1x) ",
+        kprintf("priority: %s (%d), state: %s (%1x)\n",
             prio[tcb->priority], tcb->priority,
             tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
         );
-        kprintf("\nLast xception error code: %d\n", tcb->excerr);
-    
+        kprintf("Owner user: %s, last exception error code: %d\n", tcb->owner, tcb->excerr);
+
         fg=dbg_theme[4];
         if(dbg_tui)
             dbg_settheme();

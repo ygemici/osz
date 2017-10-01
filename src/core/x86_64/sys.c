@@ -96,6 +96,7 @@ void sys_init()
 
     /* create idle task */
     tcb_t *tcb = task_new("idle", PRI_IDLE);
+    kmemcpy(&tcb->owner, "core", 5);
     // modify TCB for idle task. Don't add to scheduler queue, normally it will never be scheduled
     //start executing a special function.
     tcb->rip = (uint64_t)&idle;

@@ -60,6 +60,7 @@ void service_init(int subsystem, char *fn)
     cmd++;
     int l=kstrlen(cmd);
     tcb_t *tcb = task_new(cmd, PRI_SRV);
+    kmemcpy(&tcb->owner, "core", 5);
     // map executable
     if(elf_load(fn) == (void*)(-1)) {
         syslog_early("WARNING unable to load ELF from %s", fn);
@@ -118,6 +119,7 @@ void fs_init()
     fstab = (uint64_t)fs_locate("sys/etc/fstab");
     fstab_size=fs_size;
     tcb_t *tcb = task_new("FS", PRI_SRV);
+    kmemcpy(&tcb->owner, "core", 5);
     // map file system dispatcher
     if(elf_load("sys/fs") == (void*)(-1)) {
         kpanic("unable to load ELF from /sys/fs");
@@ -178,6 +180,7 @@ void ui_init()
 {
     int i;
     tcb_t *tcb = task_new("UI", PRI_SRV);
+    kmemcpy(&tcb->owner, "core", 5);
 
     // map user interface code
     if(elf_load("sys/ui") == (void*)(-1)) {
@@ -230,6 +233,7 @@ void drv_init(char *driver)
 
     // create a new task...
     tcb_t *tcb = task_new(drvname, PRI_DRV);
+    kmemcpy(&tcb->owner, "core", 5);
     driver[i]='.';
     // ...start with driver event dispatcher
     if(elf_load("sys/driver") == (void*)(-1)) {

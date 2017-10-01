@@ -30,6 +30,9 @@
 /* errno in core */
 dataseg uint64_t coreerrno;
 
+/* root uuid, make sure it's padded with zeros */
+dataseg uint8_t rootuid[15] = { 'r', 'o', 'o', 't', 0,0,0,0,0,0,0,0,0,0,0 };
+
 /**
  * check if current task has a specific Access Control Entry
  */
@@ -44,10 +47,12 @@ bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
         j=15;
     for(i=0;i<TCB_MAXACE;i++) {
         g = (char *)(&tcb->acl[i]);
+        // failsafe, end of list
         if(g[0]==0)
             return false;
+        // if any access requested or has the specific access for the ACE
         if(!kmemcmp(g, grp, j))
-            return (g[15] & access)==access;
+            return (access==0 || (g[15] & access)==access) ? true : false;
     }
     return false;
 }
@@ -58,23 +63,70 @@ bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
 bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event)
 {
     evt_t e=EVT_FUNC(event);
-    /* IRQ's SYS_ack only allowed for drivers, inlined check in isr_syscall */
+return true;
     /* emergency task allowed to bypass checks */
     if(sender->priority==PRI_SYS)
         return true;
+    // Core services
+    if(dest == SRV_CORE) {
+        // only drivers can set entries in IRT
+        if(e == SYS_setirq && sender->priority != PRI_DRV) goto noaccess;
+        // IRQ's SYS_ack to core only allowed for drivers, inlined check in isr_syscall for performance
+        /*** service cheks ***/
+        // root user allowed to call all services
+        if(!kmemcmp((void*)&sender->owner, rootuid, 15)) return true;
+        if(e == SYS_stime && sender->priority != PRI_DRV && !task_allowed(sender, "stime", A_WRITE)) goto noaccess;
+        // other services allowed to everyone
+        return true;
+    }
+    // FS task
     if(dest == SRV_FS || dest == services[-SRV_FS]) {
         // only init allowed to send SYS_mountfs to FS
         if(e==SYS_mountfs && sender->pid!=services[-SRV_init]) goto noaccess;
         // only drivers and system services allowed to send SYS_mknod to FS
         if((e==SYS_mknod || e==SYS_setblock) &&
             sender->priority!=PRI_DRV && sender->priority!=PRI_SRV) goto noaccess;
-        // change root directory
+        /*** service cheks ***/
+        // root user allowed to call all services
+        if(!kmemcmp((void*)&sender->owner, rootuid, 15)) return true;
         if(e==SYS_chroot && !task_allowed(sender, "chroot", A_WRITE)) goto noaccess;
+        if((e==SYS_mount||e==SYS_umount) && !task_allowed(sender, "mount", A_WRITE)) goto noaccess;
+        // other servies (fopen, fclose, fread etc.) allowed to everyone
         return true;
     }
+    // UI task
+    if(dest == SRV_UI || dest == services[-SRV_UI]) {
+        if(task_allowed(sender, "noui", 0)) goto noaccess;
+        // other services allowed to everyone
+        return true;
+    }
+    // syslog task
+    if(dest == SRV_syslog || dest == services[-SRV_syslog]) {
+        if(task_allowed(sender, "nosyslog", 0)) goto noaccess;
+        // other services allowed to everyone
+        return true;
+    }
+    // inet task
+    if(dest == SRV_inet || dest == services[-SRV_inet]) {
+        if(task_allowed(sender, "noinet", 0)) goto noaccess;
+        // other services allowed to everyone
+        return true;
+    }
+    // sound task
+    if(dest == SRV_inet || dest == services[-SRV_inet]) {
+        if(task_allowed(sender, "nosound", 0)) goto noaccess;
+        // other services allowed to everyone
+        return true;
+    }
+    // init task
+    if(dest == SRV_init || dest == services[-SRV_init]) {
+        if(task_allowed(sender, "noinit", 0)) goto noaccess;
+        // other services allowed to everyone
+        return true;
+    }
+    // video driver task
     if((dest == SRV_video || dest == services[-SRV_video]) && sender->pid != services[-SRV_UI]) goto noaccess;
-    if(e == SYS_stime && sender->priority != PRI_DRV && !task_allowed(sender, "stime", A_WRITE)) goto noaccess;
-    if(e == SYS_setirq && sender->priority != PRI_DRV) goto noaccess;
+    // if we made it this far, we are allowed to send the message
     return true;
 noaccess:
     coreerrno = EPERM;
