@@ -505,7 +505,6 @@ bool_t elf_rtlink()
     tcb_t *tcb = (tcb_t*)(pmm.bss_end);
     rela_t *rel = relas;
     uint64_t *paging = (uint64_t *)&tmpmap, *objptr;
-
     /*** collect addresses to relocate ***/
     for(j=0; j<__PAGESIZE/8; j++) {
         Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));

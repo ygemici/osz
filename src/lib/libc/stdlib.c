@@ -35,7 +35,6 @@ typedef void (*atexit_t)(void);
 
 public int atexit_num = 0;
 public atexit_t *atexit_hooks = NULL;
-public uint32_t _pathmax=0;         // maximum length of path
 
 /* NOTE: that memory allocation functions are macros, see stdlib.h */
 

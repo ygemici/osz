@@ -1,5 +1,5 @@
 /*
- * test/main.c
+ * test/fs.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,32 +22,31 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Application to test services and libraries
+ * @brief File system tests
  */
 #include <osZ.h>
+#include <sys/driver.h>
 
-void mmap_test();
-void string_test();
-void stdlib_test();
-void stdio_test();
-void unistd_test();
-void fs_test();
-
-int main(int argc, char**argv)
+void fs_test()
 {
-    /* are we running instead of init service? */
-    if(_debug & DBG_TESTS) {
-        /* wait until FS sends us an SYS_ack message after the SYS_mountfs call */
-        mq_recv();
-    }
-
-    dbg_printf("\n%s----------------------------------- TESTS --------------------------------------\n", &_osver);
-    //do tests
-//    mmap_test();
-//    string_test();
-    fs_test();
-    dbg_printf(    "--------------------------------- TESTS END ------------------------------------\n");
-
-    /* if we are running as init, exiting task will trigger poweroff, exactly what we want. */
-    return 0;
+    dbg_printf("fopen(/etc/kbd/en_us, O_RDWR|OEXCL)\n");
+    fid_t f=fopen("/etc/kbd/en_us", O_RDWR | O_EXCL);
+    dbg_printf("fopen ret %d errno %d\n", f, errno());
+    f=fclose(f);
+    dbg_printf("fclose ret %d errno %d\n", f, errno());
+    
+    f=mount("/dev/valami", "/etc", NULL);
+    dbg_printf("mount ret %d errno %d\n", f, errno());
+    
+    f=mount("/dev/zero", "/valami", NULL);
+    dbg_printf("mount ret %d errno %d\n", f, errno());
+    
+    f=mount("/dev/zero", "/etc", NULL);
+    dbg_printf("mount ret %d errno %d\n", f, errno());
+    
+    f=mount("/dev/root", "/", NULL);
+    dbg_printf("mount ret %d errno %d\n", f, errno());
+    
+    f=mknod("stdin",31,O_RDWR,1, 0);
+    dbg_printf("mknod ret %d errno %d\n", f, errno());
 }

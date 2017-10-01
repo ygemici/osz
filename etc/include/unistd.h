@@ -45,6 +45,9 @@
 #ifndef _AS
 #include <stdio.h>
 
+/* the current version of OS/Z */
+extern char _osver[192];
+
 /* Return only when the bit is set and was clear, yield otherwise */
 void lockacquire(int bit, uint64_t *ptr);
 /* Clear a bit */

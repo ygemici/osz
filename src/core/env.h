@@ -25,6 +25,7 @@
  * @brief Core environment variables (defined in FS0:\BOOTBOOT\CONFIG)
  */
 
+#ifdef _OSZ_CORE_H
 #ifndef _AS
 extern uint64_t nrphymax;   // number of physical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
@@ -36,6 +37,7 @@ extern uint64_t clocksource;// clock source
 extern uint64_t debug;      // debug flags
 extern uint64_t quantum;    // max CPU allocation time in timer interrupts
 extern uint64_t display;    // display type
+#endif
 #endif
 
 /* debug levels */

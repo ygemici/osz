@@ -27,6 +27,7 @@
 #include <osZ.h>
 #include <sys/stat.h>
 
+public char _osver[192];
 public uint64_t _bogomips = 1000;
 public uint64_t _alarmstep = 1000;
 public uint64_t errn = SUCCESS;
