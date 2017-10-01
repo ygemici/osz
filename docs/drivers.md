@@ -1,12 +1,6 @@
 OS/Z Device Drivers
 ===================
 
-Drivers are shared libraries which are loaded into separate address spaces after a
-common, platform independent event dispatcher, [service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
-They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
-are normal userspace applications. You can compile the `core` for a platform with ARCH and PLATFORM variables in [Config](https://github.com/bztsrc/osz/blob/master/Config).
-For supported platforms, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
-
 Supported devices
 -----------------
 
@@ -21,8 +15,16 @@ Planned drivers
 
  * x86_64-apic: HPET
 
-Directories
+Description
 -----------
+
+Drivers are shared libraries which are loaded into separate address spaces after a
+common, platform independent event dispatcher, [service.c](https://github.com/bztsrc/osz/blob/master/src/lib/libc/service.c).
+They are allowed to access IO address space with in/out instructions and to map MMIO at their bss. Otherwise driver tasks
+are normal userspace applications. You can compile the `core` for a platform with ARCH and PLATFORM variables in [Config](https://github.com/bztsrc/osz/blob/master/Config).
+For supported platforms, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
+
+### Directories
 
 Device drivers are located in [src/drivers](https://github.com/bztsrc/osz/blob/master/src/drivers), groupped in categories.
 Each [driver class](https://github.com/bztsrc/osz/blob/master/src/drivers/README.md) has one directory, and
@@ -36,8 +38,7 @@ switch among them, you'll have to edit `PLATFORM` in [Config](https://github.com
 
 Timers are also built into the core, but you can switch among HPET, PIT and RTC with a boot time configurable [environment variable](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md).
 
-Files
------
+### Files
 
 Among the source files of the driver, there are two special ones:
 
@@ -66,7 +67,6 @@ is an easy way to avoid having platform specific drivers in non-compatible image
 you won't have to rewrite multi-platform drivers for every architecture (like an usb storage
 driver). If the platform file is missing, the driver will be compiled for all platforms.
 
-Developing drivers
-------------------
+### Developing drivers
 
 If you want to write a device driver for OS/Z, [here](https://github.com/bztsrc/osz/blob/master/docs/howto3-develop.md) you can find more information.

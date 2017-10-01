@@ -71,8 +71,7 @@ IRQs can be assigned three ways to tasks:
 
 In driver's `task_init()` function, it may register device files in "devfs" with `mknod()` calls.
 
-Configure
----------
+### Configure
 
 If a device driver requires a configuration, it can't load config files as filesystems are not mounted
 when their initialization code is running. Instead it should use the following `libc` functions:
