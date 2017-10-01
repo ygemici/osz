@@ -94,11 +94,13 @@ irq1:
     outb    %al, $0x64
     hlt
 4:
+#if DEBUG
     /* Ctrl + Alt + Esc */
     cmpw    $0x1, %di
     jne     5f
     int     $1
     xorw    %di, %di
+#endif
 5:  movb    kbd_hist+0(%rip), %al
     movb    %al, kbd_hist+1(%rip)
     movb    %dil, kbd_hist+0(%rip)

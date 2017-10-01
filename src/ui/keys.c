@@ -151,7 +151,6 @@ public void keypress(uint64_t scancode, keymap_t keycode)
         keyflags=0;
     }
 #endif
-//asm("movl %0, %%eax;movq %1, %%rbx;xchg %%bx,%%bx;int $1"::"r"(*((uint32_t*)&k)),"r"(scancode):);
 }
 
 public void keyrelease(uint64_t scancode, keymap_t keycode)

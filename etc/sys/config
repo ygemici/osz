@@ -16,15 +16,13 @@ nrmqmax=1
 // continuously up to 1/quantum secs.
 quantum=10
 
-// maximum frame rate of the compositor
-fps=20
-
 // what to debug, decimal number or comma separated list of:
+//  de = devices, lo = print out system log
+// only if compiled with debug:
 //  mm = memory map, ta = tasks, el = elf loading,
 //  ri = run-time linker imports, re = run-time exports
-//  ir = IRQ Routing Table, de = devices, sc = scheduler
-//  ms = messaging, ma = memory allocation, lo = print out system log
-//  te = run tests instead of init
+//  ir = IRQ Routing Table, sc = scheduler, ms = messaging,
+//  ma = memory allocation, te = run tests instead of init
 debug=ms
 
 // display transformation type, decimal number 0-3 or one of:

@@ -406,7 +406,7 @@ again:
                 break;
         }
     }
-dbg_printf("lookup result %s = %d (err %d)\n",abspath,f,errno());
+//dbg_printf("lookup result %s = %d (err %d)\n",abspath,f,errno());
     free(abspath);
     // failsafe
     if(f==-1 && !errno())

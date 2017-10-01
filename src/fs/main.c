@@ -94,21 +94,21 @@ void _init(int argc, char **argv)
             case SYS_mount:
                 j=strlen(msg->ptr);
                 k=strlen(msg->ptr + j+1);
-dbg_printf("fs mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
+//dbg_printf("fs mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
                 ret = mtab_add(msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1)!=-1 ? 0 : -1;
-mtab_dump();
+//mtab_dump();
                 break;
 
             case SYS_umount:
-dbg_printf("fs umount(%s)\n",msg->ptr);
+//dbg_printf("fs umount(%s)\n",msg->ptr);
                 ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
-mtab_dump();
+//mtab_dump();
                 break;
 
             case SYS_mknod:
-dbg_printf("fs mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
+//dbg_printf("fs mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
                 ret = devfs_add(msg->ptr, ctx->pid, msg->type, msg->attr0, msg->attr1, msg->attr2) == -1 ? -1 : 0;
-devfs_dump();
+//devfs_dump();
                 break;
 
             case SYS_chroot:
@@ -152,7 +152,7 @@ devfs_dump();
                 continue;
 
             case SYS_fopen:
-dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->attr0);
+//dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->attr0);
                 ptr=canonize(msg->ptr);
                 if(ptr==NULL) {
                     ret=-1;
@@ -168,13 +168,13 @@ dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->attr0);
                     ret=taskctx_open(ctx,ret,msg->attr0,o);
                 }
                 free(ptr);
-taskctx_dump();
+//taskctx_dump();
                 break;
 
             case SYS_fclose:
                 ret=taskctx_close(ctx, msg->arg0) ? 0 : -1;
-dbg_printf("fs fclose ret %d\n",ret);
-taskctx_dump();
+//dbg_printf("fs fclose ret %d\n",ret);
+//taskctx_dump();
                 break;
 
             case SYS_fseek:

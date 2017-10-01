@@ -64,4 +64,7 @@ char *pci_getdriver(char *device)
 void pci_init()
 {
 // TODO: enumerate bus and load drivers
+    if(debug&DBG_DEVICES) {
+        kprintf("Enumerating PCI bus...\n");
+    }
 }

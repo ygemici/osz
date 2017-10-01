@@ -34,9 +34,11 @@ public int printf (const char *__restrict __format, ...)
 /* Print a message describing the meaning of the value of errno. */
 public void perror (char *s, ...)
 {
+#if DEBUG
     int errnum=errno();
     // FIXME: use fprintf(stderr
     dbg_printf("%s: %s\n", strerror(errnum), s);
+#endif
 }
 
 /* Open a file and create a new STREAM for it. */

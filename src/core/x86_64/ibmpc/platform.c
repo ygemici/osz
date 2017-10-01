@@ -28,6 +28,7 @@
 #include "../arch.h"
 #include "../isr.h"
 
+extern void pci_init();
 extern void pit_init();
 extern void rtc_init();
 
@@ -105,6 +106,7 @@ void platform_timer()
 void platform_enumerate()
 {
 // TODO: enumerate bus and load drivers
+    pci_init();
 }
 
 /**

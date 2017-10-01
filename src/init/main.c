@@ -55,5 +55,5 @@ void task_init(int argc, char **argv)
         // load user services
         services_init();
     }
-exit(0);
+//exit(0);
 }

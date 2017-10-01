@@ -140,7 +140,6 @@ public int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, 
         seterr(EINVAL);
         return -1;
     }
-dbg_printf("lib mknod(%s,%d,%d,%d,%d)\n",devname,minor,mode,size,cnt);
     msg_t *msg=mq_call(SRV_FS, SYS_mknod|MSG_PTRDATA, devname, strlen(devname)+1, minor, mode, size, cnt);
     if(errno())
         return -1;

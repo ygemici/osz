@@ -153,13 +153,20 @@ void sys_ready()
 {
     tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
 
-    /* reset early kernel console */
-    kprintf_reset();
-
     /* finish up ISR initialization */
     isr_fini();
     /* log we're ready */
     syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
+
+    // dump log even if compiled without debug support
+    if(debug&DBG_LOG) {
+        kprintf(syslog_buf);
+        scry = 65536;
+        kprintf_scrollscr();
+    }
+
+    /* reset early kernel console */
+    kprintf_init();
 
     /* Display ready message */
     kprintf("OS/Z ready. Allocated %d pages out of %d",
@@ -170,10 +177,6 @@ void sys_ready()
     // breakpoint for bochs
     breakpoint;
 #endif
-
-    // dump log even if compiled without debug support
-    if(debug&DBG_LOG)
-        kprintf(syslog_buf);
 
     /* disable scroll pause */
     scry = -1;
