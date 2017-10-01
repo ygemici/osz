@@ -63,7 +63,6 @@ bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access)
 bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event)
 {
     evt_t e=EVT_FUNC(event);
-return true;
     /* emergency task allowed to bypass checks */
     if(sender->priority==PRI_SYS)
         return true;

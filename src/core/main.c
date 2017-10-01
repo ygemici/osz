@@ -43,9 +43,13 @@
 
 #include <arch.h>
 
+/* OS version string */
 dataseg char osver[] =
     OSZ_NAME " " OSZ_VER " " OSZ_ARCH "-" OSZ_PLATFORM " (build " OSZ_BUILD ")\n"
     "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
+
+/* locks for multi core system */
+dataseg uint64_t multicorelock;
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *

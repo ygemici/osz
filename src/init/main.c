@@ -41,26 +41,6 @@ void task_init(int argc, char **argv)
     /* sys_ready() will fake a mountfs call to FS, wait for it's ack */
     mq_recv();
 
-fid_t f=fopen("/etc/kbd/en_us", O_RDWR | O_EXCL);
-dbg_printf("fopen ret %d errno %d\n", f, errno());
-f=fclose(f);
-dbg_printf("fclose ret %d errno %d\n", f, errno());
-
-f=mount("/dev/valami", "/etc", NULL);
-dbg_printf("mount ret %d errno %d\n", f, errno());
-
-f=mount("/dev/zero", "/valami", NULL);
-dbg_printf("mount ret %d errno %d\n", f, errno());
-
-f=mount("/dev/zero", "/etc", NULL);
-dbg_printf("mount ret %d errno %d\n", f, errno());
-
-f=mount("/dev/root", "/", NULL);
-dbg_printf("mount ret %d errno %d\n", f, errno());
-
-f=mknod("stdin",31,O_RDWR,1);
-dbg_printf("mknod ret %d errno %d\n", f, errno());
-
     if(rescueshell) {
         /* create a TTY window for rescue shell */
 //        ui_createwindow();

@@ -92,20 +92,20 @@ public char *getcwd()
 /**
  * create a static mount point
  */
-public int mount(const char *dev, const char *file, const char *opts)
+public int mount(const char *dev, const char *mnt, const char *opts)
 {
     char *path;
     int i,j,k;
-    if(dev==NULL || dev[0]==0 || file==NULL || file[0]==0) {
+    if(dev==NULL || dev[0]==0 || mnt==NULL || mnt[0]==0) {
         seterr(EINVAL);
         return -1;
     }
-    i=strlen(dev); j=strlen(file); k=strlen(opts);
+    i=strlen(dev); j=strlen(mnt); k=strlen(opts);
     path=(char*)malloc(i+j+k+3);
     if(path==NULL)
         return -1;
     memcpy((void*)path, (void*)dev, i+1);
-    memcpy((void*)path+i+1, (void*)file, j+1);
+    memcpy((void*)path+i+1, (void*)mnt, j+1);
     if(opts!=NULL && opts[0]!=0)
         memcpy((void*)path+i+1+j+1, (void*)opts, k+1);
     msg_t *msg=mq_call(SRV_FS, SYS_mount|MSG_PTRDATA, path, i+j+k+3);
@@ -134,14 +134,14 @@ public int umount(const char *path)
 }
 
 /* create a device link */
-public int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size)
+public int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, blkcnt_t cnt)
 {
     if(devname==NULL || devname[0]==0 || devname[0]=='/') {
         seterr(EINVAL);
         return -1;
     }
-dbg_printf("lib mknod(%s,%d,%d,%d)\n",devname,minor,mode,size);
-    msg_t *msg=mq_call(SRV_FS, SYS_mknod|MSG_PTRDATA, devname, strlen(devname)+1, minor, mode, size);
+dbg_printf("lib mknod(%s,%d,%d,%d,%d)\n",devname,minor,mode,size,cnt);
+    msg_t *msg=mq_call(SRV_FS, SYS_mknod|MSG_PTRDATA, devname, strlen(devname)+1, minor, mode, size, cnt);
     if(errno())
         return -1;
     return msg->arg0;

@@ -64,6 +64,9 @@
 #include "msg.h"
 #include "env.h"
 
+/* locks. Currently only one is used for physical memory allocation */
+#define LOCK_PMM    (1<<0)
+
 #ifndef _AS
 #include "pmm.h"
 
@@ -84,6 +87,7 @@ extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern pmm_t pmm;                     // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
+extern uint64_t multicorelock;        // locks for multi core system
 
 /* see etc/include/syscall.h */
 extern pid_t services[NUMSRV];
@@ -102,6 +106,12 @@ extern uint64_t ticks[4];
 extern uint64_t systables[8];
 
 // kernel function routines
+
+// ----- Core sync -----
+/** acquire a lock, spin loop until it's ok */
+extern void klockacquire(int bit);
+/** release a lock */
+extern void klockrelease(int bit);
 
 // ----- Console -----
 /** wait for a key by polling keyboard */

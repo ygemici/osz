@@ -40,7 +40,7 @@ devfs_t *dev = NULL;
 /**
  * add a device
  */
-uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, blksize_t blksize, blkcnt_t blkcnt)
+uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blksize_t blksize, blkcnt_t blkcnt)
 {
     uint64_t i;
     fid_t f;
@@ -61,6 +61,7 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, blksize_t blksize
     dev[i].fid=f;
     dev[i].drivertask=drivertask;
     dev[i].device=device;
+    dev[i].mode=mode;
     dev[i].blksize=blksize;
     dev[i].blkcnt=blkcnt;
     return i;
@@ -80,11 +81,11 @@ void devfs_init()
     fsdrv_reg(&devdrv);
 
     fcb_add(DEVPATH, FCB_TYPE_REG_DIR);
-    if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, __PAGESIZE, 1)==-1) abort();
-    if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)==-1) abort();
-    if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, __PAGESIZE, 1)==-1) abort();
-    if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, __PAGESIZE, 0)==-1) abort();
-    if(devfs_add("tmp", MEMFS_MAJOR, MEMFS_TMPFS, __PAGESIZE, 0)==-1) abort();
+    if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, O_RDWR, __PAGESIZE, 1)==-1) abort();
+    if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, O_RDWR, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)==-1) abort();
+    if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, O_RDONLY, __PAGESIZE, 1)==-1) abort();
+    if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, O_RDWR, __PAGESIZE, 0)==-1) abort();
+    if(devfs_add("tmp", MEMFS_MAJOR, MEMFS_TMPFS, O_RDWR, __PAGESIZE, 0)==-1) abort();
 }
 
 #if DEBUG

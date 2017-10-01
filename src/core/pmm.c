@@ -65,6 +65,7 @@ void* pmm_alloc(int pages)
     pmm_entry_t *fmem = pmm.entries;
     int i;
     uint64_t b;
+    klockacquire(LOCK_PMM);
     // run-time asserts
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
@@ -99,6 +100,7 @@ void* pmm_alloc(int pages)
                 kprintf("pmm_alloc(%d)=%x pid %x\n",pages,b,
                     *((uint32_t*)0) == OSZ_TCB_MAGICH?((tcb_t*)0)->pid:0);
 #endif
+            klockrelease(LOCK_PMM);
             return (void*)b;
         }
         fmem++;
@@ -110,6 +112,7 @@ void* pmm_alloc(int pages)
 #endif
         kpanic("pmm_alloc: Out of physical RAM");
     //}
+    klockrelease(LOCK_PMM);
     return NULL;
 }
 
@@ -123,6 +126,7 @@ void* pmm_allocslot()
     int i,j;
     uint64_t p,b,s;
 
+    klockacquire(LOCK_PMM);
     for(i=0;i<pmm.size;i++) {
         b=((fmem->base+__SLOTSIZE-1)/__SLOTSIZE)*__SLOTSIZE;
         if(fmem->base+fmem->size*__PAGESIZE>=b+__SLOTSIZE) {
@@ -171,6 +175,7 @@ void* pmm_allocslot()
                 kprintf("pmm_allocslot=%x pid %x\n",b,
                     *((uint32_t*)0) == OSZ_TCB_MAGICH?((tcb_t*)0)->pid:0);
 #endif
+            klockrelease(LOCK_PMM);
             return (void*)b;
         }
         fmem++;
@@ -183,6 +188,7 @@ panic:
 #endif
         kpanic("pmm_allocslot: Out of physical RAM");
     //}
+    klockrelease(LOCK_PMM);
     return NULL;
 }
 
@@ -193,6 +199,7 @@ void pmm_free(phy_t base, size_t numpages)
 {
     int i;
     uint64_t s=numpages*__PAGESIZE;
+    klockacquire(LOCK_PMM);
     /* add entropy */
     srand[(numpages+0)%4] ^= (uint64_t)base;
     srand[(numpages+2)%4] ^= (uint64_t)base;
@@ -220,6 +227,7 @@ addregion2:
     pmm.freepages += numpages;
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
+    klockrelease(LOCK_PMM);
 }
 
 /**

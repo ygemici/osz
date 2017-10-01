@@ -80,10 +80,10 @@ extern fid_t chdir (const char *path);
 extern char *getcwd ();
 
 /* create a static mount point */
-extern int mount(const char *dev, const char *file, const char *opts);
+extern int mount(const char *dev, const char *mnt, const char *opts);
 
-/* remove a static mount point */
-extern int umount(const char *devorfile);
+/* remove a static mount point, path can be either a device or a mount point */
+extern int umount(const char *path);
 
 /* Write LENGTH bytes of randomness starting at BUFFER.  Return 0 on
    success or -1 on error.  */

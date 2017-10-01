@@ -79,7 +79,6 @@ void bzt_free(uint64_t *arena, void *ptr)
         return;
 
     lockacquire(63,arena);
-    seterr(SUCCESS);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         dbg_printf("bzt_free(%x, %x)\n", arena, ptr);
@@ -160,7 +159,6 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
     sh=-1; sf=a/q;
 
     lockacquire(63,arena);
-    seterr(SUCCESS);
 #if DEBUG
     if(_debug&DBG_MALLOC)
         dbg_printf("bzt_alloc(%x, %x, %x, %d) quantum %d\n", arena, a, ptr, s, q);

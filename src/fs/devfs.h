@@ -39,6 +39,7 @@ typedef struct {
     fid_t fid;          //name in fcb
     pid_t drivertask;   //major
     dev_t device;       //minor
+    mode_t mode;
     blksize_t blksize;
     blkcnt_t blkcnt;
 } devfs_t;
@@ -47,7 +48,7 @@ extern uint64_t ndev;
 extern devfs_t *dev;
 
 extern void devfs_init();
-extern uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, blksize_t blksize, blkcnt_t blkcnt);
+extern uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blksize_t blksize, blkcnt_t blkcnt);
 
 #if DEBUG
 extern void devfs_dump();

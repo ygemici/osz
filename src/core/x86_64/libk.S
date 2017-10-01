@@ -44,12 +44,29 @@
 .global ksend
 .global kwaitkey
 .global kentropy
+.global klockacquire
+.global klockrelease
 
 /* idle task's code */
 idle:
     sti
     hlt
     jmp     idle
+
+/* acquire a lock, for multi core system */
+klockacquire:
+1:  lock
+    btsq    %rdi, multicorelock
+    jnc     1f
+    pause
+    jmp     1b
+1:  ret
+
+/* release a lock */
+klockrelease:
+    lock
+    btrq    %rdi, multicorelock
+    ret
 
 /* shuffle bits of random seed */
 kentropy:

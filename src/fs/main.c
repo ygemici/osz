@@ -107,6 +107,8 @@ mtab_dump();
 
             case SYS_mknod:
 dbg_printf("fs mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
+                ret = devfs_add(msg->ptr, ctx->pid, msg->type, msg->attr0, msg->attr1, msg->attr2) == -1 ? -1 : 0;
+devfs_dump();
                 break;
 
             case SYS_chroot:
