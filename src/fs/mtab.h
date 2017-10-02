@@ -35,10 +35,8 @@ typedef struct {
     fid_t mountpoint;   //index to fcb, mount point
     fid_t storage;      //index to fcb, storage device
     uint64_t fstype;    //index to fsdrv
-    uint64_t fsflags;   //mount options
     uint16_t len;       //number of access entries
     gid_t *grp;         //access entries
-    uint8_t access;     //access for world
 } mtab_t;
 
 /* mount points */

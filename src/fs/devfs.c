@@ -55,15 +55,14 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blks
         return -1;
     f=fcb_add(tmp, FCB_TYPE_DEVICE);
     fcb[f].nopen++;
+    fcb[f].mode=mode;
     fcb[f].device.inode=i;
+    fcb[i].device.blksize=blksize;
     fcb[f].device.filesize=blksize*blkcnt;
     fcb[f].device.storage=DEVFCB;
     dev[i].fid=f;
     dev[i].drivertask=drivertask;
     dev[i].device=device;
-    dev[i].mode=mode;
-    dev[i].blksize=blksize;
-    dev[i].blkcnt=blkcnt;
     return i;
 }
 
@@ -95,8 +94,8 @@ void devfs_dump()
     dbg_printf("Devices %d:\n",ndev);
     for(i=0;i<ndev;i++) {
         dbg_printf("%3d. device pid %x dev %x blk %d",
-            i,dev[i].drivertask,dev[i].device,dev[i].blksize);
-        dbg_printf(" cnt %d %d %s\n",dev[i].blkcnt,dev[i].fid,fcb[dev[i].fid].abspath);
+            i,dev[i].drivertask,dev[i].device,fcb[dev[i].fid].device.blksize);
+        dbg_printf(" size %d %d %s\n",fcb[dev[i].fid].device.filesize,dev[i].fid,fcb[dev[i].fid].abspath);
     }
 }
 #endif

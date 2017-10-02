@@ -159,6 +159,7 @@ kpanic:
     call    dbg_putchar
     movb    $10, %dil
     call    dbg_putchar
+xchg %bx, %bx
     cmpb    $0, dbg_enabled
     jz      1f
     movq    $theme_panic, dbg_theme
@@ -378,6 +379,7 @@ kmap_init:
     movq    %rax, %r8
     /* PTE */
     movq    (%rbx), %rax
+    // FIXME: remap core bss no-cache for multi core system
     xorb    %al, %al
     movq    %rcx, %rbx
     shrq    $12, %rbx

@@ -26,13 +26,28 @@
  */
 
 /* must match errno.h */
-char *errnums[] = { "SUCCESS", "EPERM", "EAGAIN", "ESRCH", "EFAULT", "EINVAL", "EBUSY", "EACCESS", "ENOMEM",
-    "ENOEXEC", "EEXIST", "ENOENT", "ENODEV", "ENOTDIR", "ENOFS", "EBADFS", "EROFS", "ENOSPC", "EIO",
-    "EPIPE", "ESPIPE" };
-char *errstrs[] = { "", "Operation not permitted.", "Try again", "No such task", "Bad address", "Invalid argument",
-    "Device or resource busy", "Access denied", "Out of memory", "Exec format error", "File exists",
-    "No such file or directory", "No such device", "Not a directory", "Unknown file system", "Corrupt file system",
-    "Read-only file system", "No space left on device", "I/O error", "Broken pipe", "Illegal seek" };
+char *errstrs[] = { ""/*Success*/,
+    "EPERM Operation not permitted",
+    "EAGAIN Try again",
+    "ESRCH No such task",
+    "EFAULT Bad address",
+    "EINVAL Invalid argument",
+    "EBUSY Device or resource busy",
+    "EACCES Access denied",
+    "ENOMEM Out of memory",
+    "ENOEXEC Exec format error",
+    "EEXIST File exists",
+    "ENOENT No such file or directory",
+    "ENODEV No such device",
+    "ENOTDIR Not a directory",
+    "ENOFS Unknown file system",
+    "EBADFS Corrupt file system",
+    "EROFS Read-only file system",
+    "ENOSPC No space left on device",
+    "EIO I/O error",
+    "EPIPE Broken pipe",
+    "ESPIPE Illegal seek",
+    "ENOTSH Not a shared memory buffer" };
 
 /* must match signal.h */
 char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EMT", "FPE", "KILL", "BUS", "SEGV",

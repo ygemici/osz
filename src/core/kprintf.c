@@ -148,10 +148,6 @@ void kprintf_init()
         }
         offs+=bootboot.fb_scanline;
     }
-#if DEBUG
-    // initialize serial as debug console
-    dbg_init();
-#endif
 }
 
 /**

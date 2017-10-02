@@ -36,6 +36,7 @@
 #include "../../loader/bootboot.h"
 #endif
 #include <syscall.h>
+#include <sys/debug.h>
 
 #define FBUF_ADDRESS  0xfffffffffc000000           //framebuffer address
 #define TMPQ_ADDRESS  0xffffffffffc00000           //temporarily mapped message queue
@@ -87,7 +88,8 @@ extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern pmm_t pmm;                     // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
-extern uint64_t multicorelock;        // locks for multi core system
+extern uint32_t multicorelock;        // locks for multi core system
+extern uint32_t numcores;             // number of cores
 
 /* see etc/include/syscall.h */
 extern pid_t services[NUMSRV];

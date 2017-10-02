@@ -71,7 +71,7 @@ extern char *sprintf(char *dst,char* fmt, ...);
 extern void sched_dump();
 
 // variables
-dataseg uint8_t dbg_enabled;
+dataseg uint8_t dbg_enabled = 0;
 dataseg uint8_t dbg_tab;
 dataseg uint8_t dbg_inst;
 dataseg uint8_t dbg_full;
@@ -1425,7 +1425,8 @@ void dbg_singlestep(uint8_t enable)
 void dbg_init()
 {
     int i;
-    dbg_enabled = 0;
+    if(dbg_enabled)
+        return;
     dbg_err = NULL;
     dbg_theme = theme_debug;
     dbg_unit = 0;

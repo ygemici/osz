@@ -41,9 +41,7 @@
 
 #ifdef DEBUG
 /* debug flags, and user mode kprintf */
-#define DBG_LOG    (1<<9)
-#define DBG_MALLOC (1<<10)
-#define DBG_TESTS  (1<<11)
+#include <sys/debug.h>
 extern uint32_t _debug;
 extern void dbg_printf(char * fmt, ...);
 #endif
@@ -84,6 +82,14 @@ extern void bzt_dumpmem(void *arena);
 #define saligned_alloc(s) bzt_alloc((void*)SBSS_ADDRESS,a,NULL,s,MAP_SHARED)
 #define sfree(p) bzt_free((void*)SBSS_ADDRESS,p)
 
+/* Return the absolute value of X.  */
+#define abs(x) ((x)<0?-(x):(x))
+#define labs(x) ((x)<0?-(x):(x))
+#define llabs(x) ((x)<0?-(x):(x))
+/* Minimum and maximum. Not in POSIX standard, but this is the right place */
+#define min(x,y) ((x)<(y)?(x):(y))
+#define max(x,y) ((x)>(y)?(x):(y))
+
 /* Return a random integer between 0 and RAND_MAX inclusive.  */
 extern uint64_t rand (void);
 /* Seed the random number generator with the given number.  */
@@ -103,14 +109,6 @@ extern void abort (void)  __attribute__ ((__noreturn__));
 /* Return the length of the multibyte character
    in S, which is no longer than N.  */
 extern int mblen (char *s, size_t n);
-
-/* Return the absolute value of X.  */
-#define abs(x) ((x)<0?-(x):(x))
-#define labs(x) ((x)<0?-(x):(x))
-#define llabs(x) ((x)<0?-(x):(x))
-/* Minimum and maximum. Not in POSIX standard, but this is the right place */
-#define min(x,y) ((x)<(y)?(x):(y))
-#define max(x,y) ((x)>(y)?(x):(y))
 
 /* Return the `div_t', `ldiv_t' or `lldiv_t' representation
    of the value of NUMER over DENOM. */

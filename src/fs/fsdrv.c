@@ -70,11 +70,11 @@ int16_t fsdrv_detect(fid_t dev)
     if(dev==DEVFCB)
         return devfsidx;
     // read the superblock
-    void *blk=readblock(dev, 0, __PAGESIZE);
+    void *blk=readblock(dev, 0);
     if(blk!=NULL) {
         // iterate on each fsdrv, see if one can recognize the superblock
         for(i=0;i<nfsdrv;i++) {
-            if(fsdrv[i].detect!=NULL && (*fsdrv[i].detect)(blk))
+            if(fsdrv[i].detect!=NULL && (*fsdrv[i].detect)(dev,blk))
                 return i;
         }
     }

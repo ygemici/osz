@@ -41,6 +41,8 @@ typedef struct {
     pid_t pid;
     fid_t rootdir;
     fid_t workdir;
+    size_t workoffs;
+    size_t workleft;
     uint64_t nopenfiles;
     uint64_t nfiles;
     openfiles_t *openfiles;
@@ -57,9 +59,10 @@ extern taskctx_t *taskctx_get(pid_t pid);
 extern void taskctx_del(pid_t pid);
 extern void taskctx_rootdir(taskctx_t *tc, fid_t fid);
 extern void taskctx_workdir(taskctx_t *tc, fid_t fid);
-extern uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs);
-extern bool_t taskctx_close(taskctx_t *tc, uint64_t idx);
+extern uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64_t idx);
+extern bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree);
 extern bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence);
+extern bool_t taskctx_validfid(taskctx_t *tc, uint64_t idx);
 
 #if DEBUG
 extern void taskctx_dump();

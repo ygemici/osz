@@ -125,12 +125,22 @@ void taskctx_workdir(taskctx_t *tc, fid_t fid)
 /**
  * add a file to open file descriptors
  */
-uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs)
+uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64_t idx)
 {
     uint64_t i;
     if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL)
         return -1;
-    // find an empty slot
+    // check if it's already opened for exclusive access
+    if(fcb[fid].mode & O_EXCL) {
+        seterr(EACCES);
+        return -1;
+    }
+    // force file descriptor index
+    if(idx!=-1 && idx<tc->nopenfiles && tc->openfiles[idx].fid==-1) {
+        i=idx;
+        goto found;
+    }
+    // find the first empty slot
     if(tc->openfiles!=NULL) {
         for(i=0;i<tc->nopenfiles;i++)
             if(tc->openfiles[i].fid==-1)
@@ -145,6 +155,9 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs)
         return -1;
     // add new open file descriptor
 found:
+    // handle exclusive access
+    if(mode & O_EXCL)
+        fcb[fid].mode |= O_EXCL;
     tc->openfiles[i].fid=fid;
     tc->openfiles[i].mode=mode;
     tc->openfiles[i].offs=offs;
@@ -156,13 +169,16 @@ found:
 /**
  * remove a file from open file descriptors
  */
-bool_t taskctx_close(taskctx_t *tc, uint64_t idx)
+bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
 {
-    if(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1)
+    if(!taskctx_validfid(tc,idx))
         return false;
+    fcb[tc->openfiles[idx].fid].mode &= ~O_EXCL;
     fcb_del(tc->openfiles[idx].fid);
-    tc->nfiles--;
     tc->openfiles[idx].fid=-1;
+    tc->nfiles--;
+    if(dontfree)
+        return true;
     idx=tc->nopenfiles;
     while(idx>0 && tc->openfiles[idx-1].fid==-1) idx--;
     if(idx!=tc->nopenfiles) {
@@ -184,8 +200,7 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx)
  */
 bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
 {
-    if(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
-        fcb[tc->openfiles[idx].fid].abspath==NULL || fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE)
+    if(!taskctx_validfid(tc,idx) || fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE)
         return false;
     switch(whence) {
         case SEEK_CUR:
@@ -204,6 +219,15 @@ bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
         return false;
     }
     return true;
+}
+
+/**
+ * see if a file descriptor valid for a context
+ */
+bool_t taskctx_validfid(taskctx_t *tc, uint64_t idx)
+{
+    return !(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
+        fcb[tc->openfiles[idx].fid].abspath==NULL);
 }
 
 #if DEBUG

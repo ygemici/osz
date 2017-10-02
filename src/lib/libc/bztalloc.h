@@ -41,5 +41,5 @@ typedef struct {
 /* this must work with a zeroed page, hence no magic and zero bit represents free */
 typedef struct {
     uint64_t numchunks;             //number of chunkmap_t
-    chunkmap_t chunk[0];            //chunks
+    chunkmap_t chunk[0];            //chunks, array dynamically allocated
 } allocmap_t;

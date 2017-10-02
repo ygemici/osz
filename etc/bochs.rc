@@ -48,3 +48,4 @@ com3: enabled=0
 com4: enabled=0
 #usb_uhci: enabled=0
 #usb_ohci: enabled=0
+debug_symbols: file=bin/core.sym, offset=0

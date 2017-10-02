@@ -28,12 +28,22 @@
 #include <osZ.h>
 #include "fcb.h"
 #include "fsdrv.h"
+#include "taskctx.h"
 
 #define ROOTMTAB 0
 #define ROOTFCB 0
 #define DEVFCB 1
 #define DEVPATH "/dev/"
 #define PATHSTACKSIZE 64
+
+// lookup return statuses
+#define NOBLOCK     1   // block not found in cache
+#define NOTFOUND    2   // file not found
+#define FSERROR     3   // file system error
+#define UPDIR       4   // directory up outside of device
+#define FILEINPATH  5   // file image referenced as directory
+#define SYMINPATH   6   // symlink in path
+#define UNIONINPATH 7   // union in path
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
@@ -43,7 +53,7 @@ typedef struct {
 } pathstack_t;
 
 /* low level functions */
-extern public void *readblock(fid_t idx, fpos_t offs, uint64_t bs);
+extern public void *readblock(fid_t idx, fpos_t offs);
 extern public void pathpush(ino_t lsn, char *path);
 extern public pathstack_t *pathpop();
 extern char *pathcat(char *path, char *filename);
@@ -51,5 +61,7 @@ extern char *canonize(const char *path);
 extern fid_t lookup(char *abspath);
 extern public uint8_t getver(char *abspath);
 extern public fpos_t getoffs(char *abspath);
+extern public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size);
+extern public size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
 
 /* libc function implementations */

@@ -39,10 +39,10 @@
 .global lockrelease
 .global dl
 .global yield
-.global seterr
 .global setirq
 .global mmap
 .global munmap
+.global p2pcpy
 .global mapfile
 .global sleep
 .global usleep
@@ -238,12 +238,33 @@ munmap:
     call    myseterrno
     ret
 
-/**
- * int mprotect (void *addr, size_t len, int prot);
- */
-mprotect:
+msync:
     xorq    %rax, %rax
-    movb    $SYS_munmap, %al
+    movb    $SYS_msync, %al
+    syscall
+    call    myseterrno
+    ret
+
+mlock:
+    xorq    %rax, %rax
+    movb    $SYS_mlock, %al
+    syscall
+    call    myseterrno
+    ret
+
+munlock:
+    xorq    %rax, %rax
+    movb    $SYS_munlock, %al
+    syscall
+    call    myseterrno
+    ret
+
+/**
+ * void p2pcpy (pid_t dst, void* dest, void *src, size_t len);
+ */
+p2pcpy:
+    xorq    %rax, %rax
+    movb    $SYS_p2pcpy, %al
     syscall
     call    myseterrno
     ret

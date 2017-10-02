@@ -39,9 +39,6 @@ typedef struct {
     fid_t fid;          //name in fcb
     pid_t drivertask;   //major
     dev_t device;       //minor
-    mode_t mode;
-    blksize_t blksize;
-    blkcnt_t blkcnt;
 } devfs_t;
 
 extern uint64_t ndev;

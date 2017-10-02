@@ -61,6 +61,8 @@ extern void perror (char *s, ...);
 #define O_RDWR      (O_READ|O_WRITE)
 /* Open a file and create a new STREAM for it. */
 extern fid_t fopen (char *filename, mode_t oflag);
+/* Open a file, replacing an existing STREAM with it. */
+extern fid_t freopen (char *filename, mode_t oflag, fid_t stream);
 /* Close STREAM. */
 extern int fclose (fid_t stream);
 /* Seek to a certain position on STREAM. */
@@ -75,6 +77,10 @@ extern void fclrerr (fid_t stream);
 extern int feof (fid_t stream);
 /* Return the error indicator for STREAM.  */
 extern int ferror (fid_t stream);
+/* Read chunks of generic data from STREAM. */
+extern size_t fread (fid_t stream, void *ptr, size_t size);
+/* Write chunks of generic data to STREAM. */
+extern size_t fwrite (fid_t stream, void *ptr, size_t size);
 
 /* unimplemented */
 #if 0
@@ -182,10 +188,6 @@ extern int puts (char *s);
 /* Push a character back onto the input buffer of STREAM. */
 extern int ungetc (int c, FILE *stream);
 
-/* Read chunks of generic data from STREAM. */
-extern size_t fread (void *ptr, size_t size, size_t n, FILE *stream);
-/* Write chunks of generic data to STREAM. */
-extern size_t fwrite (void *ptr, size_t size, size_t n, FILE *stream);
 /* Get STREAM's position. */
 extern int fgetpos (FILE *stream, fpos_t *pos);
 /* Set STREAM's position. */

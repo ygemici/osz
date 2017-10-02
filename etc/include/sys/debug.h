@@ -1,5 +1,5 @@
 /*
- * fs/cache.h
+ * sys/debug.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,15 +22,26 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Cache definitions
+ * @brief OS/Z Debug flags
  */
 
-#include <osZ.h>
+#ifndef _SYS_DEBUG_H
+#define _SYS_DEBUG_H 1
 
-extern public void cache_init();
-extern public void *cache_getblock(fid_t idx, blkcnt_t offs);
-extern public void cache_setblock(void *blk, fid_t fd, blkcnt_t offs);
+#define DBG_NONE     0      // none, false
+#define DBG_MEMMAP   (1<<0) // mm 1
+#define DBG_TASKS    (1<<1) // ta 2
+#define DBG_ELF      (1<<2) // el 4
+#define DBG_RTIMPORT (1<<3) // ri 8
+#define DBG_RTEXPORT (1<<4) // re 16
+#define DBG_IRQ      (1<<5) // ir 32
+#define DBG_DEVICES  (1<<6) // de 64
+#define DBG_SCHED    (1<<7) // sc 128
+#define DBG_MSG      (1<<8) // ms 256
+#define DBG_LOG      (1<<9) // lo 512
+#define DBG_PMM      (1<<10)// pm 1024
+#define DBG_VMM      (1<<11)// vm 2048
+#define DBG_MALLOC   (1<<12)// ma 4096
+#define DBG_TESTS    (1<<13)// te 8192
 
-#if DEBUG
-extern void cache_dump();
-#endif
+#endif /* sys/debug.h */

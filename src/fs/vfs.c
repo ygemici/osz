@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Virtual File System functions
+ * @brief Glue code between FS task and File System drivers
  */
 
 #include <osZ.h>
@@ -32,15 +32,14 @@
 #include "cache.h"
 #include "devfs.h"
 #include "mtab.h"
-#include "taskctx.h"
 
 extern uint8_t ackdelayed;      // flag to indicate async block read
 extern uint32_t pathmax;        // max length of path
 extern uint64_t _initrd_ptr;    // /dev/root pointer and size
 extern uint64_t _initrd_size;
 
-void *zeroblk = NULL;
-void *rndblk = NULL;
+void *zeroblk = NULL;           // zero block
+void *rndblk = NULL;            // random data block
 
 int pathstackidx = 0;
 pathstack_t pathstack[PATHSTACKSIZE];
@@ -196,9 +195,9 @@ char *canonize(const char *path)
 }
 
 /**
- * read a block from an fcb entry
+ * read a block from an fcb entry, offs is a LSN
  */
-public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
+public void *readblock(fid_t fd, blkcnt_t lsn)
 {
     devfs_t *device;
     void *blk=NULL;
@@ -218,26 +217,23 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                 if(device->drivertask==MEMFS_MAJOR) {
                     switch(device->device) {
                         case MEMFS_NULL:
-                            //eof?
-                            seterr(EFAULT);
                             return NULL;
                         case MEMFS_ZERO:
-                            zeroblk=(void*)realloc(zeroblk, bs);
+                            zeroblk=(void*)realloc(zeroblk, fcb[fd].device.blksize);
                             return zeroblk;
                         case MEMFS_RANDOM:
-                            rndblk=(void*)realloc(rndblk, bs);
+                            rndblk=(void*)realloc(rndblk, fcb[fd].device.blksize);
                             if(rndblk!=NULL)
-                                getentropy(rndblk, bs);
+                                getentropy(rndblk, fcb[fd].device.blksize);
                             return rndblk;
                         case MEMFS_TMPFS:
                             // TODO: implement tmpfs memory device
                             return NULL;
                         case MEMFS_RAMDISK:
-                            if((offs+1)*device->blksize>_initrd_size) {
-                                seterr(EFAULT);
+                            if((lsn+1)*fcb[fd].device.blksize>_initrd_size) {
                                 return NULL;
                             }
-                            return (void *)(_initrd_ptr + offs*device->blksize);
+                            return (void *)(_initrd_ptr + lsn*fcb[fd].device.blksize);
                         default:
                             // should never reach this
                             seterr(ENODEV);
@@ -245,15 +241,14 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
                     }
                 }
                 // real device, use block cache
-                if((offs+1)*device->blksize>fcb[fd].device.filesize) {
-                    seterr(EFAULT);
+                if((lsn+1)*fcb[fd].device.blksize>fcb[fd].device.filesize) {
                     return NULL;
                 }
                 seterr(SUCCESS);
-                blk=cache_getblock(fcb[fd].device.inode, offs);
+                blk=cache_getblock(fd, lsn);
                 if(blk==NULL && errno()==EAGAIN) {
                     // block not found in cache. Send a message to a driver
-                    mq_send(device->drivertask, DRV_read, device->device, offs, ctx->pid, 0);
+                    mq_send(device->drivertask, DRV_read, device->device, lsn, fcb[fd].device.blksize, ctx->pid, 0);
                     // delay ack message to the original caller
                     ackdelayed = true;
                 }
@@ -261,6 +256,7 @@ public void *readblock(fid_t fd, blkcnt_t offs, blksize_t bs)
             break;
         default:
             // invalid request
+            seterr(EPERM);
             break;
     }
     return blk;
@@ -348,9 +344,10 @@ again:
                     abspath[f++]='/'; abspath[f]=0;
                 }
                 f=fcb_add(abspath,loc.type);
+                fcb[f].reg.storage=fd;
                 fcb[f].reg.inode=loc.inode;
                 fcb[f].reg.filesize=loc.filesize;
-                fcb[f].reg.storage=fd;
+                fcb[f].reg.fs=fs;
                 break;
             case NOBLOCK:
                 // errno set to EAGAIN on block cache miss and ENOMEM on memory shortage
@@ -414,6 +411,9 @@ again:
     return f;
 }
 
+/**
+ * get the version info from path
+ */
 public uint8_t getver(char *abspath)
 {
     int i=0;
@@ -423,6 +423,9 @@ public uint8_t getver(char *abspath)
     return abspath[i]==';' && abspath[i+1]>'0' && abspath[i+1]<='9' ? abspath[i+1]-'0' : 0;
 }
 
+/**
+ * get the offset info from path
+ */
 public fpos_t getoffs(char *abspath)
 {
     int i=0;
@@ -434,3 +437,62 @@ public fpos_t getoffs(char *abspath)
     return 0;
 }
 
+/**
+ * read from file. ptr is either a virtual address in ctx->pid's address space (so not
+ * writable directly) or in shared memory (writable)
+ */
+public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
+{
+    size_t bs, ret=0;
+    void *blk;
+    fcb_t *fc;
+    // input checks
+    if(!taskctx_validfid(tc,idx))
+        return 0;
+    fc=&fcb[tc->openfiles[idx].fid];
+    if(fc->reg.fs==-1)
+        return 0;
+    // set up first time run parameters
+    if(tc->workleft==-1) {
+        tc->workleft=size;
+        tc->workoffs=0;
+    }
+    // read all blocks in
+    while(tc->workleft>0) {
+        // read max one block
+        bs=fcb[fc->reg.storage].device.blksize;
+        // call file system driver
+        blk=(*fsdrv[fc->reg.fs].read)(
+            tc->openfiles[idx].fid, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
+        // skip if block is not in cache
+        if(ackdelayed) break;
+        // if eof
+        if(bs==0) {
+            ret = tc->workoffs;
+            tc->workleft=-1;
+            break;
+        }
+        // failsafe, get number of bytes read
+        if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=0; } else tc->workleft-=bs;
+        // copy result to caller. If shared memory, directly; otherwise via core call
+        if((int64_t)ptr < 0)
+            memcpy((void*)(ptr + tc->workoffs), blk, bs);
+        else
+            p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
+        tc->workoffs+=bs;
+    }
+    return ret;
+}
+
+/**
+ * write to file. ptr is either a buffer in message queue or shared memory, so it's readable
+ * in both cases
+ */
+public size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
+{
+    if(!taskctx_validfid(tc,idx))
+        return 0;
+    if(tc->workleft==-1)
+        tc->workleft=size;
+    return 0;
+}

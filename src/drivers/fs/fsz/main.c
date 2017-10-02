@@ -32,43 +32,50 @@
 
 #define MAXINDIRECT 8
 
+void resizefs(fid_t fd);
+
 /**
  * check magic to detect file system
  */
-bool_t detect(void *blk)
+bool_t detect(fid_t fd, void *blk)
 {
-    return
-     !memcmp(((FSZ_SuperBlock *)blk)->magic, FSZ_MAGIC,4) &&
-     !memcmp(((FSZ_SuperBlock *)blk)->magic2,FSZ_MAGIC,4) &&
-     ((FSZ_SuperBlock *)blk)->checksum == crc32_calc((char*)((FSZ_SuperBlock *)blk)->magic, 508)
-     ? true : false;
+    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)blk;
+    bool_t ret=!memcmp(sb->magic, FSZ_MAGIC,4) && !memcmp(sb->magic2,FSZ_MAGIC,4) &&
+        sb->checksum == crc32_calc((char*)&sb->magic, 508) ? true : false;
+    if(ret) {
+        // calculate block size for this instance
+        fcb[fd].device.blksize=1<<(sb->logsec+11);
+        // check if file system size is correct
+        if(fcb[fd].device.filesize != sb->numsec*fcb[fd].device.blksize)
+            resizefs(fd);
+    }
+    return ret;
 }
 
 /**
  * locate a file on a specific device with this file system
  */
-uint8_t locate(fid_t storage, ino_t parent, locate_t *loc)
+uint8_t locate(fid_t fd, ino_t parent, locate_t *loc)
 {
     // failsafe
-    if(loc==NULL || loc->path==NULL || loc->path[0]==0)
+    if(loc==NULL || loc->path==NULL || loc->path[0]==0 || fd>=nfcb || fcb[fd].abspath==NULL)
         return NOTFOUND;
     // get superblock
-    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(storage, 0, __PAGESIZE);
+    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd, 0);
     if(sb==NULL)
         return NOBLOCK;
     FSZ_Inode *in;
     FSZ_DirEnt *dirent;
     ino_t lsn,*sdblk[MAXINDIRECT];
     uint16_t sdptr[MAXINDIRECT];
-    uint64_t bs,bp,sdmax,i;
+    uint64_t bp,sdmax,i;
     char *e;
 
     // start with root directory if parent not given
-    bs=1<<(sb->logsec+11);
     lsn=parent==0? sb->rootdirfid : parent;
-    sdmax=bs/16;
+    sdmax=fcb[fd].device.blksize/16;
 nextdir:
-//dbg_printf("FS/Z locate %s %d.'%s'\n",fcb[storage].abspath,lsn,loc->path);
+//dbg_printf("FS/Z locate %s %d.'%s'\n",fcb[fd].abspath,lsn,loc->path);
     for(e=loc->path;*e!='/' && !PATHEND(*e);e++);
     if(*e=='/') e++;
     // handle up directory
@@ -83,7 +90,7 @@ nextdir:
         goto nextdir;
     }
     // read inode
-    in=(FSZ_Inode*)readblock(storage,lsn,bs);
+    in=(FSZ_Inode*)readblock(fd,lsn);
     if(in==NULL)
         return NOBLOCK;
     if(memcmp(in->magic, FSZ_IN_MAGIC, 4))
@@ -126,13 +133,13 @@ nextdir:
             // TODO: extents
             break;
         case FSZ_IN_FLAG_DIRECT:
-            loc->fileblk=readblock(storage, in->sec, bs);
+            loc->fileblk=readblock(fd, in->sec);
             if(loc->fileblk==NULL)
                 return NOBLOCK;
             break;
         default:
             // get the first level sd
-            sdblk[0]=readblock(storage, in->sec, bs);
+            sdblk[0]=readblock(fd, in->sec);
             if(sdblk[0]==NULL)
                 return NOBLOCK;
             // failsafe
@@ -140,12 +147,12 @@ nextdir:
                 return FSERROR;
             // load each sd along the indirection path
             for(i=1;i<FLAG_TRANSLATION(in->flags);i++) {
-                sdblk[i]=readblock(storage, sdblk[i-1][0], bs);
+                sdblk[i]=readblock(fd, sdblk[i-1][0]);
                 if(sdblk[i]==NULL)
                     return NOBLOCK;
             }
             // load the first sector pointed by the last indirect sd
-            loc->fileblk=readblock(storage, sdblk[i-1][0], bs);
+            loc->fileblk=readblock(fd, sdblk[i-1][0]);
             break;
     }
 
@@ -161,7 +168,7 @@ nextdir:
         bp=0;
         while(i) {
             dirent++; bp+=sizeof(FSZ_DirEnt);
-            if(bp>=bs) {
+            if(bp>=fcb[fd].device.blksize) {
                 // FIXME: block end reached, load next block from sdblk and alter dirent pointer
                 // make gcc happy until then
                 sdmax--; sdmax++;
@@ -173,7 +180,7 @@ nextdir:
                 if(dirent->name[strlen((char*)dirent->name)-1]=='/') {
                     locate_t l;
                     l.path=e;
-                    if(locate(storage, dirent->fid, &l)==SUCCESS) {
+                    if(locate(fd, dirent->fid, &l)==SUCCESS) {
                         char *c=strdup(e);
                         if(c==NULL) {
                             // keeps errno which is set to ENOMEM
@@ -203,13 +210,41 @@ nextdir:
     return NOTFOUND;
 }
 
+/**
+ * resize file system
+ */
+void resizefs(fid_t fd)
+{
+}
+
+/**
+ * read a block from a file
+ */
+void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
+{
+    FSZ_Inode *in=(FSZ_Inode*)readblock(fd,file);
+    if(in==NULL) {
+        *s=0;
+        return NULL;
+    }
+    if(memcmp(in->magic, FSZ_IN_MAGIC, 4)) {
+        seterr(EBADFS);
+        *s=0;
+        return NULL;
+    }
+    dbg_printf("FS/Z read fd %d file %d offs %d bs %d\n",fd,file,offs,*s);
+    return NULL;
+}
+
 void _init()
 {
     fsdrv_t drv = {
         "fsz",
         "FS/Z",
         detect,
-        locate
+        locate,
+        resizefs,
+        read
     };
     //uint16_t id = 
     fsdrv_reg(&drv);

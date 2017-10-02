@@ -48,6 +48,9 @@
 /* the current version of OS/Z */
 extern char _osver[192];
 
+/* Copy N bytes of SRC to DEST in another address space.  */
+extern void p2pcpy (pid_t dst, void *dest, void *src, size_t n);
+
 /* Return only when the bit is set and was clear, yield otherwise */
 void lockacquire(int bit, uint64_t *ptr);
 /* Clear a bit */
@@ -88,6 +91,12 @@ extern int mount(const char *dev, const char *mnt, const char *opts);
 /* remove a static mount point, path can be either a device or a mount point */
 extern int umount(const char *path);
 
+/* Duplicate FD, returning a new file descriptor on the same file.  */
+extern fid_t dup (fid_t stream);
+
+/* Duplicate FD to FD2, closing FD2 and making it open on the same file.  */
+extern fid_t dup2 (fid_t stream, fid_t stream2);
+
 /* Write LENGTH bytes of randomness starting at BUFFER.  Return 0 on
    success or -1 on error.  */
 int getentropy (void *buffer, size_t length);
@@ -121,12 +130,6 @@ extern void ualarm (__useconds_t __value, __useconds_t __interval);
 /* Suspend the process until a signal arrives.
    This always returns -1 and sets `errno' to EINTR.  */
 extern int pause (void);
-
-/* Duplicate FD, returning a new file descriptor on the same file.  */
-extern int dup (int __fd);
-
-/* Duplicate FD to FD2, closing FD2 and making it open on the same file.  */
-extern int dup2 (int __fd, int __fd2);
 
 /* NULL-terminated array of "NAME=VALUE" environment variables.  */
 extern char **environ;

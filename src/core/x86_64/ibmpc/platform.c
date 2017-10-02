@@ -71,6 +71,8 @@ void platform_init()
     systables[systable_hpet_idx] = systables[systable_dsdt_idx] = 0;
 
     clocksource=TMR_PIT;
+
+    numcores=1;
 }
 
 /**

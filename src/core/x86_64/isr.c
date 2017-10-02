@@ -181,7 +181,7 @@ void isr_init()
 
     i *= tmrfreq;
     bogomips *= tmrfreq;
-    syslog_early(" cpu %d cps, %d bogomips",i, bogomips);
+    syslog_early(" cpu %d core(s), %d cps, %d bmips", numcores, i, bogomips);
     /* Hz: number of interrupts per sec
      * step: microsec to add to TICKS_NTS every interrupt
      * ts: task switch after every n interrupts */

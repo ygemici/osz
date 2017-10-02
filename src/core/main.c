@@ -49,7 +49,8 @@ dataseg char osver[] =
     "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
 /* locks for multi core system */
-dataseg uint64_t multicorelock;
+dataseg uint32_t multicorelock;
+dataseg uint32_t numcores;
 
 /**********************************************************************
  *                         OS/Z Life Cycle                            *

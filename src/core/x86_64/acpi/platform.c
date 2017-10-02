@@ -79,6 +79,7 @@ void platform_init()
     systables[systable_dsdt_idx] = (uint64_t)fs_locate("sys/etc/dsdt");
     if(fs_size == 0)
         systables[systable_dsdt_idx] = 0;
+    numcores=1;
     acpi_early(NULL);
 }
 

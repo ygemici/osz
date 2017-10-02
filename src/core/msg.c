@@ -111,8 +111,8 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         // not mapping shared memory (not in the range -2^56..-64M).
         if((int64_t)p > 0) {
             // check size. Buffers over 1M must be sent in shared memory
-            if(arg1 > (__SLOTSIZE/2)) {
-                coreerrno = EINVAL;
+            if(arg1 > __BUFFSIZE) {
+                coreerrno = ENOTSH;
                 return false;
             }
             // modify pointer to point into the temporary buffer area
@@ -161,9 +161,10 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
  * System call dispatcher for messages sent to SRV_CORE. Also has a low level part,
  * isr_syscall in (platform)/isrc.S. We only came here if message is not handled there
  */
-uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
+uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3)
 {
     tcb_t *tcb = (tcb_t*)0;
+    tcb_t *dsttcb = (tcb_t*)&tmpmap;
     phy_t *paging = (phy_t*)&tmpmap;
     phy_t *paging2 = (phy_t*)&tmp2map;
     void *data;
@@ -325,6 +326,22 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2)
             srand[(arg0+0)%4] *= 16807;
             srand[(arg0+1)%4] *= ticks[TICKS_LO];
             kentropy();
+            break;
+
+        case SYS_p2pcpy:
+            // map destination task's tcb
+            if(arg0==0 || arg0==tcb->pid) {
+                coreerrno = ESRCH;
+                return (uint64_t)false;
+            }
+            kmap((uint64_t)&tmpmap, (uint64_t)(arg0*__PAGESIZE), PG_CORE_NOCACHE);
+            if(dsttcb->magic != OSZ_TCB_MAGICH) {
+                coreerrno = ESRCH;
+                return (uint64_t)false;
+            }
+            // TODO: map arg1 address to MQ_ADDRESS
+            kprintf("UNIMPLEMENTED: p2pcpy(%x,%x,%x,%d)\n",arg0,arg1,arg2,arg3);
+            // copy arg3 bytes from arg2 to MQ_ADDRESS
             break;
 
         default:

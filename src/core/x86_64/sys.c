@@ -161,6 +161,7 @@ void sys_ready()
     // dump log even if compiled without debug support
     if(debug&DBG_LOG) {
         kprintf(syslog_buf);
+        // force a pause
         scry = 65536;
         kprintf_scrollscr();
     }

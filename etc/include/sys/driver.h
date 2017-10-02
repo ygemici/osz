@@ -34,6 +34,8 @@
 #define DRV_read        (3)
 #define DRV_write       (4)
 #define DRV_ioctl       (5)
+#define DRV_reset       (6)
+#define DRV_status      (7)
 
 /*** libc implementation prototypes */
 #ifndef _AS

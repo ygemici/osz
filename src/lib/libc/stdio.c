@@ -35,9 +35,8 @@ public int printf (const char *__restrict __format, ...)
 public void perror (char *s, ...)
 {
 #if DEBUG
-    int errnum=errno();
-    // FIXME: use fprintf(stderr
-    dbg_printf("%s: %s\n", strerror(errnum), s);
+    // FIXME: use fprintf(stderr,...
+    dbg_printf("%s: %s\n", strerror(errno()), s);
 #endif
 }
 
@@ -48,11 +47,25 @@ public fid_t fopen (char *filename, mode_t oflag)
         seterr(EINVAL);
         return -1;
     }
-    msg_t *msg=mq_call(SRV_FS, SYS_fopen|MSG_PTRDATA, filename, strlen(filename)+1, oflag);
+    msg_t *msg=mq_call(SRV_FS, SYS_fopen|MSG_PTRDATA, filename, strlen(filename)+1, oflag, -1);
     if(errno())
         return -1;
     return msg->arg0;
 }
+
+/* Open a file, replacing an existing STREAM with it. */
+public fid_t freopen (char *filename, mode_t oflag, fid_t stream)
+{
+    if(filename==NULL || filename[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_fopen|MSG_PTRDATA, filename, strlen(filename)+1, oflag, stream);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
 
 /* Close STREAM. */
 public int fclose (fid_t stream)
@@ -108,6 +121,32 @@ public int ferror (fid_t stream)
     msg_t *msg=mq_call(SRV_FS, SYS_ferror, stream);
     if(errno())
         return 0;
+    return msg->arg0;
+}
+
+/* Read chunks of generic data from STREAM. */
+public size_t fread (fid_t stream, void *ptr, size_t size)
+{
+    if(size>=__BUFFSIZE) {
+        seterr(ENOTSH);
+        return 0;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_fread, ptr, size, stream);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/* Write chunks of generic data to STREAM. */
+public size_t fwrite (fid_t stream, void *ptr, size_t size)
+{
+    if(size>=__BUFFSIZE && (int64_t)ptr > 0) {
+        seterr(ENOTSH);
+        return 0;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_fwrite|MSG_PTRDATA, ptr, size, stream);
+    if(errno())
+        return -1;
     return msg->arg0;
 }
 

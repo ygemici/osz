@@ -1,23 +1,26 @@
  --- Error fixes ---
-./src/drivers/fs/fsz/main.c:165:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
+./etc/include/sys/core.h:51:#define SYS_mapfile     19 // FIXME: remove
+./src/drivers/fs/fsz/main.c:172:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
 ./src/ui/main.c:56:    // FIXME: once vfs ready, use fopen() and fread()
-./src/core/msg.c:246:        // FIXME: remove mapfile once vfs ready
-./src/core/msg.c:290:            /* FIXME: naive implementation, no checks */
-./src/lib/libc/x86_64/unistd.S:254:// FIXME: remove mapfile once vfs ready
-./src/lib/libc/stdio.c:39:    // FIXME: use fprintf(stderr
+./src/core/x86_64/libk.S:382:    // FIXME: remap core bss no-cache for multi core system
+./src/core/msg.c:247:        // FIXME: remove mapfile once vfs ready
+./src/core/msg.c:291:            /* FIXME: naive implementation, no checks */
+./src/lib/libc/x86_64/unistd.S:275:// FIXME: remove mapfile once vfs ready
+./src/lib/libc/stdio.c:38:    // FIXME: use fprintf(stderr,...
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
-./etc/include/sys/core.h:95:/* TODO: move these to time.h, leave only OS/Z specific calls here */
+./etc/include/sys/core.h:92:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
-./src/drivers/fs/fsz/main.c:126:            // TODO: extents
-./src/fs/vfs.c:211:            //TODO: reading a block from a regular file
-./src/fs/vfs.c:233:                            // TODO: implement tmpfs memory device
-./src/fs/cache.c:39:    // TODO: use dev[idx].drivertask, dev[idx].device, dev[idx].blksize
+./src/drivers/fs/fsz/main.c:133:            // TODO: extents
+./src/fs/vfs.c:210:            //TODO: reading a block from a regular file
+./src/fs/vfs.c:230:                            // TODO: implement tmpfs memory device
+./src/fs/cache.c:39:    // TODO: use dev[fcb[fd].device.inode].drivertask, dev[fcb[fd].device.inode].device
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
-./src/core/x86_64/ibmpc/platform.c:108:// TODO: enumerate bus and load drivers
+./src/core/x86_64/ibmpc/platform.c:110:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers
 ./src/core/msg.c:99:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/msg.c:342:            // TODO: map arg1 address to MQ_ADDRESS
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
-./src/lib/libc/x86_64/unistd.S:331:    /* TODO: getentropy */
+./src/lib/libc/x86_64/unistd.S:352:    /* TODO: getentropy */
 ./src/lib/libc/x86_64/crt0.S:43:    /* TODO: call ctors */

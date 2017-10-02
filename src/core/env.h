@@ -25,7 +25,6 @@
  * @brief Core environment variables (defined in FS0:\BOOTBOOT\CONFIG)
  */
 
-#ifdef _OSZ_CORE_H
 #ifndef _AS
 extern uint64_t nrphymax;   // number of physical fragment pages
 extern uint64_t nrmqmax;    // number of message queue pages
@@ -38,24 +37,6 @@ extern uint64_t debug;      // debug flags
 extern uint64_t quantum;    // max CPU allocation time in timer interrupts
 extern uint64_t display;    // display type
 #endif
-#endif
-
-/* debug levels */
-#define DBG_NONE     0      // none, false
-#define DBG_MEMMAP   (1<<0) // mm 1
-#define DBG_TASKS    (1<<1) // ta 2
-#define DBG_ELF      (1<<2) // el 4
-#define DBG_RTIMPORT (1<<3) // ri 8
-#define DBG_RTEXPORT (1<<4) // re 16
-#define DBG_IRQ      (1<<5) // ir 32
-#define DBG_DEVICES  (1<<6) // de 64
-#define DBG_SCHED    (1<<7) // sc 128
-#define DBG_MSG      (1<<8) // ms 256
-#define DBG_LOG      (1<<9) // lo 512
-#define DBG_PMM      (1<<10)// pm 1024
-#define DBG_VMM      (1<<11)// vm 2048
-#define DBG_MALLOC   (1<<12)// ma 4096
-#define DBG_TESTS    (1<<13)// te 8192
 
 /* display options */
 #define DSP_MONO_COLOR   0  // mc flat 2D color

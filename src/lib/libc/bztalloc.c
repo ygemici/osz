@@ -30,15 +30,20 @@
 #include "bztalloc.h"
 
 /***
+ * Design considerations:
+ * 1. don't mix allocator data with application data
+ * 2. give back free memory to OS as soon as possible, don't waste resources
+ * 3. common allocator for both TLS and shared memory (hence the locking)
+ *
  * Memory layout:
- * 0. slot: array of allocmap_t pointers
+ * 0. slot: allocmap_t pointers
  * 1. slot: first allocmap_t
  * 2. slot: chunk's data (more chunks, if quantum is small)
  * 3. slot: second allocmap_t area
  * 4. slot: another chunk's data
  * 5. slot: first chunk of a large quantum
  * 6. slot: second chunk of a large quantum
- * ...
+ * ...etc.
  * 
  * Small units (quantum>=8 && quantum<PAGESIZE):
  *  ptr points to a page aligned address, bitmap maps quantum sized units, allocation done by chunksize
@@ -50,24 +55,28 @@
  *  ptr points to a slot aligned address, size[0] holds number of continous allocsize blocks
  *
  * Depends on the following libc functions:
- * - void seterr(errno);                              // set errno
- * - void lockacquire(int bit, uint64_t *ptr);        // return only when the bit is set and was clear, yield otherwise
+ * - void seterr(errno);                              // set errno (EFAULT, ENOMEM)
+ * - void lockacquire(int bit, uint64_t *ptr);        // return only when the bit became set, yield otherwise
  * - void lockrelease(int bit, uint64_t *ptr);        // clear a bit
  * - void memzero (void *dest, size_t n);             // clear memory, fill up with zeros
  * - void *memcpy (void *dest, void *src, size_t n);  // copy memory
- * - void *mmap (void *addr, size_t len, int prot, int flags, -1, 0); //query memory from pmm
- * - int munmap (void *addr, size_t len);                             //give back memory to system
+ * - void *mmap (void *addr, size_t len, int prot, int flags, -1, 0); //query RAM from pmm
+ * - int munmap (void *addr, size_t len);                             //give back RAM to system
+ * 
+ * Provides:
+ *   #define malloc(s)          bzt_alloc((void*)BSS_ADDRESS,8,NULL,s,MAP_PRIVATE)
+ *   #define calloc(n,s)        bzt_alloc((void*)BSS_ADDRESS,8,NULL,n*s,MAP_PRIVATE)
+ *   #define realloc(p,s)       bzt_alloc((void*)BSS_ADDRESS,8,p,s,MAP_PRIVATE)
+ *   #define aligned_alloc(a,s) bzt_alloc((void*)BSS_ADDRESS,a,NULL,s,MAP_PRIVATE)
+ *   #define free(p)            bzt_free ((void*)BSS_ADDRESS,p)
  */
 
 /**
- * arena is an array of *allocmap_t, first element records size and lock flag
+ * In OS/Z arena points to either at BSS_ADDRESS (TLS) or SBSS_ADDRESS (shared).
+ * The argument arena is an array of *allocmap_t, first element records size and lock flag.
+ * 
+ * free memory and give back RAM to system if possible
  */
-
-/**
- * This allocator is used for both task local storage and shared memory.
- * Arena points to an allocation map (either at BSS_ADDRESS or SBSS_ADDRESS).
- */
-
 void bzt_free(uint64_t *arena, void *ptr)
 {
     int i,j,k,cnt=0;
@@ -134,6 +143,11 @@ void bzt_free(uint64_t *arena, void *ptr)
     seterr(EFAULT);
 }
 
+/**
+ * The argument arena is an array of *allocmap_t, first element records size and lock flag.
+ *
+ * Allocate aligned memory in a memory arena
+ */
 void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
 {
     uint64_t q,sh,sf;
@@ -285,7 +299,8 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
     if(ocm!=NULL) {
         if((flag&MAP_SPARE)==0){
             memcpy(fp,ptr,ocm->quantum);
-            memzero(fp+ocm->quantum,ncm->quantum-ocm->quantum);
+            if(ncm->quantum>ocm->quantum)
+                memzero(fp+ocm->quantum,ncm->quantum-ocm->quantum);
         }
         l=0;
         if(ocm->quantum<ALLOCSIZE) {

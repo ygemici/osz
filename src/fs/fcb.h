@@ -30,23 +30,25 @@
 #ifndef _FCB_H_
 #define _FCB_H_
 
+// file types in fcb list
 #define FCB_TYPE_REG_FILE   0
 #define FCB_TYPE_REG_DIR    1
 #define FCB_TYPE_DEVICE     2
 #define FCB_TYPE_PIPE       3
 #define FCB_TYPE_SOCKET     4
 
+// regular. Files and directories
 typedef struct {
+    fid_t storage;
     ino_t inode;
     fpos_t filesize;
-    fid_t storage;
+    blksize_t blksize;
+    uint16_t fs;
 } fcb_reg_t;
 
-typedef struct {
-    uint64_t inode;
-    fpos_t filesize;
-    fid_t storage;
-} fcb_dev_t;
+// uses the same as regular files, only this time
+// storage points to devfs
+typedef fcb_reg_t fcb_dev_t;
 
 typedef struct {
 } fcb_pipe_t;
@@ -58,6 +60,7 @@ typedef struct {
     char *abspath;
     uint64_t nopen;
     uint8_t type;
+    mode_t mode;
     union {
         fcb_reg_t reg;
         fcb_dev_t device;

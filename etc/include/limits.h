@@ -30,15 +30,16 @@
  */
 
 #ifndef _LIMITS_H_
-#define _LIMITS_H	1
+#define _LIMITS_H   1
 
-#define TMP_MAX	8
-#define FILENAME_MAX	111
+#define TMP_MAX         8
+#define FILENAME_MAX    111
 
 
-#define __WORDSIZE	64
-#define __PAGESIZE	4096
-#define __SLOTSIZE	(4096*512)
+#define __WORDSIZE  64
+#define __PAGESIZE  4096
+#define __SLOTSIZE  (4096*512)
+#define __BUFFSIZE  (__SLOTSIZE/2)
 
 // memory limits, OS/Z specific addresses
 #define MQ_ADDRESS     (__PAGESIZE)
@@ -46,30 +47,30 @@
 #define BSS_ADDRESS    (0x0000000100000000)        // 4G data, tls memory, see bztalloc.c
 
 // (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
-#define NRMQ_MAX	63 //pages
+#define NRMQ_MAX    63 //pages
 // minimum required memory in megabytes
-#define PHYMEM_MIN	32 //Mb
+#define PHYMEM_MIN  32 //Mb
 
-#define CHAR_BIT	8
-#define SCHAR_MIN	(-128)
-#define SCHAR_MAX	127
-#define UCHAR_MAX	255
-#define CHAR_MIN	SCHAR_MIN
-#define CHAR_MAX	SCHAR_MAX
-#define SHRT_MIN	(-32768)
-#define SHRT_MAX	32767
-#define USHRT_MAX	65535
-#define INT_MIN	(-INT_MAX - 1)
-#define INT_MAX	2147483647
-#define UINT_MAX	4294967295U
-#define LONG_MAX	9223372036854775807L
-#define LONG_MIN	(-LONG_MAX - 1L)
-#define ULONG_MAX	18446744073709551615UL
-#define LLONG_MAX	9223372036854775807LL
-#define LLONG_MIN	(-LLONG_MAX - 1LL)
-#define ULLONG_MAX	18446744073709551615ULL
+#define CHAR_BIT    8
+#define SCHAR_MIN   (-128)
+#define SCHAR_MAX   127
+#define UCHAR_MAX   255
+#define CHAR_MIN    SCHAR_MIN
+#define CHAR_MAX    SCHAR_MAX
+#define SHRT_MIN    (-32768)
+#define SHRT_MAX    32767
+#define USHRT_MAX   65535
+#define INT_MIN     (-INT_MAX - 1)
+#define INT_MAX     2147483647
+#define UINT_MAX    4294967295U
+#define LONG_MAX    9223372036854775807L
+#define LONG_MIN    (-LONG_MAX - 1L)
+#define ULONG_MAX   18446744073709551615UL
+#define LLONG_MAX   9223372036854775807LL
+#define LLONG_MIN   (-LLONG_MAX - 1LL)
+#define ULLONG_MAX  18446744073709551615ULL
 
 /* The largest number rand will return.  */
-#define	RAND_MAX	ULLONG_MAX
+#define	RAND_MAX    ULLONG_MAX
 
 #endif	/* limits.h */

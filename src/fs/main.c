@@ -31,7 +31,6 @@
 #include "mtab.h"
 #include "devfs.h"
 #include "fsdrv.h"
-#include "taskctx.h"
 #include "fcb.h"
 #include "vfs.h"
 
@@ -73,7 +72,7 @@ void _init(int argc, char **argv)
         // if it's a block ready message
         if(EVT_FUNC(msg->evt) == SYS_setblock) {
             // save it to block cache
-            cache_setblock(msg->ptr/*blk*/, msg->size, msg->attr0/*dev*/, msg->attr1/*offs*/);
+            cache_setblock(msg->ptr/*blk*/, msg->attr0/*fcbdev*/, msg->attr1/*offs*/);
             // resume original message that caused it. Don't use taskctx_get here,
             // as that would always return a valid context
             ctx=taskctx[msg->arg4 & 0xFF]; if(ctx==NULL) continue;
@@ -84,11 +83,15 @@ void _init(int argc, char **argv)
         } else {
             // get task context and create it on demand
             ctx = taskctx_get(EVT_SENDER(msg->evt));
+            // new query, reset work counter
+            ctx->workleft = -1;
         }
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
+//dbg_printf("mountfs\n");
                 mtab_fstab(_fstab_ptr, _fstab_size);
+//mtab_dump();
                 break;
 
             case SYS_mount:
@@ -160,20 +163,22 @@ void _init(int argc, char **argv)
                 }
                 ret=lookup(msg->ptr);
                 if(ret!=-1 && !errno()) {
+                    if(msg->attr1!=-1)
+                        taskctx_close(ctx, msg->arg1, true);
                     // get offset part of path
                     o=getoffs(ptr);
                     if(o<0) o+=fcb[ret].reg.filesize;
                     // append flag overwrites it
                     if(msg->attr0 & O_APPEND) o=fcb[ret].reg.filesize;
-                    ret=taskctx_open(ctx,ret,msg->attr0,o);
+                    ret=taskctx_open(ctx,ret,msg->attr0,o,msg->attr1);
                 }
                 free(ptr);
 //taskctx_dump();
                 break;
 
             case SYS_fclose:
-                ret=taskctx_close(ctx, msg->arg0) ? 0 : -1;
-//dbg_printf("fs fclose ret %d\n",ret);
+//dbg_printf("fs fclose %d\n",msg->arg0);
+                ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
 //taskctx_dump();
                 break;
 
@@ -184,8 +189,7 @@ void _init(int argc, char **argv)
             case SYS_rewind:
                 // don't use taskctx_seek here, as it only allows regular files, and we want to use
                 // rewind() on directories too for readdir()
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1 ||
-                    fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EINVAL);
                     ret=-1;
                 } else {
@@ -195,8 +199,7 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_ftell:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1 ||
-                    fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EINVAL);
                     ret=0;
                 } else
@@ -204,9 +207,9 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_feof:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EINVAL);
-                    ret=1;
+                    ret=-1;
                 } else
                     ret=fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL || 
                         ctx->openfiles[msg->arg0].mode&OF_MODE_EOF || 
@@ -214,19 +217,75 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_ferror:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EINVAL);
-                    ret=1;
+                    ret=-1;
                 } else
-                    ret=ctx->openfiles[msg->arg0].mode >> 16 | (fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL?1:0);
+                    // force EOF flag on closed files
+                    ret=ctx->openfiles[msg->arg0].mode >> 32 | (fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL?1:0);
                 break;
 
             case SYS_fclrerr:
-                if(ctx->openfiles==NULL || ctx->nopenfiles<=msg->arg0 || ctx->openfiles[msg->arg0].fid==-1 ||
-                    fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EINVAL);
-                } else
-                    ctx->openfiles[msg->arg0].mode &= 0xffff;
+                    ret=-1;
+                } else {
+                    ctx->openfiles[msg->arg0].mode &= 0xffffffffULL;
+                    ret=0;
+                }
+                break;
+
+            case SYS_dup:
+//dbg_printf("fs dup(%d)\n",msg->arg0);
+                if(!taskctx_validfid(ctx,msg->arg0)) {
+                    seterr(EINVAL);
+                    ret=-1;
+                } else {
+                    ret=taskctx_open(ctx, ctx->openfiles[msg->arg0].fid, ctx->openfiles[msg->arg0].mode,
+                        ctx->openfiles[msg->arg0].offs,-1);
+//taskctx_dump();
+                }
+                break;
+
+            case SYS_dup2:
+//dbg_printf("fs dup2(%d,%d)\n",msg->arg0,msg->arg1);
+                if(!taskctx_validfid(ctx,msg->arg0)) {
+                    seterr(EINVAL);
+                    ret=-1;
+                } else {
+                    // don't use task_validfid here, we only check if the descriptor is not unused
+                    if(ctx->nopenfiles>msg->arg1 && ctx->openfiles[msg->arg1].fid!=-1) {
+                        // don't free openfiles block, just mark it unused
+                        taskctx_close(ctx, msg->arg1, true);
+                    }
+                    ret=taskctx_open(ctx, ctx->openfiles[msg->arg0].fid, ctx->openfiles[msg->arg0].mode,
+                        ctx->openfiles[msg->arg0].offs, msg->arg1);
+//taskctx_dump();
+                }
+                break;
+
+            case SYS_fread:
+dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
+                if(msg->size>__BUFFSIZE && (int64_t)msg->ptr > 0) {
+                    seterr(ENOTSH);
+                    ret=0;
+                }
+                if(!taskctx_validfid(ctx,msg->type)) {
+                    seterr(EINVAL);
+                    ret=0;
+                } else {
+//                    ret=readfs(ctx,msg->type,(virt_t)msg->ptr,msg->size);
+                }
+                break;
+            
+            case SYS_fwrite:
+dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
+                if(!taskctx_validfid(ctx,msg->type)) {
+                    seterr(EINVAL);
+                    ret=0;
+                } else {
+                    ret=writefs(ctx,msg->type,msg->ptr,msg->size);
+                }
                 break;
 
             default:

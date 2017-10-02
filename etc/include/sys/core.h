@@ -30,36 +30,33 @@
 
 /*** low level codes in rdi for syscall instruction ***/
 // rax: 00000000000xxxx Memory and multitask related functions
-#define SYS_IRQ 0           // CORE sends it to device drivers, disables IRQ
-#define SYS_ack 1           // device drivers to CORE, re-enable IRQ
-#define SYS_nack 2          // negative acknowledge
-#define SYS_dl 3
-#define SYS_sched_yield 4
-#define SYS_seterr 5
-#define SYS_setirq 6
-#define SYS_exit 7
-#define SYS_swapbuf 8
-#define SYS_stimebcd 9     // driver to CORE, cmos local date
-#define SYS_stime 10
-#define SYS_time 11
-#define SYS_alarm 12
-#define SYS_meminfo 13
-#define SYS_mmap 14         // mman functions
-#define SYS_munmap 15
-#define SYS_mprotect 16
-#define SYS_msync 17
-#define SYS_mlock 18
-#define SYS_munlock 19
-#define SYS_mlockall 20
-#define SYS_munlockall 21
-#define SYS_mapfile 22      // process functions
-#define SYS_fork 23
-#define SYS_exec 24
-#define SYS_sync 25
-#define SYS_rand 26
-#define SYS_srand 27
+#define SYS_IRQ          0 // CORE sends it to device drivers, disables IRQ
+#define SYS_ack          1 // device drivers to CORE, re-enable IRQ, libc return value
+#define SYS_nack         2 // negative acknowledge, libc return errno
+#define SYS_dl           3
+#define SYS_sched_yield  4
+#define SYS_setirq       5
+#define SYS_exit         6
+#define SYS_swapbuf      7
+#define SYS_stimebcd     8 // driver to CORE, cmos local date
+#define SYS_stime        9
+#define SYS_time        10
+#define SYS_alarm       11
+#define SYS_meminfo     12
+#define SYS_mmap        14 // mman functions
+#define SYS_munmap      15
+#define SYS_msync       16
+#define SYS_mlock       17
+#define SYS_munlock     18
+#define SYS_mapfile     19 // FIXME: remove
+#define SYS_p2pcpy      20
+#define SYS_fork        21 // process functions
+#define SYS_exec        22
+#define SYS_sync        23
+#define SYS_rand        24
+#define SYS_srand       25
 
-#define SYS_recv 0x7FFF     // receive message
+#define SYS_recv    0x7FFF // receive message
 
 
 // rax: FFFFFFFFFFFFxxxx File system services

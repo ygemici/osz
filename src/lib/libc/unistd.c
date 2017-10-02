@@ -134,7 +134,9 @@ public int umount(const char *path)
     return msg->arg0;
 }
 
-/* create a device link */
+/**
+ * create a device link
+ */
 public int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, blkcnt_t cnt)
 {
     if(devname==NULL || devname[0]==0 || devname[0]=='/') {
@@ -147,3 +149,24 @@ public int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, 
     return msg->arg0;
 }
 
+/**
+ * duplicate FD, returning a new file descriptor on the same file.
+ */
+public fid_t dup (fid_t stream)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_dup, stream);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * duplicate FD to FD2, closing FD2 and making it open on the same file.
+ */
+public fid_t dup2 (fid_t stream, fid_t stream2)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_dup2, stream, stream2);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}

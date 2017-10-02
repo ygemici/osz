@@ -66,6 +66,9 @@ _start:
     xorq    %rbp, %rbp
     /* initialize console so that we can report errors and stats */
     call    kprintf_init
+#if DEBUG
+    call    dbg_init
+#endif
     /* clear task rip to avoid symbol lookup in case of panic */
     xorq    %rax, %rax
     movq    %rax, __PAGESIZE-40

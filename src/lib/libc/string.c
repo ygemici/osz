@@ -34,13 +34,13 @@ public uint32_t translatelower[] = {
 /* Return a string describing the meaning of the `errno' code in ERRNUM.  */
 char *strerror(int errnum)
 {
-    return errnum>=0 && errnum<sizeof(errstrs) ? errstrs[errnum] : "Unknown error";
+    return errnum>=0 && errnum<sizeof(errstrs)/sizeof(errstrs[0]) ? errstrs[errnum] : "Unknown error";
 }
 
 /* Return a string describing the meaning of the signal number in SIG.  */
 char *strsignal(int sig)
 {
-    return sig>=0 && sig<sizeof(sigs) ? sigs[sig] : "?";
+    return sig>=0 && sig<sizeof(sigs)/sizeof(sigs[0]) ? sigs[sig] : "?";
 }
 
 /* Duplicate S, returning an identical malloc'd string.  */

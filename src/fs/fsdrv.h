@@ -30,15 +30,6 @@
 #ifndef _FSDRV_H_
 #define _FSDRV_H_
 
-// locate resturn statuses
-#define NOBLOCK     1   // block not found in cache
-#define NOTFOUND    2   // file not found
-#define FSERROR     3   // file system error
-#define UPDIR       4   // directory up outside of device
-#define FILEINPATH  5   // file image referenced as directory
-#define SYMINPATH   6   // symlink in path
-#define UNIONINPATH 7   // union in path
-
 typedef struct {
     fid_t inode;
     fpos_t filesize;
@@ -50,8 +41,10 @@ typedef struct {
 typedef struct {
     const char *name;
     const char *desc;
-    bool_t (*detect)(void *blk);
-    uint8_t (*locate)(fid_t storage, ino_t parent, locate_t *loc);
+    bool_t (*detect)(fid_t fd, void *blk);
+    uint8_t (*locate)(fid_t fd, ino_t parent, locate_t *loc);
+    void (*resizefs)(fid_t fd);
+    void* (*read)(fid_t fd, ino_t file, fpos_t offs, size_t *s);
 } fsdrv_t;
 
 /* filesystem parsers */
