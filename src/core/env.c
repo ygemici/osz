@@ -32,18 +32,13 @@ dataseg uint64_t nrphymax;
 dataseg uint64_t nrmqmax;
 dataseg uint64_t nrlogmax;
 dataseg uint64_t clocksource;
-dataseg uint64_t fps;
 dataseg uint64_t debug;
 dataseg uint64_t display;
 dataseg uint64_t quantum;
-dataseg uint64_t keymap;
-dataseg uint64_t pathmax;
-dataseg uint8_t identity;
 dataseg uint8_t syslog;
 dataseg uint8_t networking;
 dataseg uint8_t sound;
 dataseg uint8_t rescueshell;
-dataseg uint8_t lefthanded;
 
 /*** for overriding default or autodetected values ***/
 // platform specific variables
@@ -139,15 +134,8 @@ unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max
     return s;
 }
 
-/** parse a true boolean that defaults to false */
-unsigned char *env_boolt(unsigned char *s, uint8_t *v)
-{
-    *v = (*s=='1'||*s=='t'||*s=='T'||*s=='e'||*s=='E'||(*s=='o'&&*(s+1)=='n')||(*s=='O'&&*(s+1)=='N'));
-    return s+1;
-}
-
 /** parse a false boolean that defaults to true */
-unsigned char *env_boolf(unsigned char *s, uint8_t *v)
+unsigned char *env_bool(unsigned char *s, uint8_t *v)
 {
     *v = !(*s=='0'||*s=='f'||*s=='F'||*s=='d'||*s=='D'||(*s=='o'&&*(s+1)=='f')||(*s=='O'&&*(s+1)=='F'));
     return s+1;
@@ -173,21 +161,6 @@ unsigned char *env_display(unsigned char *s)
     if(s[0]=='r' && s[1]=='e')  display = DSP_STEREO_COLOR; //real 3D
     while(*s!=0 && *s!='\n')
         s++;
-    return s;
-}
-
-/** parse keyboard map definition */
-unsigned char *env_keymap(unsigned char *s)
-{
-    unsigned char *c = (unsigned char *)keymap;
-    unsigned char *e = (unsigned char *)keymap + 7;
-
-    while(c<e && s!=NULL && *s!=0) {
-        *c = *s;
-        c++;
-        s++;
-    }
-    *c = 0;
     return s;
 }
 
@@ -245,15 +218,13 @@ void env_init()
 
     // set up defaults
     networking = sound = syslog = true;
-    identity = false;
     nrphymax = nrlogmax = 8;
     nrmqmax = 1;
-    pathmax = 512;
-    fps = 10;
     quantum = 100;
     display = DSP_MONO_COLOR;
     debug = DBG_NONE;
-    kmemcpy(&keymap,"en_us",6);
+    // initialize platform variables
+    platform_env();
 
     // parse ascii text
     while(env < env_end && *env!=0) {
@@ -287,17 +258,17 @@ void env_init()
         // disable syslog
         if(!kmemcmp(env, "syslog=", 7)) {
             env += 7;
-            env = env_boolf(env, &syslog);
+            env = env_bool(env, &syslog);
         } else
         // disable networking
         if(!kmemcmp(env, "networking=", 11)) {
             env += 11;
-            env = env_boolf(env, &networking);
+            env = env_bool(env, &networking);
         } else
         // disable sound
         if(!kmemcmp(env, "sound=", 6)) {
             env += 6;
-            env = env_boolf(env, &sound);
+            env = env_bool(env, &sound);
         } else
         // maximum timeslice a task can allocate
         // CPU continously in timer interrupts
@@ -316,7 +287,7 @@ void env_init()
             env += 6;
             env = env_debug(env);
         } else
-            // platform specific keys
+            // platform specific keys, such as clocksource
             env = platform_parse(env);
     }
 }

@@ -27,6 +27,7 @@
 
 #define _AS 1
 #include "arch.h"
+#include "../mcb.h"
 
 .section .text
 .global idle
@@ -37,6 +38,7 @@
 .global kmap
 .global kmap_init
 .global kmap_mq
+.global kmap_buf
 .global kmap_getpte
 .global kstrcpy
 .global kstrlen
@@ -56,7 +58,7 @@ idle:
 /* acquire a lock, for multi core system */
 klockacquire:
 1:  lock
-    btsq    %rdi, multicorelock
+    btsq    %rdi, mcb + mcb_locks
     jnc     1f
     pause
     jmp     1b
@@ -65,7 +67,7 @@ klockacquire:
 /* release a lock */
 klockrelease:
     lock
-    btrq    %rdi, multicorelock
+    btrq    %rdi, mcb + mcb_locks
     ret
 
 /* shuffle bits of random seed */
@@ -204,6 +206,8 @@ kmemcpy:
     jz      2f
     orq     %rdx, %rdx
     jz      2f
+//    cmpq    $30, %rdx
+//    ja      3f
 1:  movq    %rdx, %rcx
     shrq    $3, %rcx
     or      %rcx, %rcx
@@ -214,6 +218,9 @@ kmemcpy:
     repnz   movsb
     cld
 2:  ret
+// TODO: use SSE2 copy
+3:
+    ret
 
 kmemset:
     cld
@@ -379,7 +386,6 @@ kmap_init:
     movq    %rax, %r8
     /* PTE */
     movq    (%rbx), %rax
-    // FIXME: remap core bss no-cache for multi core system
     xorb    %al, %al
     movq    %rcx, %rbx
     shrq    $12, %rbx
@@ -405,7 +411,7 @@ kmap_init:
     popq    %rbx
     ret
 
-/* map a message queue temporairly
+/* map a message queue temporarily
    IN rdi: tcb->memroot */
 kmap_mq:
     movq    %rdi, %rdx
@@ -413,7 +419,7 @@ kmap_mq:
     call    kmap_getpte2
     movb    $PG_CORE_NOCACHE, %r12b
     movq    $tmpmqctrl, %rax
-    addq    $__PAGESIZE-16, %rax
+    addq    $__PAGESIZE-24, %rax
     movq    %r12, (%rax)
     movw    nrmqmax, %cx
     movq    $MQ_ADDRESS / __PAGESIZE, %rax
@@ -429,6 +435,51 @@ kmap_mq:
     movb    $PG_CORE_NOCACHE, %sil
     call    kmap
 
+    ret
+
+/* map a buffer temporarily (up to 2M)
+   IN: rdi: tcb->memroot, rsi: pointer, rdx: size */
+kmap_buf:
+    andq    $__SLOTSIZE-1, %rdx
+    push    %rdx
+    push    %rsi
+    movq    %rdi, %rdx
+    movq    %rsi, %rdi
+    push    %rdx
+    push    %rdi
+    call    kmap_getpte2
+    movb    $PG_CORE_NOCACHE, %r12b
+    movq    $tmpmqctrl, %rax
+    addq    $__PAGESIZE-24, %rax
+    movq    %r12, (%rax)
+    pop     %rdi
+    pop     %rdx
+    // does buffer expand to the next slot?
+    mov     (%rsp), %rax
+    addq    %rsi, %rax
+    shrq    $21, %rax
+    movq    %rsi, %rbx
+    shrq    $21, %rbx
+    // buf/__SLOTSIZE == (buf+size)/__SLOTSIZE?
+    cmpq    %rax, %rbx
+    je      1f
+    // map the next slot too
+    addq    $__SLOTSIZE, %rsi
+    call    kmap_getpte2
+    movb    $PG_CORE_NOCACHE, %r12b
+    movq    $tmpmqctrl, %rax
+    addq    $__PAGESIZE-16, %rax
+    movq    %r12, (%rax)
+    // invalidate newly mapped buffer
+1:  pop     %rax
+    andq    $__SLOTSIZE-1, %rax
+    addq    $TMPQ_ADDRESS, %rax
+    pop     %rcx
+    shrq    $12, %rcx
+1:  invlpg  (%rax)
+    addq    $__PAGESIZE, %rax
+    decw    %cx
+    jnz     1b
     ret
 
 /* IN rdi: virtual address

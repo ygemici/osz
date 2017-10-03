@@ -36,7 +36,6 @@
 c_assert(ISR_NUMIRQ < 224);
 
 /* external resources */
-extern ccb_t ccb;                   // CPU Control Block
 
 /* from isrs.S */
 extern void isr_exc00divzero();
@@ -49,7 +48,6 @@ extern void isr_irqtmr_rtc();
 extern void isr_irqtmrcal();
 extern void isr_irqtmrcal_rtc();
 extern uint64_t isr_tmrcalibrate();
-extern void platform_timer();
 extern uint64_t env_getts(char *p, int16_t timezone);
 
 /* safe stack for interrupt routines */
@@ -181,7 +179,7 @@ void isr_init()
 
     i *= tmrfreq;
     bogomips *= tmrfreq;
-    syslog_early(" cpu %d core(s), %d cps, %d bmips", numcores, i, bogomips);
+    syslog_early(" cpu %d core(s), %d cps, %d bmips", mcb.numcores, i, bogomips);
     /* Hz: number of interrupts per sec
      * step: microsec to add to TICKS_NTS every interrupt
      * ts: task switch after every n interrupts */

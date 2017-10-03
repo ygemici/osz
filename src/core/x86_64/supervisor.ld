@@ -38,6 +38,7 @@ SECTIONS
     . += 65536;
 
     /* dynamically allocated/mapped data */
+    . = ALIGN(4096);
     __bss_start = .;
     /* mappings hack */
     tmpctrl = .;
@@ -59,6 +60,9 @@ SECTIONS
     . += 4096;
     /* CPU Control Block. We need static address for that */
     ccb = .;
+    . += 4096;
+    /* Multi Core Control Block */
+    mcb = .;
     . += 4096;
     /* physical memory manager free memory entries */
     pmm_entries = .;

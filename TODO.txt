@@ -2,7 +2,6 @@
 ./etc/include/sys/core.h:51:#define SYS_mapfile     19 // FIXME: remove
 ./src/drivers/fs/fsz/main.c:172:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
 ./src/ui/main.c:56:    // FIXME: once vfs ready, use fopen() and fread()
-./src/core/x86_64/libk.S:382:    // FIXME: remap core bss no-cache for multi core system
 ./src/core/msg.c:247:        // FIXME: remove mapfile once vfs ready
 ./src/core/msg.c:291:            /* FIXME: naive implementation, no checks */
 ./src/lib/libc/x86_64/unistd.S:275:// FIXME: remove mapfile once vfs ready
@@ -15,11 +14,11 @@
 ./src/fs/vfs.c:210:            //TODO: reading a block from a regular file
 ./src/fs/vfs.c:230:                            // TODO: implement tmpfs memory device
 ./src/fs/cache.c:39:    // TODO: use dev[fcb[fd].device.inode].drivertask, dev[fcb[fd].device.inode].device
+./src/core/x86_64/libk.S:221:// TODO: use SSE2 copy
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
-./src/core/x86_64/ibmpc/platform.c:110:// TODO: enumerate bus and load drivers
+./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers
 ./src/core/msg.c:99:    /* TODO: use mq_buffstart properly as a circular buffer */
-./src/core/msg.c:342:            // TODO: map arg1 address to MQ_ADDRESS
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/x86_64/unistd.S:352:    /* TODO: getentropy */

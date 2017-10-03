@@ -39,7 +39,7 @@
 #include <sys/debug.h>
 
 #define FBUF_ADDRESS  0xfffffffffc000000           //framebuffer address
-#define TMPQ_ADDRESS  0xffffffffffc00000           //temporarily mapped message queue
+#define TMPQ_ADDRESS  0xffffffffffa00000           //temporarily mapped message queue
 #define CORE_ADDRESS  0xffffffffffe02000           //core text segment
 
 #define TCB_ADDRESS    0
@@ -69,6 +69,7 @@
 #define LOCK_PMM    (1<<0)
 
 #ifndef _AS
+#include "mcb.h"
 #include "pmm.h"
 
 // import virtual addresses from linker
@@ -82,14 +83,14 @@ extern uint8_t tmpalarm;              // temporarily mapped tcb for next alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
 extern uint8_t __bss_start;           // start of bss segment
+extern ccb_t ccb;                     // CPU Control Block, mapped per core
+extern multicore_t mcb;               // MultiCore Control Block, mapped globally for all cores
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern pmm_t pmm;                     // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
-extern uint32_t multicorelock;        // locks for multi core system
-extern uint32_t numcores;             // number of cores
 
 /* see etc/include/syscall.h */
 extern pid_t services[NUMSRV];
@@ -142,11 +143,13 @@ extern void kprintf_poweroff();
 extern void kprintf_reboot();
 
 // ----- Platform -----
-extern void platform_init();
-extern void platform_enumerate();
-extern void platform_poweroff();
-extern void platform_reset();
-extern void platform_halt();
+extern void platform_env();         // called by env_init()
+extern void platform_detect();      // called by sys_init() before isr_init()
+extern void platform_enumerate();   // called by sys_init()
+extern void platform_timer();       // called by isr_init()
+extern void platform_poweroff();    // called by kprintf_poweroff()
+extern void platform_reset();       // called by kprintf_reset()
+extern void platform_halt();        // hang the system
 
 /** Parse configuration to get environment */
 extern void env_init();
@@ -210,8 +213,11 @@ extern void *kmap_init();
 /** Map a physical page at a virtual address */
 extern void kmap(virt_t virt, phy_t phys, uint8_t access);
 
-/** temporarirly map a message queue at TMPQ_ADDRESS */
+/** temporarily map a message queue at TMPQ_ADDRESS */
 extern void kmap_mq(phy_t tcbmemroot);
+
+/** temporarily map a buffer (up to 2M) at TMPQ_ADDRESS */
+extern void kmap_buf(phy_t tcbmemroot, virt_t ptr, size_t size);
 
 /** return a pointer to PTE for virtual address */
 extern uint64_t *kmap_getpte(virt_t virt);

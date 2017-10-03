@@ -274,7 +274,7 @@ dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
                     seterr(EINVAL);
                     ret=0;
                 } else {
-//                    ret=readfs(ctx,msg->type,(virt_t)msg->ptr,msg->size);
+                    ret=readfs(ctx,msg->type,(virt_t)msg->ptr,msg->size);
                 }
                 break;
             

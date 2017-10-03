@@ -58,11 +58,11 @@ unsigned char *env_cs(unsigned char *s)
 }
 
 /**
- * Initalize platform. Called by main()
+ * Initalize platform variables. Called by env_init()
  */
-void platform_init()
+void platform_env()
 {
-    // set up defaults
+    // set up defaults. Remember, no PMM yet
     systables[systable_smbi_idx] = bootboot.x86_64.smbi_ptr;
     systables[systable_mp_idx] = bootboot.x86_64.mp_ptr;
 
@@ -71,8 +71,6 @@ void platform_init()
     systables[systable_hpet_idx] = systables[systable_dsdt_idx] = 0;
 
     clocksource=TMR_PIT;
-
-    numcores=1;
 }
 
 /**
@@ -100,6 +98,16 @@ void platform_timer()
         clocksource=TMR_PIT;
         pit_init();
     }
+}
+
+/**
+ * Initalize platform, detect basic hardware. Called by sys_init()
+ */
+void platform_detect()
+{
+    // things needed for isr_init()
+    // for MultiCore, use acpi platform
+    mcb.numcores=1;
 }
 
 /**

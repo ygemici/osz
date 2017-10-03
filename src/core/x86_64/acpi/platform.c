@@ -65,22 +65,17 @@ unsigned char *env_cs(unsigned char *s)
 }
 
 /**
- * Initialize platform dependent part. Called by main()
+ * Initialize platform variables. Called by env_init()
  */
-void platform_init()
+void platform_env()
 {
-    // set up defaults
+    // set up defaults. Remember, no PMM yet
     systables[systable_acpi_idx] = bootboot.x86_64.acpi_ptr;
     systables[systable_smbi_idx] = bootboot.x86_64.smbi_ptr;
     systables[systable_efi_idx] = bootboot.x86_64.efi_ptr;
     systables[systable_mp_idx] = bootboot.x86_64.mp_ptr;
     systables[systable_apic_idx] = systables[systable_ioapic_idx] = 
-    systables[systable_hpet_idx] = 0;
-    systables[systable_dsdt_idx] = (uint64_t)fs_locate("sys/etc/dsdt");
-    if(fs_size == 0)
-        systables[systable_dsdt_idx] = 0;
-    numcores=1;
-    acpi_early(NULL);
+    systables[systable_hpet_idx] = systables[systable_dsdt_idx] = 0;
 }
 
 /**
@@ -129,6 +124,21 @@ void platform_timer()
         hpet_init();
         clocksource=TMR_HPET;
     }
+}
+
+/**
+ * Initalize platform, detect basic hardware. Called by sys_init()
+ */
+void platform_detect()
+    // things needed for isr_init()
+    // if DSDT address not provided manually, look for a user provided file
+    if(systables[systable_dsdt_idx] == 0) {
+        systables[systable_dsdt_idx] = (uint64_t)fs_locate("sys/etc/dsdt");
+        if(fs_size == 0)
+            systables[systable_dsdt_idx] = 0;
+    }
+    mcb.numcores=1;
+    acpi_early(NULL);
 }
 
 /**

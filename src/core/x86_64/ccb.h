@@ -22,8 +22,8 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief CPU Control Block. Architecture specific implementation
- * MUST ALIGN WITH 64 BIT TSS
+ * @brief CPU Control Block. Mapped per core, architecture specific
+ * !!!WARNING!!! MUST ALIGN WITH 64 BIT TSS
  */
 
 #define OSZ_CCB_MAGIC "CPUB"

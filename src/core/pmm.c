@@ -294,14 +294,14 @@ void pmm_init()
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
             if(!i) {
-                // map free physical pages to pmm.entries
-                for(i=0;(uint)i<(uint)nrphymax;i++)
-                    kmap((uint64_t)((uint8_t*)fmem) + i*__PAGESIZE,
+                // map free physical pages to mcb and pmm.entries. Nocache is important for MultiCore
+                for(i=0;(uint)i<(uint)nrphymax+1;i++)
+                    kmap((uint64_t)((uint8_t*)&mcb) + i*__PAGESIZE,
                         (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
                         PG_CORE_NOCACHE);
-                // "preallocate" the memory for pmm.entries
-                entry->ptr +=(uint64_t)((uint)nrphymax*__PAGESIZE);
-                entry->size-=(uint64_t)((uint)nrphymax*__PAGESIZE);
+                // "preallocate" the memory for mcb and pmm.entries
+                entry->ptr +=(uint64_t)(((uint)nrphymax+1)*__PAGESIZE);
+                entry->size-=(uint64_t)(((uint)nrphymax+1)*__PAGESIZE);
                 i=true;
             }
         }
@@ -311,6 +311,11 @@ void pmm_init()
     // memory check, -1 for rounding errors
     if(m/1024/1024 < PHYMEM_MIN-1)
         kpanic("Not enough memory. At least %d Mb of RAM required, only %d Mb free.", PHYMEM_MIN, m/1024/1024);
+
+    // set up MultiCore Control Block which holds the pmm lock
+    kmemcpy(&mcb.magic, OSZ_MCB_MAGIC, 4);
+    mcb.locks = 0;
+    mcb.numcores = 1;
 
     // iterate through memory map again but this time
     // record free areas in pmm.entries
@@ -408,9 +413,9 @@ void* kalloc(int pages)
         pages=1;
     if(pages>512)
         pages=512;
-    /* we allow non continous pages */
+    /* we allow non continous pages. For multi core system we must disable caching */
     while(pages-->0){
-        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE);
+        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE_NOCACHE);
         pmm.bss_end += __PAGESIZE;
     }
     return bss;

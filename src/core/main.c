@@ -35,7 +35,7 @@
  *       0-16G user      RAM identity mapped[3] (0x0000000000000000)
  *
  *   [1] see loader/bootboot.h
- *   [2] see sys/config and env.h. Plain ascii key=value pairs,
+ *   [2] see sys/config and env.c. Plain ascii key=value pairs,
  *       separated by newline characters.
  *   [3] when main() calls sys_enable(), user task will be mapped
  *       instead into 0 - 2^56 and shared memory in -2^56 - -64M.
@@ -48,10 +48,6 @@ dataseg char osver[] =
     OSZ_NAME " " OSZ_VER " " OSZ_ARCH "-" OSZ_PLATFORM " (build " OSZ_BUILD ")\n"
     "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
-/* locks for multi core system */
-dataseg uint32_t multicorelock;
-dataseg uint32_t numcores;
-
 /**********************************************************************
  *                         OS/Z Life Cycle                            *
  **********************************************************************/
@@ -62,11 +58,9 @@ void main()
     kprintf("OS/Z starting...\n");
 
     /*** step 1: motoric reflexes ***/
-    // initialize platform
-    platform_init();
     // parse environment
     env_init();
-    // initialize physical memory manager, required by new task creation
+    // initialize Physical Memory Manager, required by new task creation and syslog
     pmm_init();
 
     // initialize the system, "idle" task and device driver tasks
@@ -107,8 +101,8 @@ void main()
     sys_enable();
 
     /*** step 4: go to dreamless sleep. ***/
-    // ...we should never return here. Instead exiting init will
-    // poweroff the machine as the last step in the shutdown procedure.
-    // But just in case of any unwanted return, we say good bye.
+    // ...we should never return here. Instead exiting init will poweroff
+    // the machine as the last step in the shutdown procedure. But just in
+    // case of any unwanted return, we say good bye here too.
     kprintf_poweroff();
 }

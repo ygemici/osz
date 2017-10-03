@@ -329,6 +329,12 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
             break;
 
         case SYS_p2pcpy:
+            // failsafe
+            arg3 &= (__BUFFSIZE-1);
+            if((int64_t)arg1 < 0) {
+                coreerrno = EINVAL;
+                return (uint64_t)false;
+            }
             // map destination task's tcb
             if(arg0==0 || arg0==tcb->pid) {
                 coreerrno = ESRCH;
@@ -339,9 +345,10 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
                 coreerrno = ESRCH;
                 return (uint64_t)false;
             }
-            // TODO: map arg1 address to MQ_ADDRESS
-            kprintf("UNIMPLEMENTED: p2pcpy(%x,%x,%x,%d)\n",arg0,arg1,arg2,arg3);
-            // copy arg3 bytes from arg2 to MQ_ADDRESS
+            // map destination buffer temporarily
+            kmap_buf(dsttcb->memroot,arg1,arg3);
+            // copy from current address space to buffer
+            kmemcpy((void*)(TMPQ_ADDRESS + (arg1&(__SLOTSIZE-1))),(void*)arg2,arg3);
             break;
 
         default:

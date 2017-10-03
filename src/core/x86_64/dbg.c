@@ -132,14 +132,19 @@ void dbg_putchar(int c)
     if(c<8 || c>255 || (dbg_indump==2 && (c<' '||c>=127)) || (c>=127&&c<160) || c==173)
         c='.';
     __asm__ __volatile__ (
+        "movl %0, %%ebx;"
+#ifndef NOBOCHSCONSOLE
         // bochs e9 port hack
-        "movl %0, %%eax;movb %%al, %%bl;outb %%al, $0xe9;"
+        "movb %%bl, %%al;outb %%al, $0xe9;"
+#endif
         // print character on serial
-        "movl $10000,%%ecx;movw $0x3fd,%%dx;1:"
-        "inb %%dx, %%al;"
+        "movl $10000,%%ecx;movw $0x3fd,%%dx;"
+        // transmit buffer ready?
+        "1:inb %%dx, %%al;"
         "cmpb $0xff,%%al;je 2f;"
         "dec %%ecx;jz 2f;"
         "andb $0x20,%%al;jz 1b;"
+        // send out character
         "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx;2:"
     ::"r"(c));
 }

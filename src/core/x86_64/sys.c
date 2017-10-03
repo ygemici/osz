@@ -92,8 +92,6 @@ void sys_init()
     drvs = (char *)fs_locate("sys/drivers");
     drvs_end = drvs + fs_size;
 
-    /*** Platform specific initialization ***/
-
     /* create idle task */
     tcb_t *tcb = task_new("idle", PRI_IDLE);
     kmemcpy(&tcb->owner, "core", 5);
@@ -105,7 +103,9 @@ void sys_init()
     idle_mapping = tcb->memroot;
     idle_first = true;
 
+    /*** Platform specific initialization ***/
     syslog_early("Device drivers");
+    platform_detect();
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
 
