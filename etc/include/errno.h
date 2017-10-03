@@ -53,7 +53,7 @@ extern int errno();
 #define EIO         18  // I/O error
 #define EPIPE       19  // Broken pipe
 #define ESPIPE      20  // Illegal seek
-#define ENOTSH      21  // Not a shared memory buffer
+#define ENOTSHM     21  // Not a shared memory buffer
 
 /*
 #define EINTR        4  // Interrupted system call

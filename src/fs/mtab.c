@@ -100,7 +100,7 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     fcb[fd].nopen++;
 
 //dbg_printf("dev '%s' file '%s' opts '%s' fs %d\n",dev,file,opts,fs);
-    if(ff==ROOTFCB) {
+    if(ff==ROOTFCB && !rootmounted) {
         // when mounting root, also mount /dev. It's path is hardcoded, cannot be changed in OS/Z
         mtab_add(DEVPATH, DEVPATH, "");
         rootmounted = true;

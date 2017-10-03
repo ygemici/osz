@@ -128,12 +128,12 @@ public int ferror (fid_t stream)
 public size_t fread (fid_t stream, void *ptr, size_t size)
 {
     if(size>=__BUFFSIZE) {
-        seterr(ENOTSH);
+        seterr(ENOTSHM);
         return 0;
     }
     msg_t *msg=mq_call(SRV_FS, SYS_fread, ptr, size, stream);
     if(errno())
-        return -1;
+        return 0;
     return msg->arg0;
 }
 
@@ -141,12 +141,12 @@ public size_t fread (fid_t stream, void *ptr, size_t size)
 public size_t fwrite (fid_t stream, void *ptr, size_t size)
 {
     if(size>=__BUFFSIZE && (int64_t)ptr > 0) {
-        seterr(ENOTSH);
+        seterr(ENOTSHM);
         return 0;
     }
     msg_t *msg=mq_call(SRV_FS, SYS_fwrite|MSG_PTRDATA, ptr, size, stream);
     if(errno())
-        return -1;
+        return 0;
     return msg->arg0;
 }
 

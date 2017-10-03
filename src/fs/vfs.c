@@ -460,13 +460,16 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
         tc->workleft=size;
         tc->workoffs=0;
     }
+//dbg_printf("readfs storage %d file %d offs %d\n",fc->reg.storage, tc->openfiles[idx].fid, tc->openfiles[idx].offs);
     // read all blocks in
     while(tc->workleft>0) {
         // read max one block
         bs=fcb[fc->reg.storage].device.blksize;
+//dbg_printf("readfs %d %d left %d\n",tc->openfiles[idx].offs + tc->workoffs,bs,tc->workleft);
         // call file system driver
         blk=(*fsdrv[fc->reg.fs].read)(
-            tc->openfiles[idx].fid, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
+            fc->reg.storage, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
+//dbg_printf("readfs ret %x %d, delayed %d\n",blk,bs,ackdelayed);
         // skip if block is not in cache
         if(ackdelayed) break;
         // if eof
@@ -474,9 +477,13 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
             ret = tc->workoffs;
             tc->workleft=-1;
             break;
+        } else if(blk==NULL) {
+            // spare portion of file? return zero block
+            zeroblk=(void*)realloc(zeroblk, fcb[fc->reg.storage].device.blksize);
+            blk=zeroblk;
         }
         // failsafe, get number of bytes read
-        if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=0; } else tc->workleft-=bs;
+        if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=-1; ret=tc->workoffs+bs; } else tc->workleft-=bs;
         // copy result to caller. If shared memory, directly; otherwise via core call
         if((int64_t)ptr < 0)
             memcpy((void*)(ptr + tc->workoffs), blk, bs);
@@ -484,6 +491,8 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
             p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
         tc->workoffs+=bs;
     }
+    // only alter seek offset when read is finished
+    tc->openfiles[idx].offs += ret;
     return ret;
 }
 
@@ -493,9 +502,17 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
  */
 public size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
 {
+    fcb_t *fc;
+    // input checks
     if(!taskctx_validfid(tc,idx))
         return 0;
-    if(tc->workleft==-1)
+    fc=&fcb[tc->openfiles[idx].fid];
+    if(fc->reg.fs==-1)
+        return 0;
+    // set up first time run parameters
+    if(tc->workleft==-1) {
         tc->workleft=size;
+        tc->workoffs=0;
+    }
     return 0;
 }

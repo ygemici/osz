@@ -215,24 +215,80 @@ nextdir:
  */
 void resizefs(fid_t fd)
 {
+//    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
+//    dbg_printf("FS/Z resizefs, currently %d should be %d\n",
+//      sb->numsec, fcb[fd].device.filesize/fcb[fd].device.blksize);
 }
 
 /**
- * read a block from a file
+ * read a block from a file. returns:
+ *   NULL && ackdelayed: block not found in cache, retry when driver has loaded the sector
+ *   *s==0: eof
+ *   NULL && *s!=0: spare record, zeros
+ *   !NULL && *s!=0: valid file data
  */
 void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
 {
     FSZ_Inode *in=(FSZ_Inode*)readblock(fd,file);
-    if(in==NULL) {
-        *s=0;
-        return NULL;
+    void *blk;
+    uint64_t i,j,k,l;
+//dbg_printf("fsz read storage %d file %d offs %d s %d\n",fd,file,offs,*s);
+    // failsafe
+    if( fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
+        in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4) || in->size<=offs) goto read_err;
+    size_t bs=fcb[fd].device.blksize;
+    // eof check when reading from end of file
+    if(offs+*s > in->size) {
+        *s = in->size-offs;
+        // failsafe
+        if(*s==0) return NULL;
     }
-    if(memcmp(in->magic, FSZ_IN_MAGIC, 4)) {
-        seterr(EBADFS);
-        *s=0;
-        return NULL;
+    l=FLAG_TRANSLATION(in->flags);
+    // simplest case, data inlined in inode
+    if(l==FSZ_IN_FLAG_INLINE)
+        return (void*)(in->inlinedata + offs);
+    // one block referenced directly
+    blk=readblock(fd,in->sec);
+    if(blk==NULL) goto read_err;
+    if(l==FSZ_IN_FLAG_DIRECT) {
+        return (void*)(blk + offs);
     }
-//    dbg_printf("FS/Z read fd %d file %d offs %d bs %d\n",fd,file,offs,*s);
+    // otherwise translate sector directories
+    // first block?
+    if(offs<bs) {
+        if(*s>bs-offs)
+            *s=bs-offs; // max size returned from the first block
+        offs=0;
+    } else {
+        offs/=bs;       // use block aligned offset
+        offs*=bs;
+        if(offs+*s > in->size) {
+            *s = in->size-offs;
+            if(*s==0) return NULL;
+        }
+    }
+    // get how much data one sd entry covers at top level
+    j=1; for(i=0;i<l;i++) j*=bs;
+//dbg_printf(" indirect %d j %d offs %d s %d\n",l,j,offs,*s);
+    // iterate through sd levels
+    for(k=0;k<l;k++) {
+        // get which sd entry belongs to this offset at level k
+        i=(offs/j);
+//dbg_printf(" level %d: sd %d blk %x ",k,i,blk);
+        i=((uint64_t*)blk)[i<<1];
+//dbg_printf(" next %d\n",i);
+        // spare portion of file?
+        if(i==0) return NULL;
+        blk=readblock(fd,i);
+        if(blk==NULL) goto read_err;
+        j/=bs;
+    }
+//dbg_printf(" end %d s %d\n", offs%bs, *s);
+    // okay, we got the data block at last
+    return (void*)(blk+offs%bs);
+    
+read_err:
+    *s = 0;
     return NULL;
 }
 

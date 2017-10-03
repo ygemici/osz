@@ -15,8 +15,8 @@ NOINITRD = 0
 #with initrd file, the format: fsz, crc, newc, hpodc, tar
 INITRDFMT = fsz
 #size of partitions in kilobytes
-#EFI doesn't like smaller ESP partitions
-ESPSIZE = 1024
+#EFI doesn't like ESP partitions smaller than 1024k
+ESPSIZE = 2048
 USRSIZE = 768
 VARSIZE = 4
 HOMESIZE = 4

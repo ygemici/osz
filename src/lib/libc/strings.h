@@ -47,7 +47,7 @@ char *errstrs[] = { ""/*Success*/,
     "EIO I/O error",
     "EPIPE Broken pipe",
     "ESPIPE Illegal seek",
-    "ENOTSH Not a shared memory buffer" };
+    "ENOTSHM Not a shared memory buffer" };
 
 /* must match signal.h */
 char *sigs[] = { "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "EMT", "FPE", "KILL", "BUS", "SEGV",

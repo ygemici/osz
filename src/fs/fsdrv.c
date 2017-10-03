@@ -28,6 +28,7 @@
 #include "fsdrv.h"
 #include "vfs.h"
 
+/* devfs index in mount list */
 uint16_t devfsidx = -1;
 
 /* filesystem parsers */
@@ -43,7 +44,7 @@ public uint16_t fsdrv_reg(const fsdrv_t *fs)
     if(fsdrv==NULL || errno())
         abort();
     memcpy((void*)&fsdrv[nfsdrv-1], (void*)fs, sizeof(fsdrv_t));
-    if(!memcmp(fs->name,"devfs",6))
+    if(devfsidx==(uint16_t)-1 && !memcmp(fs->name,"devfs",6))
         devfsidx = nfsdrv-1;
     return nfsdrv-1;
 }

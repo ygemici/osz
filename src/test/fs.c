@@ -38,10 +38,31 @@ void fs_test()
     dbg_printf("dup ret %d errno %d %s\n", f2, errno(), strerror(errno()));
     f2=dup2(f,f2);
     dbg_printf("dup2 ret %d errno %d\n", f2, errno());
-    size_t s=fread(f,&buff,65536);
-    dbg_printf("fread ret %d errno %d\n", s, errno());
+//    size_t s=fread(f,&buff,65536);
+//    dbg_printf("fread ret %d errno %d\n%s\n", s, errno(),buff);
     f=fclose(f);
-    dbg_printf("fclose ret %d errno %d\n", f, errno());
+    dbg_printf("fclose ret %d errno %d\n\n", f, errno());
+
+    dbg_printf("fopen(/vt_sw.txt, O_RDWR)\n");
+    f=fopen("/vt_sw.txt", O_RDWR);
+//    s=fread(f,&buff,65536);
+//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
+
+    dbg_printf("fopen(/direct, O_RDWR)\n");
+    f=fopen("/direct", O_RDWR);
+//    s=fread(f,&buff,65536);
+//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
+
+    dbg_printf("fopen(/sd, O_RDWR)\n");
+    f=fopen("/sd", O_RDWR);
+//    s=fread(f,&buff,65536);
+//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
+
+    dbg_printf("fopen(/sd2, O_RDWR)\n");
+    f=fopen("/sd2", O_RDWR);
+//    s=fread(f,&buff,65536);
+//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
+
 return;
     f=mount("/dev/valami", "/etc", NULL);
     dbg_printf("mount ret %d errno %d\n", f, errno());

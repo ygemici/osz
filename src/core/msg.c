@@ -112,7 +112,7 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         if((int64_t)p > 0) {
             // check size. Buffers over 1M must be sent in shared memory
             if(arg1 > __BUFFSIZE) {
-                coreerrno = ENOTSH;
+                coreerrno = ENOTSHM;
                 return false;
             }
             // modify pointer to point into the temporary buffer area

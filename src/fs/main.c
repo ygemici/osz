@@ -155,7 +155,7 @@ void _init(int argc, char **argv)
                 continue;
 
             case SYS_fopen:
-//dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->attr0);
+//dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->type);
                 ptr=canonize(msg->ptr);
                 if(ptr==NULL) {
                     ret=-1;
@@ -163,14 +163,14 @@ void _init(int argc, char **argv)
                 }
                 ret=lookup(msg->ptr);
                 if(ret!=-1 && !errno()) {
-                    if(msg->attr1!=-1)
-                        taskctx_close(ctx, msg->arg1, true);
+                    if(msg->attr0!=-1)
+                        taskctx_close(ctx, msg->attr0, true);
                     // get offset part of path
                     o=getoffs(ptr);
                     if(o<0) o+=fcb[ret].reg.filesize;
                     // append flag overwrites it
-                    if(msg->attr0 & O_APPEND) o=fcb[ret].reg.filesize;
-                    ret=taskctx_open(ctx,ret,msg->attr0,o,msg->attr1);
+                    if(msg->type & O_APPEND) o=fcb[ret].reg.filesize;
+                    ret=taskctx_open(ctx,ret,msg->type,o,msg->attr0);
                 }
                 free(ptr);
 //taskctx_dump();
@@ -267,7 +267,7 @@ void _init(int argc, char **argv)
             case SYS_fread:
 //dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
                 if(msg->size>__BUFFSIZE && (int64_t)msg->ptr > 0) {
-                    seterr(ENOTSH);
+                    seterr(ENOTSHM);
                     ret=0;
                 }
                 if(!taskctx_validfid(ctx,msg->type)) {

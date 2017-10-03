@@ -173,6 +173,7 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
 {
     if(!taskctx_validfid(tc,idx))
         return false;
+    //cache_flush(tc->openfiles[idx].fid)
     fcb[tc->openfiles[idx].fid].mode &= ~O_EXCL;
     fcb_del(tc->openfiles[idx].fid);
     tc->openfiles[idx].fid=-1;
