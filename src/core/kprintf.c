@@ -77,7 +77,7 @@ extern char _binary_logo_start;
 extern uint64_t isr_currfps;
 extern uint64_t isr_lastfps;
 #if DEBUG
-uint64_t __attribute__ ((section (".data"))) dbg_rip;
+dataseg uint64_t dbg_rip;
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
 extern void dbg_init();
@@ -85,7 +85,7 @@ extern void dbg_setpos();
 #endif
 
 /**
- * reset console, white on black and moce cursor home
+ * reset console, white on black and move cursor home
  */
 void kprintf_reset()
 {
@@ -127,7 +127,7 @@ void kprintf_init()
     // default fg and bg, cursor at home
     kprintf_reset();
 
-    // display logo
+    // display logo, shift it to darker blue
     char *data = &_binary_logo_start + 0x255;
     char *palette = &_binary_logo_start + 0x12;
     offs = ((bootboot.fb_height/2-32) * bootboot.fb_scanline) +
@@ -151,7 +151,7 @@ void kprintf_init()
 }
 
 /**
- *  Display good bye screen and reboot computer
+ *  display Good Bye screen and reboot computer
  */
 void kprintf_reboot()
 {
@@ -176,7 +176,7 @@ void kprintf_reboot()
 }
 
 /**
- * Display good bye screen and turn off computer
+ * display Good Bye screen and turn off computer
  */
 void kprintf_poweroff()
 {
@@ -187,7 +187,7 @@ void kprintf_poweroff()
     dbg_putchar(10);
 #endif
     kprintf(poweroffprefix);
-    // Poweroff real hardware
+    // turn off hardware
     platform_poweroff();
 
     // if it didn't work, show a message and freeze.
@@ -200,7 +200,6 @@ void kprintf_poweroff()
 #endif
     platform_halt();
 }
-
 
 /**
  * put logo on panic screen, colours shifted to red
@@ -261,6 +260,7 @@ void kprintf_putchar(int c)
     srand[(offs+c+1)%4] -= ticks[TICKS_LO];
     srand[(c+bootboot.datetime[7]+bootboot.datetime[6]+bootboot.datetime[5])%4] *= 16807;
 #if DEBUG
+    // send it to serial too
     dbg_putchar(c);
 #endif
 }
@@ -457,6 +457,7 @@ void kprintf_clearline()
     }
 }
 
+#if DEBUG
 /**
  * for testing purposes, print out all characters
  */
@@ -470,13 +471,10 @@ void kprintf_unicodetable()
             kprintf_putchar(y*64+x);
             kx++;
         }
-#if DEBUG
         kprintf("\n");
-#else
-        ky++;
-#endif
     }
 }
+#endif
 
 /**
  * display a string on early console
@@ -490,12 +488,14 @@ void kprintf(char* fmt, ...)
 
     if(fmt==NULL)
         fmt=nullstr;
-    /* starts with "\x1b[UT"? */
+#if DEBUG
+    /* starts with special (esc)[UT CSI command? */
     if(*((uint32_t*)fmt)==(uint32_t)0x54555B1B) {
         /* print out the whole charset */
         kprintf_unicodetable();
         return;
     }
+#endif
 
     while(fmt[0]!=0) {
         // special characters

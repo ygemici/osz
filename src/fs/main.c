@@ -265,7 +265,7 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_fread:
-dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
+//dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
                 if(msg->size>__BUFFSIZE && (int64_t)msg->ptr > 0) {
                     seterr(ENOTSH);
                     ret=0;
@@ -279,7 +279,7 @@ dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
                 break;
             
             case SYS_fwrite:
-dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
+//dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
                 if(!taskctx_validfid(ctx,msg->type)) {
                     seterr(EINVAL);
                     ret=0;

@@ -204,7 +204,10 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
     // failsafe
     if(fd>=nfcb)
         return NULL;
-
+#if DEBUG
+    if(_debug&DBG_BLKIO)
+        dbg_printf("readblock(device file %d, sector %d)\n",fd,lsn);
+#endif
     switch(fcb[fd].type) {
         case FCB_TYPE_REG_FILE: 
             //TODO: reading a block from a regular file

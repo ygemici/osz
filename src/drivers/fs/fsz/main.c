@@ -232,7 +232,7 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
         *s=0;
         return NULL;
     }
-    dbg_printf("FS/Z read fd %d file %d offs %d bs %d\n",fd,file,offs,*s);
+//    dbg_printf("FS/Z read fd %d file %d offs %d bs %d\n",fd,file,offs,*s);
     return NULL;
 }
 

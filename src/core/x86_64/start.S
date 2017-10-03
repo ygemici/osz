@@ -44,11 +44,6 @@ _start:
     inb		$0x70, %al
     btsw	$8, %ax
     outb	%al, $0x70
-#if DEBUG
-/* clear debug status */
-    xorq    %rax, %rax
-    movq    %rax, %dr6
-#endif
 /* setup segments */
     movq    $gdt64, %rax
     lgdt    (%rax)
@@ -68,6 +63,9 @@ _start:
     call    kprintf_init
 #if DEBUG
     call    dbg_init
+    /* clear debug status */
+    xorq    %rax, %rax
+    movq    %rax, %dr6
 #endif
     /* clear task rip to avoid symbol lookup in case of panic */
     xorq    %rax, %rax
