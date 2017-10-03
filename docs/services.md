@@ -2,7 +2,7 @@ OS/Z Services
 =============
 
 There are two different kind of services: system services and user services. System services
-must reside on the initial ramdisk, as they are the server counterparts of libc, and they
+must reside on the initial ramdisk, as they are the server counterparts of `libc`, and they
 cannot be controlled from userspace. User services on the other hand are controlled by the
 init system service, and they can be loaded from external disks as well.
 

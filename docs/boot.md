@@ -27,7 +27,7 @@ That platform independent `main()` does the following:
  3. `pmm_init()` sets up Physical Memory Manager in [src/core/pmm.c](https://github.com/bztsrc/osz/blob/master/src/core/pmm.c).
  4. initializes [system services](https://github.com/bztsrc/osz/blob/master/docs/services.md), starting with `sys_init()` in [src/core/(platform)/sys.c](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/sys.c), which loads `idle` task
  and enumerates system buses to locate and load [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md). It will also initialize
-the [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c#121) (IRT).
+the [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c#L121) (IRT).
  5. second service is the `fs_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) which is a normal system service, except it has the initrd entirely mapped in in it's bss.
  6. user interface is initialized with `ui_init()` in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c). These first three services (aka `idle`, `FS`, `UI`) are mandatory, unlike the rest.
  7. loads additional, non-critical tasks by several `service_init()` calls in [src/core/service.c](https://github.com/bztsrc/osz/blob/master/src/core/service.c) like the `syslog`, `inet`, `sound` and `init` system services.
