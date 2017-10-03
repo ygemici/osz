@@ -53,8 +53,8 @@ This can be a numeric value, or a comma separated list of flags, see [debug.h](h
 | 4     | el   | DBG_ELF | debug [ELF loading](https://github.com/bztsrc/osz/blob/master/src/core/elf.c#L66) |
 | 8     | ri   | DBG_RTIMPORT | debug [run-time linker](https://github.com/bztsrc/osz/blob/master/src/core/elf.c#L486) imported values |
 | 16    | re   | DBG_RTEXPORT | debug run-time linker exported values |
-| 32    | ir   | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c#L270) |
-| 64    | de   | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/pci.c) |
+| 32    | ir   | DBG_IRQ | dump [IRQ Routing Table](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isr.c#L121) |
+| 64    | de   | DBG_DEVICES | dump [System Tables](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/acpi/acpi.c) and [PCI devices](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ibmpc/pci.c) |
 | 128   | sc   | DBG_SCHED | debug [scheduler](https://github.com/bztsrc/osz/blob/master/src/core/sched.c) |
 | 256   | ms   | DBG_MSG | debug [message sending](https://github.com/bztsrc/osz/blob/master/src/core/msg.c) |
 | 512   | lo   | DBG_LOG | dump [early syslog](https://github.com/bztsrc/osz/blob/master/src/core/syslog.c) |
