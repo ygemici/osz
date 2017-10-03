@@ -27,6 +27,8 @@
 #include <osZ.h>
 #include "keys.h"
 
+extern char *keymap_type;
+
 // index to keymap
 uint64_t modmap[16] = {0,
     // single modifiers
@@ -59,6 +61,7 @@ keymap_t keymap[2*512*16];
 /* If API changed to support more keymaps, this should be uint8_t alt */
 private void keymap_parse(bool_t alt, char *keyrc, size_t len)
 {
+
     // local buffer pointers
     // current and end of buffer
     char *c = keyrc, *e = keyrc + len;
@@ -66,6 +69,12 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
     uint64_t scancode, i;
     // temporary buffer for character reference
     uint8_t key[4];
+
+#if DEBUG
+    dbg_printf("  keymap parse %x %d\n", keyrc, len);
+#endif
+    if(keyrc==NULL || len==0)
+        return;
 
     while(c<e && *c!=0) {
         // skip comments
@@ -109,6 +118,18 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
             c++;
         }
     }
+}
+
+char buf[__PAGESIZE];
+private void keymap_init()
+{
+    fid_t f=fopen("/etc/kbd/en_us", O_RDONLY);
+#if DEBUG
+    dbg_printf("  keymap read %d %s\n", errno(),strerror(errno()));
+#endif
+    size_t s=fread(f, &buf, __PAGESIZE);
+    fclose(f);
+    keymap_parse(0, buf, s);
 }
 
 /* receive a scancode or a pretranslated keycode */

@@ -38,8 +38,8 @@ void fs_test()
     dbg_printf("dup ret %d errno %d %s\n", f2, errno(), strerror(errno()));
     f2=dup2(f,f2);
     dbg_printf("dup2 ret %d errno %d\n", f2, errno());
-//    size_t s=fread(f,&buff,65536);
-//    dbg_printf("fread ret %d errno %d\n%s\n", s, errno(),buff);
+    size_t s=fread(f,&buff,65536);
+    dbg_printf("fread ret %d errno %d\n%s\n", s, errno(),buff);
     f=fclose(f);
     dbg_printf("fclose ret %d errno %d\n\n", f, errno());
 

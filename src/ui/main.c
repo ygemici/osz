@@ -28,7 +28,7 @@
 #include <sys/driver.h>
 
 extern char _binary_logo_start;
-extern void keymap_parse(bool_t alt, char *keymap, size_t len);
+extern void keymap_init();
 extern void reset_pointers();
 
 // filled by run-time linker
@@ -36,8 +36,8 @@ public void* _screen_ptr;
 public uint64_t _fb_width;
 public uint64_t _fb_height;
 public uint8_t _display_type;
-public uint8_t lefthanded=false;
-public char *keymap_type;
+uint8_t lefthanded=false;
+char *keymap_type;
 
 public void opentty(){}
 public void openwin(){}
@@ -49,14 +49,8 @@ void task_init(int argc, char **argv)
     lefthanded = env_bool("lefthanded",false);
 //    keymap_type = env_str("keymap","en_us");
 
-    uint64_t bss = BSS_ADDRESS+__SLOTSIZE;
-    uint64_t len;
-
-    /* map keymap */
-    // FIXME: once vfs ready, use fopen() and fread()
-    len = mapfile((void*)bss, "/sys/etc/kbd/en_us");
-    keymap_parse(0, (char*)bss, (size_t)len);
-    bss += (len + __PAGESIZE-1) & ~(__PAGESIZE-1);
-
+    mq_recv();
+    
+    keymap_init();
     reset_pointers();
 }

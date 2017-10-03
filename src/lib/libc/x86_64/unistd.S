@@ -43,7 +43,6 @@
 .global mmap
 .global munmap
 .global p2pcpy
-.global mapfile
 .global sleep
 .global usleep
 .global meminfo
@@ -265,17 +264,8 @@ munlock:
 p2pcpy:
     xorq    %rax, %rax
     movb    $SYS_p2pcpy, %al
-    syscall
-    call    myseterrno
-    ret
-
-/**
- * size_t mapfile(void *bss, char *fn)
- */
-// FIXME: remove mapfile once vfs ready
-mapfile:
-    xorq    %rax, %rax
-    movb    $SYS_mapfile, %al
+    movq    %rcx, %rbx
+xchg %bx, %bx
     syscall
     call    myseterrno
     ret

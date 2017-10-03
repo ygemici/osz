@@ -202,7 +202,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
     devfs_t *device;
     void *blk=NULL;
     // failsafe
-    if(fd>=nfcb)
+    if(fd==-1 || fd>=nfcb || lsn==-1)
         return NULL;
 #if DEBUG
     if(_debug&DBG_BLKIO)
@@ -469,7 +469,7 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
         // call file system driver
         blk=(*fsdrv[fc->reg.fs].read)(
             fc->reg.storage, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
-//dbg_printf("readfs ret %x %d, delayed %d\n",blk,bs,ackdelayed);
+//dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
         // skip if block is not in cache
         if(ackdelayed) break;
         // if eof

@@ -227,7 +227,8 @@ isr_syscall:
     jmp     9f
 
     /* syscall or message send */
-3:  movq    %rdx, %rcx
+3:  movq    %rcx, %r8
+    movq    %rdx, %rcx
     movq    %rsi, %rdx
     movq    %rdi, %rsi
     movq    %rax, %rdi
@@ -235,6 +236,7 @@ isr_syscall:
     jmp     9f
 4:  pushq   %r9
     pushq   %r10
+    movq    %r8, %r9
     movq    %rcx, %r8
     movq    %rdx, %rcx
     movq    %rsi, %rdx

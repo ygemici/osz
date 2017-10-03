@@ -47,7 +47,6 @@ typedef struct {
 
 void setirq(int8_t irq);                // set irq message for this task
 meminfo_t meminfo();                    // get memory info
-size_t mapfile(void *bss, char *fn);    // map a file on initrd
 /* create a device link */
 extern int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, blkcnt_t cnt);
 /* parse environment */

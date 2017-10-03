@@ -48,13 +48,12 @@
 #define SYS_msync       16
 #define SYS_mlock       17
 #define SYS_munlock     18
-#define SYS_mapfile     19 // FIXME: remove
-#define SYS_p2pcpy      20
-#define SYS_fork        21 // process functions
-#define SYS_exec        22
-#define SYS_sync        23
-#define SYS_rand        24
-#define SYS_srand       25
+#define SYS_p2pcpy      19
+#define SYS_rand        20
+#define SYS_srand       21
+#define SYS_fork        22 // process functions
+#define SYS_exec        23
+#define SYS_sync        24
 
 #define SYS_recv    0x7FFF // receive message
 

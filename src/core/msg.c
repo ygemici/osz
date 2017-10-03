@@ -168,7 +168,6 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
     phy_t *paging = (phy_t*)&tmpmap;
     phy_t *paging2 = (phy_t*)&tmp2map;
     void *data;
-    char fn[128];
     phy_t tmp;
     uint64_t i,j;
 
@@ -243,41 +242,6 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
              * Values smaller than alarmstep already handled by isr_syscall in isrc.S */
             sched_alarm(tcb, ticks[TICKS_TS]+arg0, ticks[TICKS_NTS]+arg1);
             break;
-
-        // FIXME: remove mapfile once vfs ready
-        case SYS_mapfile:
-            /* map a file info bss */
-            if(arg0<BSS_ADDRESS || arg0>=BUF_ADDRESS || arg1==0 || *((char*)arg1)==0) {
-                coreerrno = EINVAL;
-                return 0;
-            }
-            /* locate the file */
-            tmp = tcb->memroot;
-            if(*((char*)arg1)=='/')
-                arg1++;
-            kstrcpy((char*)&fn,(char*)arg1);
-            task_map(identity_mapping);
-            data = fs_locate(fn);
-            task_map(tmp);
-            if(data==NULL) {
-                coreerrno = ENOENT;
-                return 0;
-            }
-            /* data inlined in inode? */
-            if(data != NULL && ((phy_t)data & (__PAGESIZE-1))!=0) {
-                /* copy to a new empty page */
-                tmp = (phy_t)pmm_alloc(1);
-                tcb->allocmem++;
-                tcb->linkmem--;
-                kmap((virt_t)&tmpmap, (phy_t)data & ~(__PAGESIZE-1), PG_CORE_NOCACHE);
-                kmap((virt_t)&tmp2map, tmp, PG_CORE_NOCACHE);
-                kmemcpy((char*)&tmp2map, &tmpmap + ((phy_t)data & (__PAGESIZE-1)), fs_size);
-                data = (void*)tmp;
-            }
-            /* map */
-            vmm_mapbss(tcb, (virt_t)arg0, (phy_t)data, fs_size, PG_USER_RO);
-            /* return loaded file size */
-            return fs_size;
 
         case SYS_meminfo:
                 msg_sends(EVT_DEST(tcb->pid) | EVT_FUNC(SYS_ack), pmm.freepages,pmm.totalpages,0,0,0,0);

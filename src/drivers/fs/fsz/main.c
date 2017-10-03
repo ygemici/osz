@@ -231,12 +231,12 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
 {
     FSZ_Inode *in=(FSZ_Inode*)readblock(fd,file);
     void *blk;
-    uint64_t i,j,k,l;
+    uint64_t i,j,k,l,bs;
 //dbg_printf("fsz read storage %d file %d offs %d s %d\n",fd,file,offs,*s);
     // failsafe
     if( fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
         in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4) || in->size<=offs) goto read_err;
-    size_t bs=fcb[fd].device.blksize;
+    bs=fcb[fd].device.blksize;
     // eof check when reading from end of file
     if(offs+*s > in->size) {
         *s = in->size-offs;
