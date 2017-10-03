@@ -27,8 +27,9 @@ CORE
 
 Special service which runs in privileged supervisor mode. It's always mapped in all memory map.
 The lowest level code of OS/Z like ISRs, physical memory allocation, task switching, timers and such
-are implemented here. All the other services (including the driver tasks) are running in non-privileged
-user mode (ring 3).
+are implemented here. Although it looks like a separate task, `idle` is part of core as it needs to halt the CPU.
+All the other services (including the driver tasks) are running in non-privileged user mode (ring 3).
+
 
 Typical functions: alarm(), setuid(), setsighandler(), yield(), fork(), execve(), mmap(), munmap().
 
