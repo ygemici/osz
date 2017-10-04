@@ -111,6 +111,11 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_mount:
+                if(msg->ptr==NULL || msg->size==0) {
+                    seterr(EINVAL);
+                    ret=-1;
+                    break;
+                }
                 j=strlen(msg->ptr);
                 k=strlen(msg->ptr + j+1);
 #ifdef DEBUG
@@ -129,6 +134,11 @@ void _init(int argc, char **argv)
                 if(_debug&DBG_FS)
                     dbg_printf("FS: umount(%s)\n",msg->ptr);
 #endif
+                if(msg->ptr==NULL || msg->size==0) {
+                    seterr(EINVAL);
+                    ret=-1;
+                    break;
+                }
                 ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
 #ifdef DEBUG
                 if(_debug&DBG_FS)
@@ -141,12 +151,38 @@ void _init(int argc, char **argv)
                 if(_debug&DBG_DEVICES)
                     dbg_printf("FS: mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
 #endif
+                if(msg->ptr==NULL || msg->size==0) {
+                    seterr(EINVAL);
+                    ret=-1;
+                    break;
+                }
                 ret = devfs_add(msg->ptr, ctx->pid, msg->type, msg->attr0, msg->attr1, msg->attr2) == -1 ? -1 : 0;
 //devfs_dump();
                 break;
 
+            case SYS_ioctl:
+#ifdef DEBUG
+                if(_debug&DBG_DEVICES)
+                    dbg_printf("FS: ioctl(%d,%d,%s[%d])\n",msg->type,msg->attr0,msg->ptr,msg->size);
+#endif
+                if(!taskctx_validfid(ctx,msg->type) || fcb[ctx->openfiles[msg->type].fid].type!=FCB_TYPE_DEVICE) {
+                    seterr(EBADF);
+                    ret=-1;
+                } else {
+                    // relay the message to the appropriate driver task with device id
+                    devfs_t *df=&dev[fcb[ctx->openfiles[msg->type].fid].device.inode];
+#ifdef DEBUG
+                if(_debug&DBG_DEVICES)
+                    dbg_printf("FS: ioctl from %x to pid %x dev %d\n",ctx->pid, df->drivertask, df->device);
+#endif
+                    mq_send(df->drivertask, DRV_ioctl|(msg->ptr!=NULL&&msg->size>0?MSG_PTRDATA:0),
+                        msg->ptr, msg->size, df->device, msg->attr0, ctx->pid);
+                    continue;
+                }
+                break;
+
             case SYS_chroot:
-                ret=lookup(msg->ptr);
+                ret=lookup(msg->ptr, false);
                 if(ret!=-1 && !errno()) {
                     fcb_del(ctx->rootdir);
                     fcb[ret].nopen++;
@@ -162,7 +198,7 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_chdir:
-                ret=lookup(msg->ptr);
+                ret=lookup(msg->ptr, false);
                 if(ret!=-1 && !errno()) {
                     fcb_del(ctx->workdir);
                     // if new workdir outside of rootdir, use rootdir as workdir
@@ -185,6 +221,17 @@ void _init(int argc, char **argv)
                 ctx->msg.evt = 0;
                 continue;
 
+            case SYS_realpath:
+                ret=lookup(msg->ptr, false);
+                if(ret!=-1 && !errno()) {
+                    ptr=fcb[ret].abspath;
+                    mq_send(EVT_SENDER(msg->evt), SYS_ack | MSG_PTRDATA, ptr, strlen(ptr)+1);
+                    ctx->msg.evt = 0;
+                    continue;
+                }
+                ret=0;
+                break;
+
             case SYS_dstat:
                 if(msg->arg0>=0 && msg->arg0<nfcb && fcb[msg->arg0].type==FCB_TYPE_DEVICE) {
                     ret=msg->arg0;
@@ -204,7 +251,7 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_lstat:
-                ret=lookup(msg->ptr);
+                ret=lookup(msg->ptr, false);
                 if(ret!=-1 && !errno()) {
 dostat:             ptr=statfs(ret);
                     if(ptr!=NULL) {
@@ -217,14 +264,32 @@ dostat:             ptr=statfs(ret);
                 ret=0;
                 break;
 
-            case SYS_fopen:
-//dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->type);
-                ptr=canonize(msg->ptr);
+            case SYS_tmpfile:
+//dbg_printf("fs tmpfile()\n");
+                ptr=malloc(128);
                 if(ptr==NULL) {
                     ret=-1;
                     break;
                 }
-                ret=lookup(msg->ptr);
+                //FIXME: no sprintf yet
+                //sprintf(ptr, "%s%x%x", P_tmpdir, ctx->pid, rand());
+                ret=lookup(ptr, true);
+                if(ret!=-1 && !errno()) {
+                    ret=taskctx_open(ctx,ret,O_RDWR|O_TMPFILE,0,-1);
+                }
+                free(ptr);
+//taskctx_dump();
+                break;
+
+            case SYS_fopen:
+//dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->type);
+                ptr=canonize(msg->ptr);
+                if(ptr==NULL) {
+                    seterr(EINVAL);
+                    ret=-1;
+                    break;
+                }
+                ret=lookup(msg->ptr, msg->type & O_CREAT ? true : false);
                 if(ret!=-1 && !errno()) {
                     if(msg->attr0!=-1)
                         taskctx_close(ctx, msg->attr0, true);
@@ -246,6 +311,14 @@ dostat:             ptr=statfs(ret);
                     ret=-1;
                 } else
                     ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
+//taskctx_dump();
+                break;
+
+            case SYS_fcloseall:
+//dbg_printf("fs fcloseall\n");
+                for(j=0;j<ctx->nopenfiles;j++)
+                    taskctx_close(ctx, j, false);
+                ret=0;
 //taskctx_dump();
                 break;
 
@@ -361,9 +434,6 @@ dostat:             ptr=statfs(ret);
                 } else {
                     ret=writefs(ctx,msg->type,msg->ptr,msg->size);
                 }
-                break;
-
-            case SYS_realpath:
                 break;
 
             default:

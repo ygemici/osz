@@ -170,3 +170,16 @@ public fid_t dup2 (fid_t stream, fid_t stream2)
         return -1;
     return msg->arg0;
 }
+
+/**
+ * send an I/O control command to a device opened by fopen. BUFF can be NULL.
+ */
+public int ioctl(fid_t stream, uint64_t code, void *buff, size_t size)
+{
+    // we send it to FS, but the ack will came from a driver
+    msg_t *msg=mq_call(SRV_FS, SYS_ioctl|(buff!=NULL&&size>0?MSG_PTRDATA:0), buff, size, stream, code);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+

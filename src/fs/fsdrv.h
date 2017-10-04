@@ -36,6 +36,7 @@ typedef struct {
     void *fileblk;
     char *path;
     uint8_t type;
+    bool_t creat;
 } locate_t;
 
 typedef struct {

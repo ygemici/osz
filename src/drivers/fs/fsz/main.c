@@ -219,6 +219,7 @@ nextdir:
             i--;
         }
     }
+    // TODO: if loc->creat, then create dir or path
     return NOTFOUND;
 }
 

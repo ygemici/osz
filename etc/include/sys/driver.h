@@ -34,8 +34,9 @@
 #define DRV_read        (3)
 #define DRV_write       (4)
 #define DRV_ioctl       (5)
-#define DRV_reset       (6)
-#define DRV_status      (7)
+
+// ioctl codes (2nd argument)
+#define IOCTL_reset     (0)
 
 /*** libc implementation prototypes */
 #ifndef _AS
@@ -49,6 +50,7 @@ void setirq(int8_t irq);                // set irq message for this task
 meminfo_t meminfo();                    // get memory info
 /* create a device link */
 extern int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, blkcnt_t cnt);
+extern int ioctl(fid_t stream, uint64_t code, void *buff, size_t size);
 /* parse environment */
 extern uint64_t env_num(char *key, uint64_t def, uint64_t min, uint64_t max);
 extern bool_t env_bool(char *key, bool_t def);

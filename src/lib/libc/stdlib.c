@@ -154,16 +154,16 @@ void _atexit(int status)
 }
 
 /**
- *  Return the canonical absolute name of file NAME.  If RESOLVED is
- *  null, the result is malloc'd; otherwise, if the canonical name is
- *  PATH_MAX chars or more, returns null with `errno' set to
- *  ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
- *  returns the name in RESOLVED.
+ *  Return the canonical absolute name of file NAME in a read-only BUF.
  */
-char *realpath (char *name, char *resolved)
+char *realpath (char *path)
 {
-    if(resolved!=NULL) {
-        strcpy(resolved,name);
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return NULL;
     }
-    return resolved;
+    msg_t *msg=mq_call(SRV_FS, SYS_realpath|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return NULL;
+    return (char*)msg->ptr;
 }

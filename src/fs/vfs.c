@@ -111,8 +111,13 @@ char *canonize(const char *path)
     // translate dev: paths
     while(i<k && path[i]!=':' && path[i]!='/' && !PATHEND(path[i])) i++;
     if(path[i]==':') {
-        strcpy(result, DEVPATH); j=sizeof(DEVPATH);
-        strncpy(result+j, path, i); j+=i;
+        // skip "root:"
+        if(i==4 && !memcmp(path,"root",4)) {
+            i=4; j=0;
+        } else {
+            strcpy(result, DEVPATH); j=sizeof(DEVPATH);
+            strncpy(result+j, path, i); j+=i;
+        }
         result[j++]='/'; m=j;
         i++;
         if(i<k && path[i]=='/') i++;
@@ -136,11 +141,16 @@ char *canonize(const char *path)
         if(result[j-1]!='/') result[j++]='/';
         while(i<k && path[i]=='/') i++;
         // skip current dir paths
-        if(path[i]=='.' && i+1<k && path[i+1]=='/') {
+        if(path[i]=='.' && i+1<k && (path[i+1]=='/' || PATHEND(path[i+1]))) {
             i+=2; continue;
+        } else
+        // handle .../../ case: skip ../ and remove .../ from result
+        if(j>4 && path[i]=='.' && i+2<k && path[i+1]=='.' && (path[i+2]=='/' || PATHEND(path[i+2])) &&
+            !memcmp(result+j-4,".../",4)) {
+                j-=4; i+=3; continue;
+        // do not handle otherwise directory up here, as last directory
+        // in result path could be a symlink
 /*
-        // do not handle directory up here, as last directory in result
-        // could be a symlink
         if(path[i]=='.') {
             i++;
             if(path[i]=='.') {
@@ -284,7 +294,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
 /**
  * return an fcb index for an absolute path. May set errno to EAGAIN on cache miss
  */
-fid_t lookup(char *path)
+fid_t lookup(char *path, bool_t creat)
 {
     locate_t loc;
     char *abspath,*tmp=NULL, *c;
@@ -292,14 +302,18 @@ fid_t lookup(char *path)
     int16_t fs;
     int i,j,l,k;
 again:
+    if(tmp!=NULL) {
+        free(tmp);
+        tmp=NULL;
+    }
     if(path==NULL || path[0]==0) {
         seterr(EINVAL);
         return -1;
     }
     abspath=canonize(path);
-    if(tmp!=NULL) {
-        free(tmp);
-        tmp=NULL;
+    if(abspath==NULL) {
+        seterr(EINVAL);
+        return -1;
     }
     f=fcb_get(abspath);
     fd=ff=fs=-1;
@@ -355,6 +369,7 @@ again:
         loc.path=abspath+l;
         loc.inode=f=-1;
         loc.fileblk=NULL;
+        loc.creat=creat;
         pathstackidx=0;
         switch((*fsdrv[fs].locate)(fd, 0, &loc)) {
             case SUCCESS:
@@ -415,7 +430,7 @@ again:
                     if(tmp==NULL) break;
                     tmp=pathcat(tmp, loc.path);
                     if(tmp==NULL) break;
-                    f=lookup(tmp);
+                    f=lookup(tmp, creat);
                     free(tmp);
                     c+=strlen(c)+1;
                 }

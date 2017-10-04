@@ -98,7 +98,7 @@ again:
                         // direct data
                         return (void*)(bootboot.initrd_ptr + in->sec * FSZ_SECSIZE);
                     else
-                        // sector directory (only one level supported here)
+                        // sector directory (only one level supported here, and no holes in files)
                         return (void*)(bootboot.initrd_ptr + (unsigned int)(((FSZ_SectorList *)(bootboot.initrd_ptr+in->sec*FSZ_SECSIZE))->fid) * FSZ_SECSIZE);
                 }
             }

@@ -40,6 +40,15 @@ public void perror (char *s, ...)
 #endif
 }
 
+/* Create a temporary file and open it read/write. */
+public fid_t tmpfile (void)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_tmpfile);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
 /* Open a file and create a new STREAM for it. */
 public fid_t fopen (char *filename, mode_t oflag)
 {
@@ -71,6 +80,15 @@ public fid_t freopen (char *filename, mode_t oflag, fid_t stream)
 public int fclose (fid_t stream)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_fclose, stream);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/* Close all streams. */
+public int fcloseall (void)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_fcloseall);
     if(errno())
         return -1;
     return msg->arg0;

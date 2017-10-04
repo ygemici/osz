@@ -46,6 +46,11 @@
 /* Print a message describing the meaning of the value of errno. */
 extern void perror (char *s, ...);
 
+/* Default path prefix for `tmpfile'.  */
+#define P_tmpdir	"/tmp/"
+/* Create a temporary file and open it read/write. */
+extern fid_t tmpfile (void);
+
 /* open flags */
 #define O_READ      (1<<0)  // read
 #define O_WRITE     (1<<1)  // write
@@ -65,6 +70,8 @@ extern fid_t fopen (char *filename, mode_t oflag);
 extern fid_t freopen (char *filename, mode_t oflag, fid_t stream);
 /* Close STREAM. */
 extern int fclose (fid_t stream);
+/* Close all streams. */
+extern int fcloseall (void);
 /* Seek to a certain position on STREAM. */
 extern int fseek (fid_t stream, off_t off, int whence);
 /* Rewind to the beginning of STREAM or opendir handle. */
@@ -89,9 +96,6 @@ extern size_t fwrite (fid_t stream, void *ptr, size_t size);
 #define _IOLBF 1		/* Line buffered.  */
 #define _IONBF 2		/* No buffering.  */
 
-/* Default path prefix for `tempnam' and `tmpnam'.  */
-#define P_tmpdir	"/tmp"
-
 /* Remove file FILENAME.  */
 extern int remove (char *filename);
 /* Rename file OLD to NEW.  */
@@ -106,8 +110,6 @@ extern char *tmpnam (char *s);
 extern char *tempnam (char *dir, char *pfx);
 /* Flush STREAM, or all streams if STREAM is NULL. */
 extern int fflush (FILE *stream);
-/* Close all streams. */
-extern int fcloseall (void);
 /* Create a new stream that refers to a memory buffer.  */
 extern FILE *fmemopen (void *s, size_t len, char *modes);
 

@@ -92,7 +92,7 @@ void devfs_dump()
     int i;
     dbg_printf("Devices %d:\n",ndev);
     for(i=0;i<ndev;i++) {
-        dbg_printf("%3d. device pid %02x dev %x mode %2x blk %d",
+        dbg_printf("%3d. pid %02x dev %x mode %2x blk %d",
             i,dev[i].drivertask,dev[i].device,fcb[dev[i].fid].mode,fcb[dev[i].fid].device.blksize);
         dbg_printf(" size %d %d %s\n",fcb[dev[i].fid].device.filesize,dev[i].fid,fcb[dev[i].fid].abspath);
     }
