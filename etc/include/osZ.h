@@ -28,12 +28,15 @@
 #ifndef _OS_Z_
 #define _OS_Z_ 1
 
+/* common includes */
 #include <errno.h>
 #include <limits.h>
 
+/* non-assembler includes */
 #ifndef _AS
 # include <stdint.h>
 # include <sys/types.h>
+/* only for user applications */
 # ifndef OSZ_CORE
 #  include <sys/platform.h>
 #  include <stdio.h>
@@ -43,7 +46,9 @@
 #  include <syslog.h>
 # endif
 #endif
+/* user applications, even for assembler */
 #ifndef OSZ_CORE
+# include <sys/stat.h>
 # include <sysexits.h>
 # include <unistd.h>
 # include <sound.h>

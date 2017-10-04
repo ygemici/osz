@@ -53,7 +53,6 @@
 #define SYS_srand       21
 #define SYS_fork        22 // process functions
 #define SYS_exec        23
-#define SYS_sync        24
 
 #define SYS_recv    0x7FFF // receive message
 

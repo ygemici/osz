@@ -57,7 +57,7 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blks
     fcb[f].nopen++;
     fcb[f].mode=mode;
     fcb[f].device.inode=i;
-    fcb[i].device.blksize=blksize;
+    fcb[f].device.blksize=blksize;
     fcb[f].device.filesize=blksize*blkcnt;
     fcb[f].device.storage=DEVFCB;
     dev[i].fid=f;
@@ -84,7 +84,6 @@ void devfs_init()
     if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, O_RDWR, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)==-1) abort();
     if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, O_RDONLY, __PAGESIZE, 1)==-1) abort();
     if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, O_RDWR, __PAGESIZE, 0)==-1) abort();
-    if(devfs_add("tmp", MEMFS_MAJOR, MEMFS_TMPFS, O_RDWR, __PAGESIZE, 0)==-1) abort();
 }
 
 #if DEBUG
@@ -93,8 +92,8 @@ void devfs_dump()
     int i;
     dbg_printf("Devices %d:\n",ndev);
     for(i=0;i<ndev;i++) {
-        dbg_printf("%3d. device pid %x dev %x blk %d",
-            i,dev[i].drivertask,dev[i].device,fcb[dev[i].fid].device.blksize);
+        dbg_printf("%3d. device pid %02x dev %x mode %2x blk %d",
+            i,dev[i].drivertask,dev[i].device,fcb[dev[i].fid].mode,fcb[dev[i].fid].device.blksize);
         dbg_printf(" size %d %d %s\n",fcb[dev[i].fid].device.filesize,dev[i].fid,fcb[dev[i].fid].abspath);
     }
 }

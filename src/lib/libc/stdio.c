@@ -150,3 +150,29 @@ public size_t fwrite (fid_t stream, void *ptr, size_t size)
     return msg->arg0;
 }
 
+/* Get file attributes for FILE in a read-only BUF.  */
+public stat_t *lstat (const char *path)
+{
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return NULL;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_lstat|MSG_PTRDATA, path, strlen(path)+1);
+    return (stat_t*)msg->ptr;
+}
+
+/* Get file attributes for a device returned in st_dev */
+public stat_t *dstat (fid_t fd)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_dstat, fd);
+    return (stat_t*)msg->ptr;
+}
+
+/* Get file attributes for the file, device, pipe, or socket that
+   file descriptor FD is open on and return them in a read-only BUF. */
+public stat_t *fstat (fid_t fd)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_fstat, fd);
+    return (stat_t*)msg->ptr;
+}
+

@@ -90,6 +90,8 @@ nextdir:
         goto nextdir;
     }
     // read inode
+    if(lsn==0)
+        return NOBLOCK;
     in=(FSZ_Inode*)readblock(fd,lsn);
     if(in==NULL)
         return NOBLOCK;
@@ -133,12 +135,16 @@ nextdir:
             // TODO: extents
             break;
         case FSZ_IN_FLAG_DIRECT:
+            if(in->sec==0)
+                return NOBLOCK;
             loc->fileblk=readblock(fd, in->sec);
             if(loc->fileblk==NULL)
                 return NOBLOCK;
             break;
         default:
             // get the first level sd
+            if(in->sec==0)
+                return NOBLOCK;
             sdblk[0]=readblock(fd, in->sec);
             if(sdblk[0]==NULL)
                 return NOBLOCK;
@@ -147,12 +153,18 @@ nextdir:
                 return FSERROR;
             // load each sd along the indirection path
             for(i=1;i<FLAG_TRANSLATION(in->flags);i++) {
+                if(sdblk[i-1][0]==0)
+                    return NOBLOCK;
                 sdblk[i]=readblock(fd, sdblk[i-1][0]);
                 if(sdblk[i]==NULL)
                     return NOBLOCK;
             }
             // load the first sector pointed by the last indirect sd
+            if(sdblk[i-1][0]==0)
+                return NOBLOCK;
             loc->fileblk=readblock(fd, sdblk[i-1][0]);
+            if(loc->fileblk==NULL)
+                return NOBLOCK;
             break;
     }
 
@@ -221,6 +233,34 @@ void resizefs(fid_t fd)
 }
 
 /**
+ * query stat_t from inode
+ */
+bool_t stat(fid_t fd, ino_t file, stat_t *st)
+{
+    FSZ_Inode *in=(FSZ_Inode*)readblock(fd,file);
+dbg_printf("fsz stat storage %d file %d\n",fd,file);
+    // failsafe
+    if( fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
+        in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4))
+            return false;
+    memcpy(st->st_type,in->filetype,4);
+    if(in->filetype[3]!=':')
+        memcpy(st->st_mime,in->mimetype,44);
+    if(!memcmp(in->filetype,FILETYPE_SYMLINK,4))
+        st->st_mode |= S_IFLNK;
+    if(!memcmp(in->filetype,FILETYPE_UNION,4))
+        st->st_mode |= S_IFUNI;
+    st->st_nlink=in->numlinks;
+    memcpy((void*)&st->st_owner,(void*)&in->owner,sizeof(uuid_t));
+    st->st_size=in->size;
+    st->st_blocks=in->numblocks;
+    st->st_atime=in->accessdate;
+    st->st_ctime=in->changedate;
+    st->st_mtime=in->modifydate;
+    return true;
+}
+
+/**
  * read a block from a file. returns:
  *   NULL && ackdelayed: block not found in cache, retry when driver has loaded the sector
  *   *s==0: eof
@@ -234,7 +274,7 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
     uint64_t i,j,k,l,bs;
 //dbg_printf("fsz read storage %d file %d offs %d s %d\n",fd,file,offs,*s);
     // failsafe
-    if( fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
+    if( file==0 || fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
         in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4) || in->size<=offs) goto read_err;
     bs=fcb[fd].device.blksize;
     // eof check when reading from end of file
@@ -248,11 +288,12 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
     if(l==FSZ_IN_FLAG_INLINE)
         return (void*)(in->inlinedata + offs);
     // one block referenced directly
+    if(in->sec==0)
+        return NULL;
     blk=readblock(fd,in->sec);
     if(blk==NULL) goto read_err;
-    if(l==FSZ_IN_FLAG_DIRECT) {
+    if(l==FSZ_IN_FLAG_DIRECT)
         return (void*)(blk + offs);
-    }
     // otherwise translate sector directories
     // first block?
     if(offs<bs) {
@@ -300,6 +341,7 @@ void _init()
         detect,
         locate,
         resizefs,
+        stat,
         read
     };
     //uint16_t id = 

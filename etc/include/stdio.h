@@ -108,8 +108,6 @@ extern char *tempnam (char *dir, char *pfx);
 extern int fflush (FILE *stream);
 /* Close all streams. */
 extern int fcloseall (void);
-/* Open a file, replacing an existing stream with it. */
-extern FILE *freopen (char *filename, char *modes, FILE *stream);
 /* Create a new stream that refers to a memory buffer.  */
 extern FILE *fmemopen (void *s, size_t len, char *modes);
 

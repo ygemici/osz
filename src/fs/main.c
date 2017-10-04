@@ -27,6 +27,7 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
+#include <sys/stat.h>
 #include "cache.h"
 #include "mtab.h"
 #include "devfs.h"
@@ -51,7 +52,7 @@ void _init(int argc, char **argv)
     msg_t *msg;
     uint64_t ret = 0, j, k;
     off_t o;
-    char *ptr;
+    void *ptr;
 
     // environment
     pathmax=env_num("pathmax",512,256,1024*1024);
@@ -89,27 +90,57 @@ void _init(int argc, char **argv)
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
-//dbg_printf("mountfs\n");
+#ifdef DEBUG
+                if(_debug&DBG_FS) {
+                    fsdrv_dump();
+                    devfs_dump();
+                    dbg_printf("FS: mountfs()\n");
+                }
+#endif
                 mtab_fstab(_fstab_ptr, _fstab_size);
-//mtab_dump();
+#ifdef DEBUG
+                if(_debug&DBG_FS)
+                    mtab_dump();
+#endif
+                // notify other system services that they can continue with their initialization
+                mq_send(SRV_UI, SYS_ack, 0);
+                mq_send(SRV_syslog, SYS_ack, 0);
+                mq_send(SRV_inet, SYS_ack, 0);
+                mq_send(SRV_sound, SYS_ack, 0);
+                // we send the ack to init in the usual way
                 break;
 
             case SYS_mount:
                 j=strlen(msg->ptr);
                 k=strlen(msg->ptr + j+1);
-//dbg_printf("fs mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
+#ifdef DEBUG
+                if(_debug&DBG_FS)
+                    dbg_printf("FS: mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
+#endif
                 ret = mtab_add(msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1)!=-1 ? 0 : -1;
-//mtab_dump();
+#ifdef DEBUG
+                if(_debug&DBG_FS)
+                    mtab_dump();
+#endif
                 break;
 
             case SYS_umount:
-//dbg_printf("fs umount(%s)\n",msg->ptr);
+#ifdef DEBUG
+                if(_debug&DBG_FS)
+                    dbg_printf("FS: umount(%s)\n",msg->ptr);
+#endif
                 ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
-//mtab_dump();
+#ifdef DEBUG
+                if(_debug&DBG_FS)
+                    mtab_dump();
+#endif
                 break;
 
             case SYS_mknod:
-//dbg_printf("fs mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
+#ifdef DEBUG
+                if(_debug&DBG_DEVICES)
+                    dbg_printf("FS: mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
+#endif
                 ret = devfs_add(msg->ptr, ctx->pid, msg->type, msg->attr0, msg->attr1, msg->attr2) == -1 ? -1 : 0;
 //devfs_dump();
                 break;
@@ -154,6 +185,38 @@ void _init(int argc, char **argv)
                 ctx->msg.evt = 0;
                 continue;
 
+            case SYS_dstat:
+                if(msg->arg0>=0 && msg->arg0<nfcb && fcb[msg->arg0].type==FCB_TYPE_DEVICE) {
+                    ret=msg->arg0;
+                    goto dostat;
+                }
+                seterr(EINVAL);
+                ret=0;
+                break;
+
+            case SYS_fstat:
+                if(taskctx_validfid(ctx,msg->arg0)) {
+                    ret=ctx->openfiles[msg->arg0].fid;
+                    goto dostat;
+                }
+                seterr(EBADF);
+                ret=0;
+                break;
+
+            case SYS_lstat:
+                ret=lookup(msg->ptr);
+                if(ret!=-1 && !errno()) {
+dostat:             ptr=statfs(ret);
+                    if(ptr!=NULL) {
+                        mq_send(EVT_SENDER(msg->evt), SYS_ack | MSG_PTRDATA, ptr, sizeof(stat_t));
+                        ctx->msg.evt = 0;
+                        continue;
+                    }
+                    seterr(ENOENT);
+                }
+                ret=0;
+                break;
+
             case SYS_fopen:
 //dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->type);
                 ptr=canonize(msg->ptr);
@@ -178,19 +241,30 @@ void _init(int argc, char **argv)
 
             case SYS_fclose:
 //dbg_printf("fs fclose %d\n",msg->arg0);
-                ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
+                if(!taskctx_validfid(ctx,msg->arg0)) {
+                    seterr(EBADF);
+                    ret=-1;
+                } else
+                    ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
 //taskctx_dump();
                 break;
 
             case SYS_fseek:
-                ret=taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2) ? 0 : -1;
+                if(!taskctx_validfid(ctx,msg->arg0)) {
+                    seterr(EBADF);
+                    ret=-1;
+                } else {
+                    ret=taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2) ? 0 : -1;
+                    if(ret)
+                        seterr(EINVAL);
+                }
                 break;
 
             case SYS_rewind:
                 // don't use taskctx_seek here, as it only allows regular files, and we want to use
                 // rewind() on directories too for readdir()
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=-1;
                 } else {
                     ctx->openfiles[msg->arg0].offs = 0;
@@ -200,7 +274,7 @@ void _init(int argc, char **argv)
 
             case SYS_ftell:
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=0;
                 } else
                     ret=ctx->openfiles[msg->arg0].offs;
@@ -208,7 +282,7 @@ void _init(int argc, char **argv)
 
             case SYS_feof:
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=-1;
                 } else
                     ret=fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL || 
@@ -218,7 +292,7 @@ void _init(int argc, char **argv)
 
             case SYS_ferror:
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=-1;
                 } else
                     // force EOF flag on closed files
@@ -227,7 +301,7 @@ void _init(int argc, char **argv)
 
             case SYS_fclrerr:
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=-1;
                 } else {
                     ctx->openfiles[msg->arg0].mode &= 0xffffffffULL;
@@ -238,7 +312,7 @@ void _init(int argc, char **argv)
             case SYS_dup:
 //dbg_printf("fs dup(%d)\n",msg->arg0);
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=-1;
                 } else {
                     ret=taskctx_open(ctx, ctx->openfiles[msg->arg0].fid, ctx->openfiles[msg->arg0].mode,
@@ -250,7 +324,7 @@ void _init(int argc, char **argv)
             case SYS_dup2:
 //dbg_printf("fs dup2(%d,%d)\n",msg->arg0,msg->arg1);
                 if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EINVAL);
+                    seterr(EBADF);
                     ret=-1;
                 } else {
                     // don't use task_validfid here, we only check if the descriptor is not unused
@@ -266,12 +340,13 @@ void _init(int argc, char **argv)
 
             case SYS_fread:
 //dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
-                if(msg->size>__BUFFSIZE && (int64_t)msg->ptr > 0) {
+                // buffers bigger than 1M must use shared memory
+                if(msg->size>=__BUFFSIZE && (int64_t)msg->ptr > 0) {
                     seterr(ENOTSHM);
                     ret=0;
                 }
-                if(!taskctx_validfid(ctx,msg->type)) {
-                    seterr(EINVAL);
+                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_READ)) {
+                    seterr(EBADF);
                     ret=0;
                 } else {
                     ret=readfs(ctx,msg->type,(virt_t)msg->ptr,msg->size);
@@ -280,17 +355,20 @@ void _init(int argc, char **argv)
             
             case SYS_fwrite:
 //dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
-                if(!taskctx_validfid(ctx,msg->type)) {
-                    seterr(EINVAL);
+                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_WRITE)) {
+                    seterr(EBADF);
                     ret=0;
                 } else {
                     ret=writefs(ctx,msg->type,msg->ptr,msg->size);
                 }
                 break;
 
+            case SYS_realpath:
+                break;
+
             default:
 #if DEBUG
-                dbg_printf("FS: unknown event: %x\n",EVT_FUNC(msg->evt));
+                dbg_printf("FS: unknown event: %d from pid %x\n",EVT_FUNC(msg->evt), EVT_SENDER(msg->evt));
 #endif
                 seterr(EPERM);
                 ret=-1;

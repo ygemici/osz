@@ -86,7 +86,7 @@ int16_t fsdrv_detect(fid_t dev)
 void fsdrv_dump()
 {
     int i;
-    dbg_printf("Filesystems %d:\n",nfsdrv);
+    dbg_printf("File system drivers %d:\n",nfsdrv);
     for(i=0;i<nfsdrv;i++)
         dbg_printf("%3d. '%s' %s %x\n",i,fsdrv[i].name,fsdrv[i].desc,fsdrv[i].detect);
 }

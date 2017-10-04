@@ -62,7 +62,8 @@ This can be a numeric value, or a comma separated list of flags, see [debug.h](h
 | 2048  | vm   | DBG_VMM | debug [virtual memory manager](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/vmm.c) |
 | 4096  | ma   | DBG_MALLOC | debug [libc memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
 | 8192  | bl   | DBG_BLKIO | debug [block level I/O](https://github.com/bztsrc/osz/blob/master/src/fs/vfs.c) |
-| 16284 | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
+| 16384 | fs   | DBG_FS | debug [file systems](https://github.com/bztsrc/osz/blob/master/src/fs/main.c) |
+| 32768 | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
 
 Most of these only available when compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config). Normally you can only use two to troubleshoot boot: DBG_DEVICES and DBG_LOG.
 

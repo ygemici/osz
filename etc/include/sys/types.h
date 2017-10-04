@@ -100,7 +100,9 @@ typedef int register_t;     // register type
 typedef uint64_t blksize_t; // block size
 typedef uint64_t blkcnt_t;  // number of disk blocks.
 typedef uint64_t fpos_t;    // file position
-typedef uint32_t keymap_t;  // keymap selector
+typedef uint32_t keymap_t;  // keymap entry
+typedef uint64_t time_t;    // timestamp in microsec
+
 /*
 typedef void __signalfn(int);
 typedef __signalfn *sighandler_t;

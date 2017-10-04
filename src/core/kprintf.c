@@ -298,10 +298,10 @@ void kprintf_dumpascii(int64_t c)
  */
 void kprintf_putdec(int64_t c)
 {
-    int i=12,s=c<0;
+    int64_t i=18,s=c<0;
     if(s) c*=-1;
-    if(c>99999999999)
-        c=99999999999;
+    if(c>99999999999999999LL)
+        c=99999999999999999LL;
     tmpstr[i]=0;
     do {
         tmpstr[--i]='0'+(c%10);
@@ -309,8 +309,8 @@ void kprintf_putdec(int64_t c)
     } while(c!=0&&i>0);
     if(s)
         tmpstr[--i]='-';
-    if(cnt>0&&cnt<12) {
-        while(i>12-cnt) {
+    if(cnt>0&&cnt<18) {
+        while(i>18-cnt) {
             tmpstr[--i]=' ';
         }
     }

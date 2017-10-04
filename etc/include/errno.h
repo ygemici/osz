@@ -54,12 +54,12 @@ extern int errno();
 #define EPIPE       19  // Broken pipe
 #define ESPIPE      20  // Illegal seek
 #define ENOTSHM     21  // Not a shared memory buffer
+#define EBADF       22  // Bad file number
 
 /*
 #define EINTR        4  // Interrupted system call
 #define ENXIO        6  // No such device or address
 #define E2BIG        7  // Argument list too long
-#define EBADF        9  // Bad file number
 #define ECHILD      10  // No child processes
 #define ENOTBLK     15  // Block device required
 #define EXDEV       18  // Cross-device link

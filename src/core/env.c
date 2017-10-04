@@ -199,6 +199,8 @@ unsigned char *env_debug(unsigned char *s)
         if(s[0]=='p' && s[1]=='m')              debug |= DBG_PMM;
         if(s[0]=='v' && s[1]=='m')              debug |= DBG_VMM;
         if(s[0]=='m' && s[1]=='a')              debug |= DBG_MALLOC;
+        if(s[0]=='b' && s[1]=='l')              debug |= DBG_BLKIO;
+        if(s[0]=='f' && s[1]=='s')              debug |= DBG_FS;
         if(s[0]=='t' && s[1]=='e')              debug |= DBG_TESTS;
 #endif
         s++;

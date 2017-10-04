@@ -66,7 +66,7 @@ typedef struct {
     uint64_t    lastmountdate;      // 720
     uint64_t    lastcheckdate;      // 728
     uint64_t    lastdefragdate;     // 736
-    uint32_t    owneruuid[4];       // 744 owner UUID
+    uint32_t    owner[4];           // 744 owner UUID
     uint8_t     reserved[256];
     uint8_t     magic2[4];          //1016
     uint32_t    checksum;           //1020 Castagnoli CRC32 of bytes at 512-1020
@@ -135,11 +135,12 @@ typedef struct {
     uint8_t     magic[4];       //   0 magic 'FSIN'
     uint32_t    checksum;       //   4 Castagnoli CRC32, filetype to inlinedata (exclusive)
     uint8_t     filetype[4];    //   8 first 4 bytes of mime main type, eg: text,imag,vide,audi,appl etc.
-    uint8_t     mimetype[52];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
-    uint8_t     encrypt[20];    //  64 AES encryption key mask or zero
-    uint32_t    enchash;        //  84 password Castagnoli CRC32, to avoid decryption with bad passwords
-    uint64_t    createdate;     //  88 number of microseconds since 1970. jan. 1 00:00:00 UTC
-    uint64_t    lastaccess;     //  96
+    uint8_t     mimetype[44];   //  12 mime sub type, eg.: plain, html, gif, jpeg etc.
+    uint8_t     encrypt[20];    //  56 AES encryption key mask or zero
+    uint32_t    enchash;        //  76 password Castagnoli CRC32, to avoid decryption with bad passwords
+    uint64_t    changedate;     //  80 number of microseconds since 1970. jan. 1 00:00:00 UTC, inode change time
+    uint64_t    accessdate;     //  88 last data access time (if implemented, otherwise zero)
+    uint64_t    numblocks;      //  96 number of blocks allocated for this inode (*)
     uint64_t    numlinks;       // 104 number of references to this inode
     uint64_t    metalabel;      // 112 logical sector number of meta label block
     uint64_t    metalabel_hi;
@@ -149,13 +150,13 @@ typedef struct {
     FSZ_Version version2;       // 320
     FSZ_Version version1;       // 384
     // FSZ_Version current; I haven't used FSZ_Version struct here to save typing when referencing
-    uint64_t         sec;       // 448 current (or only) version
+    uint64_t         sec;       // 448 current (or only) version (**)
     uint64_t         sec_hi;
     uint64_t         size;      // 464 file size
     uint64_t         size_hi;
     uint64_t         modifydate;// 480
     uint32_t         filechksum;// 488 Castagnoli CRC32 of data or zero
-    uint32_t         flags;     // 492 see FSZ_IN_FLAG_*
+    uint32_t         flags;     // 492 see FSZ_IN_FLAG_* (**)
     //owner is the last in FSZ_Version to followed by ACL, so it can be considered to be the first
     //entry in the Access Control List. It is the control ACE, specifies who can modify the ACL.
     FSZ_Access       owner;     // 496
@@ -194,7 +195,10 @@ typedef struct {
 #define MIMETYPE_INT_INDEX   "fs-search-index" // search cache
 #define MIMETYPE_INT_JOURNAL "fs-journal-data" // journaling records
 
-// logical sector address to data sector translation. These file sizes
+// (*) numblocks counts sector directories, indirect sector lists and data sectors, but
+// not zero sectors (holes) for all versions alltogether
+
+// (**) logical sector address to data sector translation. These file sizes
 // were calculated with 4096 sector size. That is configurable in the
 // FSZ_SuperBlock if you think 11 sector reads is too much to access
 // data at any arbitrary position in a Yotta magnitude file.

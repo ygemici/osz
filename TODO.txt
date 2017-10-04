@@ -1,14 +1,12 @@
  --- Error fixes ---
-./src/drivers/fs/fsz/main.c:172:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
+./src/drivers/fs/fsz/main.c:184:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
 ./src/core/msg.c:255:            /* FIXME: naive implementation, no checks */
 ./src/lib/libc/stdio.c:38:    // FIXME: use fprintf(stderr,...
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
-./etc/include/sys/core.h:91:/* TODO: move these to time.h, leave only OS/Z specific calls here */
+./etc/include/sys/core.h:90:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
-./src/drivers/fs/fsz/main.c:133:            // TODO: extents
-./src/fs/vfs.c:213:            //TODO: reading a block from a regular file
-./src/fs/vfs.c:233:                            // TODO: implement tmpfs memory device
+./src/drivers/fs/fsz/main.c:135:            // TODO: extents
 ./src/fs/cache.c:39:    // TODO: use dev[fcb[fd].device.inode].drivertask, dev[fcb[fd].device.inode].device
 ./src/core/x86_64/libk.S:220:// TODO: use SSE2 copy
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc

@@ -27,6 +27,7 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
+#include <sys/stat.h>
 #include "fcb.h"
 #include "vfs.h"
 #include "cache.h"
@@ -41,7 +42,9 @@ extern uint64_t _initrd_size;
 void *zeroblk = NULL;           // zero block
 void *rndblk = NULL;            // random data block
 
-int pathstackidx = 0;
+stat_t st;                      // buffer for stat() and fstat()
+
+int pathstackidx = 0;           // path stack
 pathstack_t pathstack[PATHSTACKSIZE];
 
 /**
@@ -201,16 +204,32 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
 {
     devfs_t *device;
     void *blk=NULL;
+    size_t bs;
     // failsafe
     if(fd==-1 || fd>=nfcb || lsn==-1)
         return NULL;
 #if DEBUG
     if(_debug&DBG_BLKIO)
-        dbg_printf("readblock(device file %d, sector %d)\n",fd,lsn);
+        dbg_printf("FS: readblock(fd %d, sector %d)\n",fd,lsn);
 #endif
     switch(fcb[fd].type) {
-        case FCB_TYPE_REG_FILE: 
-            //TODO: reading a block from a regular file
+        case FCB_TYPE_REG_FILE:
+            // reading a block from a regular file
+            if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv)
+                return NULL;
+            bs=fcb[fcb[fd].reg.storage].device.blksize;
+            // call file system driver to read block
+            blk=(*fsdrv[fcb[fd].reg.fs].read)(fcb[fd].reg.storage, fcb[fd].reg.inode, lsn*bs, &bs);
+            // skip if block is not in cache or eof
+            if(ackdelayed || bs==0) return NULL;
+            if(blk==NULL) {
+                // spare portion of file? return zero block
+                zeroblk=(void*)realloc(zeroblk, fcb[fcb[fd].reg.storage].device.blksize);
+                return zeroblk;
+            }
+            return blk;
+            break;
+        case FCB_TYPE_PIPE:
             break;
         case FCB_TYPE_DEVICE:
             // reading a block from a device file
@@ -229,9 +248,6 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
                             if(rndblk!=NULL)
                                 getentropy(rndblk, fcb[fd].device.blksize);
                             return rndblk;
-                        case MEMFS_TMPFS:
-                            // TODO: implement tmpfs memory device
-                            return NULL;
                         case MEMFS_RAMDISK:
                             if((lsn+1)*fcb[fd].device.blksize>_initrd_size) {
                                 return NULL;
@@ -453,7 +469,7 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
     if(!taskctx_validfid(tc,idx))
         return 0;
     fc=&fcb[tc->openfiles[idx].fid];
-    if(fc->reg.fs==-1)
+    if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv)
         return 0;
     // set up first time run parameters
     if(tc->workleft==-1) {
@@ -484,7 +500,7 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
         }
         // failsafe, get number of bytes read
         if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=-1; ret=tc->workoffs+bs; } else tc->workleft-=bs;
-        // copy result to caller. If shared memory, directly; otherwise via core call
+        // copy result to caller. If shared memory, directly; otherwise via a core syscall
         if((int64_t)ptr < 0)
             memcpy((void*)(ptr + tc->workoffs), blk, bs);
         else
@@ -515,4 +531,40 @@ public size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
         tc->workoffs=0;
     }
     return 0;
+}
+
+/**
+ * return a stat structure for file
+ */
+public stat_t *statfs(fid_t idx)
+{
+    // failsafe
+    if(idx>=nfcb || fcb[idx].abspath==NULL)
+        return NULL;
+    memset(&st,0,sizeof(stat_t));
+    // add common fcb fields
+    st.st_dev=fcb[idx].reg.storage;
+    st.st_ino=fcb[idx].reg.inode;
+    st.st_mode|=(fcb[idx].mode&0xFFFF) | (fcb[idx].type << 16);
+    st.st_size=fcb[idx].reg.filesize;
+    // type specific fields
+    switch(fcb[idx].type) {
+        case FCB_TYPE_DEVICE:
+            st.st_blksize=fcb[idx].device.blksize;
+            if(fcb[idx].device.blksize==1)
+                st.st_mode|=S_IFCHR;
+            break;
+        case FCB_TYPE_PIPE:
+            break;
+        case FCB_TYPE_SOCKET:
+            break;
+        default:
+            // call file system driver to fill in various stat_t fields
+            if(fcb[idx].reg.fs==-1 || fcb[idx].reg.fs>=nfsdrv || 
+                !(*fsdrv[fcb[idx].reg.fs].stat)(fcb[idx].reg.storage, fcb[idx].reg.inode, &st))
+                return NULL;
+            st.st_blksize=fcb[fcb[idx].reg.storage].device.blksize;
+            break;
+    }
+    return &st;
 }

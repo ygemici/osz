@@ -32,7 +32,6 @@
 #define MEMFS_RAMDISK    1
 #define MEMFS_RANDOM     2
 #define MEMFS_NULL       3
-#define MEMFS_TMPFS      4
 
 /* device type */
 typedef struct {

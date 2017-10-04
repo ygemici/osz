@@ -54,14 +54,19 @@ char *sprintf_putascii(char *dst, int64_t c)
 
 char *sprintf_putdec(char *dst, int64_t c)
 {
-    int i=12;
+    int64_t i=18,s=c<0;
+    if(s) c*=-1;
+    if(c>99999999999999999LL)
+        c=99999999999999999LL;
     tmpstr[i]=0;
     do {
         tmpstr[--i]='0'+(c%10);
         c/=10;
     } while(c!=0&&i>0);
-    if(cnt>0&&cnt<10) {
-        while(i>12-cnt) {
+    if(s)
+        tmpstr[--i]='-';
+    if(cnt>0&&cnt<18) {
+        while(i>18-cnt) {
             tmpstr[--i]=' ';
         }
     }

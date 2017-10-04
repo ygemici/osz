@@ -43,6 +43,7 @@
 #define DBG_VMM      (1<<11)// vm 2048
 #define DBG_MALLOC   (1<<12)// ma 4096
 #define DBG_BLKIO    (1<<13)// bl 8192
-#define DBG_TESTS    (1<<14)// te 16382
+#define DBG_FS       (1<<14)// te 16382
+#define DBG_TESTS    (1<<15)// te 32768
 
 #endif /* sys/debug.h */

@@ -128,8 +128,10 @@ void taskctx_workdir(taskctx_t *tc, fid_t fid)
 uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64_t idx)
 {
     uint64_t i;
-    if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL)
+    if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL) {
+        seterr(EBADF);
         return -1;
+    }
     // check if it's already opened for exclusive access
     if(fcb[fid].mode & O_EXCL) {
         seterr(EACCES);

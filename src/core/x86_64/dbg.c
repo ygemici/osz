@@ -975,9 +975,9 @@ void dbg_msg()
                         case SYS_fwrite: kprintf("write"); break;
                         case SYS_fseek: kprintf("seek"); break;
                         case SYS_dup: kprintf("dup"); break;
-                        case SYS_stat: kprintf("stat"); break;
+                        case SYS_lstat: kprintf("lstat"); break;
                         case SYS_ioctl: kprintf("ioctl"); break;
-                        case SYS_mountfs: kprintf("mountfs()"); args=0; break;
+                        case SYS_mountfs: kprintf("mountfs"); args=0; break;
                         default: kprintf("%2x?", *((uint64_t*)m) &0x7FFF); break;
                     }
                 } else

@@ -34,6 +34,7 @@
  *  ./mkfs (file) mime (path) (mimetype) - change the mime type of a file in image file
  *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
  *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
+ *  ./mkfs (file) dump (lsn) - dump a sector into C header format
  *  ./mkfs disk - assemble partition images into one big GPT disk, bin/disk.dd
  *
  * It's a minimal implementation, has several limitations compared to the FS/Z spec.
@@ -65,6 +66,8 @@ char *fs;
 int size;
 long int li=0,read_size=0;
 long int ts;   // current timestamp in microsec
+char *emptysec;// empty sector
+int initrd;
 
 //-------------CODE-----------
 
@@ -106,6 +109,7 @@ void add_superblock()
     memset(fs+size,0,secsize);
     sb=(FSZ_SuperBlock *)(fs+size);
     memcpy(sb->magic,FSZ_MAGIC,4);
+    memcpy((char*)&sb->owner,"root",4);
     sb->version_major=FSZ_VERSION_MAJOR;
     sb->version_minor=FSZ_VERSION_MINOR;
     sb->raidtype=FSZ_SB_SOFTRAID_NONE;
@@ -121,13 +125,15 @@ void add_superblock()
 //appends an inode
 int add_inode(char *filetype, char *mimetype)
 {
-    int i,j=!strcmp(filetype,"url:")||!strcmp(filetype,"uni:")?secsize-1024:56;
+    int i,j=!strcmp(filetype,"url:")||!strcmp(filetype,"uni:")?secsize-1024:43;
     FSZ_Inode *in;
     fs=realloc(fs,size+secsize);
     if(fs==NULL) exit(4);
     memset(fs+size,0,secsize);
     in=(FSZ_Inode *)(fs+size);
     memcpy(in->magic,FSZ_IN_MAGIC,4);
+    memcpy((char*)&in->owner,"root",4);
+    in->owner.access=FSZ_READ|FSZ_WRITE|FSZ_DELETE;
     if(filetype!=NULL){
         i=strlen(filetype);
         memcpy(in->filetype,filetype,i>4?4:i);
@@ -145,11 +151,12 @@ int add_inode(char *filetype, char *mimetype)
         } else {
             i=strlen(mimetype);
         }
-        memcpy(j==56?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
-        if(j!=56)
+        memcpy(j==43?in->mimetype:in->inlinedata,mimetype,i>j?j:i);
+        if(j!=43)
             in->size=i;
     }
-    in->createdate=ts;
+    in->changedate=ts;
+    in->modifydate=ts;
     in->checksum=crc32_calc((char*)in->filetype,1016);
     size+=secsize;
     return size/secsize-1;
@@ -174,6 +181,7 @@ void link_inode(int inode, char *path, int toinode)
         ent++; cnt++;
     }
     FSZ_Inode *in=((FSZ_Inode *)(fs+toinode*secsize));
+    FSZ_Inode *in2=((FSZ_Inode *)(fs+inode*secsize));
     ent->fid=inode;
     ent->length=strlen(path);
     memcpy(ent->name,path,strlen(path));
@@ -181,10 +189,13 @@ void link_inode(int inode, char *path, int toinode)
         ent->name[ent->length++]='/';
     }
     hdr->numentries++;
+    in->modifydate=ts;
     in->size+=sizeof(FSZ_DirEnt);
     qsort((char*)hdr+sizeof(FSZ_DirEntHeader), hdr->numentries, sizeof(FSZ_DirEnt), direntcmp);
     hdr->checksum=crc32_calc((char*)hdr+sizeof(FSZ_DirEntHeader),hdr->numentries*sizeof(FSZ_DirEnt));
     in->checksum=crc32_calc((char*)in->filetype,1016);
+    in2->numlinks++;
+    in2->checksum=crc32_calc((char*)in2->filetype,1016);
 }
 
 //reads a file and adds it to the output
@@ -192,16 +203,20 @@ void add_file(char *name, char *datafile)
 {
     FSZ_Inode *in;
     char *data=readfileall(datafile);
-    long int i,j,s=((read_size+secsize-1)/secsize)*secsize;
+    long int i,j,k,s=((read_size+secsize-1)/secsize)*secsize;
     int inode=add_inode("application","octet-stream");
     fs=realloc(fs,size+s+secsize);
     if(fs==NULL) exit(4);
+    memset(fs+size,0,s+secsize);
     in=(FSZ_Inode *)(fs+inode*secsize);
+    in->changedate=ts;
+    in->modifydate=ts;
     in->size=read_size;
     if(read_size<=secsize-1024) {
         // small, inline data
         in->sec=inode;
         in->flags=FSZ_IN_FLAG_INLINE;
+        in->numblocks=0;
         memcpy(in->inlinedata,data,read_size);
         s=0;
     } else {
@@ -209,29 +224,46 @@ void add_file(char *name, char *datafile)
         if(read_size>secsize) {
             char *ptr;
             // sector directory
-            memset(fs+size,0,secsize);
-            ptr=fs+size; j=(read_size+secsize-1)/secsize;
+            ptr=fs+size; j=s/secsize;
+            in->numblocks=1;
             if(j*8>secsize){
                 fprintf(stderr,"File too big: %s\n",datafile);
                 exit(5);
             }
-            for(i=inode+2;j>0;j--){
-                memcpy(ptr,&i,4);
-                i++; ptr+=16;
+            k=inode+2;
+            for(i=0;i<j;i++){
+                // no spare files (holes) for initrd, as core/fs.c maps the
+                // files on it as-is, and we will gzip the initrd anyway
+                if(initrd || memcmp(data+i*secsize,emptysec,secsize)) {
+                    memcpy(ptr,&k,4);
+                    memcpy(fs+size+(i+1)*secsize,data+i*secsize,
+                        (i+1)*secsize>read_size?read_size%secsize:secsize);
+                    k++;
+                    in->numblocks++;
+                } else {
+                    s-=secsize;
+                }
+                ptr+=16;
             }
             size+=secsize;
             in->flags=FSZ_IN_FLAG_SD;
-        } else
+        } else {
+            // direct sector link
             in->flags=FSZ_IN_FLAG_DIRECT;
-        // direct sector link
-        memset(fs+size+read_size,0,s-read_size);
-        memcpy(fs+size,data,read_size);
+            if(memcmp(data,emptysec,secsize)) {
+                in->numblocks=1;
+                memcpy(fs+size,data,read_size);
+            } else {
+                in->sec=0;
+                in->numblocks=0;
+            }
+        }
     }
     // detect file type
     if(!strncmp(data+1,"ELF",3))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"executable",10);}
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"executable",10);in->owner.access|=FSZ_EXEC;}
     if(!strcmp(name+strlen(name)-3,".so"))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"sharedlib",9);}
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"sharedlib",9);}
     else
     // this is a simple creator, should use libmagic. But this
     // is enough for our purposes, so don't introduce a dependency
@@ -239,47 +271,50 @@ void add_file(char *name, char *datafile)
        !strcmp(name+strlen(name)-2,".c")||
        !strcmp(name+strlen(name)-3,".md")||
        !strcmp(name+strlen(name)-4,".txt")||
-       !strcmp(name+strlen(name)-5,".conf")||
-       !strcmp(name+strlen(name)-5,"fstab")||
-       !strcmp(name+strlen(name)-8,"hostname")||
-       !strcmp(name+strlen(name)-7,"profile")||
-       !strcmp(name+strlen(name)-7,"release")
-      ) {memset(in->mimetype,0,56);memcpy(in->mimetype,"plain",5);
+       !strcmp(name+strlen(name)-5,".conf")
+      ) {memset(in->mimetype,0,44);memcpy(in->mimetype,"plain",5);
          memcpy(in->filetype,"text",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".htm")||
        !strcmp(name+strlen(name)-5,".html")
       )
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"html",4);
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"html",4);
          memcpy(in->filetype,"text",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".svg"))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"svg",3);
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"svg",3);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".gif"))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"gif",3);
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"gif",3);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".png"))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"png",3);
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"png",3);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".jpg"))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"jpeg",4);
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"jpeg",4);
          memcpy(in->filetype,"imag",4);
         }
     else
     if(!strcmp(name+strlen(name)-4,".bmp"))
-        {memset(in->mimetype,0,56);memcpy(in->mimetype,"bitmap",6);
+        {memset(in->mimetype,0,44);memcpy(in->mimetype,"bitmap",6);
          memcpy(in->filetype,"imag",4);
         }
-
+    else {
+        // detect plain 7bit ascii files
+        j=1; for(i=0;i<read_size;i++) if(data[i]<7||data[i]>=127) { j=0; break; }
+        if(j) {
+         memset(in->mimetype,0,44);memcpy(in->mimetype,"plain",5);
+         memcpy(in->filetype,"text",4);
+        }
+    }
     in->checksum=crc32_calc((char*)in->filetype,1016);
     size+=s;
     link_inode(inode,name,0);
@@ -363,7 +398,7 @@ void checkcompilation()
     // These numbers MUST match the ones in: etc/include/fsZ.h
     if( (uint64_t)(&sb.numsec) - (uint64_t)(&sb) != 528 ||
         (uint64_t)(&sb.rootdirfid) - (uint64_t)(&sb) != 560 ||
-        (uint64_t)(&sb.owneruuid) - (uint64_t)(&sb) != 744 ||
+        (uint64_t)(&sb.owner) - (uint64_t)(&sb) != 744 ||
         (uint64_t)(&sb.magic2) - (uint64_t)(&sb) != 1016 ||
         (uint64_t)(&in.filetype) - (uint64_t)(&in) != 8 ||
         (uint64_t)(&in.version5) - (uint64_t)(&in) != 128 ||
@@ -626,6 +661,9 @@ int createdisk()
 //creates an fs image of a directory
 int createimage(char *image,char *dir)
 {
+    // are we creating initrd? Needed by add_file
+    initrd=(strlen(image)>7 && !memcmp(image+strlen(image)-6,"INITRD",6));
+
     fs=malloc(secsize);
     if(fs==NULL) exit(3);
     size=0;
@@ -633,6 +671,8 @@ int createimage(char *image,char *dir)
     add_superblock();
     // add root directory
     ((FSZ_SuperBlock *)fs)->rootdirfid = add_inode("dir:",MIMETYPE_DIR_ROOT);
+    ((FSZ_Inode*)(fs+secsize))->numlinks++;
+    ((FSZ_Inode*)(fs+secsize))->checksum=crc32_calc((char*)(((FSZ_Inode*)(fs+secsize))->filetype),1016);
 
     // recursively parse the directory and add everything in it
     // into the fs image
@@ -640,6 +680,7 @@ int createimage(char *image,char *dir)
 
     //modify the total number of sectors
     ((FSZ_SuperBlock *)fs)->numsec=size/secsize;
+    ((FSZ_SuperBlock *)fs)->freesec=size/secsize;
     ((FSZ_SuperBlock *)fs)->checksum=crc32_calc((char *)((FSZ_SuperBlock *)fs)->magic,508);
 
     //write out new image
@@ -719,7 +760,7 @@ void changemime(int argc, char **argv)
         if(in->filetype[3]==':') { printf("mkfs: Unable to change mime type of special inode\n"); exit(2); }
         if(*c!='/') { printf("mkfs: bad mime type\n"); exit(2); } else c++;
         memcpy(in->filetype,argv[4],4);
-        memcpy(in->mimetype,c,strlen(c)<56?strlen(c):55);
+        memcpy(in->mimetype,c,strlen(c)<44?strlen(c):43);
         in->checksum=crc32_calc((char*)in->filetype,1016);
         //write out new image
         f=fopen(argv[1],"wb");
@@ -785,6 +826,163 @@ void initrdrom(int argc, char **argv)
     fclose(f);
 }
 
+void dump(int argc, char **argv)
+{
+    int i=argv[3]!=NULL?atoi(argv[3]):0;
+    uint64_t j,*k,l,secs=secsize;
+    char unit='k';
+    fs=readfileall(argv[1]);
+    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)fs;
+    FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader*)(fs+i*secsize);
+    FSZ_DirEnt *d;
+    if(memcmp(&sb->magic, FSZ_MAGIC, 4) || memcmp(&sb->magic2, FSZ_MAGIC, 4)) {
+        printf("mkfs: Not an FS/Z image, bad magic. Compressed?\n"); exit(2);
+    }
+    secs=1<<(sb->logsec+11);
+    if(i*secs>read_size) { printf("mkfs: Unable to allocate %d sector\n",i); exit(2); }
+    printf("Dumping LSN %d:\n",i);
+    if(i==0) {
+        printf("FSZ_SuperBlock {\n");
+        printf("\tmagic: %s\n",FSZ_MAGIC);
+        printf("\tversion_major.version_minor: %d.%d\n",sb->version_major,sb->version_minor);
+        printf("\tflags: 0x%02x %s %s\n",sb->flags,sb->flags&FSZ_SB_FLAG_HIST?"FSZ_SB_FLAG_HIST":"",
+            sb->flags&FSZ_SB_FLAG_BIGINODE?"FSZ_SB_FLAG_BIGINODE":"");
+        printf("\traidtype: 0x%02x %s\n",sb->raidtype,sb->raidtype==FSZ_SB_SOFTRAID_NONE?"none":"");
+        printf("\tlogsec: %d (%ld bytes per sector)\n",sb->logsec,secs);
+        printf("\tphysec: %d (%ld bytes per sector)\n",sb->physec,secs/sb->physec);
+        printf("\tcurrmounts / maxmounts: %d / %d\n",sb->currmounts,sb->maxmounts);
+        j=sb->numsec*(1<<(sb->logsec+11))/1024;
+        if(j>1024) { j/=1024; unit='M'; } printf("\tnumsec: %ld (total capacity %ld %cbytes)\n",sb->numsec,j,unit); 
+        printf("\tfreesec: %ld (%ld%% free, not including free holes)\n",sb->freesec,sb->freesec*100/sb->numsec);
+        printf("\trootdirfid: LSN %ld\n",sb->rootdirfid);
+        printf("\tfreesecfid: LSN %ld %s\n",sb->freesecfid,sb->freesecfid==0?"(no free holes)":"");
+        printf("\tbadsecfid: LSN %ld\n",sb->badsecfid);
+        printf("\tindexfid: LSN %ld\n",sb->indexfid);
+        printf("\tmetafid: LSN %ld\n",sb->metafid);
+        printf("\tjournalfid: LSN %ld (start %ld, end %ld)\n",sb->journalfid, sb->journalstr, sb->journalend);
+        printf("\tenchash: 0x%04x %s\n",sb->enchash, sb->enchash==0?"none":"encrypted");
+        j=sb->createdate/1000000; printf("\tcreatedate: %ld %s",sb->createdate,ctime((time_t*)&j));
+        j=sb->lastmountdate/1000000; printf("\tlastmountdate: %ld %s",sb->lastmountdate,ctime((time_t*)&j));
+        j=sb->lastcheckdate/1000000; printf("\tlastcheckdate: %ld %s",sb->lastcheckdate,ctime((time_t*)&j));
+        j=sb->lastdefragdate/1000000; printf("\tlastdefragdate: %ld %s",sb->lastmountdate,ctime((time_t*)&j));
+        printf("\towner: "); for(j=0;j<16;j++) printf("%02x",((char*)&sb->owner)[j]); printf("\n");
+        printf("\tmagic2: %s\n",FSZ_MAGIC);
+        printf("\tchecksum: 0x%04x %s\n",sb->checksum,
+            sb->checksum==crc32_calc((char *)sb->magic,508)?"correct":"invalid");
+        printf("\traidspecific: %s\n",sb->raidspecific);
+        printf("};\n");
+    } else
+    if(!memcmp(fs+i*secs,FSZ_IN_MAGIC,4)) {
+        FSZ_Inode *in=(FSZ_Inode*)(fs+i*secs);
+        printf("FSZ_Inode {\n");
+        printf("\tmagic: %s\n",FSZ_IN_MAGIC);
+        printf("\tchecksum: 0x%04x %s\n",in->checksum,
+            in->checksum==crc32_calc((char*)in->filetype,1016)?"correct":"invalid");
+        printf("\tfiletype: \"%c%c%c%c\", mimetype: \"%s\"\n",in->filetype[0],in->filetype[1],
+            in->filetype[2],in->filetype[3],in->mimetype);
+        printf("\tenchash: 0x%04x %s\n",in->enchash, in->enchash==0?"none":"encrypted");
+        j=in->changedate/1000000; printf("\tchangedate: %ld %s",in->changedate,ctime((time_t*)&j));
+        j=in->accessdate/1000000; printf("\taccessdate: %ld %s",in->accessdate,ctime((time_t*)&j));
+        printf("\tnumblocks: %ld\n\tnumlinks: %ld\n",in->numblocks,in->numlinks);
+        printf("\tmetalabel: LSN %ld\n",in->metalabel);
+        printf("\tFSZ_Version {\n");
+        printf("\t\tsec: LSN %ld %s\n",in->sec,in->sec==0?"spare":(in->sec==i?"self-reference (inlined)":""));
+        printf("\t\tsize: %ld bytes\n",in->size);
+        j=in->modifydate/1000000; printf("\t\tmodifydate: %ld %s",in->modifydate,ctime((time_t*)&j));
+        printf("\t\tfilechksum: 0x%04x %s\n",in->filechksum,in->filechksum==0?"not implemented":"");
+        printf("\t\tflags: 0x%04x ",in->flags);
+        switch(FLAG_TRANSLATION(in->flags)){
+            case FSZ_IN_FLAG_INLINE: printf("FSZ_IN_FLAG_INLINE"); break;
+            case FSZ_IN_FLAG_DIRECT: printf("FSZ_IN_FLAG_DIRECT"); break;
+            case FSZ_IN_FLAG_SECLIST: printf("FSZ_IN_FLAG_SECLIST"); break;
+            case FSZ_IN_FLAG_SECLIST0: printf("FSZ_IN_FLAG_SECLIST0"); break;
+            case FSZ_IN_FLAG_SECLIST1: printf("FSZ_IN_FLAG_SECLIST1"); break;
+            case FSZ_IN_FLAG_SECLIST2: printf("FSZ_IN_FLAG_SECLIST2"); break;
+            case FSZ_IN_FLAG_SECLIST3: printf("FSZ_IN_FLAG_SECLIST3"); break;
+            case FSZ_IN_FLAG_SD: printf("FSZ_IN_FLAG_SD"); break;
+            default: printf("FSZ_IN_FLAG_SD%d",FLAG_TRANSLATION(in->flags)); break;
+        }
+        printf("\n\t};\n");
+        printf("\towner: "); for(j=0;j<15;j++) printf("%02x",((char*)&in->owner)[j]);
+        printf(":%c%c%c%c%c%c%c\n",
+            in->owner.access&FSZ_READ?'r':'-',
+            in->owner.access&FSZ_READ?'w':'-',
+            in->owner.access&FSZ_READ?'e':'-',
+            in->owner.access&FSZ_READ?'a':'-',
+            in->owner.access&FSZ_READ?'d':'-',
+            in->owner.access&FSZ_READ?'u':'-',
+            in->owner.access&FSZ_READ?'s':'-');
+        printf("\tinlinedata: '%c%c%c%c...'\n",in->inlinedata[0],in->inlinedata[1],in->inlinedata[2],in->inlinedata[3]);
+        printf("};\n");
+        printf("Data sectors: ");
+        switch(FLAG_TRANSLATION(in->flags)){
+            case FSZ_IN_FLAG_INLINE: printf("%ld", in->sec); break;
+            case FSZ_IN_FLAG_DIRECT: printf("%ld", in->sec); break;
+            case FSZ_IN_FLAG_SECLIST: printf("sl"); break;
+            case FSZ_IN_FLAG_SECLIST0: printf("%ld sl", in->sec); break;
+            case FSZ_IN_FLAG_SECLIST1: printf("sd %ld [ sl ]", in->sec); break;
+            case FSZ_IN_FLAG_SECLIST2: printf("sd %ld [ sd [ sl ]]", in->sec); break;
+            case FSZ_IN_FLAG_SECLIST3: printf("sd %ld [ sd [ sd [ sl ]]]", in->sec); break;
+            default:
+                printf("sd %ld [", in->sec);
+                k=(uint64_t*)(fs+in->sec*secs);
+                l=secs/16; while(l>1 && k[l*2-1]==0 && k[l*2-2]==0) l--;
+                for(j=0;j<l;j++) {
+                    if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SD)
+                        printf(" %ld",*k);
+                    else
+                        printf(" sd %ld [...]",*k);
+                    k+=2;
+                }
+                printf(" ]");
+                break;
+        }
+        printf("\n");
+        if(!memcmp(in->inlinedata,FSZ_DIR_MAGIC,4)) {
+            hdr=(FSZ_DirEntHeader*)in->inlinedata;
+            printf("\n");
+            goto dumpdir;
+        }
+    } else
+    if(!memcmp(fs+i*secs,FSZ_DIR_MAGIC,4)) {
+dumpdir:
+        d=(FSZ_DirEnt *)hdr;
+        printf("FSZ_DirEntHeader {\n");
+        printf("\tmagic: %s\n",FSZ_DIR_MAGIC);
+        printf("\tchecksum: %04x\n",hdr->checksum);
+        printf("\tflags: 0x%04lx %s %s\n",hdr->flags,hdr->flags&FSZ_DIR_FLAG_UNSORTED?"FSZ_DIR_FLAG_UNSORTED":"",
+            hdr->flags&FSZ_DIR_FLAG_HASHED?"FSZ_DIR_FLAG_HASHED":"");
+        printf("\tnumentries: %ld\n",hdr->numentries);
+        printf("};\n");
+        for(j=0;j<hdr->numentries;j++) {
+            d++;
+            printf("FSZ_DirEnt {\n");
+            printf("\tfid: LSN %ld\n",d->fid);
+            printf("\tlength: %d unicode characters\n",d->length);
+            printf("\tname: \"%s\"\n",d->name);
+            printf("};\n");
+        }
+    } else {
+        k=(uint64_t*)(fs+i*secs); l=1;
+        for(j=0;j<16;j++) {
+            k++;
+            if(*k!=0) { l=0; break; }
+            k++;
+        }
+        if(l) {
+            printf("Probably Sector Directory or Sector List\n");
+            k=(uint64_t*)(fs+i*secs);
+            l=secs/32; while(l>1 && k[l*4-1]==0 && k[l*4-2]==0 && k[l*4-3]==0 && k[l*4-4]==0) l--;
+            for(j=0;j<l;j++) {
+                printf("\tLSN %ld\t\t(LSN/size) %ld%s",*k,*(k+2),j%2==0?"\t\t":"\n");
+                k+=4;
+            }
+        } else {
+            printf("File data\n");
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     char *path=strdup(argv[0]);
@@ -804,6 +1002,11 @@ int main(int argc, char **argv)
     varfile=malloc(i+16); sprintf(varfile,"%svar.part",path);
     homefile=malloc(i+16); sprintf(homefile,"%shome.part",path);
 
+    // create an empty sector
+    emptysec=(char*)malloc(secsize);
+    if(emptysec==NULL) { printf("mkfs: Unable to allocate %d memory\n",secsize); exit(1); }
+    memset(emptysec,0,secsize);
+
     //parse arguments
     if(argv[1]==NULL||!strcmp(argv[1],"help")) {
         printf("FS/Z mkfs utility\n"
@@ -813,6 +1016,7 @@ int main(int argc, char **argv)
             "./mkfs (imagetoread) mime (path) (mimetype)\n"
             "./mkfs (imagetoread) cat (path)\n"
             "./mkfs (imagetoread) ls (path)\n"
+            "./mkfs (imagetoread) dump (lsn)\n"
             "./mkfs (imagetocreate) (createfromdir)\n"
             "./mkfs disk\n");
         exit(0);
@@ -839,6 +1043,9 @@ int main(int argc, char **argv)
         } else
         if(!strcmp(argv[2],"ls") && argc>=2) {
             ls(argc,argv);
+        } else
+        if(!strcmp(argv[2],"dump") && argc>=2) {
+            dump(argc,argv);
         } else
         if(argc>1) {
             createimage(argv[1],argv[2]);
