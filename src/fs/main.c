@@ -335,13 +335,14 @@ dostat:         if(ret!=-1 && !errno()) {
                 break;
 
             case SYS_rewind:
-                // don't use taskctx_seek here, as it only allows regular files, and we want to use
-                // rewind() on directories too for readdir()
+                // don't use taskctx_seek here, as it only allows regular files, and we
+                // want rewind() to work on directory streams too
                 if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
                     ctx->openfiles[msg->arg0].offs = 0;
+                    ctx->openfiles[msg->arg0].unionidx = 0;
                     ret=0;
                 }
                 break;
