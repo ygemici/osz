@@ -30,6 +30,9 @@
 #include "vfs.h"
 #include "fsdrv.h"
 
+extern uint8_t ackdelayed;      // flag to indicate async block read
+extern fid_t lookup(char *abspath, bool_t creat);
+
 public uint64_t nfcb = 0;
 public uint64_t nfiles = 0;
 public fcb_t *fcb = NULL;
@@ -105,6 +108,10 @@ void fcb_del(fid_t idx)
     fcb[idx].nopen--;
     // remove if reached zero
     if(fcb[idx].nopen==0) {
+        if(fcb[idx].type==FCB_TYPE_UNION && fcb[idx].uni.unionlist!=NULL) {
+            free(fcb[idx].uni.unionlist);
+            fcb[idx].uni.unionlist=NULL;
+        }
         if(fcb[idx].abspath!=NULL)
             free(fcb[idx].abspath);
         fcb[idx].abspath=NULL;
@@ -118,15 +125,92 @@ void fcb_del(fid_t idx)
     }
 }
 
+/**
+ * build a list of fids for union
+ */
+void fcb_unionlist_build(fid_t idx)
+{
+    int i,j,k,l,n;
+    uint64_t bs;
+    char *ptr;
+    fid_t f,*fl=NULL;
+    // failsafe
+#if DEBUG
+dbg_printf("fcb_unionlist_build %d\n",idx);
+#endif
+    if(idx>=nfcb || fcb[idx].abspath==NULL || fcb[idx].type!=FCB_TYPE_UNION || 
+      fcb[idx].uni.fs==-1 ||fcb[idx].uni.fs>=nfsdrv)
+        return;
+//    if(fcb[idx].uni.unionlist!=NULL)
+//        free(fcb[idx].uni.unionlist);
+    bs=fcb[fcb[idx].uni.storage].device.blksize;
+    // call file system driver
+    ptr=(*fsdrv[fcb[idx].uni.fs].read)(fcb[idx].uni.storage, fcb[idx].uni.inode, 0, &bs);
+    // ptr should not be NULL, as union data inlined in inode and inode is in the cache already
+    if(ptr==NULL || ptr[0]==0 || ackdelayed)
+        return;
+    n=1;
+    for(i=0;i<bs;i++){
+        l=strlen(ptr+i);
+        k=-1;
+        if(l>3) {
+            for(j=0;j<l-3;j++) {
+                if(ptr[i+j]=='.' && ptr[i+j+1]=='.' && ptr[i+j+2]=='.') {
+                    k=j;
+                    break;
+                }
+            }
+        }
+        // if union member has joker
+        if(k!=-1) {
+            ptr[i+k]=0;
+#if DEBUG
+dbg_printf("  unionlist joker '%s' '%s'\n",ptr+i,ptr+i+k+4);
+#endif
+            f=lookup(ptr+i,false);
+            ptr[i+k]='.';
+            if(ackdelayed) return;
+            if(f!=-1) {
+                //TODO: read direnties from f, iterate on all subdirs with lookup((ptr+i)+d->d_name+(ptr+i+k+4));
+                //if lookup!=-1, add to fl
+            }
+        } else {
+            f=lookup(ptr+i,false);
+#if DEBUG
+dbg_printf("  unionlist '%s' %d\n",ptr+i,f);
+#endif
+            if(ackdelayed) return;
+            if(f!=-1) {
+                fl=(fid_t*)realloc(fcb[idx].uni.unionlist,++n*sizeof(fid_t));
+                if(fl==NULL) return;
+                fl[n-2]=f;
+            }
+        }
+        i+=l;
+    }
+    fcb[idx].uni.unionlist=fl;
+#if DEBUG
+    fcb_dump();
+#endif
+    return;
+}
+
 #if DEBUG
 void fcb_dump()
 {
-    uint64_t i;
-    char *types[]={"file", "dir ", "dev ", "pipe", "sock"};
+    uint64_t i,j;
+    char *types[]={"file", "dir ", "uni ", "dev ", "pipe", "sock"};
     dbg_printf("File Control Blocks %d:\n",nfcb);
     for(i=0;i<nfcb;i++) {
-        dbg_printf("%3d. %3d %s ",i,fcb[i].nopen,types[fcb[i].type]);
-        dbg_printf("%3d:%3d %8d %s\n",fcb[i].reg.storage,fcb[i].reg.inode,fcb[i].reg.filesize,fcb[i].abspath);
+        dbg_printf("%3d. %3d %s %4d ",i,fcb[i].nopen,types[fcb[i].type],fcb[i].type!=FCB_TYPE_UNION?fcb[i].reg.blksize:0);
+        dbg_printf("%3d:%3d %8d %s",fcb[i].reg.storage,fcb[i].reg.inode,fcb[i].reg.filesize,fcb[i].abspath);
+        if(fcb[i].type==FCB_TYPE_UNION && fcb[i].uni.unionlist!=NULL) {
+            dbg_printf("\t[");
+            for(j=0;fcb[i].uni.unionlist[j]!=0;j++)
+                dbg_printf(" %d",fcb[i].uni.unionlist[j]);
+            dbg_printf(" ]");
+        }
+        dbg_printf("\n");
     }
 }
 #endif

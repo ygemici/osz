@@ -70,24 +70,6 @@ extern void dbg_printf(char * fmt, ...);
 #ifndef _AS
 extern char _osver[];
 
-typedef struct
-  {
-    int quot;           /* Quotient.  */
-    int rem;            /* Remainder.  */
-  } div_t;
-
-typedef struct
-  {
-    long int quot;      /* Quotient.  */
-    long int rem;       /* Remainder.  */
-  } ldiv_t;
-
-typedef struct
-  {
-    long long int quot;     /* Quotient.  */
-    long long int rem;      /* Remainder.  */
-  } lldiv_t;
-
 /* memory manager */
 /* Map addresses starting near ADDR and extending for LEN bytes.
    The return value is the actual mapping address chosen or MAP_FAILED

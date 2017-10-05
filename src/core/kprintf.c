@@ -338,6 +338,48 @@ void kprintf_puthex(int64_t c)
 }
 
 /**
+ * dump memory, for %D
+ */
+void kprintf_dumpmem(uint8_t *mem)
+{
+    uint8_t *ptr;
+    int i,j,k=cnt;
+#if DEBUG
+    int old=dbg_indump;
+#endif
+    if(k<1 || k>128) k=16;
+    kprintf("\n");
+    for(j=0;j<k;j++) {
+        cnt=4;
+        kprintf_puthex((int64_t)mem);
+        kprintf_putchar(':');kx++;
+        kprintf_putchar(' ');kx++;
+        ptr=mem; cnt=1;
+        for(i=0;i<16;i++) {
+            kprintf_puthex(*ptr);
+            kprintf_putchar(' ');kx++;
+            if(i%4==3) {
+                kprintf_putchar(' ');kx++;
+            }
+            ptr++;
+        }
+        ptr=mem;
+#if DEBUG
+        dbg_indump=2;
+#endif
+        for(i=0;i<16;i++) {
+            kprintf_putchar(*ptr);kx++;
+            ptr++;
+        }
+#if DEBUG
+        dbg_indump=old;
+#endif
+        mem+=16;
+        kprintf("\n");
+    }
+}
+
+/**
  * called by isr_timer every sec, for debug
  */
 void kprintf_putfps()
@@ -545,16 +587,19 @@ void kprintf(char* fmt, ...)
             reent++;
             if(fmt[0]=='a') {
                 kprintf_putascii(arg);
-            }
+            } else
             if(fmt[0]=='A') {
                 kprintf_dumpascii(arg);
-            }
+            } else
+            if(fmt[0]=='D') {
+                kprintf_dumpmem((uint8_t*)arg);
+            } else
             if(fmt[0]=='d') {
                 kprintf_putdec(arg);
-            }
+            } else
             if(fmt[0]=='x') {
                 kprintf_puthex(arg);
-            }
+            } else
             if(fmt[0]=='s') {
                 kprintf(p);
             }

@@ -41,7 +41,8 @@ extern uint64_t _initrd_size;
 void *zeroblk = NULL;           // zero block
 void *rndblk = NULL;            // random data block
 
-stat_t st;                      // buffer for stat() and fstat()
+stat_t st;                      // buffer for lstat() and fstat()
+dirent_t dirent;                // buffer for readdir()
 
 int pathstackidx = 0;           // path stack
 pathstack_t pathstack[PATHSTACKSIZE];
@@ -199,11 +200,39 @@ char *canonize(const char *path)
         }
         i++;
     }
+    if(j>0 && result[j-1]=='/') j--;
+    while(j>0 && result[j-1]=='.') j--;
     // trailing slash
-    if(path[i-1]=='/')
+    if(i>0 && path[i-1]=='/')
         result[j++]='/';
     result[j]=0;
     return result;
+}
+
+/**
+ * get the version info from path
+ */
+public uint8_t getver(char *abspath)
+{
+    int i=0;
+    if(abspath==NULL || abspath[0]==0)
+        return 0;
+    while(abspath[i]!=';' && abspath[i]!=0) i++;
+    return abspath[i]==';' && abspath[i+1]>'0' && abspath[i+1]<='9' ? abspath[i+1]-'0' : 0;
+}
+
+/**
+ * get the offset info from path
+ */
+public fpos_t getoffs(char *abspath)
+{
+    int i=0;
+    if(abspath==NULL || abspath[0]==0)
+        return 0;
+    while(abspath[i]!='#' && abspath[i]!=0) i++;
+    if(abspath[i]=='#')
+        return atoll(&abspath[i+1]);
+    return 0;
 }
 
 /**
@@ -301,6 +330,7 @@ fid_t lookup(char *path, bool_t creat)
     int16_t fs;
     int i,j,l,k;
 again:
+//dbg_printf("lookup '%s' creat %d\n",path,creat);
     if(tmp!=NULL) {
         free(tmp);
         tmp=NULL;
@@ -311,14 +341,25 @@ again:
     }
     abspath=canonize(path);
     if(abspath==NULL) {
-        seterr(EINVAL);
+        seterr(ENOENT);
         return -1;
+    }
+    // we don't allow joker in path on file creation
+    j=strlen(abspath);
+    if(creat && j>4) {
+        j-=3;
+        for(i=0;i<j;i++)
+            if(abspath[i]=='.' && abspath[i+1]=='.' && abspath[i+2]=='.') {
+                free(abspath);
+                seterr(ENOENT);
+                return -1;
+            }
     }
     f=fcb_get(abspath);
     fd=ff=fs=-1;
     i=j=l=k=0;
     // if not found in cache
-    if(f==-1) {
+    if(f==-1 || (f==ROOTFCB && fcb[f].reg.inode==0)) {
         // first, look at static mounts
         // find the longest match in mtab, root fill always match
         for(i=0;i<nmtab;i++) {
@@ -366,17 +407,18 @@ again:
         // pass the remaining path to filesystem driver
         // fd=device fcb, fs=fsdrv idx, ff=mount point, l=longest mount length
         loc.path=abspath+l;
-        loc.inode=f=-1;
+        loc.inode=-1;
         loc.fileblk=NULL;
         loc.creat=creat;
         pathstackidx=0;
         switch((*fsdrv[fs].locate)(fd, 0, &loc)) {
             case SUCCESS:
-                f=strlen(abspath);
-                if(loc.type==FCB_TYPE_REG_DIR && abspath[f-1]!='/') {
-                    abspath[f++]='/'; abspath[f]=0;
+                i=strlen(abspath);
+                if(loc.type==FCB_TYPE_REG_DIR && i>0 && abspath[i-1]!='/') {
+                    abspath[i++]='/'; abspath[i]=0;
                 }
-                f=fcb_add(abspath,loc.type);
+                if(f==-1)
+                    f=fcb_add(abspath,loc.type);
                 fcb[f].reg.storage=fd;
                 fcb[f].reg.inode=loc.inode;
                 fcb[f].reg.filesize=loc.filesize;
@@ -445,36 +487,10 @@ again:
 }
 
 /**
- * get the version info from path
- */
-public uint8_t getver(char *abspath)
-{
-    int i=0;
-    if(abspath==NULL || abspath[0]==0)
-        return 0;
-    while(abspath[i]!=';' && abspath[i]!=0) i++;
-    return abspath[i]==';' && abspath[i+1]>'0' && abspath[i+1]<='9' ? abspath[i+1]-'0' : 0;
-}
-
-/**
- * get the offset info from path
- */
-public fpos_t getoffs(char *abspath)
-{
-    int i=0;
-    if(abspath==NULL || abspath[0]==0)
-        return 0;
-    while(abspath[i]!='#' && abspath[i]!=0) i++;
-    if(abspath[i]=='#')
-        return atoll(&abspath[i+1]);
-    return 0;
-}
-
-/**
  * read from file. ptr is either a virtual address in ctx->pid's address space (so not
  * writable directly) or in shared memory (writable)
  */
-public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
+size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
 {
     size_t bs, ret=0;
     void *blk;
@@ -521,8 +537,9 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
             p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
         tc->workoffs+=bs;
     }
-    // only alter seek offset when read is finished
-    tc->openfiles[idx].offs += ret;
+    // only alter seek offset when read is finished and it's nor readdir
+    if(!(tc->openfiles[idx].mode&OF_MODE_READDIR))
+        tc->openfiles[idx].offs += ret;
     return ret;
 }
 
@@ -530,7 +547,7 @@ public size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
  * write to file. ptr is either a buffer in message queue or shared memory, so it's readable
  * in both cases
  */
-public size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
+size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
 {
     fcb_t *fc;
     // input checks
@@ -548,18 +565,23 @@ public size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
 }
 
 /**
- * return a stat structure for file
+ * return a stat_t structure for file
  */
-public stat_t *statfs(fid_t idx)
+stat_t *statfs(fid_t idx)
 {
     // failsafe
     if(idx>=nfcb || fcb[idx].abspath==NULL)
         return NULL;
     memset(&st,0,sizeof(stat_t));
+//dbg_printf("statfs(%d)\n",idx);
     // add common fcb fields
     st.st_dev=fcb[idx].reg.storage;
     st.st_ino=fcb[idx].reg.inode;
-    st.st_mode|=(fcb[idx].mode&0xFFFF) | (fcb[idx].type << 16);
+    st.st_mode=(fcb[idx].mode&0xFFFF);
+    if(fcb[idx].type==FCB_TYPE_UNION)
+        st.st_mode|=S_IFDIR|S_IFUNI;
+    else
+        st.st_mode|=(fcb[idx].type << 16);
     st.st_size=fcb[idx].reg.filesize;
     // type specific fields
     switch(fcb[idx].type) {
@@ -582,3 +604,39 @@ public stat_t *statfs(fid_t idx)
     }
     return &st;
 }
+
+/**
+ * read the next directory entry
+ */
+dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
+{
+    fcb_t *fc;
+    size_t s;
+    // failsafe
+    if(!taskctx_validfid(tc,idx))
+        return NULL;
+    fc=&fcb[tc->openfiles[idx].fid];
+    if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv)
+        return 0;
+    memset(&dirent,0,sizeof(dirent_t));
+    // call file system driver to parse the directory entry
+    s=(*fsdrv[fc->reg.fs].getdirent)(ptr, tc->openfiles[idx].offs, &dirent);
+    // failsafe
+    if(s==0 || dirent.d_ino==0 || dirent.d_name[0]==0)
+        return NULL;
+    if(dirent.d_len==0)
+        dirent.d_len=strlen(dirent.d_name);
+    dirent.d_dev=fc->reg.storage;
+    // assume regular file
+    dirent.d_type=FCB_TYPE_REG_FILE;
+    // call file system driver to fill in st_mode stat_t field
+    memset(&st,0,sizeof(stat_t));
+    if((*fsdrv[fc->reg.fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
+        dirent.d_type=st.st_mode>>16;
+        memcpy(&dirent.d_icon,&st.st_type,8);
+    }
+    // move open file pointer
+    tc->openfiles[idx].offs += s;
+    return &dirent;
+}
+

@@ -151,8 +151,6 @@ void sys_init()
  */
 void sys_ready()
 {
-    tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
-
     /* finish up ISR initialization */
     isr_fini();
     /* log we're ready */
@@ -182,7 +180,8 @@ void sys_ready()
     /* disable scroll pause */
     scry = -1;
 
-    /* mount filesystems. Make it look like init had sent the message so FS will notify init when it's done */
+    /* mount filesystems. It have to come from somewhere, so we choose the init task. */
+    tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
     sched_awake(tcb);
     task_map(tcb->memroot);
     msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);

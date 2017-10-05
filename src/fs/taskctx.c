@@ -27,8 +27,13 @@
 
 #include <osZ.h>
 #include <stdio.h>
-#include "taskctx.h"
 #include "fcb.h"
+#include "fsdrv.h"
+#include "taskctx.h"
+
+// union lists
+int32_t nunionlist = 0;
+fid_t **unionlist = NULL;
 
 // task contexts
 uint64_t ntaskctx = 0;
@@ -129,7 +134,7 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64
 {
     uint64_t i;
     if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL) {
-        seterr(EBADF);
+        seterr(ENOENT);
         return -1;
     }
     // check if it's already opened for exclusive access
@@ -163,6 +168,7 @@ found:
     tc->openfiles[i].fid=fid;
     tc->openfiles[i].mode=mode;
     tc->openfiles[i].offs=offs;
+    tc->openfiles[i].unionidx=0;
     tc->nfiles++;
     fcb[fid].nopen++;
     return i;

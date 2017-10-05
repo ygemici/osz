@@ -141,6 +141,7 @@ int add_inode(char *filetype, char *mimetype)
             FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)(in->inlinedata);
             in->sec=size/secsize;
             in->flags=FSZ_IN_FLAG_INLINE;
+            in->size=sizeof(FSZ_DirEntHeader);
             memcpy(in->inlinedata,FSZ_DIR_MAGIC,4);
             hdr->checksum=crc32_calc((char*)hdr+sizeof(FSZ_DirEntHeader),hdr->numentries*sizeof(FSZ_DirEnt));
         }

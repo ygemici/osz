@@ -53,16 +53,16 @@ typedef struct {
 } pathstack_t;
 
 /* low level functions */
-extern void *readblock(fid_t idx, fpos_t offs);
 extern void pathpush(ino_t lsn, char *path);
 extern pathstack_t *pathpop();
 extern char *pathcat(char *path, char *filename);
 extern char *canonize(const char *path);
-extern fid_t lookup(char *abspath, bool_t creat);
 extern uint8_t getver(char *abspath);
 extern fpos_t getoffs(char *abspath);
+extern void *readblock(fid_t idx, fpos_t offs);
+/* wrappers around file system driver functions */
+extern fid_t lookup(char *abspath, bool_t creat);
 extern size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size);
 extern size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
 extern stat_t *statfs(fid_t idx);
-
-/* libc function implementations */
+extern dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size);

@@ -94,21 +94,6 @@
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
 
 #ifndef _AS
-typedef struct {
-    fid_t     st_dev;       // ID of device, *not* major/minor
-    ino_t     st_ino;       // inode of the file
-    mode_t    st_mode;      // mode
-    uint8_t   st_type[4];   // file type
-    uint8_t   st_mime[44];  // mime type
-    nlink_t   st_nlink;     // number of hard links
-    uid_t     st_owner;     // owner user id
-    off_t     st_size;      // file size
-    blksize_t st_blksize;   // block size
-    blkcnt_t  st_blocks;    // number of allocated blocks
-    time_t    st_atime;     // access time in microsec timestamp
-    time_t    st_mtime;     // modification time in microsec timestamp
-    time_t    st_ctime;     // status change time in microsec timestamp
-} stat_t;
 
 /* Print a message describing the meaning of the value of errno. */
 extern void perror (char *s, ...);
@@ -149,9 +134,9 @@ extern stat_t *dstat (fid_t fd);
 extern stat_t *fstat (fid_t fd);
 
 /* Open a file and create a new STREAM for it. */
-extern fid_t fopen (char *filename, mode_t oflag);
+extern fid_t fopen (const char *filename, mode_t oflag);
 /* Open a file, replacing an existing STREAM with it. */
-extern fid_t freopen (char *filename, mode_t oflag, fid_t stream);
+extern fid_t freopen (const char *filename, mode_t oflag, fid_t stream);
 /* Close STREAM. */
 extern int fclose (fid_t stream);
 /* Close all streams. */
@@ -173,7 +158,14 @@ extern size_t fread (fid_t stream, void *ptr, size_t size);
 /* Write chunks of generic data to STREAM. */
 extern size_t fwrite (fid_t stream, void *ptr, size_t size);
 /* Return the canonical absolute name of file NAME in a read-only BUF. */
-extern char *realpath (char *name);
+extern char *realpath (const char *name);
+/* Open a directory stream on PATH. Return STREAM on the directory */
+extern fid_t opendir (const char *path);
+/* Read a directory entry from directory stream.  Return a pointer to a
+   read-only dirent_t BUF describing the entry, or NULL for EOF or error. */
+extern dirent_t *readdir(fid_t dirstream);
+/* Close the directory STREAM. Return 0 if successful, -1 if not. */
+extern int closedir (fid_t dirstream);
 
 /*** unimplemented ***/
 #if 0

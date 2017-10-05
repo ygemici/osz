@@ -73,6 +73,5 @@
 #define SYS_opendir     (43)
 #define SYS_readdir     (44)
 #define SYS_rewind      (45)
-#define SYS_closedir    (46)
 // socket operations
 

@@ -123,6 +123,7 @@ private void keymap_parse(bool_t alt, char *keyrc, size_t len)
 char buf[__PAGESIZE];
 private void keymap_init()
 {
+/*
     fid_t f=fopen("/etc/kbd/en_us", O_RDONLY);
 #if DEBUG
     dbg_printf("  keymap read %d %s\n", errno(),strerror(errno()));
@@ -130,6 +131,7 @@ private void keymap_init()
     size_t s=fread(f, &buf, __PAGESIZE);
     fclose(f);
     keymap_parse(0, buf, s);
+*/
 }
 
 /* receive a scancode or a pretranslated keycode */

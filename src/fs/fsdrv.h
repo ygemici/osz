@@ -47,6 +47,8 @@ typedef struct {
     void (*resizefs)(fid_t fd);
     bool_t (*stat)(fid_t fd, ino_t file, stat_t *st);
     void* (*read)(fid_t fd, ino_t file, fpos_t offs, size_t *s);
+    void* (*write)(fid_t fd, ino_t file, fpos_t offs, size_t *s);
+    size_t (*getdirent)(void *buf, fpos_t offs, dirent_t *dirent);
 } fsdrv_t;
 
 /* filesystem parsers */

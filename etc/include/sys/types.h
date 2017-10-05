@@ -60,11 +60,11 @@
 /*** Access bits in uuid.Data4[7] ***/
 #define A_READ    (1<<0)
 #define A_WRITE   (1<<1)
-#define A_EXEC    (1<<2)          // execute or search
+#define A_EXEC    (1<<2)    // execute or search
 #define A_APPEND  (1<<3)
 #define A_DELETE  (1<<4)
-#define A_SUID    (1<<6)          // Set user id on execution
-#define A_SGID    (1<<7)          // Inherit ACL, no set group per se in OS/Z
+#define A_SUID    (1<<6)    // Set user id on execution
+#define A_SGID    (1<<7)    // Inherit ACL, no set group per se in OS/Z
 
 /*** libc ***/
 #ifndef _AS
@@ -77,9 +77,27 @@ typedef struct {
 } __attribute__((packed)) uuid_t;
 #define UUID_ACCESS(a) (a.Data4[7])
 
+typedef struct
+  {
+    int quot;               // Quotient.
+    int rem;                // Remainder.
+  } div_t;
+
+typedef struct
+  {
+    long int quot;          // Quotient.
+    long int rem;           // Remainder.
+  } ldiv_t;
+
+typedef struct
+  {
+    long long int quot;     // Quotient.
+    long long int rem;      // Remainder.
+  } lldiv_t;
+
 typedef unsigned char uchar;
 typedef unsigned int uint;
-typedef uint8_t bool_t;
+typedef uint8_t bool_t;     // boolean type, true or false
 typedef uint64_t size_t;    // buffer size
 typedef uint64_t fid_t;     // file index
 typedef uint64_t ino_t;     // inode number
@@ -99,6 +117,31 @@ typedef uint64_t blkcnt_t;  // number of disk blocks.
 typedef uint64_t fpos_t;    // file position
 typedef uint32_t keymap_t;  // keymap entry
 typedef uint64_t time_t;    // timestamp in microsec
+
+typedef struct {
+    fid_t       st_dev;     // ID of device, *not* major/minor
+    ino_t       st_ino;     // inode of the file
+    mode_t      st_mode;    // mode
+    uint8_t     st_type[4]; // file type
+    uint8_t     st_mime[44];// mime type
+    nlink_t     st_nlink;   // number of hard links
+    uid_t       st_owner;   // owner user id
+    off_t       st_size;    // file size
+    blksize_t   st_blksize; // block size
+    blkcnt_t    st_blocks;  // number of allocated blocks
+    time_t      st_atime;   // access time in microsec timestamp
+    time_t      st_mtime;   // modification time in microsec timestamp
+    time_t      st_ctime;   // status change time in microsec timestamp
+} stat_t;
+
+typedef struct {
+    fid_t       d_dev;      // ID of device, *not* major/minor
+    ino_t       d_ino;      // inode number
+    uint8_t     d_icon[8];  // short mime type for icon
+    uint32_t    d_type;     // entry type, st_mode >> 16
+    uint32_t    d_len;      // name length
+    char        d_name[FILENAME_MAX];
+} dirent_t;
 
 /*
 typedef void __signalfn(int);

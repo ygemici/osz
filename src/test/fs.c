@@ -45,8 +45,19 @@ void dumpstat(stat_t *st)
     dbg_printf("\n");
 }
 
+void dumpdirent(dirent_t *de)
+{
+    if(de==NULL)
+        return;
+    dbg_printf("    d_dev %d\td_ino %d\td_type %02x",de->d_dev,de->d_ino,de->d_type);
+    dbg_printf("\td_icon '%s'\n    d_len %d\td_name '%s'\n",de->d_icon,de->d_len,de->d_name);
+}
+
 void fs_test()
 {
+    dirent_t *de;
+fid_t f;
+/*
     stat_t *st=lstat("/etc");
     dbg_printf("lstat(/etc) ret %x errno %d %s\n", st, errno(), strerror(errno()));
     dumpstat(st);
@@ -65,25 +76,28 @@ void fs_test()
     f=fclose(f);
     dbg_printf("fclose ret %d errno %d\n\n", f, errno());
 
-    dbg_printf("fopen(/vt_sw.txt, O_RDWR)\n");
-    f=fopen("/vt_sw.txt", O_RDWR);
-//    s=fread(f,&buff,65536);
-//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
-
-    dbg_printf("fopen(/direct, O_RDWR)\n");
-    f=fopen("/direct", O_RDWR);
-//    s=fread(f,&buff,65536);
-//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
-
-    dbg_printf("fopen(/sd, O_RDWR)\n");
-    f=fopen("/sd", O_RDWR);
-//    s=fread(f,&buff,65536);
-//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
-
-    dbg_printf("fopen(/sd2, O_RDWR)\n");
-    f=fopen("/sd2", O_RDWR);
-//    s=fread(f,&buff,65536);
-//    dbg_printf("fread ret %d errno %d\n\n", s, errno());
+    f=fcloseall();
+    dbg_printf("fcloseall ret %d errno %d\n\n", f, errno());
+    
+    f=opendir("/sys");
+    dbg_printf("opendir(/sys) ret %d errno %d\n\n", f, errno());
+    de=(dirent_t*)1;
+    while(de!=NULL) {
+        de=readdir(f);
+        dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
+        dumpdirent(de);
+    }
+    closedir(f);
+*/
+    f=opendir("/etc");
+    dbg_printf("opendir(/etc) ret %d errno %d\n\n", f, errno());
+    de=(dirent_t*)1;
+    while(de!=NULL) {
+        de=readdir(f);
+        dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
+        dumpdirent(de);
+    }
+    closedir(f);
 
 return;
     f=mount("/dev/valami", "/etc", NULL);

@@ -87,7 +87,7 @@ void _init(int argc, char **argv)
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
             case SYS_mountfs:
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_FS) {
                     fsdrv_dump();
                     devfs_dump();
@@ -95,17 +95,18 @@ void _init(int argc, char **argv)
                 }
 #endif
                 mtab_fstab(_fstab_ptr, _fstab_size);
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_FS)
                     mtab_dump();
 #endif
-                // notify other system services that they can continue with their initialization
+                // notify other system services that file system is ready,
+                // they can continue with their initialization
                 mq_send(SRV_UI, SYS_ack, 0);
                 mq_send(SRV_syslog, SYS_ack, 0);
                 mq_send(SRV_inet, SYS_ack, 0);
                 mq_send(SRV_sound, SYS_ack, 0);
-                // we send the ack to init in the usual way
-                break;
+                mq_send(SRV_init, SYS_ack, 0);
+                continue;
 
             case SYS_mount:
                 if(msg->ptr==NULL || msg->size==0) {
@@ -115,19 +116,19 @@ void _init(int argc, char **argv)
                 }
                 j=strlen(msg->ptr);
                 k=strlen(msg->ptr + j+1);
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_FS)
                     dbg_printf("FS: mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
 #endif
                 ret = mtab_add(msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1)!=-1 ? 0 : -1;
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_FS)
                     mtab_dump();
 #endif
                 break;
 
             case SYS_umount:
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_FS)
                     dbg_printf("FS: umount(%s)\n",msg->ptr);
 #endif
@@ -137,14 +138,14 @@ void _init(int argc, char **argv)
                     break;
                 }
                 ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_FS)
                     mtab_dump();
 #endif
                 break;
 
             case SYS_mknod:
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_DEVICES)
                     dbg_printf("FS: mknod(%s,%d,%02x,%d,%d)\n",msg->ptr,msg->type,msg->attr0,msg->attr1,msg->attr2);
 #endif
@@ -158,7 +159,7 @@ void _init(int argc, char **argv)
                 break;
 
             case SYS_ioctl:
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_DEVICES)
                     dbg_printf("FS: ioctl(%d,%d,%s[%d])\n",msg->type,msg->attr0,msg->ptr,msg->size);
 #endif
@@ -168,7 +169,7 @@ void _init(int argc, char **argv)
                 } else {
                     // relay the message to the appropriate driver task with device id
                     devfs_t *df=&dev[fcb[ctx->openfiles[msg->type].fid].device.inode];
-#ifdef DEBUG
+#if DEBUG
                 if(_debug&DBG_DEVICES)
                     dbg_printf("FS: ioctl from %x to pid %x dev %d\n",ctx->pid, df->drivertask, df->device);
 #endif
@@ -259,14 +260,12 @@ void _init(int argc, char **argv)
 
             case SYS_lstat:
                 ret=lookup(msg->ptr, false);
-                if(ret!=-1 && !errno()) {
-dostat:             ptr=statfs(ret);
-                    if(ptr!=NULL) {
-                        mq_send(EVT_SENDER(msg->evt), SYS_ack | MSG_PTRDATA, ptr, sizeof(stat_t));
-                        ctx->msg.evt = 0;
-                        continue;
-                    }
-                    seterr(ENOENT);
+dostat:         if(ret!=-1 && !errno()) {
+                    ptr=statfs(ret);
+                    if(ptr!=NULL)
+                        p2pcpy(EVT_SENDER(msg->evt), (void*)msg->arg2, ptr, sizeof(stat_t));
+                    else
+                        seterr(ENOENT);
                 }
                 ret=0;
                 break;
@@ -290,15 +289,9 @@ dostat:             ptr=statfs(ret);
 
             case SYS_fopen:
 //dbg_printf("fs fopen(%s, %x)\n", msg->ptr, msg->type);
-                ptr=canonize(msg->ptr);
-                if(ptr==NULL) {
-                    seterr(EINVAL);
-                    ret=-1;
-                    break;
-                }
                 ret=lookup(msg->ptr, msg->type & O_CREAT ? true : false);
                 if(ret!=-1 && !errno()) {
-                    if(fcb[ret].type==FCB_TYPE_REG_DIR) {
+                    if(fcb[ret].type==FCB_TYPE_REG_DIR || fcb[ret].type==FCB_TYPE_UNION) {
                         seterr(EISDIR);
                         ret=-1;
                     } else {
@@ -312,13 +305,13 @@ dostat:             ptr=statfs(ret);
                         ret=taskctx_open(ctx,ret,msg->type,o,msg->attr0);
                     }
                 }
-                free(ptr);
 //taskctx_dump();
                 break;
 
+          //case SYS_closedir:
             case SYS_fclose:
-//dbg_printf("fs fclose %d\n",msg->arg0);
-                if(!taskctx_validfid(ctx,msg->arg0) || fcb[ctx->openfiles[msg->arg0].fid].type==FCB_TYPE_REG_DIR) {
+//dbg_printf("fs %s %d\n",ctx->openfiles[msg->arg0].mode&OF_MODE_READDIR?"closedir":"fclose",msg->arg0);
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
@@ -420,14 +413,21 @@ dostat:             ptr=statfs(ret);
                 break;
 
             case SYS_fread:
-//dbg_printf("fs fread(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
+//dbg_printf("fs fread(%d,%x,%d) offs %d mode %x\n",msg->type,msg->ptr,msg->size,
+//    ctx->openfiles[msg->type].offs,ctx->openfiles[msg->type].mode);
                 // buffers bigger than 1M must use shared memory
                 if(msg->size>=__BUFFSIZE && (int64_t)msg->ptr > 0) {
                     seterr(ENOTSHM);
                     ret=0;
-                }
-                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_READ) ||
-                   fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_REG_DIR) {
+                } else
+                if(msg->ptr==NULL || msg->size==0) {
+                    // when buffer size 0, nothing to read
+                    // when no buffer, report error
+                    if(msg->ptr==NULL && msg->size>0)
+                        seterr(EINVAL);
+                    ret=0;
+                } else
+                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_READ)) {
                     seterr(EBADF);
                     ret=0;
                 } else {
@@ -438,11 +438,55 @@ dostat:             ptr=statfs(ret);
             case SYS_fwrite:
 //dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
                 if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_WRITE) ||
-                   fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_REG_DIR) {
+                   fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_REG_DIR ||
+                   fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_UNION) {
                     seterr(EBADF);
+                    ret=0;
+                } else
+                if(msg->ptr==NULL || msg->size==0) {
+                    // nothing to write
+                    // when no buffer, report error
+                    if(msg->ptr==NULL && msg->size>0)
+                        seterr(EINVAL);
                     ret=0;
                 } else {
                     ret=writefs(ctx,msg->type,msg->ptr,msg->size);
+                }
+                break;
+
+            case SYS_opendir:
+                ret=lookup(msg->ptr, false);
+//dbg_printf("fs opendir(%s) ret %d errno %d\n", msg->ptr, ret, errno());
+                if(ret!=-1 && !errno()) {
+                    if(fcb[ret].type!=FCB_TYPE_REG_DIR && fcb[ret].type!=FCB_TYPE_UNION) {
+                        seterr(ENOTDIR);
+                        ret=-1;
+                    } else {
+                        if(fcb[ret].type==FCB_TYPE_UNION) {
+                            ackdelayed=false;
+                            fcb_unionlist_build(ret);
+                            if(ackdelayed) break;
+                        }
+                        ret=taskctx_open(ctx,ret,O_RDONLY,0,-1);
+                        if(ret!=-1) {
+                            ctx->openfiles[ret].mode|=OF_MODE_READDIR;
+                        }
+                    }
+                }
+//taskctx_dump();
+                break;
+
+            case SYS_readdir:
+//dbg_printf("fs readdir(%x,%d,%d,%x)\n", msg->ptr, msg->size, msg->type,msg->attr0);
+                if(!taskctx_validfid(ctx,msg->type) || fcb[ctx->openfiles[msg->type].fid].type!=FCB_TYPE_REG_DIR) {
+                    seterr(EBADF);
+                    ret=0;
+                } else {
+                    ptr=(void*)readdirfs(ctx,msg->type,msg->ptr,msg->size);
+                    if(ptr!=NULL && !errno()) {
+                        p2pcpy(EVT_SENDER(msg->evt), (void*)msg->attr0, ptr, sizeof(dirent_t));
+                        ret=0;
+                    }
                 }
                 break;
 

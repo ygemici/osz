@@ -26,6 +26,11 @@
  */
 #include <osZ.h>
 
+#define DIRENTMAX 512
+c_assert(DIRENTMAX>sizeof(dirent_t));
+dirent_t *stdlib_direntbuf=NULL;
+stat_t *stdlib_statbuf=NULL;
+
 public int printf (const char *__restrict __format, ...)
 {
     return 0;
@@ -175,7 +180,9 @@ public int ioctl(fid_t stream, uint64_t code, void *buff, size_t size)
     return msg->arg0;
 }
 
-/* Create a temporary file and open it read/write. */
+/**
+ * Create a temporary file and open it read/write.
+ */
 public fid_t tmpfile (void)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_tmpfile);
@@ -184,8 +191,10 @@ public fid_t tmpfile (void)
     return msg->arg0;
 }
 
-/* Open a file and create a new STREAM for it. */
-public fid_t fopen (char *filename, mode_t oflag)
+/**
+ * Open a file and create a new STREAM for it.
+ */
+public fid_t fopen (const char *filename, mode_t oflag)
 {
     if(filename==NULL || filename[0]==0) {
         seterr(EINVAL);
@@ -197,8 +206,10 @@ public fid_t fopen (char *filename, mode_t oflag)
     return msg->arg0;
 }
 
-/* Open a file, replacing an existing STREAM with it. */
-public fid_t freopen (char *filename, mode_t oflag, fid_t stream)
+/**
+ * Open a file, replacing an existing STREAM with it.
+ */
+public fid_t freopen (const char *filename, mode_t oflag, fid_t stream)
 {
     if(filename==NULL || filename[0]==0) {
         seterr(EINVAL);
@@ -210,7 +221,9 @@ public fid_t freopen (char *filename, mode_t oflag, fid_t stream)
     return msg->arg0;
 }
 
-/* Close STREAM. */
+/**
+ * Close STREAM.
+ */
 public int fclose (fid_t stream)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_fclose, stream);
@@ -219,7 +232,9 @@ public int fclose (fid_t stream)
     return msg->arg0;
 }
 
-/* Close all streams. */
+/**
+ * Close all streams.
+ */
 public int fcloseall (void)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_fcloseall);
@@ -228,7 +243,9 @@ public int fcloseall (void)
     return msg->arg0;
 }
 
-/* Seek to a certain position on STREAM. */
+/**
+ * Seek to a certain position on STREAM.
+ */
 public int fseek (fid_t stream, off_t off, int whence)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_fseek, stream, off, whence);
@@ -237,7 +254,9 @@ public int fseek (fid_t stream, off_t off, int whence)
     return msg->arg0;
 }
 
-/* Return the current position of STREAM. */
+/**
+ * Return the current position of STREAM.
+ */
 public fpos_t ftell (fid_t stream)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_ftell, stream);
@@ -246,19 +265,25 @@ public fpos_t ftell (fid_t stream)
     return msg->arg0;
 }
 
-/* Rewind to the beginning of STREAM or opendir handle. */
+/**
+ * Rewind to the beginning of STREAM or opendir handle.
+ */
 public void rewind (fid_t stream)
 {
     mq_call(SRV_FS, SYS_rewind, stream);
 }
 
-/* Clear the error and EOF indicators for STREAM.  */
+/**
+ * Clear the error and EOF indicators for STREAM.
+ */
 public void fclrerr (fid_t stream)
 {
     mq_call(SRV_FS, SYS_fclrerr, stream);
 }
 
-/* Return the EOF indicator for STREAM.  */
+/**
+ * Return the EOF indicator for STREAM.
+ */
 public int feof (fid_t stream)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_feof, stream);
@@ -267,7 +292,9 @@ public int feof (fid_t stream)
     return msg->arg0;
 }
 
-/* Return the error indicator for STREAM.  */
+/**
+ * Return the error indicator for STREAM.
+ */
 public int ferror (fid_t stream)
 {
     msg_t *msg=mq_call(SRV_FS, SYS_ferror, stream);
@@ -276,7 +303,9 @@ public int ferror (fid_t stream)
     return msg->arg0;
 }
 
-/* Read chunks of generic data from STREAM. */
+/**
+ * Read chunks of generic data from STREAM.
+ */
 public size_t fread (fid_t stream, void *ptr, size_t size)
 {
     if(size>=__BUFFSIZE) {
@@ -289,7 +318,9 @@ public size_t fread (fid_t stream, void *ptr, size_t size)
     return msg->arg0;
 }
 
-/* Write chunks of generic data to STREAM. */
+/**
+ * Write chunks of generic data to STREAM.
+ */
 public size_t fwrite (fid_t stream, void *ptr, size_t size)
 {
     if(size>=__BUFFSIZE && (int64_t)ptr > 0) {
@@ -302,36 +333,63 @@ public size_t fwrite (fid_t stream, void *ptr, size_t size)
     return msg->arg0;
 }
 
-/* Get file attributes for FILE in a read-only BUF.  */
+/**
+ * Get file attributes for FILE in a read-only BUF.
+ */
 public stat_t *lstat (const char *path)
 {
     if(path==NULL || path[0]==0) {
         seterr(EINVAL);
         return NULL;
     }
-    msg_t *msg=mq_call(SRV_FS, SYS_lstat|MSG_PTRDATA, path, strlen(path)+1);
-    return (stat_t*)msg->ptr;
-}
-
-/* Get file attributes for a device returned in st_dev */
-public stat_t *dstat (fid_t fd)
-{
-    msg_t *msg=mq_call(SRV_FS, SYS_dstat, fd);
-    return (stat_t*)msg->ptr;
-}
-
-/* Get file attributes for the file, device, pipe, or socket that
-   file descriptor FD is open on and return them in a read-only BUF. */
-public stat_t *fstat (fid_t fd)
-{
-    msg_t *msg=mq_call(SRV_FS, SYS_fstat, fd);
-    return (stat_t*)msg->ptr;
+    if(stdlib_statbuf==NULL) {
+        stdlib_statbuf=malloc(sizeof(stat_t));
+        if(stdlib_statbuf==NULL)
+            return NULL;
+    }
+    mq_call(SRV_FS, SYS_lstat|MSG_PTRDATA, path, strlen(path)+1, stdlib_statbuf);
+    if(!errno())
+        return (stat_t*)stdlib_statbuf;
+    return NULL;
 }
 
 /**
- *  Return the canonical absolute name of file NAME in a read-only BUF.
+ * Get file attributes for a device returned in st_dev
  */
-char *realpath (char *path)
+public stat_t *dstat (fid_t fd)
+{
+    if(stdlib_statbuf==NULL) {
+        stdlib_statbuf=malloc(sizeof(stat_t));
+        if(stdlib_statbuf==NULL)
+            return NULL;
+    }
+    mq_call(SRV_FS, SYS_dstat, fd, 0, stdlib_statbuf);
+    if(!errno())
+        return (stat_t*)stdlib_statbuf;
+    return NULL;
+}
+
+/**
+ * Get file attributes for the file, device, pipe, or socket that
+ * file descriptor FD is open on and return them in a read-only BUF.
+ */
+public stat_t *fstat (fid_t fd)
+{
+    if(stdlib_statbuf==NULL) {
+        stdlib_statbuf=malloc(sizeof(stat_t));
+        if(stdlib_statbuf==NULL)
+            return NULL;
+    }
+    mq_call(SRV_FS, SYS_fstat, fd, 0, stdlib_statbuf);
+    if(!errno())
+        return (stat_t*)stdlib_statbuf;
+    return NULL;
+}
+
+/**
+ *  Return the canonical absolute name of file NAME in a malloc'd BUF.
+ */
+char *realpath (const char *path)
 {
     if(path==NULL || path[0]==0) {
         seterr(EINVAL);
@@ -340,5 +398,58 @@ char *realpath (char *path)
     msg_t *msg=mq_call(SRV_FS, SYS_realpath|MSG_PTRDATA, path, strlen(path)+1);
     if(errno())
         return NULL;
-    return (char*)msg->ptr;
+    return strdup((char*)msg->ptr);
+}
+
+/**
+ * Open a directory stream on PATH. Return STREAM on the directory
+ */
+public fid_t opendir (const char *path)
+{
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_opendir|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * Read a directory entry from directory stream.  Return a pointer to a
+ * read-only dirent_t BUF describing the entry, or NULL for EOF or error.
+ */
+public dirent_t *readdir(fid_t dirstream)
+{
+    // I have designed FS/Z carefully so that directory entries never
+    // cross block borders, but other file systems (like ext2) cannot
+    // guarantee that. Therefore we need a user side buffer and use
+    // fread() to make sure we have the entire entry in memory
+    if(stdlib_direntbuf==NULL) {
+        stdlib_direntbuf=malloc(DIRENTMAX);
+        if(errno())
+            return NULL;
+    }
+    if(!fread(dirstream, stdlib_direntbuf, DIRENTMAX)) 
+        return NULL;
+#if DEBUG
+dbg_printf("%2D\n",stdlib_direntbuf);
+#endif
+    mq_call(SRV_FS, SYS_readdir|MSG_PTRDATA, stdlib_direntbuf, DIRENTMAX, dirstream, stdlib_direntbuf);
+    if(errno())
+        return NULL;
+    return (dirent_t*)stdlib_direntbuf;
+}
+
+/**
+ * Close the directory STREAM. Return 0 if successful, -1 if not.
+ */
+public int closedir (fid_t dirstream)
+{
+    //use the same fclose, directory streams are not special
+    msg_t *msg=mq_call(SRV_FS, SYS_fclose, dirstream);
+    if(errno())
+        return -1;
+    return msg->arg0;
 }

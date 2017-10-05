@@ -58,7 +58,7 @@ bool_t detect(fid_t fd, void *blk)
 uint8_t locate(fid_t fd, ino_t parent, locate_t *loc)
 {
     // failsafe
-    if(loc==NULL || loc->path==NULL || loc->path[0]==0 || fd>=nfcb || fcb[fd].abspath==NULL)
+    if(loc==NULL || loc->path==NULL || fd>=nfcb || fcb[fd].abspath==NULL)
         return NOTFOUND;
     // get superblock
     FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd, 0);
@@ -75,7 +75,6 @@ uint8_t locate(fid_t fd, ino_t parent, locate_t *loc)
     lsn=parent==0? sb->rootdirfid : parent;
     sdmax=fcb[fd].device.blksize/16;
 nextdir:
-//dbg_printf("FS/Z locate %s %d.'%s'\n",fcb[fd].abspath,lsn,loc->path);
     for(e=loc->path;*e!='/' && !PATHEND(*e);e++);
     if(*e=='/') e++;
     // handle up directory
@@ -109,8 +108,11 @@ nextdir:
     if(PATHEND(*loc->path)) {
         loc->inode = lsn;
         loc->filesize = in->size;
-        if(!memcmp(in->filetype, FILETYPE_DIR, 4) || !memcmp(in->filetype, FILETYPE_UNION, 4))
+        if(!memcmp(in->filetype, FILETYPE_DIR, 4))
             loc->type = FCB_TYPE_REG_DIR;
+        else
+        if(!memcmp(in->filetype, FILETYPE_UNION, 4))
+            loc->type = FCB_TYPE_UNION;
         else
             loc->type = FCB_TYPE_REG_FILE;
         return SUCCESS;
@@ -239,7 +241,7 @@ void resizefs(fid_t fd)
 bool_t stat(fid_t fd, ino_t file, stat_t *st)
 {
     FSZ_Inode *in=(FSZ_Inode*)readblock(fd,file);
-dbg_printf("fsz stat storage %d file %d\n",fd,file);
+//dbg_printf("fsz stat storage %d file %d\n",fd,file);
     // failsafe
     if( fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
         in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4))
@@ -247,10 +249,20 @@ dbg_printf("fsz stat storage %d file %d\n",fd,file);
     memcpy(st->st_type,in->filetype,4);
     if(in->filetype[3]!=':')
         memcpy(st->st_mime,in->mimetype,44);
-    if(!memcmp(in->filetype,FILETYPE_SYMLINK,4))
+    if(!memcmp(in->filetype,FILETYPE_SYMLINK,4)) {
+        st->st_mode &= ~S_IFMT;
+        st->st_mode |= S_IFREG;
         st->st_mode |= S_IFLNK;
-    if(!memcmp(in->filetype,FILETYPE_UNION,4))
+    }
+    if(!memcmp(in->filetype,FILETYPE_UNION,4)) {
+        st->st_mode &= ~S_IFMT;
+        st->st_mode |= S_IFDIR;
         st->st_mode |= S_IFUNI;
+    }
+    if(!memcmp(in->filetype,FILETYPE_DIR,4)) {
+        st->st_mode &= ~S_IFMT;
+        st->st_mode |= S_IFDIR;
+    }
     st->st_nlink=in->numlinks;
     memcpy((void*)&st->st_owner,(void*)&in->owner,sizeof(uuid_t));
     st->st_size=in->size;
@@ -286,7 +298,7 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
     }
     l=FLAG_TRANSLATION(in->flags);
     // simplest case, data inlined in inode
-    if(l==FSZ_IN_FLAG_INLINE)
+    if(l==FSZ_IN_FLAG_INLINE || !memcmp(in->filetype,FILETYPE_SYMLINK,4) || !memcmp(in->filetype,FILETYPE_UNION,4))
         return (void*)(in->inlinedata + offs);
     // one block referenced directly
     if(in->sec==0)
@@ -334,6 +346,33 @@ read_err:
     return NULL;
 }
 
+/**
+ * parse a directory entry in buffer into dirent and return it's size.
+ */
+size_t getdirent(void *buf, fpos_t offs, dirent_t *dirent)
+{
+    size_t s=0;
+    if(buf==NULL)
+        return 0;
+    // skip directory header
+    if(offs==0) {
+        if(memcmp(((FSZ_DirEntHeader*)buf)->magic,FSZ_DIR_MAGIC,4))
+            return 0;
+        else {
+            buf+=sizeof(FSZ_DirEntHeader);
+            s=sizeof(FSZ_DirEntHeader);
+        }
+    }
+    FSZ_DirEnt *ent=(FSZ_DirEnt*)buf;
+    if(ent->fid==0 || ent->name[0]==0)
+        return 0;
+    dirent->d_ino=ent->fid;
+    dirent->d_len=ent->length;
+    memcpy(&dirent->d_name, ent->name, strlen((char*)ent->name));
+    s+=sizeof(FSZ_DirEnt);
+    return s;
+}
+
 void _init()
 {
     fsdrv_t drv = {
@@ -343,7 +382,9 @@ void _init()
         locate,
         resizefs,
         stat,
-        read
+        read,
+        NULL,
+        getdirent
     };
     //uint16_t id = 
     fsdrv_reg(&drv);

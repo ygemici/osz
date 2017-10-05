@@ -33,9 +33,10 @@
 // file types in fcb list
 #define FCB_TYPE_REG_FILE   0
 #define FCB_TYPE_REG_DIR    1
-#define FCB_TYPE_DEVICE     2
-#define FCB_TYPE_PIPE       3
-#define FCB_TYPE_SOCKET     4
+#define FCB_TYPE_UNION      2
+#define FCB_TYPE_DEVICE     3
+#define FCB_TYPE_PIPE       4
+#define FCB_TYPE_SOCKET     5
 
 // regular. Files and directories
 typedef struct {
@@ -45,6 +46,15 @@ typedef struct {
     blksize_t blksize;
     uint16_t fs;
 } fcb_reg_t;
+
+// Directory unions
+typedef struct {
+    fid_t storage;
+    ino_t inode;
+    fpos_t filesize;
+    fid_t *unionlist;
+    uint16_t fs;
+} fcb_union_t;
 
 // uses the same as regular files, only this time
 // storage points to devfs
@@ -64,6 +74,7 @@ typedef struct {
     union {
         fcb_reg_t reg;
         fcb_dev_t device;
+        fcb_union_t uni;
         fcb_pipe_t pipe;
         fcb_socket_t socket;
     };
@@ -76,6 +87,7 @@ extern fcb_t *fcb;
 extern fid_t fcb_get(char *abspath);
 extern fid_t fcb_add(char *abspath, uint8_t type);
 extern void fcb_del(fid_t idx);
+extern void fcb_unionlist_build(fid_t idx);
 
 #if DEBUG
 extern void fcb_dump();
