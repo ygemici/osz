@@ -28,7 +28,7 @@
 #include <osZ.h>
 
 #ifndef _FCB_H_
-#define _FCB_H_
+#define _FCB_H_ 1
 
 // file types in fcb list
 #define FCB_TYPE_REG_FILE   0

@@ -27,15 +27,12 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
-#include <sys/stat.h>
 #include "cache.h"
 #include "mtab.h"
 #include "devfs.h"
 #include "fsdrv.h"
 #include "fcb.h"
 #include "vfs.h"
-
-//#include "vfs.h"
 
 public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory
 public uint64_t _initrd_size=0;     // initrd size in bytes
@@ -184,29 +181,39 @@ void _init(int argc, char **argv)
             case SYS_chroot:
                 ret=lookup(msg->ptr, false);
                 if(ret!=-1 && !errno()) {
-                    fcb_del(ctx->rootdir);
-                    fcb[ret].nopen++;
-                    ctx->rootdir = ret;
-                    // if workdir outside of new rootdir, use rootdir as workdir
-                    if(memcmp(fcb[ctx->workdir].abspath, fcb[ctx->rootdir].abspath, strlen(fcb[ctx->rootdir].abspath))) {
-                        fcb_del(ctx->workdir);
+                    if(fcb[ret].type!=FCB_TYPE_REG_DIR) {
+                        seterr(ENOTDIR);
+                        ret=-1;
+                    } else {
+                        fcb_del(ctx->rootdir);
                         fcb[ret].nopen++;
-                        ctx->workdir = ret;
+                        ctx->rootdir = ret;
+                        // if workdir outside of new rootdir, use rootdir as workdir
+                        if(memcmp(fcb[ctx->workdir].abspath, fcb[ctx->rootdir].abspath, strlen(fcb[ctx->rootdir].abspath))) {
+                            fcb_del(ctx->workdir);
+                            fcb[ret].nopen++;
+                            ctx->workdir = ret;
+                        }
+                        ret = 0;
                     }
-                    ret = 0;
                 }
                 break;
 
             case SYS_chdir:
                 ret=lookup(msg->ptr, false);
                 if(ret!=-1 && !errno()) {
-                    fcb_del(ctx->workdir);
-                    // if new workdir outside of rootdir, use rootdir as workdir
-                    if(memcmp(fcb[ret].abspath, fcb[ctx->rootdir].abspath, strlen(fcb[ctx->rootdir].abspath)))
-                        ret=ctx->rootdir;
-                    fcb[ret].nopen++;
-                    ctx->workdir = ret;
-                    ret = 0;
+                    if(fcb[ret].type!=FCB_TYPE_REG_DIR) {
+                        seterr(ENOTDIR);
+                        ret=-1;
+                    } else {
+                        fcb_del(ctx->workdir);
+                        // if new workdir outside of rootdir, use rootdir as workdir
+                        if(memcmp(fcb[ret].abspath, fcb[ctx->rootdir].abspath, strlen(fcb[ctx->rootdir].abspath)))
+                            ret=ctx->rootdir;
+                        fcb[ret].nopen++;
+                        ctx->workdir = ret;
+                        ret = 0;
+                    }
                 }
                 break;
 
@@ -291,14 +298,19 @@ dostat:             ptr=statfs(ret);
                 }
                 ret=lookup(msg->ptr, msg->type & O_CREAT ? true : false);
                 if(ret!=-1 && !errno()) {
-                    if(msg->attr0!=-1)
-                        taskctx_close(ctx, msg->attr0, true);
-                    // get offset part of path
-                    o=getoffs(ptr);
-                    if(o<0) o+=fcb[ret].reg.filesize;
-                    // append flag overwrites it
-                    if(msg->type & O_APPEND) o=fcb[ret].reg.filesize;
-                    ret=taskctx_open(ctx,ret,msg->type,o,msg->attr0);
+                    if(fcb[ret].type==FCB_TYPE_REG_DIR) {
+                        seterr(EISDIR);
+                        ret=-1;
+                    } else {
+                        if(msg->attr0!=-1)
+                            taskctx_close(ctx, msg->attr0, true);
+                        // get offset part of path
+                        o=getoffs(ptr);
+                        if(o<0) o+=fcb[ret].reg.filesize;
+                        // append flag overwrites it
+                        if(msg->type & O_APPEND) o=fcb[ret].reg.filesize;
+                        ret=taskctx_open(ctx,ret,msg->type,o,msg->attr0);
+                    }
                 }
                 free(ptr);
 //taskctx_dump();
@@ -306,11 +318,12 @@ dostat:             ptr=statfs(ret);
 
             case SYS_fclose:
 //dbg_printf("fs fclose %d\n",msg->arg0);
-                if(!taskctx_validfid(ctx,msg->arg0)) {
+                if(!taskctx_validfid(ctx,msg->arg0) || fcb[ctx->openfiles[msg->arg0].fid].type==FCB_TYPE_REG_DIR) {
                     seterr(EBADF);
                     ret=-1;
-                } else
+                } else {
                     ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
+                }
 //taskctx_dump();
                 break;
 
@@ -323,14 +336,9 @@ dostat:             ptr=statfs(ret);
                 break;
 
             case SYS_fseek:
-                if(!taskctx_validfid(ctx,msg->arg0)) {
-                    seterr(EBADF);
-                    ret=-1;
-                } else {
-                    ret=taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2) ? 0 : -1;
-                    if(ret)
-                        seterr(EINVAL);
-                }
+                ret=taskctx_seek(ctx, msg->arg0, msg->arg1, msg->arg2) ? 0 : -1;
+                if(ret && !errno())
+                    seterr(EINVAL);
                 break;
 
             case SYS_rewind:
@@ -384,7 +392,7 @@ dostat:             ptr=statfs(ret);
 
             case SYS_dup:
 //dbg_printf("fs dup(%d)\n",msg->arg0);
-                if(!taskctx_validfid(ctx,msg->arg0)) {
+                if(!taskctx_validfid(ctx,msg->arg0) || fcb[ctx->openfiles[msg->arg0].fid].type==FCB_TYPE_REG_DIR) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
@@ -396,7 +404,7 @@ dostat:             ptr=statfs(ret);
 
             case SYS_dup2:
 //dbg_printf("fs dup2(%d,%d)\n",msg->arg0,msg->arg1);
-                if(!taskctx_validfid(ctx,msg->arg0)) {
+                if(!taskctx_validfid(ctx,msg->arg0) || fcb[ctx->openfiles[msg->arg0].fid].type==FCB_TYPE_REG_DIR) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
@@ -418,7 +426,8 @@ dostat:             ptr=statfs(ret);
                     seterr(ENOTSHM);
                     ret=0;
                 }
-                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_READ)) {
+                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_READ) ||
+                   fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_REG_DIR) {
                     seterr(EBADF);
                     ret=0;
                 } else {
@@ -428,7 +437,8 @@ dostat:             ptr=statfs(ret);
             
             case SYS_fwrite:
 //dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
-                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_WRITE)) {
+                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_WRITE) ||
+                   fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_REG_DIR) {
                     seterr(EBADF);
                     ret=0;
                 } else {

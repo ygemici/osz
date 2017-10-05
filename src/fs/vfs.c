@@ -27,7 +27,6 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
-#include <sys/stat.h>
 #include "fcb.h"
 #include "vfs.h"
 #include "cache.h"

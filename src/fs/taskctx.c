@@ -175,7 +175,7 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
 {
     if(!taskctx_validfid(tc,idx))
         return false;
-    if(tc->openfiles[idx].mode & O_TMPFILE) {
+    if(tc->openfiles[idx].mode & O_TMPFILE && fcb[tc->openfiles[idx].fid].mode!=FCB_TYPE_REG_DIR) {
         //unlink()
     } else {
         //cache_flush(tc->openfiles[idx].fid)
@@ -207,8 +207,14 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
  */
 bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
 {
-    if(!taskctx_validfid(tc,idx) || fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE)
+    if(!taskctx_validfid(tc,idx)){
+        seterr(EBADF);
         return false;
+    }
+    if(fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE) {
+        seterr(ESPIPE);
+        return false;
+    }
     switch(whence) {
         case SEEK_CUR:
             tc->openfiles[idx].offs += offs;

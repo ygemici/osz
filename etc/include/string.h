@@ -26,13 +26,15 @@
  */
 
 /*
- *	ISO C99 Standard: 7.21 String handling	<string.h>
+ *  ISO C99 Standard: 7.21 String handling  <string.h>
  */
 
-#ifndef	_STRING_H
-#define	_STRING_H	1
+#ifndef _STRING_H
+#define _STRING_H   1
 
-#include <osZ.h>
+#ifndef _AS
+/* Copy N bytes of SRC to DEST in another address space.  */
+extern void p2pcpy (pid_t dst, void *dest, void *src, size_t n);
 
 /* Set N bytes of S to zero.  */
 extern void *memzero (void *s, size_t n);
@@ -108,5 +110,7 @@ extern char *strsignal (int sig);
 extern char *basename (const char *s);
 /* Return directory part of path */
 extern char *dirname (const char *s);
+
+#endif
 
 #endif /* string.h  */

@@ -28,7 +28,7 @@
 #include <osZ.h>
 
 #ifndef _FSDRV_H_
-#define _FSDRV_H_
+#define _FSDRV_H_ 1
 
 typedef struct {
     fid_t inode;

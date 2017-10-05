@@ -1,11 +1,10 @@
  --- Error fixes ---
 ./src/drivers/fs/fsz/main.c:184:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
-./src/fs/main.c:274:                //FIXME: no sprintf yet
-./src/core/msg.c:255:            /* FIXME: naive implementation, no checks */
+./src/fs/main.c:281:                //FIXME: no sprintf yet
+./src/core/msg.c:254:            /* FIXME: naive implementation, no checks */
 ./src/lib/libc/stdio.c:38:    // FIXME: use fprintf(stderr,...
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
-./etc/include/sys/core.h:90:/* TODO: move these to time.h, leave only OS/Z specific calls here */
 ./src/init/services.c:36:    // TODO: load and start user services
 ./src/drivers/fs/fsz/main.c:135:            // TODO: extents
 ./src/drivers/fs/fsz/main.c:222:    // TODO: if loc->creat, then create dir or path
@@ -14,8 +13,8 @@
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers
-./src/core/msg.c:99:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/msg.c:98:    /* TODO: use mq_buffstart properly as a circular buffer */
 ./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
 ./src/core/sched.c:180:        /* TODO: swap -> memory */
-./src/lib/libc/x86_64/unistd.S:342:    /* TODO: getentropy */
 ./src/lib/libc/x86_64/crt0.S:43:    /* TODO: call ctors */
+./src/lib/libc/x86_64/stdlib.S:352:    /* TODO: getentropy */

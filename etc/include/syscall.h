@@ -22,13 +22,19 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief OS/Z syscall services and low level messaging prototypes
+ * @brief OS/Z syscall services
  */
 
 #ifndef _SYSCALL_H
 #define _SYSCALL_H 1
 
-// system services (negative pid_t)
+/**
+ * Normally this header should hold the system call defines, but
+ * since OS/Z is a microkernel, it has several system services and
+ * the system functions are spread accross them.
+ */
+
+/*** system services (negative and zero pid_t) ***/
 #define SRV_CORE		 0
 #define SRV_FS			-1
 #define SRV_UI			-2
@@ -40,13 +46,37 @@
 
 #define NUMSRV          8
 
-// get function indeces and prototypes
+/*** get function indeces ***/
+// 000000000000xxxx Memory, Multitask and other core services, stdlib.h
 #include <sys/core.h>
+// FFFFFFFFFFFFxxxx File system services, stdio.h
 #include <sys/fs.h>
+// FFFFFFFFFFFExxxx User Interface services, ui.h
 #include <sys/ui.h>
+// FFFFFFFFFFFDxxxx Syslog services, syslog.h
 #include <sys/syslog.h>
+// FFFFFFFFFFFCxxxx Networking services, inet.h
 #include <sys/inet.h>
+// FFFFFFFFFFFBxxxx Audio services, sound.h
 #include <sys/sound.h>
+// FFFFFFFFFFFAxxxx Init, control user services, init.h
 #include <sys/init.h>
+
+/*** libc implementation prototypes */
+#ifndef _AS
+
+/*** message queue, the real system calls ***/
+/* async, send a message (non-blocking, except dest queue is full) */
+uint64_t mq_send(pid_t dst, uint64_t func, ...);
+/* sync, send a message and receive result (blocking) */
+msg_t *mq_call(pid_t dst, uint64_t func, ...);
+/* async, is there a message? return serial or 0 (non-blocking) */
+uint64_t mq_ismsg();
+/* sync, wait until there's a message (blocking) */
+msg_t *mq_recv();
+/* sync, dispatch events (blocking, noreturn unless error) */
+uint64_t mq_dispatch();
+
+#endif
 
 #endif /* syscall.h */

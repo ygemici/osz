@@ -28,6 +28,8 @@
 #ifndef _OSZ_CORE_H
 #define _OSZ_CORE_H
 
+#define PHYMEM_MIN  32 //Mb, minimum RAM required
+
 #include <errno.h>
 #include <limits.h>
 #ifndef _AS
@@ -42,15 +44,17 @@
 #define TMPQ_ADDRESS  0xffffffffffa00000           //temporarily mapped message queue
 #define CORE_ADDRESS  0xffffffffffe02000           //core text segment
 
-#define TCB_ADDRESS    0
-#define BUF_ADDRESS    (0x00007fff00000000)        //128T-4G data, slot alloced buffers
-#define SBSS_ADDRESS   (0xFFFF800000000000)        //shared memory, see bztalloc.c
+#define TCB_ADDRESS   0
+#define BUF_ADDRESS   (0x00007fff00000000)         //128T-4G data, slot alloced buffers
+
+#define USERSTACK_MAX 256 //kbytes
+#define NRMQ_MAX      ((TEXT_ADDRESS-MQ_ADDRESS-(USERSTACK_MAX*1024))/__PAGESIZE)
 
 /* ticks indeces for counters */
-#define TICKS_TS 0      //+00 timestamp sec counter
+#define TICKS_TS  0     //+00 timestamp sec counter
 #define TICKS_NTS 1     //+08 timestamp nanosec fraction
-#define TICKS_LO 2      //+16 overall ticks (jiffies, 128 bit)
-#define TICKS_HI 3      //+24
+#define TICKS_LO  2     //+16 overall ticks (jiffies, 128 bit)
+#define TICKS_HI  3     //+24
 
 /* system tables */
 #define systable_acpi_idx 0

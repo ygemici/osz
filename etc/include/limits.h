@@ -35,7 +35,6 @@
 #define TMP_MAX         8
 #define FILENAME_MAX    111
 
-
 #define __WORDSIZE  64
 #define __PAGESIZE  4096
 #define __SLOTSIZE  (4096*512)
@@ -44,12 +43,8 @@
 // memory limits, OS/Z specific addresses
 #define MQ_ADDRESS     (__PAGESIZE)
 #define TEXT_ADDRESS   (__SLOTSIZE)                // 2M code segment
-#define BSS_ADDRESS    (0x0000000100000000)        // 4G data, tls memory, see bztalloc.c
-
-// (TEXT_ADDRESS-MQ_ADDRESS-stacksizemax)/__PAGESIZE
-#define NRMQ_MAX    63 //pages
-// minimum required memory in megabytes
-#define PHYMEM_MIN  32 //Mb
+#define BSS_ADDRESS    (0x0000000100000000UL)      // 4G data, tls memory, see bztalloc.c
+#define SBSS_ADDRESS   (0xFFFF800000000000UL)      // shared memory, see bztalloc.c
 
 #define CHAR_BIT    8
 #define SCHAR_MIN   (-128)

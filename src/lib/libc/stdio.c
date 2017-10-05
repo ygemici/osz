@@ -40,6 +40,141 @@ public void perror (char *s, ...)
 #endif
 }
 
+/**
+ * Make PATH be the root directory (the starting point for absolute paths).
+ * This call is restricted to the super-user.
+ */
+public fid_t chroot(const char *path)
+{
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_chroot|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * Change the process's working directory to PATH.
+ */
+public fid_t chdir(const char *path)
+{
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_chdir|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * return the current working directory in a malloc'd buffer
+ */
+public char *getcwd()
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_getcwd);
+    if(errno())
+        return NULL;
+    return strdup(msg->ptr);
+}
+
+/**
+ * create a static mount point
+ */
+public int mount(const char *dev, const char *mnt, const char *opts)
+{
+    char *path;
+    int i,j,k;
+    if(dev==NULL || dev[0]==0 || mnt==NULL || mnt[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    i=strlen(dev); j=strlen(mnt); k=strlen(opts);
+    path=(char*)malloc(i+j+k+3);
+    if(path==NULL)
+        return -1;
+    memcpy((void*)path, (void*)dev, i+1);
+    memcpy((void*)path+i+1, (void*)mnt, j+1);
+    if(opts!=NULL && opts[0]!=0)
+        memcpy((void*)path+i+1+j+1, (void*)opts, k+1);
+    msg_t *msg=mq_call(SRV_FS, SYS_mount|MSG_PTRDATA, path, i+j+k+3);
+    i=errno();
+    free(path); // clears errno
+    if(i) {
+        seterr(i);
+        return -1;
+    }
+    return msg->arg0;
+}
+
+/**
+ * remove a static mount point, path can be either a device or a mount point
+ */
+public int umount(const char *path)
+{
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_umount|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * create a device link
+ */
+public int mknod(const char *devname, dev_t minor, mode_t mode, blksize_t size, blkcnt_t cnt)
+{
+    if(devname==NULL || devname[0]==0 || devname[0]=='/') {
+        seterr(EINVAL);
+        return -1;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_mknod|MSG_PTRDATA, devname, strlen(devname)+1, minor, mode, size, cnt);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * duplicate FD, returning a new file descriptor on the same file.
+ */
+public fid_t dup (fid_t stream)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_dup, stream);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * duplicate FD to FD2, closing FD2 and making it open on the same file.
+ */
+public fid_t dup2 (fid_t stream, fid_t stream2)
+{
+    msg_t *msg=mq_call(SRV_FS, SYS_dup2, stream, stream2);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
+/**
+ * send an I/O control command to a device opened by fopen. BUFF can be NULL.
+ */
+public int ioctl(fid_t stream, uint64_t code, void *buff, size_t size)
+{
+    // we send it to FS, but the ack will came from a driver
+    msg_t *msg=mq_call(SRV_FS, SYS_ioctl|(buff!=NULL&&size>0?MSG_PTRDATA:0), buff, size, stream, code);
+    if(errno())
+        return -1;
+    return msg->arg0;
+}
+
 /* Create a temporary file and open it read/write. */
 public fid_t tmpfile (void)
 {
@@ -74,7 +209,6 @@ public fid_t freopen (char *filename, mode_t oflag, fid_t stream)
         return -1;
     return msg->arg0;
 }
-
 
 /* Close STREAM. */
 public int fclose (fid_t stream)
@@ -194,3 +328,17 @@ public stat_t *fstat (fid_t fd)
     return (stat_t*)msg->ptr;
 }
 
+/**
+ *  Return the canonical absolute name of file NAME in a read-only BUF.
+ */
+char *realpath (char *path)
+{
+    if(path==NULL || path[0]==0) {
+        seterr(EINVAL);
+        return NULL;
+    }
+    msg_t *msg=mq_call(SRV_FS, SYS_realpath|MSG_PTRDATA, path, strlen(path)+1);
+    if(errno())
+        return NULL;
+    return (char*)msg->ptr;
+}

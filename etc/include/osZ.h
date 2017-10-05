@@ -31,32 +31,21 @@
 /* common includes */
 #include <errno.h>
 #include <limits.h>
-
-/* non-assembler includes */
-#ifndef _AS
-# include <stdint.h>
-# include <sys/types.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <syscall.h>
 /* only for user applications */
-# ifndef OSZ_CORE
-#  include <sys/platform.h>
-#  include <stdio.h>
-#  include <stdlib.h>
-#  include <stdarg.h>
-#  include <string.h>
-#  include <syslog.h>
-# endif
-#endif
-/* user applications, even for assembler */
-#ifndef OSZ_CORE
-# include <sys/stat.h>
-# include <sysexits.h>
-# include <unistd.h>
+#ifndef _OSZ_CORE_H
+# include <sys/platform.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <stdarg.h>
+# include <string.h>
+# include <syslog.h>
 # include <sound.h>
 # include <inet.h>
 # include <ui.h>
 # include <init.h>
 #endif
-
-#include <syscall.h>
 
 #endif /* osZ.h */

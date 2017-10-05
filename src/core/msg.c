@@ -28,7 +28,6 @@
 #include <arch.h>
 #include <sysexits.h>
 #include <sys/video.h>
-#include <sys/mman.h>
 #include "env.h"
 
 /* external resources */
@@ -254,18 +253,17 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
 #endif
             /* FIXME: naive implementation, no checks */
             data=(void *)arg0;
-            j=arg2&PROT_WRITE? PG_USER_RW : PG_USER_RO;
             if(arg1>=__SLOTSIZE) {
                 arg1=(arg1+__SLOTSIZE-1)/__SLOTSIZE;
                 for(i=0;i<arg1;i++) {
-                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_allocslot(), __SLOTSIZE, j);
+                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_allocslot(), __SLOTSIZE, PG_USER_RW);
                     tcb->allocmem+=__SLOTSIZE/__PAGESIZE;
                     arg0+=__SLOTSIZE;
                 }
             } else {
                 arg1=(arg1+__PAGESIZE-1)/__PAGESIZE;
                 for(i=0;i<arg1;i++) {
-                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(1), __PAGESIZE, j);
+                    vmm_mapbss(tcb, (virt_t)arg0, (phy_t)pmm_alloc(1), __PAGESIZE, PG_USER_RW);
                     tcb->allocmem++;
                     arg0+=__PAGESIZE;
                 }

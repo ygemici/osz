@@ -25,7 +25,7 @@
  * @brief Available errno values
  */
 #ifndef _ERRNO_H
-#define _ERRNO_H
+#define _ERRNO_H 1
 
 #ifndef _AS
 extern void seterr(int errno);
@@ -46,15 +46,16 @@ extern int errno();
 #define ENOENT      11  // No such file or directory
 #define ENODEV      12  // No such device
 #define ENOTDIR     13  // Not a directory
-#define ENOFS       14  // No filesystem found
-#define EBADFS      15  // Corrupt filesystem
-#define EROFS       16  // Read-only file system
-#define ENOSPC      17  // No space left on device
-#define EIO         18  // I/O error
-#define EPIPE       19  // Broken pipe
-#define ESPIPE      20  // Illegal seek
-#define ENOTSHM     21  // Not a shared memory buffer
-#define EBADF       22  // Bad file number
+#define EISDIR      14  // Is a directory
+#define ENOFS       15  // No filesystem found
+#define EBADFS      16  // Corrupt filesystem
+#define EROFS       17  // Read-only file system
+#define ENOSPC      18  // No space left on device
+#define EIO         19  // I/O error
+#define EPIPE       20  // Broken pipe
+#define ESPIPE      21  // Illegal seek
+#define ENOTSHM     22  // Not a shared memory buffer
+#define EBADF       23  // Bad file number
 
 /*
 #define EINTR        4  // Interrupted system call
@@ -63,7 +64,6 @@ extern int errno();
 #define ECHILD      10  // No child processes
 #define ENOTBLK     15  // Block device required
 #define EXDEV       18  // Cross-device link
-#define EISDIR      21  // Is a directory
 #define ENFILE      23  // File table overflow
 #define EMFILE      24  // Too many open files
 #define ENOTTY      25  // Not a typewriter

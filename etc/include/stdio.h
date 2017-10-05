@@ -22,13 +22,11 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief ISO C99 Standard: 7.19 Input/output
+ * @brief ISO C99 Standard: 7.19 Input/output, plus every file and directory manipulation
  */
 
 #ifndef _STDIO_H
 #define _STDIO_H 1
-
-#include <sys/types.h>
 
 /* Default buffer size.  */
 #ifndef BUFSIZ
@@ -37,19 +35,28 @@
 
 #define EOF (-1)
 
+/* Default path prefix for `tmpfile'.  */
+#define P_tmpdir	"/tmp/"
+
 /* The possibilities for the third argument to `fseek'.
    These values should not be changed.  */
 #define SEEK_SET	0	/* Seek from beginning of file.  */
 #define SEEK_CUR	1	/* Seek from current position.  */
 #define SEEK_END	2	/* Seek from end of file.  */
 
-/* Print a message describing the meaning of the value of errno. */
-extern void perror (char *s, ...);
+/* Standard file descriptors.  */
+#define STDIN_FILENO    0   /* Standard input. */
+#define STDOUT_FILENO   1   /* Standard output. */
+#define STDERR_FILENO   2   /* Standard error output. */
 
-/* Default path prefix for `tmpfile'.  */
-#define P_tmpdir	"/tmp/"
-/* Create a temporary file and open it read/write. */
-extern fid_t tmpfile (void);
+/* Values for the second argument to access.
+   These may be OR'd together.  */
+#define R_OK    A_READ      /* Test for read permission. */
+#define W_OK    A_WRITE     /* Test for write permission. */
+#define X_OK    A_EXEC      /* Test for execute permission. */
+#define A_OK    A_APPEND    /* Test for append permission. */
+#define D_OK    A_DELETE    /* Test for delete permission. */
+#define F_OK    0           /* Test for existence.  */
 
 /* open flags */
 #define O_READ      (1<<0)  // read
@@ -64,6 +71,83 @@ extern fid_t tmpfile (void);
 #define O_RDONLY    O_READ
 #define O_WRONLY    O_WRITE
 #define O_RDWR      (O_READ|O_WRITE)
+
+/* macros and flags for stat_t */
+#define S_IFLG   0xFF000000 // mask
+#define S_IFLNK	 0x01000000 // fsdrv specific, symlink
+#define S_IFUNI  0x02000000 // fsdrv specific, directory union
+#define S_IFCHR  0x03000000 // character device, if blksize==1
+#define S_IFMT     0xFF0000 // mask
+#define S_IFREG    0x000000 // FCB_TYPE_REG_FILE
+#define S_IFDIR    0x010000 // FCB_TYPE_REG_DIR
+#define S_IFDEV    0x020000 // FCB_TYPE_DEVICE
+#define S_IFIFO    0x030000 // FCB_TYPE_PIPE
+#define S_IFSOCK   0x040000 // FCB_TYPE_SOCKET
+
+#define S_ISLNK(m)	(((m) & S_IFLG) == S_IFLNK)
+#define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
+#define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
+#define S_ISUNI(m)	(((m) & S_IFMT) == S_IFDIR && ((m) & S_IFLG) == S_IFUNI)
+#define S_ISCHR(m)	(((m) & S_IFMT) == S_IFDEV && ((m) & S_IFLG) == S_IFCHR)
+#define S_ISBLK(m)	(((m) & S_IFMT) == S_IFDEV && ((m) & S_IFLG) != S_IFCHR)
+#define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
+#define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
+
+#ifndef _AS
+typedef struct {
+    fid_t     st_dev;       // ID of device, *not* major/minor
+    ino_t     st_ino;       // inode of the file
+    mode_t    st_mode;      // mode
+    uint8_t   st_type[4];   // file type
+    uint8_t   st_mime[44];  // mime type
+    nlink_t   st_nlink;     // number of hard links
+    uid_t     st_owner;     // owner user id
+    off_t     st_size;      // file size
+    blksize_t st_blksize;   // block size
+    blkcnt_t  st_blocks;    // number of allocated blocks
+    time_t    st_atime;     // access time in microsec timestamp
+    time_t    st_mtime;     // modification time in microsec timestamp
+    time_t    st_ctime;     // status change time in microsec timestamp
+} stat_t;
+
+/* Print a message describing the meaning of the value of errno. */
+extern void perror (char *s, ...);
+
+/* Make PATH be the root directory (the starting point for absolute paths).
+   This call is restricted to the super-user.  */
+extern fid_t chroot (const char *__path);
+
+/* Change the process's working directory to PATH.  */
+extern fid_t chdir (const char *path);
+
+/* Get the pathname of the current working directory in a malloc'd buffer */
+extern char *getcwd ();
+
+/* create a static mount point */
+extern int mount(const char *dev, const char *mnt, const char *opts);
+
+/* remove a static mount point, path can be either a device or a mount point */
+extern int umount(const char *path);
+
+/* Duplicate FD, returning a new file descriptor on the same file.  */
+extern fid_t dup (fid_t stream);
+
+/* Duplicate FD to FD2, closing FD2 and making it open on the same file.  */
+extern fid_t dup2 (fid_t stream, fid_t stream2);
+
+/* Create a temporary file and open it read/write. */
+extern fid_t tmpfile (void);
+
+/* Get file attributes for FILE in a read-only BUF.  */
+extern stat_t *lstat (const char *path);
+
+/* Get file attributes for a device returned in st_dev */
+extern stat_t *dstat (fid_t fd);
+
+/* Get file attributes for the file, device, pipe, or socket that
+   file descriptor FD is open on and return them in a read-only BUF. */
+extern stat_t *fstat (fid_t fd);
+
 /* Open a file and create a new STREAM for it. */
 extern fid_t fopen (char *filename, mode_t oflag);
 /* Open a file, replacing an existing STREAM with it. */
@@ -88,23 +172,50 @@ extern int ferror (fid_t stream);
 extern size_t fread (fid_t stream, void *ptr, size_t size);
 /* Write chunks of generic data to STREAM. */
 extern size_t fwrite (fid_t stream, void *ptr, size_t size);
+/* Return the canonical absolute name of file NAME in a read-only BUF. */
+extern char *realpath (char *name);
 
-/* unimplemented */
+/*** unimplemented ***/
 #if 0
 /* The possibilities for the third argument to `setvbuf'.  */
 #define _IOFBF 0		/* Fully buffered.  */
 #define _IOLBF 1		/* Line buffered.  */
 #define _IONBF 2		/* No buffering.  */
 
+/* Create a one-way communication channel (pipe).
+   If successful, two file descriptors are stored in PIPEDES;
+   bytes written on PIPEDES[1] can be read from PIPEDES[0].
+   Returns 0 if successful, -1 if not.  */
+extern int pipe (int pipedes[2]);
+
+/* Make a link to FROM named TO.  */
+extern int link (const char *__from, const char *__to);
+
+/* Make a symbolic link to FROM named TO.  */
+extern int symlink (const char *__from, const char *__to);
+
+/* Remove the link NAME.  */
+extern int unlink (const char *__name);
+
+/* Remove the directory PATH.  */
+extern int rmdir (const char *__path);
+
+/* Make all changes done to FD actually appear on disk.  */
+extern int fsync (int __fd);
+
+/* Make all changes done to all files actually appear on disk.  */
+extern void sync (void) __THROW;
+
+/* Truncate FILE to LENGTH bytes.  */
+extern int truncate (const char *__file, __off_t __length);
+
+/* Truncate the file FD is open on to LENGTH bytes.  */
+extern int ftruncate (int __fd, __off_t __length);
+
 /* Remove file FILENAME.  */
 extern int remove (char *filename);
 /* Rename file OLD to NEW.  */
 extern int rename (char *oldname, char *newname);
-/* Create a temporary file and open it read/write.
-
-   This function is a possible cancellation point and therefore not
-   marked with __THROW.  */
-extern FILE *tmpfile (void);
 /* Generate a temporary filename.  */
 extern char *tmpnam (char *s);
 extern char *tempnam (char *dir, char *pfx);
@@ -208,6 +319,8 @@ extern int ftrylockfile (FILE *stream);
 
 /* Relinquish the ownership granted for STREAM.  */
 extern void funlockfile (FILE *stream);
+#endif
+
 #endif
 
 #endif /* stdio.h */

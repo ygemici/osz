@@ -28,8 +28,6 @@
 #ifndef	_SYS_TYPES_H
 #define	_SYS_TYPES_H	1
 
-#include <stdint.h>
-
 /*** visibility ***/
 #define public __attribute__ ((__visibility__("default")))
 #define private __attribute__ ((__visibility__("hidden")))
@@ -70,7 +68,6 @@
 
 /*** libc ***/
 #ifndef _AS
-#include <stdint.h>
 
 typedef struct {
 	uint32_t Data1;

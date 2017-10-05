@@ -30,6 +30,7 @@
 
 #include <sys/platform.h>
 
+#ifndef _AS
 typedef void *va_list;
 
 #ifdef __builtin_va_start
@@ -42,6 +43,8 @@ typedef void *va_list;
 #define va_arg(list, type)    __builtin_va_arg(list, type)
 #else
 #define va_arg(list, type)    __platform_va_arg(list, type)
+#endif
+
 #endif
 
 #endif /* stdarg.h */

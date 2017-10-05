@@ -13,7 +13,7 @@
  */
 
 #ifndef _FS_Z_H_
-#define _FS_Z_H_
+#define _FS_Z_H_    1
 
 #include <stdint.h>
 #include <sys/types.h>

@@ -28,8 +28,6 @@
 #ifndef _SYS_CORE_H
 #define _SYS_CORE_H 1
 
-/*** low level codes in rdi for syscall instruction ***/
-// rax: 00000000000xxxx Memory and multitask related functions
 #define SYS_IRQ          0 // CORE sends it to device drivers, disables IRQ
 #define SYS_ack          1 // device drivers to CORE, re-enable IRQ, libc return value
 #define SYS_nack         2 // negative acknowledge, libc return errno
@@ -55,43 +53,5 @@
 #define SYS_exec        23
 
 #define SYS_recv    0x7FFF // receive message
-
-
-// rax: FFFFFFFFFFFFxxxx File system services
-// see sys/fs.h, stdlib.h, stdio.h, unistd.h
-// rax: FFFFFFFFFFFExxxx User Interface services
-// see sys/ui.h, ui.h
-// rax: FFFFFFFFFFFDxxxx Syslog services
-// see sys/syslog.h, syslog.h
-// rax: FFFFFFFFFFFCxxxx Networking services
-// see sys/net.h, inet.h
-// rax: FFFFFFFFFFFBxxxx Audio services
-// see sys/sound.h, sound.h
-// rax: FFFFFFFFFFFAxxxx Init, user services
-// see sys/init.h, init.h
-
-/*** libc implementation prototypes */
-#ifndef _AS
-#include <sys/stat.h>
-
-/*** message queue ***/
-/* async, send a message (non-blocking, except dest queue is full) */
-uint64_t mq_send(pid_t dst, uint64_t func, ...);
-/* sync, send a message and receive result (blocking) */
-msg_t *mq_call(pid_t dst, uint64_t func, ...);
-/* async, is there a message? return serial or 0 (non-blocking) */
-uint64_t mq_ismsg();
-/* sync, wait until there's a message (blocking) */
-msg_t *mq_recv();
-/* sync, dispatch events (blocking, noreturn unless error) */
-uint64_t mq_dispatch();
-
-
-/* TODO: move these to time.h, leave only OS/Z specific calls here */
-uint64_t time();                        // get system time
-void stime(uint64_t utctimestamp);      // set system time
-pid_t exec(uchar *cmd);                 // start a new process in the background
-
-#endif
 
 #endif /* sys/core.h */

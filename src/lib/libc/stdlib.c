@@ -26,13 +26,32 @@
  */
 #include <osZ.h>
 
+public char _osver[192];
+public uint64_t _bogomips = 1000;
+public uint64_t _alarmstep = 1000;
+public uint64_t errn = SUCCESS;
 #if DEBUG
 /* debug flags */
 public uint32_t _debug;
 #endif
 
-typedef void (*atexit_t)(void);
+/**
+ * set error status, errno
+ */
+public void seterr(int e)
+{
+    errn = e;
+}
 
+/**
+ * get error status, errno
+ */
+public int errno()
+{
+    return errn;
+}
+
+typedef void (*atexit_t)(void);
 public int atexit_num = 0;
 public atexit_t *atexit_hooks = NULL;
 
@@ -153,17 +172,3 @@ void _atexit(int status)
             (*atexit_hooks[i])();
 }
 
-/**
- *  Return the canonical absolute name of file NAME in a read-only BUF.
- */
-char *realpath (char *path)
-{
-    if(path==NULL || path[0]==0) {
-        seterr(EINVAL);
-        return NULL;
-    }
-    msg_t *msg=mq_call(SRV_FS, SYS_realpath|MSG_PTRDATA, path, strlen(path)+1);
-    if(errno())
-        return NULL;
-    return (char*)msg->ptr;
-}

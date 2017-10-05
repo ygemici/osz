@@ -24,9 +24,10 @@
  *
  * @brief Memory allocator and deallocator.
  */
-#define _BZT_ALLOC
 #include <osZ.h>
+#ifndef _OS_Z_
 #include <sys/mman.h>
+#endif
 #include "bztalloc.h"
 
 /***
@@ -157,7 +158,9 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
     chunkmap_t *ncm=NULL; //new chunk map
     chunkmap_t *ocm=NULL; //old chunk map
     uint64_t maxchunks = (ALLOCSIZE-8)/sizeof(chunkmap_t);
+#ifndef _OS_Z_
     int prot = PROT_READ | PROT_WRITE;
+#endif
     flag |= MAP_FIXED | MAP_ANONYMOUS;
 
     if(s==0) {
@@ -179,7 +182,13 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
 #endif
     // if we don't have any allocmaps yet
     if(!numallocmaps(arena)) {
-        if(mmap((void*)((uint64_t)arena+ARENASIZE), ALLOCSIZE, prot, flag&~MAP_SPARE, -1, 0)==MAP_FAILED) {
+        if(
+#ifndef _OS_Z_
+          mmap((void*)((uint64_t)arena+ARENASIZE), ALLOCSIZE, prot, flag&~MAP_SPARE, -1, 0)
+#else
+          mmap((void*)((uint64_t)arena+ARENASIZE), ALLOCSIZE, flag&~MAP_SPARE)
+#endif
+          ==MAP_FAILED) {
             seterr(ENOMEM);
             lockrelease(63,arena);
             return NULL;
@@ -235,7 +244,12 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
         if(fc==0) {
             //do we have place for a new allocmap?
             if(i>=numallocmaps(arena) ||
-                mmap(fp, ALLOCSIZE, prot, flag&~MAP_SPARE, -1, 0)==MAP_FAILED) {
+#ifndef _OS_Z_
+                mmap(fp, ALLOCSIZE, prot, flag&~MAP_SPARE, -1, 0)
+#else
+                mmap(fp, ALLOCSIZE, flag&~MAP_SPARE)
+#endif
+                ==MAP_FAILED) {
                     seterr(ENOMEM);
                     lockrelease(63,arena);
                     return ptr;
@@ -243,7 +257,13 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
             arena[0]++;
             //did we just passed a page boundary?
             if((arena[0]*sizeof(void*)/__PAGESIZE)!=((arena[0]+1)*sizeof(void*)/__PAGESIZE)) {
-                if(mmap(&arena[arena[0]], __PAGESIZE, prot, flag&~MAP_SPARE, -1, 0)==MAP_FAILED) {
+                if(
+#ifndef _OS_Z_
+                mmap(&arena[arena[0]], __PAGESIZE, prot, flag&~MAP_SPARE, -1, 0)
+#else
+                mmap(&arena[arena[0]], __PAGESIZE, flag&~MAP_SPARE)
+#endif
+                ==MAP_FAILED) {
                     seterr(ENOMEM);
                     lockrelease(63,arena);
                     return ptr;
@@ -263,7 +283,13 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
         for(k=0;k<BITMAPSIZE;k++)
             am->chunk[i].map[k]=0;
         // allocate memory for small quantum sizes
-        if((flag&MAP_SPARE)==0 && q<__PAGESIZE && !mmap(fp, chunksize(q), prot, flag, -1, 0)) {
+        if((flag&MAP_SPARE)==0 && q<__PAGESIZE &&
+#ifndef _OS_Z_
+        mmap(fp, chunksize(q), prot, flag, -1, 0)
+#else
+        mmap(fp, chunksize(q), flag)
+#endif
+        ==MAP_FAILED) {
             seterr(ENOMEM);
             lockrelease(63,arena);
             return ptr;
@@ -276,14 +302,26 @@ void *bzt_alloc(uint64_t *arena,size_t a,void *ptr,size_t s,int flag)
             ncm->map[sh>>6] |= (1UL<<(sh%64));
             fp=ncm->ptr + sh*ncm->quantum;
             //allocate new memory for medium quantum sizes
-            if((flag&MAP_SPARE)==0 && q>=__PAGESIZE && !mmap(fp, ncm->quantum, prot, flag, -1, 0))
+            if((flag&MAP_SPARE)==0 && q>=__PAGESIZE && 
+#ifndef _OS_Z_
+            mmap(fp, ncm->quantum, prot, flag, -1, 0)
+#else
+            mmap(fp, ncm->quantum, flag)
+#endif
+            ==MAP_FAILED)
                 fp=NULL;
         } else
             fp=NULL;
     } else {
         s=((s+ALLOCSIZE-1)/ALLOCSIZE)*ALLOCSIZE;
         //allocate new memory for large quantum sizes
-        if((flag&MAP_SPARE)==0 && !mmap(fp, s, prot, flag, -1, 0))
+        if((flag&MAP_SPARE)==0 && 
+#ifndef _OS_Z_
+        mmap(fp, s, prot, flag, -1, 0)
+#else
+        mmap(fp, s, flag)
+#endif
+        ==MAP_FAILED)
             fp=NULL;
         else
             ncm->map[0]=s;
