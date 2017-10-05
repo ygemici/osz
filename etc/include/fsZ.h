@@ -184,7 +184,7 @@ typedef struct {
 #define FILETYPE_DIR        "dir:"  // directory
 #define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths with jokers
 #define FILETYPE_INTERNAL   "int:"  // internal files, like free and bad sectors and meta info
-#define FILETYPE_SYMLINK    "url:"  // symbolic link, inlined data is a path
+#define FILETYPE_SYMLINK    "lnk:"  // symbolic link, inlined data is a path
 // mime types for filesystem specific files
 // for FILETYPE_DIR
 #define MIMETYPE_DIR_ROOT   "fs-root"  // root directory (for recovery it has a special mime type)

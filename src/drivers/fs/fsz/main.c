@@ -242,6 +242,7 @@ bool_t stat(fid_t fd, ino_t file, stat_t *st)
 {
     FSZ_Inode *in=(FSZ_Inode*)readblock(fd,file);
 //dbg_printf("fsz stat storage %d file %d\n",fd,file);
+    lastlink=NULL;
     // failsafe
     if( fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
         in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4))
@@ -250,6 +251,7 @@ bool_t stat(fid_t fd, ino_t file, stat_t *st)
     if(in->filetype[3]!=':')
         memcpy(st->st_mime,in->mimetype,44);
     if(!memcmp(in->filetype,FILETYPE_SYMLINK,4)) {
+        lastlink=(char*)in->inlinedata;
         st->st_mode &= ~S_IFMT;
         st->st_mode |= S_IFREG;
         st->st_mode |= S_IFLNK;

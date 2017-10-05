@@ -433,9 +433,6 @@ public dirent_t *readdir(fid_t dirstream)
     }
     if(!fread(dirstream, stdlib_direntbuf, DIRENTMAX)) 
         return NULL;
-#if DEBUG
-dbg_printf("%2D\n",stdlib_direntbuf);
-#endif
     mq_call(SRV_FS, SYS_readdir|MSG_PTRDATA, stdlib_direntbuf, DIRENTMAX, dirstream, stdlib_direntbuf);
     if(errno())
         return NULL;

@@ -47,6 +47,8 @@
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
+extern char *lastlink;
+
 typedef struct {
     ino_t inode;
     char *path;

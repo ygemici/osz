@@ -45,7 +45,7 @@ typedef struct {
     fpos_t filesize;
     blksize_t blksize;
     uint16_t fs;
-} fcb_reg_t;
+} __attribute__((packed)) fcb_reg_t;
 
 // Directory unions
 typedef struct {
@@ -54,17 +54,17 @@ typedef struct {
     fpos_t filesize;
     fid_t *unionlist;
     uint16_t fs;
-} fcb_union_t;
+} __attribute__((packed)) fcb_union_t;
 
 // uses the same as regular files, only this time
 // storage points to devfs
 typedef fcb_reg_t fcb_dev_t;
 
 typedef struct {
-} fcb_pipe_t;
+} __attribute__((packed)) fcb_pipe_t;
 
 typedef struct {
-} fcb_socket_t;
+} __attribute__((packed)) fcb_socket_t;
 
 typedef struct {
     char *abspath;

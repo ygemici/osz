@@ -125,7 +125,7 @@ void add_superblock()
 //appends an inode
 int add_inode(char *filetype, char *mimetype)
 {
-    int i,j=!strcmp(filetype,"url:")||!strcmp(filetype,"uni:")?secsize-1024:43;
+    int i,j=!strcmp(filetype,FILETYPE_SYMLINK)||!strcmp(filetype,FILETYPE_UNION)?secsize-1024:43;
     FSZ_Inode *in;
     fs=realloc(fs,size+secsize);
     if(fs==NULL) exit(4);
@@ -137,7 +137,7 @@ int add_inode(char *filetype, char *mimetype)
     if(filetype!=NULL){
         i=strlen(filetype);
         memcpy(in->filetype,filetype,i>4?4:i);
-        if(!strcmp(filetype,"dir:")){
+        if(!strcmp(filetype,FILETYPE_DIR)){
             FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)(in->inlinedata);
             in->sec=size/secsize;
             in->flags=FSZ_IN_FLAG_INLINE;
@@ -147,7 +147,7 @@ int add_inode(char *filetype, char *mimetype)
         }
     }
     if(mimetype!=NULL){
-        if(!strcmp(filetype,"uni:")){
+        if(!strcmp(filetype,FILETYPE_UNION)){
             for(i=1;i<j && !(mimetype[i-1]==0 && mimetype[i]==0);i++);
         } else {
             i=strlen(mimetype);
@@ -347,8 +347,8 @@ void add_dirs(char *dirname,int parent,int level)
         }
         if(ent->d_type==DT_LNK) {
             // add a symbolic link
-            int s=readlink(dirname,ptrto,FSZ_SECSIZE-1024-1); ptrto[s+1]=0;
-            int i=add_inode("url:",ptrto);
+            int s=readlink(full,ptrto,FSZ_SECSIZE-1024-1); ptrto[s]=0;
+            int i=add_inode(FILETYPE_SYMLINK,ptrto);
             link_inode(i,full+parent,0);
         }
         // maybe add other types, blkdev, socket etc.
@@ -702,7 +702,7 @@ void ls(int argc, char **argv)
 
     if(dir==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
     int cnt=0;
-    if(!memcmp(dir->filetype,"uni:",4)){
+    if(!memcmp(dir->filetype,FILETYPE_UNION,4)){
         char *c=((char*)dir+1024);
         printf("Union list of:\n");
         while(*c!=0) {
@@ -712,7 +712,7 @@ void ls(int argc, char **argv)
         }
         return;
     }
-    if(memcmp(dir->filetype,"dir:",4)) { printf("mkfs: not a directory\n"); exit(2); }
+    if(memcmp(dir->filetype,FILETYPE_DIR,4)) { printf("mkfs: not a directory\n"); exit(2); }
     FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)((char*)dir+1024);
     FSZ_DirEnt *ent;
     ent=(FSZ_DirEnt *)hdr; ent++;
@@ -781,7 +781,7 @@ void addunion(int argc, char **argv)
         c+=strlen(argv[i])+1;
     }
     fs=readfileall(argv[1]); size=read_size;
-    i=add_inode("uni:",(char*)&items);
+    i=add_inode(FILETYPE_UNION,(char*)&items);
     memset(&items,0,sizeof(items));
     memcpy(&items,argv[3],strlen(argv[3]));
     if(items[strlen(argv[3])-1]!='/')
@@ -796,7 +796,7 @@ void addunion(int argc, char **argv)
 void addsymlink(int argc, char **argv)
 {
     fs=readfileall(argv[1]); size=read_size;
-    int i=add_inode("url:",argv[4]);
+    int i=add_inode(FILETYPE_SYMLINK,argv[4]);
     link_inode(i,argv[3],0);
     //write out new image
     f=fopen(argv[1],"wb");
@@ -913,8 +913,12 @@ void dump(int argc, char **argv)
             in->owner.access&FSZ_READ?'d':'-',
             in->owner.access&FSZ_READ?'u':'-',
             in->owner.access&FSZ_READ?'s':'-');
-        printf("\tinlinedata: '%c%c%c%c...'\n",in->inlinedata[0],in->inlinedata[1],in->inlinedata[2],in->inlinedata[3]);
-        printf("};\n");
+        printf("\tinlinedata: '");
+        if(!memcmp(in->filetype,FILETYPE_SYMLINK,4))
+            printf("%s",in->inlinedata);
+        else
+            printf("%c%c%c%c...",in->inlinedata[0],in->inlinedata[1],in->inlinedata[2],in->inlinedata[3]);
+        printf("'\n};\n");
         printf("Data sectors: ");
         switch(FLAG_TRANSLATION(in->flags)){
             case FSZ_IN_FLAG_INLINE: printf("%ld", in->sec); break;

@@ -138,6 +138,7 @@ typedef struct {
     fid_t       d_dev;      // ID of device, *not* major/minor
     ino_t       d_ino;      // inode number
     uint8_t     d_icon[8];  // short mime type for icon
+    uint64_t    d_filesize; // file size
     uint32_t    d_type;     // entry type, st_mode >> 16
     uint32_t    d_len;      // name length
     char        d_name[FILENAME_MAX];

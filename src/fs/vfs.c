@@ -47,6 +47,8 @@ dirent_t dirent;                // buffer for readdir()
 int pathstackidx = 0;           // path stack
 pathstack_t pathstack[PATHSTACKSIZE];
 
+public char *lastlink;          // last symlink's target, filled in by fsdrv's stat()
+
 /**
  * add an inode reference to path stack. Rotate if stack grows too big
  */
@@ -499,6 +501,11 @@ size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
     if(!taskctx_validfid(tc,idx))
         return 0;
     fc=&fcb[tc->openfiles[idx].fid];
+    if(fc->type==FCB_TYPE_UNION && (tc->openfiles[idx].mode&OF_MODE_READDIR)) {
+        if(fc->uni.unionlist[tc->openfiles[idx].unionidx]==0)
+            return 0;
+        fc=&fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]];
+    }
     if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv)
         return 0;
     // set up first time run parameters
@@ -612,6 +619,8 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
 {
     fcb_t *fc;
     size_t s;
+    fid_t f;
+    char *abspath;
     // failsafe
     if(!taskctx_validfid(tc,idx))
         return NULL;
@@ -627,16 +636,48 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     if(dirent.d_len==0)
         dirent.d_len=strlen(dirent.d_name);
     dirent.d_dev=fc->reg.storage;
+    dirent.d_filesize=fc->reg.filesize;
     // assume regular file
     dirent.d_type=FCB_TYPE_REG_FILE;
     // call file system driver to fill in st_mode stat_t field
     memset(&st,0,sizeof(stat_t));
     if((*fsdrv[fc->reg.fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
         dirent.d_type=st.st_mode>>16;
+        // if it's a symlink, get the target's type and size
+        if(lastlink!=NULL) {
+            f=-1;
+            if(lastlink[0]=='/') {
+                f=lookup(lastlink, false);
+            } else {
+                abspath=(char*)malloc(pathmax);
+                if(abspath!=NULL) {
+                    strcpy(abspath, fc->type==FCB_TYPE_UNION ?
+                            fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]].abspath : fc->abspath);
+                    pathcat(abspath,lastlink);
+                    f=lookup(abspath, false);
+                    free(abspath);
+                }
+            }
+            if(ackdelayed) return NULL;
+            if(f!=-1 && fcb[f].reg.fs!=-1 && fcb[f].reg.fs<nfsdrv &&
+                (*fsdrv[fcb[f].reg.fs].stat)(fcb[f].reg.storage, fcb[f].reg.inode, &st)) {
+                    dirent.d_type &= ~(S_IFMT>>16);
+                    dirent.d_type |= st.st_mode>>16;
+                    dirent.d_filesize=st.st_size;
+                    // let it copy the icon from the updated stat_t buf
+            }
+        }
         memcpy(&dirent.d_icon,&st.st_type,8);
+        if(dirent.d_icon[3]==':')
+            dirent.d_icon[3]=0;
     }
     // move open file pointer
     tc->openfiles[idx].offs += s;
+    if(fc->type==FCB_TYPE_UNION && tc->openfiles[idx].offs >=
+        fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]].uni.filesize) {
+        tc->openfiles[idx].offs = 0;
+        tc->openfiles[idx].unionidx++;
+    }
     return &dirent;
 }
 

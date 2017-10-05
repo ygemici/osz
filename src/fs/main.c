@@ -464,7 +464,6 @@ dostat:         if(ret!=-1 && !errno()) {
                         ret=-1;
                     } else {
                         if(fcb[ret].type==FCB_TYPE_UNION) {
-                            ackdelayed=false;
                             fcb_unionlist_build(ret);
                             if(ackdelayed) break;
                         }
@@ -479,7 +478,8 @@ dostat:         if(ret!=-1 && !errno()) {
 
             case SYS_readdir:
 //dbg_printf("fs readdir(%x,%d,%d,%x)\n", msg->ptr, msg->size, msg->type,msg->attr0);
-                if(!taskctx_validfid(ctx,msg->type) || fcb[ctx->openfiles[msg->type].fid].type!=FCB_TYPE_REG_DIR) {
+                if(!taskctx_validfid(ctx,msg->type) || (fcb[ctx->openfiles[msg->type].fid].type!=FCB_TYPE_REG_DIR &&
+                  fcb[ctx->openfiles[msg->type].fid].type!=FCB_TYPE_UNION)) {
                     seterr(EBADF);
                     ret=0;
                 } else {
