@@ -27,9 +27,19 @@
 
 #include <osZ.h>
 
+// block priorities for soft update
+#define BLKPRIO_NOTDIRTY 0  // for read operations
+#define BLKPRIO_ALLOC    1  // allocate space on file system
+#define BLKPRIO_DATA     2  // file data
+#define BLKPRIO_MAPPING  3  // data mapping info
+#define BLKPRIO_META     4  // inode information
+
+typedef uint8_t blkprio_t;
+
 extern public void cache_init();
-extern public void *cache_getblock(fid_t idx, blkcnt_t offs);
-extern public void cache_setblock(void *blk, fid_t fd, blkcnt_t offs);
+extern public void *cache_getblock(fid_t fd, blkcnt_t lsn);
+extern public void cache_setblock(void *blk, fid_t fd, blkcnt_t lsn, blkprio_t prio);
+extern public void cache_freeblocks(fid_t fd);
 
 #if DEBUG
 extern void cache_dump();

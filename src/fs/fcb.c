@@ -90,6 +90,8 @@ fid_t fcb_add(char *abspath, uint8_t type)
     abspath=strdup(abspath);
     fcb[i].abspath=abspath;
     fcb[i].type=type;
+    if(type<FCB_TYPE_PIPE)
+        fcb[i].reg.fs=-1;
     return i;
 }
 
@@ -117,6 +119,7 @@ void fcb_del(fid_t idx)
         if(fcb[idx].abspath!=NULL)
             free(fcb[idx].abspath);
         fcb[idx].abspath=NULL;
+        fcb[idx].reg.filesize=0;
         nfiles--;
         idx=nfcb;
         while(idx>0 && fcb[idx-1].abspath==NULL) idx--;
@@ -155,7 +158,7 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
     fid_t f,*fl=NULL;
     // failsafe
     if(idx>=nfcb || fcb[idx].abspath==NULL || fcb[idx].type!=FCB_TYPE_UNION || 
-      fcb[idx].uni.fs==-1 ||fcb[idx].uni.fs>=nfsdrv)
+      fcb[idx].uni.fs==-1 ||fcb[idx].uni.fs>=nfsdrv || fsdrv[fcb[idx].uni.fs].read==NULL)
         return -1;
 //dbg_printf("fcb_unionlist_build(%d,%x,%d)\n",idx,buf,s);
     bs=fcb[fcb[idx].uni.storage].device.blksize;
@@ -183,7 +186,7 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
             f=lookup(fn,false);
 //dbg_printf("  unionlist '%s'...'%s' %d buf=%x s=%d\n",fn,ptr+i+k+4,f,buf,s);
             if(ackdelayed) { free(fn); return -1; }
-            if(f!=-1 && fcb[f].reg.fs!=-1 && fcb[f].reg.fs<nfsdrv) {
+            if(f!=-1 && fcb[f].reg.fs!=-1 && fcb[f].reg.fs<nfsdrv && fsdrv[fcb[f].reg.fs].getdirent!=NULL) {
                 if(buf==NULL) return f;
                 j=0; l=1;
                 fn=realloc(fn,pathmax);
@@ -232,7 +235,8 @@ void fcb_dump()
     char *types[]={"file", "dir ", "uni ", "dev ", "pipe", "sock"};
     dbg_printf("File Control Blocks %d:\n",nfcb);
     for(i=0;i<nfcb;i++) {
-        dbg_printf("%3d. %3d %s %4d ",i,fcb[i].nopen,types[fcb[i].type],fcb[i].type!=FCB_TYPE_UNION?fcb[i].reg.blksize:0);
+        dbg_printf("%3d. %3d %s %4d %8s ",i,fcb[i].nopen,types[fcb[i].type],
+            fcb[i].type!=FCB_TYPE_UNION?fcb[i].reg.blksize:0,fcb[i].reg.fs<nfsdrv?fsdrv[fcb[i].reg.fs].name:"nofs");
         dbg_printf("%3d:%3d %8d %s",fcb[i].reg.storage,fcb[i].reg.inode,fcb[i].reg.filesize,fcb[i].abspath);
         if(fcb[i].type==FCB_TYPE_UNION && fcb[i].uni.unionlist!=NULL) {
             dbg_printf("\t[");

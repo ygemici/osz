@@ -31,10 +31,10 @@
 #define SYS_IRQ          0 // CORE sends it to device drivers, disables IRQ
 #define SYS_ack          1 // device drivers to CORE, re-enable IRQ, libc return value
 #define SYS_nack         2 // negative acknowledge, libc return errno
-#define SYS_dl           3
+#define SYS_exit         3
 #define SYS_sched_yield  4
 #define SYS_setirq       5
-#define SYS_exit         6
+#define SYS_dl           6
 #define SYS_swapbuf      7
 #define SYS_stimebcd     8 // driver to CORE, cmos local date
 #define SYS_stime        9

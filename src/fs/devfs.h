@@ -27,17 +27,19 @@
 
 #include <osZ.h>
 
-#define MEMFS_MAJOR      0
-#define MEMFS_ZERO       0
-#define MEMFS_RAMDISK    1
-#define MEMFS_RANDOM     2
-#define MEMFS_NULL       3
+#define MEMFS_MAJOR     0
+#define MEMFS_ZERO      0
+#define MEMFS_RAMDISK   1
+#define MEMFS_RANDOM    2
+#define MEMFS_NULL      3
 
 /* device type */
 typedef struct {
-    fid_t fid;          //name in fcb
-    pid_t drivertask;   //major
-    dev_t device;       //minor
+    fid_t fid;          // name in fcb
+    pid_t drivertask;   // major
+    dev_t device;       // minor
+    blkcnt_t total;     // total number of blocks to be written
+    blkcnt_t out;       // number of blocks already written out
 } devfs_t;
 
 extern uint64_t ndev;
@@ -45,6 +47,7 @@ extern devfs_t *dev;
 
 extern void devfs_init();
 extern uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blksize_t blksize, blkcnt_t blkcnt);
+extern void devfs_del(uint64_t idx);
 
 #if DEBUG
 extern void devfs_dump();

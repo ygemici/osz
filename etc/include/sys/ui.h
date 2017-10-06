@@ -31,5 +31,6 @@
 #define SYS_setcursor	(0x17)
 #define SYS_keypress	(0x1b)
 #define SYS_keyrelease	(0x1c)
-#define SYS_pointer	(0x20)
+#define SYS_devprogress	(0x1e)
+#define SYS_pointer	(0x21)
 

@@ -55,51 +55,11 @@ void dumpdirent(dirent_t *de)
 
 void fs_test()
 {
-    dirent_t *de;
-fid_t f;
-/*
-    stat_t *st=lstat("/etc");
-    dbg_printf("lstat(/etc) ret %x errno %d %s\n", st, errno(), strerror(errno()));
-    dumpstat(st);
-    dbg_printf("fopen(/etc/kbd/en_us, O_RDWR)\n");
-    fid_t f=fopen("/etc/kbd/en_us", O_RDWR);
+    fid_t f;
+    f=fopen("/etc/valami/megint",O_CREAT);
     dbg_printf("fopen ret %d errno %d %s\n", f, errno(), strerror(errno()));
-    fid_t f2=dup(f);
-    dbg_printf("dup ret %d errno %d %s\n", f2, errno(), strerror(errno()));
-    f2=dup2(f,f2);
-    dbg_printf("dup2 ret %d errno %d\n", f2, errno());
-    size_t s=fread(f,&buff,65536);
-    dbg_printf("fread ret %d errno %d\n%s\n", s, errno(),buff);
-    st=fstat(f);
-    dbg_printf("fstat(%d) ret %x errno %d %s\n", f, st, errno(), strerror(errno()));
-    dumpstat(st);
-    f=fclose(f);
-    dbg_printf("fclose ret %d errno %d\n\n", f, errno());
 
-    f=fcloseall();
-    dbg_printf("fcloseall ret %d errno %d\n\n", f, errno());
-    
-    f=opendir("/sys");
-    dbg_printf("opendir(/sys) ret %d errno %d\n\n", f, errno());
-    de=(dirent_t*)1;
-    while(de!=NULL) {
-        de=readdir(f);
-        dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
-        dumpdirent(de);
-    }
-    closedir(f);
-*/
-    f=opendir("/etc");
-    dbg_printf("opendir(/etc) ret %d errno %d\n\n", f, errno());
-    de=(dirent_t*)1;
-    while(de!=NULL) {
-        de=readdir(f);
-        dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
-        dumpdirent(de);
-    }
-    closedir(f);
-
-return;
+    dirent_t *de;
     f=mount("/dev/valami", "/etc", NULL);
     dbg_printf("mount ret %d errno %d\n", f, errno());
     
@@ -114,4 +74,48 @@ return;
     
     f=mknod("stdin",31,O_RDWR,1, 0);
     dbg_printf("mknod ret %d errno %d\n", f, errno());
+
+    stat_t *st=lstat("/etc");
+    dbg_printf("lstat(/etc) ret %x errno %d %s\n", st, errno(), strerror(errno()));
+    dumpstat(st);
+    dbg_printf("fopen(/etc/kbd/en_us, O_RDWR)\n");
+    f=fopen("/etc/kbd/en_us", O_RDWR);
+    dbg_printf("fopen ret %d errno %d %s\n", f, errno(), strerror(errno()));
+    fid_t f2=dup(f);
+    dbg_printf("dup ret %d errno %d %s\n", f2, errno(), strerror(errno()));
+    f2=dup2(f,f2);
+    dbg_printf("dup2 ret %d errno %d\n", f2, errno());
+    size_t s=fread(f,&buff,65536);
+    dbg_printf("fread ret %d errno %d\n%s\n", s, errno(),buff);
+    st=fstat(f);
+    dbg_printf("fstat(%d) ret %x errno %d %s\n", f, st, errno(), strerror(errno()));
+    dumpstat(st);
+//    f=fclose(f);
+    dbg_printf("fclose ret %d errno %d\n\n", f, errno());
+
+//    f=fcloseall();
+//    dbg_printf("fcloseall ret %d errno %d\n\n", f, errno());
+    
+    f=opendir("/sys");
+    dbg_printf("opendir(/sys) ret %d errno %d\n\n", f, errno());
+    de=(dirent_t*)1;
+    while(de!=NULL) {
+        de=readdir(f);
+        dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
+        dumpdirent(de);
+    }
+//    closedir(f);
+    f=opendir("/etc");
+    dbg_printf("opendir(/etc) ret %d errno %d\n\n", f, errno());
+    de=(dirent_t*)1;
+    while(de!=NULL) {
+        de=readdir(f);
+        dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
+        dumpdirent(de);
+    }
+//    closedir(f);
+
+    mq_call(SRV_FS, SYS_dump);
+    mq_send(SRV_FS, SYS_exit);
+    mq_call(SRV_FS, SYS_dump);
 }

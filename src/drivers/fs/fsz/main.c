@@ -46,8 +46,9 @@ bool_t detect(fid_t fd, void *blk)
         // calculate block size for this instance
         fcb[fd].device.blksize=1<<(sb->logsec+11);
         // check if file system size is correct
-        if(fcb[fd].device.filesize != sb->numsec*fcb[fd].device.blksize)
+        if(fcb[fd].device.filesize != sb->numsec*fcb[fd].device.blksize) {
             resizefs(fd);
+        }
     }
     return ret;
 }
@@ -194,6 +195,7 @@ nextdir:
                 if(dirent->name[strlen((char*)dirent->name)-1]=='/') {
                     locate_t l;
                     l.path=e;
+                    l.creat=false;
                     if(locate(fd, dirent->fid, &l)==SUCCESS) {
                         char *c=strdup(e);
                         if(c==NULL) {
@@ -222,6 +224,9 @@ nextdir:
         }
     }
     // TODO: if loc->creat, then create dir or path
+    if(loc->creat) {
+dbg_printf("locate create inode lsn %d '%s'\n",lsn,loc->path);
+    }
     return NOTFOUND;
 }
 
@@ -233,6 +238,19 @@ void resizefs(fid_t fd)
 //    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
 //    dbg_printf("FS/Z resizefs, currently %d should be %d\n",
 //      sb->numsec, fcb[fd].device.filesize/fcb[fd].device.blksize);
+}
+
+/**
+ * check file system consistency
+ */
+bool_t checkfs(fid_t fd)
+{
+    // failsafe
+    if(fsck.dev!=fd)
+        return false;
+//    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
+//    dbg_printf("FS/Z fsck\n");
+    return true;
 }
 
 /**
@@ -383,6 +401,7 @@ void _init()
         detect,
         locate,
         resizefs,
+        checkfs,
         stat,
         read,
         NULL,

@@ -184,15 +184,24 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
             }
             /* is it init task exiting? */
             if(tcb->pid == services[-SRV_init]) {
-                /* display good bye screen */
+                /* display Good Bye screen */
                 if(arg0 == EX_OK)
                     kprintf_poweroff();
                 else
                     kprintf_reboot();
             }
+            /* notify other system services too so they can free structures allocated for this task */
+            msg_sends(EVT_DEST(SRV_init)  | EVT_FUNC(SYS_exit), 0,0,0,0,0,0);
+            msg_sends(EVT_DEST(SRV_sound) | EVT_FUNC(SYS_exit), 0,0,0,0,0,0);
+            msg_sends(EVT_DEST(SRV_inet)  | EVT_FUNC(SYS_exit), 0,0,0,0,0,0);
+            msg_sends(EVT_DEST(SRV_syslog)| EVT_FUNC(SYS_exit), 0,0,0,0,0,0);
+            msg_sends(EVT_DEST(SRV_UI)    | EVT_FUNC(SYS_exit), 0,0,0,0,0,0);
+            msg_sends(EVT_DEST(SRV_FS)    | EVT_FUNC(SYS_exit), 0,0,0,0,0,0);
             /* is it an abort(), and core dump requested? */
             if(arg1) {
+                // TODO: save memory dump to fs
             }
+            /* pick the next task to run */
             sched_pick();
             break;
 

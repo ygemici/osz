@@ -602,6 +602,8 @@ void kprintf(char* fmt, ...)
             } else
             if(fmt[0]=='s') {
                 kprintf(p);
+                // padding with spaces
+                arg=kstrlen(p); if(arg<cnt) { cnt-=arg; while(cnt-->0) { kprintf_putchar(' '); kx++; } }
             }
             reent--;
         } else {

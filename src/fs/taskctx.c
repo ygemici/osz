@@ -64,6 +64,7 @@ taskctx_t *taskctx_get(pid_t pid)
         tc->next=ntc;
     else
         taskctx[pid & 0xFF]=ntc;
+    ntc->fs=-1;
     fcb[0].nopen+=2;
     ntaskctx++;
     return ntc;
@@ -139,7 +140,7 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64
     }
     // check if it's already opened for exclusive access
     if(fcb[fid].mode & O_EXCL) {
-        seterr(EACCES);
+        seterr(EBUSY);
         return -1;
     }
     // force file descriptor index
@@ -165,6 +166,12 @@ found:
     // handle exclusive access
     if(mode & O_EXCL)
         fcb[fid].mode |= O_EXCL;
+    // deceide operation mode
+    if(!(mode & O_READ) && !(mode & O_WRITE))
+        mode |= O_READ;
+    if(mode & O_CREAT)
+        mode |= O_WRITE;
+    // save open file descriptor
     tc->openfiles[i].fid=fid;
     tc->openfiles[i].mode=mode;
     tc->openfiles[i].offs=offs;

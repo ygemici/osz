@@ -40,11 +40,21 @@ fsdrv_t *fsdrv = NULL;
  */
 public uint16_t fsdrv_reg(const fsdrv_t *fs)
 {
+    bool_t isdevfs;
+    // failsafe
+    if(fs->name==NULL || fs->name[0]==0)
+        return -1;
+    // only devfs allowed to omit detect and locate functions,
+    // and there it's mandatory to avoid false positives
+    isdevfs=!memcmp(fs->name,"devfs",6);
+    if(!isdevfs && (fs->detect==NULL || fs->locate==NULL))
+        return -1;
     fsdrv=(fsdrv_t*)realloc(fsdrv,++nfsdrv*sizeof(fsdrv_t));
     if(fsdrv==NULL || errno())
         abort();
     memcpy((void*)&fsdrv[nfsdrv-1], (void*)fs, sizeof(fsdrv_t));
-    if(devfsidx==(uint16_t)-1 && !memcmp(fs->name,"devfs",6))
+    // record devfs index
+    if(devfsidx==(uint16_t)-1 && isdevfs)
         devfsidx = nfsdrv-1;
     return nfsdrv-1;
 }
@@ -74,6 +84,7 @@ int16_t fsdrv_detect(fid_t dev)
     void *blk=readblock(dev, 0);
     if(blk!=NULL) {
         // iterate on each fsdrv, see if one can recognize the superblock
+        // normally there should be no fsdrv without detect, but be sure
         for(i=0;i<nfsdrv;i++) {
             if(fsdrv[i].detect!=NULL && (*fsdrv[i].detect)(dev,blk))
                 return i;
@@ -87,7 +98,17 @@ void fsdrv_dump()
 {
     int i;
     dbg_printf("File system drivers %d:\n",nfsdrv);
-    for(i=0;i<nfsdrv;i++)
-        dbg_printf("%3d. '%s' %s %x\n",i,fsdrv[i].name,fsdrv[i].desc,fsdrv[i].detect);
+    for(i=0;i<nfsdrv;i++) {
+        dbg_printf("%3d. '%s' %s %x:",i,fsdrv[i].name,fsdrv[i].desc,fsdrv[i].detect);
+        if(fsdrv[i].detect) dbg_printf(" detect");
+        if(fsdrv[i].locate) dbg_printf(" locate");
+        if(fsdrv[i].resizefs) dbg_printf(" resizefs");
+        if(fsdrv[i].checkfs) dbg_printf(" checkfs");
+        if(fsdrv[i].stat) dbg_printf(" stat");
+        if(fsdrv[i].read) dbg_printf(" read");
+        if(fsdrv[i].write) dbg_printf(" write");
+        if(fsdrv[i].getdirent) dbg_printf(" getdirent");
+        dbg_printf("\n");
+    }
 }
 #endif

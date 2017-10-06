@@ -18,7 +18,7 @@ Boot Parameters
 
 | Parameter | Default  | Type | Subsystem | Description |
 | --------- | :------: | ---- | --------- | ----------- |
-| screen    | 1024x768 | num<i>x</i>num | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution |
+| screen    | 1024x768 | num<i>x</i>num | [loader](https://github.com/bztsrc/osz/blob/master/loader) | required screen resolution, minimum 800x600 |
 | kernel    | sys/core | string  | loader | the name of kernel executable on initrd |
 | debug     | 0        | decimal | core | specifies which debug information to show (if [compiled with debugging](https://github.com/bztsrc/osz/blob/master/Config), see below) |
 | nrphymax  | 2        | number  | core | the number of pages to store physical RAM fragments (16 bytes each) |
@@ -30,6 +30,7 @@ Boot Parameters
 | networking | true    | boolean | core | disable inet service |
 | sound     | true     | boolean | core | disable sound service |
 | pathmax   | 512      | number  | fs   | Maximum length of path, minimum 256 |
+| cachelines | 16      | number  | fs   | Number of block cache lines, minimum 16 |
 | fps       | 10       | number  | ui   | requested frame rate |
 | keymap    | en_us    | string  | ui   | keyboard layout, see [etc/kbd](https://github.com/bztsrc/osz/blob/master/etc/sys/etc/kbd) |
 | lefthanded | false   | boolean | ui   | swap pointers |

@@ -39,6 +39,7 @@ public uint8_t _display_type;
 uint8_t lefthanded=false;
 char *keymap_type;
 
+public void devprogress(fid_t fd, blkcnt_t out, blkcnt_t total){}
 public void opentty(){}
 public void openwin(){}
 public void openwrd(){}

@@ -27,6 +27,8 @@
 #include <osZ.h>
 #include "cache.h"
 
+extern uint16_t cachelines;     // number of cache lines
+
 void cache_init()
 {
 }
@@ -34,7 +36,7 @@ void cache_init()
 /**
  * read a block from cache
  */
-public void* cache_getblock(fid_t fd, blkcnt_t offs)
+public void* cache_getblock(fid_t fd, blkcnt_t lsn)
 {
     // TODO: use dev[fcb[fd].device.inode].drivertask, dev[fcb[fd].device.inode].device
     // fcb[fd].device.blksize
@@ -44,7 +46,14 @@ public void* cache_getblock(fid_t fd, blkcnt_t offs)
 /**
  * store a block in cache, called by drivers
  */
-public void cache_setblock(void *blk, fid_t fd, blkcnt_t offs)
+public void cache_setblock(void *blk, fid_t fd, blkcnt_t lsn, blkprio_t prio)
+{
+}
+
+/**
+ * remove all blocks of a device from cache
+ */
+public void cache_freeblocks(fid_t fd)
 {
 }
 

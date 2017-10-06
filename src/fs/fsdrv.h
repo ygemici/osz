@@ -45,6 +45,7 @@ typedef struct {
     bool_t (*detect)(fid_t fd, void *blk);
     uint8_t (*locate)(fid_t fd, ino_t parent, locate_t *loc);
     void (*resizefs)(fid_t fd);
+    bool_t (*checkfs)(fid_t fd);
     bool_t (*stat)(fid_t fd, ino_t file, stat_t *st);
     void* (*read)(fid_t fd, ino_t file, fpos_t offs, size_t *s);
     void* (*write)(fid_t fd, ino_t file, fpos_t offs, size_t *s);

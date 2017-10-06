@@ -96,6 +96,7 @@ bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event)
     // UI task
     if(dest == SRV_UI || dest == services[-SRV_UI]) {
         if(task_allowed(sender, "noui", 0)) goto noaccess;
+        if(e==SYS_devprogress && sender->pid!=services[-SRV_FS]) goto noaccess;
         // other services allowed for everyone
         return true;
     }
@@ -112,7 +113,7 @@ bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event)
         return true;
     }
     // sound task
-    if(dest == SRV_inet || dest == services[-SRV_inet]) {
+    if(dest == SRV_sound || dest == services[-SRV_sound]) {
         if(task_allowed(sender, "nosound", 0)) goto noaccess;
         // other services allowed for everyone
         return true;

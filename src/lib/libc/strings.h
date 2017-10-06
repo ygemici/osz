@@ -45,11 +45,13 @@ char *errstrs[] = { ""/*Success*/,
     "EBADFS Corrupt file system",
     "EROFS Read-only file system",
     "ENOSPC No space left on device",
+    "ENOTSUP File type not supported by file system",
     "EIO I/O error",
     "EPIPE Broken pipe",
     "ESPIPE Illegal seek",
     "ENOTSHM Not a shared memory buffer",
-    "EBADF Bad file number"
+    "EBADF Bad file number",
+    "ENOTBIG Buffer not big enough"
 };
 
 /* must match signal.h */

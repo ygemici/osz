@@ -26,52 +26,55 @@
  */
 
 // cache
-#define SYS_setblock    ( 3)
-#define SYS_ackblock    ( 4)
+#define SYS_setblock    ( 4)
+#define SYS_ackblock    ( 5)
 // file systems
-#define SYS_mountfs     ( 5)
-#define SYS_mount       ( 6)
-#define SYS_umount      ( 7)
-#define SYS_sync        ( 8)
+#define SYS_mountfs     ( 6)
+#define SYS_mount       ( 7)
+#define SYS_umount      ( 8)
+#define SYS_fsck        ( 9) //
 // file operations
-#define SYS_mknod       ( 9)
-#define SYS_ioctl       (10)
-#define SYS_lstat       (11)
-#define SYS_dstat       (12)
-#define SYS_fstat       (13)
-#define SYS_fopen       (14)
-#define SYS_fseek       (15)
-#define SYS_ftell       (16)
-#define SYS_fread       (17)
-#define SYS_fwrite      (18)
-#define SYS_fflush      (19)
-#define SYS_feof        (20)
-#define SYS_ferror      (21)
-#define SYS_fclrerr     (22)
-#define SYS_fclose      (23)
-#define SYS_fcloseall   (24)
-#define SYS_tmpfile     (25)
-#define SYS_dup         (26)
-#define SYS_dup2        (27)
-#define SYS_link        (28)
-#define SYS_symlink     (29)
-#define SYS_unlink      (30)
-#define SYS_rename      (31)
-#define SYS_realpath    (32)
-// pipe operations
-#define SYS_pipe        (33)
-#define SYS_popen       (34)
-#define SYS_pclose      (35)
+#define SYS_mknod       (10)
+#define SYS_ioctl       (11)
+#define SYS_lstat       (12)
+#define SYS_dstat       (13)
+#define SYS_fstat       (14)
+#define SYS_fopen       (15)
+#define SYS_fseek       (16)
+#define SYS_ftell       (17)
+#define SYS_fread       (18)
+#define SYS_fwrite      (19) //
+#define SYS_fflush      (20) //
+#define SYS_feof        (21)
+#define SYS_ferror      (22)
+#define SYS_fclrerr     (23)
+#define SYS_fclose      (24)
+#define SYS_fcloseall   (25)
+#define SYS_tmpfile     (26)
+#define SYS_dup         (27)
+#define SYS_dup2        (28)
+#define SYS_link        (29) //
+#define SYS_symlink     (30) //
+#define SYS_unlink      (31) //
+#define SYS_rename      (32) //
+#define SYS_realpath    (33)
 // directory operations
-#define SYS_chroot      (36)
-#define SYS_chdir       (37)
-#define SYS_getcwd      (38)
-#define SYS_mkdir       (39)
-#define SYS_rmdir       (40)
-#define SYS_mkunion     (41)
-#define SYS_rmunion     (42)
-#define SYS_opendir     (43)
-#define SYS_readdir     (44)
-#define SYS_rewind      (45)
+#define SYS_chroot      (34)
+#define SYS_chdir       (35)
+#define SYS_getcwd      (36)
+#define SYS_mkdir       (37) //
+#define SYS_rmdir       (38) //
+#define SYS_mkunion     (39) //
+#define SYS_rmunion     (40) //
+#define SYS_opendir     (41)
+#define SYS_readdir     (42)
+#define SYS_rewind      (43)
+// pipe operations
+#define SYS_pipe        (44) //
+#define SYS_popen       (45) //
+#define SYS_pclose      (46) //
 // socket operations
 
+#if DEBUG
+#define SYS_dump        (255)
+#endif

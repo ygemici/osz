@@ -42,11 +42,13 @@ void *rndblk = NULL;            // random data block
 
 stat_t st;                      // buffer for lstat() and fstat()
 dirent_t dirent;                // buffer for readdir()
+public fsck_t fsck;             // fsck state block for dofsck() and fsdrv's checkfs()
 
 int pathstackidx = 0;           // path stack
 pathstack_t pathstack[PATHSTACKSIZE];
 
 public char *lastlink;          // last symlink's target, filled in by fsdrv's stat()
+
 
 /**
  * add an inode reference to path stack. Rotate if stack grows too big
@@ -245,7 +247,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
     void *blk=NULL;
     size_t bs;
     // failsafe
-    if(fd==-1 || fd>=nfcb || lsn==-1)
+    if(fd==-1 || fd>=nfcb || lsn==-1 || fsck.dev==fd)
         return NULL;
 #if DEBUG
     if(_debug&DBG_BLKIO)
@@ -254,7 +256,8 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
     switch(fcb[fd].type) {
         case FCB_TYPE_REG_FILE:
             // reading a block from a regular file
-            if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv)
+            if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv ||
+              fsdrv[fcb[fd].reg.fs].read==NULL)
                 return NULL;
             bs=fcb[fcb[fd].reg.storage].device.blksize;
             // call file system driver to read block
@@ -268,8 +271,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
             }
             return blk;
             break;
-        case FCB_TYPE_PIPE:
-            break;
+
         case FCB_TYPE_DEVICE:
             // reading a block from a device file
             if(fcb[fd].device.inode<ndev) {
@@ -306,18 +308,28 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
                 blk=cache_getblock(fd, lsn);
                 if(blk==NULL && errno()==EAGAIN) {
                     // block not found in cache. Send a message to a driver
-                    mq_send(device->drivertask, DRV_read, device->device, lsn, fcb[fd].device.blksize, ctx->pid, 0);
+                    mq_send(device->drivertask, DRV_read, device->device, lsn, fcb[fd].device.blksize,
+                        ctx->pid, fcb[fd].device.inode);
                     // delay ack message to the original caller
                     ackdelayed = true;
                 }
             }
             break;
+
         default:
             // invalid request
             seterr(EPERM);
             break;
     }
     return blk;
+}
+
+/**
+ * write a block to a device with given priority
+ */
+public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, size_t size, blkprio_t prio)
+{
+    return true;
 }
 
 /**
@@ -362,7 +374,7 @@ again:
     // if not found in cache
     if(f==-1 || (f==ROOTFCB && fcb[f].reg.inode==0)) {
         // first, look at static mounts
-        // find the longest match in mtab, root fill always match
+        // find the longest match in mtab, root will always match
         for(i=0;i<nmtab;i++) {
             j=strlen(fcb[mtab[i].mountpoint].abspath);
             if(j>l && !memcmp(fcb[mtab[i].mountpoint].abspath, abspath, j)) {
@@ -400,9 +412,16 @@ again:
                 mtab[k].fstype=fs;
         }
         // if file system unknown, not much we can do
+        // there should be no fsdrv without locate, but be sure
         if(fs==-1 || fsdrv[fs].locate==NULL) {
             free(abspath);
             seterr(ENOFS);
+            return -1;
+        }
+        // check if this device is locked
+        if(fsck.dev==fd) {
+            free(abspath);
+            seterr(EAGAIN);
             return -1;
         }
         // pass the remaining path to filesystem driver
@@ -500,52 +519,67 @@ size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
     if(!taskctx_validfid(tc,idx))
         return 0;
     fc=&fcb[tc->openfiles[idx].fid];
-    if(fc->type==FCB_TYPE_UNION && (tc->openfiles[idx].mode&OF_MODE_READDIR)) {
-        if(fc->uni.unionlist[tc->openfiles[idx].unionidx]==0)
-            return 0;
-        fc=&fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]];
-    }
-    if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv)
-        return 0;
-    // set up first time run parameters
-    if(tc->workleft==-1) {
-        tc->workleft=size;
-        tc->workoffs=0;
-    }
-//dbg_printf("readfs storage %d file %d offs %d\n",fc->reg.storage, tc->openfiles[idx].fid, tc->openfiles[idx].offs);
-    // read all blocks in
-    while(tc->workleft>0) {
-        // read max one block
-        bs=fcb[fc->reg.storage].device.blksize;
-//dbg_printf("readfs %d %d left %d\n",tc->openfiles[idx].offs + tc->workoffs,bs,tc->workleft);
-        // call file system driver
-        blk=(*fsdrv[fc->reg.fs].read)(
-            fc->reg.storage, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
-//dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
-        // skip if block is not in cache
-        if(ackdelayed) break;
-        // if eof
-        if(bs==0) {
-            ret = tc->workoffs;
-            tc->workleft=-1;
+    switch(fc->type) {
+        case FCB_TYPE_PIPE:
             break;
-        } else if(blk==NULL) {
-            // spare portion of file? return zero block
-            zeroblk=(void*)realloc(zeroblk, fcb[fc->reg.storage].device.blksize);
-            blk=zeroblk;
-        }
-        // failsafe, get number of bytes read
-        if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=-1; ret=tc->workoffs+bs; } else tc->workleft-=bs;
-        // copy result to caller. If shared memory, directly; otherwise via a core syscall
-        if((int64_t)ptr < 0)
-            memcpy((void*)(ptr + tc->workoffs), blk, bs);
-        else
-            p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
-        tc->workoffs+=bs;
+
+        case FCB_TYPE_SOCKET:
+            break;
+
+        default:
+            // check if this device is locked
+            if(fsck.dev==fc->reg.storage) {
+                seterr(EAGAIN);
+                return 0;
+            }
+            if(fc->type==FCB_TYPE_UNION && (tc->openfiles[idx].mode&OF_MODE_READDIR)) {
+                if(fc->uni.unionlist[tc->openfiles[idx].unionidx]==0)
+                    return 0;
+                fc=&fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]];
+            }
+            if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv || fsdrv[fc->reg.fs].read==NULL)
+                return 0;
+            // set up first time run parameters
+            if(tc->workleft==-1) {
+                tc->workleft=size;
+                tc->workoffs=0;
+            }
+//dbg_printf("readfs storage %d file %d offs %d\n",fc->reg.storage, tc->openfiles[idx].fid, tc->openfiles[idx].offs);
+            // read all blocks in
+            while(tc->workleft>0) {
+                // read max one block
+                bs=fcb[fc->reg.storage].device.blksize;
+//dbg_printf("readfs %d %d left %d\n",tc->openfiles[idx].offs + tc->workoffs,bs,tc->workleft);
+                // call file system driver
+                blk=(*fsdrv[fc->reg.fs].read)(
+                    fc->reg.storage, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
+//dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
+                // skip if block is not in cache
+                if(ackdelayed) break;
+                // if eof
+                if(bs==0) {
+                    ret = tc->workoffs;
+                    tc->workleft=-1;
+                    break;
+                } else if(blk==NULL) {
+                    // spare portion of file? return zero block
+                    zeroblk=(void*)realloc(zeroblk, fcb[fc->reg.storage].device.blksize);
+                    blk=zeroblk;
+                }
+                // failsafe, get number of bytes read
+                if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=-1; ret=tc->workoffs+bs; } else tc->workleft-=bs;
+                // copy result to caller. If shared memory, directly; otherwise via a core syscall
+                if((int64_t)ptr < 0)
+                    memcpy((void*)(ptr + tc->workoffs), blk, bs);
+                else
+                    p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
+                tc->workoffs+=bs;
+            }
+            // only alter seek offset when read is finished and it's nor readdir
+            if(!(tc->openfiles[idx].mode&OF_MODE_READDIR))
+                tc->openfiles[idx].offs += ret;
+            break;
     }
-    // only alter seek offset when read is finished and it's nor readdir
-    if(!(tc->openfiles[idx].mode&OF_MODE_READDIR))
-        tc->openfiles[idx].offs += ret;
     return ret;
 }
 
@@ -560,12 +594,27 @@ size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     if(!taskctx_validfid(tc,idx))
         return 0;
     fc=&fcb[tc->openfiles[idx].fid];
-    if(fc->reg.fs==-1)
-        return 0;
-    // set up first time run parameters
-    if(tc->workleft==-1) {
-        tc->workleft=size;
-        tc->workoffs=0;
+    switch(fc->type) {
+        case FCB_TYPE_PIPE:
+            break;
+
+        case FCB_TYPE_SOCKET:
+            break;
+
+        default:
+            // check if this device is locked
+            if(fsck.dev==fc->reg.storage) {
+                seterr(EAGAIN);
+                return 0;
+            }
+            if(fc->reg.fs==-1)
+                return 0;
+            // set up first time run parameters
+            if(tc->workleft==-1) {
+                tc->workleft=size;
+                tc->workoffs=0;
+            }
+            break;
     }
     return 0;
 }
@@ -578,6 +627,11 @@ stat_t *statfs(fid_t idx)
     // failsafe
     if(idx>=nfcb || fcb[idx].abspath==NULL)
         return NULL;
+    // check if this device is locked
+    if(fsck.dev==fcb[idx].reg.storage) {
+        seterr(EAGAIN);
+        return 0;
+    }
     memset(&st,0,sizeof(stat_t));
 //dbg_printf("statfs(%d)\n",idx);
     // add common fcb fields
@@ -602,7 +656,7 @@ stat_t *statfs(fid_t idx)
             break;
         default:
             // call file system driver to fill in various stat_t fields
-            if(fcb[idx].reg.fs==-1 || fcb[idx].reg.fs>=nfsdrv || 
+            if(fcb[idx].reg.fs==-1 || fcb[idx].reg.fs>=nfsdrv || fsdrv[fcb[idx].reg.fs].stat==NULL ||
                 !(*fsdrv[fcb[idx].reg.fs].stat)(fcb[idx].reg.storage, fcb[idx].reg.inode, &st))
                 return NULL;
             st.st_blksize=fcb[fcb[idx].reg.storage].device.blksize;
@@ -624,8 +678,13 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     if(!taskctx_validfid(tc,idx))
         return NULL;
     fc=&fcb[tc->openfiles[idx].fid];
-    if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv)
+    if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv || fsdrv[fc->reg.fs].getdirent==NULL)
         return 0;
+    // check if this device is locked
+    if(fsck.dev==fc->reg.storage) {
+        seterr(EAGAIN);
+        return 0;
+    }
     memset(&dirent,0,sizeof(dirent_t));
     // call file system driver to parse the directory entry
     s=(*fsdrv[fc->reg.fs].getdirent)(ptr, tc->openfiles[idx].offs, &dirent);
@@ -640,7 +699,7 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     dirent.d_type=FCB_TYPE_REG_FILE;
     // call file system driver to fill in st_mode stat_t field
     memset(&st,0,sizeof(stat_t));
-    if((*fsdrv[fc->reg.fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
+    if(fsdrv[fc->reg.fs].stat!=NULL && (*fsdrv[fc->reg.fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
         dirent.d_type=st.st_mode>>16;
         // if it's a symlink, get the target's type and size
         if(lastlink!=NULL) {
@@ -680,3 +739,30 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     return &dirent;
 }
 
+/**
+ * do a file system check on a device
+ */
+bool_t dofsck(fid_t fd, bool_t fix)
+{
+    // failsafe
+    if(fd==-1 || fsck.dev!=-1 || fsck.dev!=fd || fcb[fd].type!=FCB_TYPE_DEVICE || fcb[fd].device.storage!=DEVFCB)
+        return false;
+    // first call to dofsck?
+    if(fsck.dev==-1) {
+        fsck.dev=fd;
+        fsck.fix=fix;
+        fsck.fs=fsdrv_detect(fd);
+    }
+    if(fsck.fs!=-1 && fsck.fs<nfsdrv && fsdrv[fsck.fs].checkfs!=NULL) {
+        // continue the step that was interrupted
+        while(fsck.step<FSCKSTEP_DONE) {
+            if(!(*fsdrv[fsck.fs].checkfs)(fd))
+                return false;
+            fsck.step++;
+        }
+    }
+    // clear lock and reset step counter
+    fsck.dev=-1;
+    fsck.step=0;
+    return true;
+}

@@ -25,6 +25,7 @@
  * @brief Device File System. It's not a real fs
  */
 #include <osZ.h>
+#include "mtab.h"
 #include "devfs.h"
 #include "fsdrv.h"
 #include "fcb.h"
@@ -67,6 +68,44 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blks
 }
 
 /**
+ * remove a device
+ */
+void devfs_del(uint64_t idx)
+{
+    int i;
+    if(idx==-1 || idx>=ndev)
+        return;
+    // remove from mtab
+    for(i=0;i<nmtab;i++)
+        if(mtab[i].storage==dev[idx].fid) {
+            fcb_del(mtab[i].mountpoint);
+            nmtab--;
+            memcpy(&mtab[i], &mtab[i+1], (nmtab-i)*sizeof(mtab_t));
+            mtab=(mtab_t*)realloc(mtab, nmtab*sizeof(mtab_t));
+        }
+    // remove all files referenced on this device
+    for(i=0;i<nfcb;i++)
+        if(fcb[i].type<FCB_TYPE_PIPE && fcb[i].reg.storage==dev[idx].fid) {
+            fcb[i].nopen=0;
+            fcb_del(i);
+        }
+    // free all blocks
+    cache_freeblocks(dev[idx].fid);
+    // remove the device from file list
+    fcb[dev[idx].fid].nopen=0;
+    fcb_del(dev[idx].fid);
+    // remove from devfs
+    dev[idx].fid=-1;
+    i=ndev; while(i>0 && dev[i-1].fid==-1) i--;
+    if(i!=ndev) {
+        ndev=i;
+        dev=(devfs_t*)realloc(dev,ndev*sizeof(devfs_t));
+    }
+    // we don't remove taskctx with open files on the device, as they will
+    // automatically report feof() / ferror() on next operation
+}
+
+/**
  * initialize devfs
  */
 void devfs_init()
@@ -74,6 +113,12 @@ void devfs_init()
     fsdrv_t devdrv = {
         "devfs",
         "Device list",
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         NULL,
         NULL
     };
@@ -92,6 +137,8 @@ void devfs_dump()
     int i;
     dbg_printf("Devices %d:\n",ndev);
     for(i=0;i<ndev;i++) {
+        if(dev[i].fid==-1)
+            continue;
         dbg_printf("%3d. pid %02x dev %x mode %2x blk %d",
             i,dev[i].drivertask,dev[i].device,fcb[dev[i].fid].mode,fcb[dev[i].fid].device.blksize);
         dbg_printf(" size %d %d %s\n",fcb[dev[i].fid].device.filesize,dev[i].fid,fcb[dev[i].fid].abspath);

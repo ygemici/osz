@@ -27,11 +27,8 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
-#include "cache.h"
 #include "mtab.h"
 #include "devfs.h"
-#include "fsdrv.h"
-#include "fcb.h"
 #include "vfs.h"
 
 public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory
@@ -39,6 +36,7 @@ public uint64_t _initrd_size=0;     // initrd size in bytes
 public char *_fstab_ptr=NULL;       // pointer to /etc/fstab data
 public size_t _fstab_size=0;        // fstab size
 public uint32_t pathmax;            // maximum length of path
+public uint32_t cachelines;         // number of block cache lines
 uint8_t ackdelayed;
 
 /**
@@ -53,11 +51,13 @@ void _init(int argc, char **argv)
 
     // environment
     pathmax=env_num("pathmax",512,256,1024*1024);
+    cachelines=env_num("cachelines",16,16,65535);
 
     // initialize vfs structures
     mtab_init();    // registers "/" as first fcb
     devfs_init();   // registers "/dev/" as second fcb
     cache_init();
+    fsck.dev=-1;    // no locked device
 
     /*** endless loop ***/
     while(1) {
@@ -70,7 +70,7 @@ void _init(int argc, char **argv)
         // if it's a block ready message
         if(EVT_FUNC(msg->evt) == SYS_setblock) {
             // save it to block cache
-            cache_setblock(msg->ptr/*blk*/, msg->attr0/*fcbdev*/, msg->attr1/*offs*/);
+            cache_setblock(msg->ptr/*blk*/, msg->attr0/*fcbdev*/, msg->attr1/*offs*/,BLKPRIO_NOTDIRTY);
             // resume original message that caused it. Don't use taskctx_get here,
             // as that would always return a valid context
             ctx=taskctx[msg->arg4 & 0xFF]; if(ctx==NULL) continue;
@@ -78,6 +78,18 @@ void _init(int argc, char **argv)
             if(ctx==NULL || EVT_FUNC(ctx->msg.evt)==0) continue;
             // ok, msg->arg4 points to a pid with a valid context and with a suspended message
             msg = &ctx->msg;
+        } else
+        // if it's a block written out acknowledge
+        if(EVT_FUNC(msg->evt) == SYS_ackblock) {
+            // failsafe
+            if(msg->arg0==-1 || msg->arg0>=ndev) continue;
+            // increase number of blocks written out
+            dev[msg->arg0].out++;
+            if(dev[msg->arg0].out >= dev[msg->arg0].total)
+                dev[msg->arg0].out=dev[msg->arg0].total=0;
+            // notify UI to update progressbar
+            mq_send(SRV_UI, SYS_devprogress, dev[msg->arg0].fid, dev[msg->arg0].out, dev[msg->arg0].total);
+            continue;
         } else {
             // get task context and create it on demand
             ctx = taskctx_get(EVT_SENDER(msg->evt));
@@ -86,11 +98,28 @@ void _init(int argc, char **argv)
         }
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
+#if DEBUG
+            case SYS_dump:
+                taskctx_dump();
+                fsdrv_dump();
+                devfs_dump();
+                mtab_dump();
+                fcb_dump();
+                break;
+#endif
+
+            // task is exiting, clean up
+            case SYS_exit:
+                for(j=0;j<ctx->nopenfiles;j++)
+                    taskctx_close(ctx, j, false);
+                for(j=0;j<ndev;j++)
+                    if(dev[j].drivertask==ctx->pid)
+                        devfs_del(j);
+                continue;
+
             case SYS_mountfs:
 #if DEBUG
                 if(_debug&DBG_FS) {
-                    fsdrv_dump();
-                    devfs_dump();
                     dbg_printf("FS: mountfs()\n");
                 }
 #endif
@@ -142,6 +171,26 @@ void _init(int argc, char **argv)
                 if(_debug&DBG_FS)
                     mtab_dump();
 #endif
+                break;
+
+            case SYS_fsck:
+#if DEBUG
+                if(_debug&DBG_DEVICES)
+                    dbg_printf("FS: fsck(%s)\n",msg->ptr);
+#endif
+                ret=lookup(msg->ptr, false);
+                if(fsck.dev!=-1 && fsck.dev!=ret) {
+                    seterr(EAGAIN);
+                    ret=-1;
+                    break;
+                }
+                if(ret!=-1 && !errno()) {
+                    ret=dofsck(ret, msg->type) ? 0 : -1;
+                    if(!ret)
+                        break;
+                }
+                seterr(ENODEV);
+                ret=-1;
                 break;
 
             case SYS_mknod:
@@ -305,6 +354,7 @@ dostat:         if(ret!=-1 && !errno()) {
                         ret=taskctx_open(ctx,ret,msg->type,o,msg->attr0);
                     }
                 }
+//fcb_dump();
 //taskctx_dump();
                 break;
 

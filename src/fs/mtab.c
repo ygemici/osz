@@ -54,7 +54,7 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     }
     // get device fcb
     fd = fcb_get(dev);
-    if(fd == -1) {
+    if(fd == -1 || (fd!=DEVFCB && fcb[fd].type!=FCB_TYPE_DEVICE && fcb[fd].type!=FCB_TYPE_REG_FILE)) {
         seterr(ENODEV);
         return -1;
     }
@@ -96,7 +96,7 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     mtab[i].storage=fd;
     mtab[i].mountpoint=ff;
     mtab[i].fstype=fs;
-    fcb[fd].mode=O_RDWR;
+    fcb[ff].reg.fs=fs;
     fcb[fd].nopen++;
 
 //dbg_printf("dev '%s' file '%s' opts '%s' fs %d\n",dev,file,opts,fs);

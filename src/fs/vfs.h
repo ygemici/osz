@@ -26,6 +26,7 @@
  */
 
 #include <osZ.h>
+#include "cache.h"
 #include "fcb.h"
 #include "fsdrv.h"
 #include "taskctx.h"
@@ -47,6 +48,21 @@
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
+#define FSCKSTEP_SB     0
+#define FSCKSTEP_ALLOC  1
+#define FSCKSTEP_DIR    2
+#define FSCKSTEP_NLINK  3
+#define FSCKSTEP_DONE  4
+typedef struct {
+    fid_t dev;
+    uint8_t step;
+    bool_t fix;
+    uint16_t fs;
+} fsck_t;
+
+/* file system check state */
+extern fsck_t fsck;
+
 extern uint8_t ackdelayed;      // flag to indicate async block read
 extern char *lastlink;          // last symlink's target, filled in by fsdrv's stat()
 extern dirent_t dirent;         // buffer for readdir()
@@ -64,10 +80,12 @@ extern char *pathcat(char *path, char *filename);
 extern char *canonize(const char *path);
 extern uint8_t getver(char *abspath);
 extern fpos_t getoffs(char *abspath);
-extern void *readblock(fid_t idx, fpos_t offs);
+extern void *readblock(fid_t fd, blkcnt_t lsn);
+public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, size_t size, blkprio_t prio);
 /* wrappers around file system driver functions */
 extern fid_t lookup(char *abspath, bool_t creat);
 extern size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size);
 extern size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
 extern stat_t *statfs(fid_t idx);
 extern dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
+extern bool_t dofsck(fid_t fd, bool_t fix);

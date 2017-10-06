@@ -51,11 +51,13 @@ extern int errno();
 #define EBADFS      16  // Corrupt filesystem
 #define EROFS       17  // Read-only file system
 #define ENOSPC      18  // No space left on device
-#define EIO         19  // I/O error
-#define EPIPE       20  // Broken pipe
-#define ESPIPE      21  // Illegal seek
-#define ENOTSHM     22  // Not a shared memory buffer
-#define EBADF       23  // Bad file number
+#define ENOTSUP     19  // File type not supported by file system
+#define EIO         20  // I/O error
+#define EPIPE       21  // Broken pipe
+#define ESPIPE      22  // Illegal seek
+#define ENOTSHM     23  // Not a shared memory buffer
+#define EBADF       24  // Bad file number
+#define ENOTBIG     25  // Buffer not big enough
 
 /*
 #define EINTR        4  // Interrupted system call
