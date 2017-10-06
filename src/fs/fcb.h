@@ -87,7 +87,7 @@ extern fcb_t *fcb;
 extern fid_t fcb_get(char *abspath);
 extern fid_t fcb_add(char *abspath, uint8_t type);
 extern void fcb_del(fid_t idx);
-extern void fcb_unionlist_build(fid_t idx);
+extern fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s);
 
 #if DEBUG
 extern void fcb_dump();

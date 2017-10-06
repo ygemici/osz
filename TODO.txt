@@ -9,7 +9,7 @@
 ./src/drivers/fs/fsz/main.c:137:            // TODO: extents
 ./src/drivers/fs/fsz/main.c:224:    // TODO: if loc->creat, then create dir or path
 ./src/fs/cache.c:39:    // TODO: use dev[fcb[fd].device.inode].drivertask, dev[fcb[fd].device.inode].device
-./src/fs/fcb.c:174:                //TODO: read direnties from f, iterate on all subdirs with lookup((ptr+i)+d->d_name+(ptr+i+k+4));
+./src/fs/fcb.c:205:                //TODO: read direnties from f, iterate on all subdirs with lookup((ptr+i)+d->d_name+(ptr+i+k+4));
 ./src/core/x86_64/libk.S:220:// TODO: use SSE2 copy
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers

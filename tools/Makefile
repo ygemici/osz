@@ -69,29 +69,11 @@ endif
 	@./mkfs.o $(SYSFILE) union etc/ "/sys/etc/" "/usr/.../etc/"
 	@./mkfs.o $(SYSFILE) union lib/ "/sys/lib/" "/usr/.../lib/"
 else
-ifeq ($(INITRDFMT),fsz)
 	$(O)./mkfs.o $(INITRD) ../bin/initrd
 	@./mkfs.o $(INITRD) union bin/ "/sys/bin/" "/usr/.../bin/"
 	@./mkfs.o $(INITRD) union etc/ "/sys/etc/" "/usr/.../etc/"
 	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/.../lib/"
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
-else
-	@echo -e "uni:/sys/bin/\00/usr/.../bin/\00\00" >../bin/initrd/bin
-	@echo -e "uni:/sys/etc/\00/usr/.../etc/\00\00" >../bin/initrd/etc
-	@echo -e "uni:/sys/lib/\00/usr/.../lib/\00\00" >../bin/initrd/lib
-ifeq ($(INITRDFMT),crc)
-	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H crc -o 2>/dev/null | gzip > ../$(INITRD)
-endif
-ifeq ($(INITRDFMT),newc)
-	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H newc -o 2>/dev/null | gzip > ../$(INITRD)
-endif
-ifeq ($(INITRDFMT),hpodc)
-	$(O)cd ../bin/initrd && find . 2>/dev/null | cpio -H hpodc -o 2>/dev/null | gzip > ../$(INITRD)
-endif
-ifeq ($(INITRDFMT),tar)
-	$(O)cd ../bin/initrd && tar -czf ../$(INITRD) *
-endif
-endif
 	@#./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
 endif
 

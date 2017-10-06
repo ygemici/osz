@@ -33,7 +33,6 @@
 #include "devfs.h"
 #include "mtab.h"
 
-extern uint8_t ackdelayed;      // flag to indicate async block read
 extern uint32_t pathmax;        // max length of path
 extern uint64_t _initrd_ptr;    // /dev/root pointer and size
 extern uint64_t _initrd_size;

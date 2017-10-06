@@ -406,11 +406,35 @@ char *realpath (const char *path)
  */
 public fid_t opendir (const char *path)
 {
+    fid_t fd=-1;
+    void *buf=NULL;
+    msg_t *msg;
+    size_t s;
     if(path==NULL || path[0]==0) {
         seterr(EINVAL);
         return -1;
     }
-    msg_t *msg=mq_call(SRV_FS, SYS_opendir|MSG_PTRDATA, path, strlen(path)+1);
+    s=strlen(path+1);
+    // In case we encounter an union with joker, FS will ask to read
+    // the directory list for it and call opendir again. This is because
+    // the directory entry buffer must be on the user side, where disk
+    // blocks data are concatenated in order. Wouldn't be a problem if
+    // directory entries couldn't cross block borders.
+again:
+    msg=mq_call(SRV_FS, SYS_opendir|MSG_PTRDATA, path, s, fd);
+    if(msg->arg3>0) {
+        buf=malloc(msg->arg3);
+        if(buf==NULL)
+            return -1;
+        fd=msg->arg0;
+        s=msg->arg3;
+        path=buf;
+        mq_call(SRV_FS, SYS_fread, buf, s, fd);
+        if(!errno())
+            goto again;
+    }
+    if(buf)
+        free(buf);
     if(errno())
         return -1;
     return msg->arg0;

@@ -47,7 +47,10 @@
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
-extern char *lastlink;
+extern uint8_t ackdelayed;      // flag to indicate async block read
+extern char *lastlink;          // last symlink's target, filled in by fsdrv's stat()
+extern dirent_t dirent;         // buffer for readdir()
+extern uint32_t pathmax;        // maximum length of path
 
 typedef struct {
     ino_t inode;

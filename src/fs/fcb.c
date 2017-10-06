@@ -26,12 +26,9 @@
  */
 
 #include <osZ.h>
-#include "fcb.h"
 #include "vfs.h"
-#include "fsdrv.h"
 
 extern uint8_t ackdelayed;      // flag to indicate async block read
-extern fid_t lookup(char *abspath, bool_t creat);
 
 public uint64_t nfcb = 0;
 public uint64_t nfiles = 0;
@@ -101,14 +98,19 @@ fid_t fcb_add(char *abspath, uint8_t type)
  */
 void fcb_del(fid_t idx)
 {
+    int i;
     // failsafe
     if(idx>=nfcb || fcb[idx].abspath==NULL)
         return;
     // decrease link counter
-    fcb[idx].nopen--;
+    if(fcb[idx].nopen>0)
+        fcb[idx].nopen--;
     // remove if reached zero
     if(fcb[idx].nopen==0) {
         if(fcb[idx].type==FCB_TYPE_UNION && fcb[idx].uni.unionlist!=NULL) {
+            for(i=0;fcb[idx].uni.unionlist[i]!=0;i++)
+                if(idx!=fcb[idx].uni.unionlist[i])
+                    fcb_del(fcb[idx].uni.unionlist[i]);
             free(fcb[idx].uni.unionlist);
             fcb[idx].uni.unionlist=NULL;
         }
@@ -126,29 +128,42 @@ void fcb_del(fid_t idx)
 }
 
 /**
+ * add a fid_t to a fid_t list if it's not already in the list
+ */
+size_t fcb_unionlist_add(fid_t **fl,fid_t f,size_t n)
+{
+    int i;
+    if(f!=-1) {
+        for(i=0;i<n;i++)
+            if((*fl)[i]==f)
+                return n;
+        *fl=(fid_t*)realloc(*fl,++n*sizeof(fid_t));
+        if(*fl==NULL) return 0;
+        (*fl)[n-2]=f;
+    }
+    return n;
+}
+
+/**
  * build a list of fids for union
  */
-void fcb_unionlist_build(fid_t idx)
+fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
 {
     int i,j,k,l,n;
     uint64_t bs;
-    char *ptr;
+    char *ptr,*fn;
     fid_t f,*fl=NULL;
     // failsafe
-#if DEBUG
-dbg_printf("fcb_unionlist_build %d\n",idx);
-#endif
     if(idx>=nfcb || fcb[idx].abspath==NULL || fcb[idx].type!=FCB_TYPE_UNION || 
       fcb[idx].uni.fs==-1 ||fcb[idx].uni.fs>=nfsdrv)
-        return;
-//    if(fcb[idx].uni.unionlist!=NULL)
-//        free(fcb[idx].uni.unionlist);
+        return -1;
+//dbg_printf("fcb_unionlist_build(%d,%x,%d)\n",idx,buf,s);
     bs=fcb[fcb[idx].uni.storage].device.blksize;
     // call file system driver
     ptr=(*fsdrv[fcb[idx].uni.fs].read)(fcb[idx].uni.storage, fcb[idx].uni.inode, 0, &bs);
     // ptr should not be NULL, as union data inlined in inode and inode is in the cache already
     if(ptr==NULL || ptr[0]==0 || ackdelayed)
-        return;
+        return -1;
     n=1;
     for(i=0;i<bs;i++){
         l=strlen(ptr+i);
@@ -163,36 +178,51 @@ dbg_printf("fcb_unionlist_build %d\n",idx);
         }
         // if union member has joker
         if(k!=-1) {
-            ptr[i+k]=0;
-#if DEBUG
-dbg_printf("  unionlist joker '%s' '%s'\n",ptr+i,ptr+i+k+4);
-#endif
-            f=lookup(ptr+i,false);
-            ptr[i+k]='.';
-            if(ackdelayed) return;
-            if(f!=-1) {
+            fn=strndup(ptr+i,k+1);
+            if(fn==NULL) return -1;
+            f=lookup(fn,false);
+//dbg_printf("  unionlist '%s'...'%s' %d buf=%x s=%d\n",fn,ptr+i+k+4,f,buf,s);
+            if(ackdelayed) { free(fn); return -1; }
+            if(f!=-1 && fcb[f].reg.fs!=-1 && fcb[f].reg.fs<nfsdrv) {
+                if(buf==NULL) return f;
+                j=0; l=1;
+                fn=realloc(fn,pathmax);
+                if(fn==NULL) continue;
+                while(j<s && l!=0) {
+                    fn[k]=0;
+                    memset(&dirent.d_name,0,FILENAME_MAX);
+                    l=(*fsdrv[fcb[f].reg.fs].getdirent)(buf+j, j, &dirent);
+                    if(dirent.d_name[0]!=0 && dirent.d_name[strlen(dirent.d_name)-1]=='/') {
+                        pathcat(fn,dirent.d_name);
+                        pathcat(fn,ptr+i+k+4);
+                        f=lookup(fn,false);
+//dbg_printf("  unionlist '%s' %d\n",fn,f);
+                        n=fcb_unionlist_add(&fl,f,n);
+                        if(!n) return -1;
+                    }
+                    j+=l;
+                }
                 //TODO: read direnties from f, iterate on all subdirs with lookup((ptr+i)+d->d_name+(ptr+i+k+4));
                 //if lookup!=-1, add to fl
             }
+            free(fn);
         } else {
             f=lookup(ptr+i,false);
-#if DEBUG
-dbg_printf("  unionlist '%s' %d\n",ptr+i,f);
-#endif
-            if(ackdelayed) return;
-            if(f!=-1) {
-                fl=(fid_t*)realloc(fcb[idx].uni.unionlist,++n*sizeof(fid_t));
-                if(fl==NULL) return;
-                fl[n-2]=f;
-            }
+//dbg_printf("  unionlist '%s' %d\n",ptr+i,f);
+            if(ackdelayed) return -1;
+            n=fcb_unionlist_add(&fl,f,n);
+            if(!n) return -1;
         }
         i+=l;
     }
+    // okay, we are finished, we won't repeatedly call fcb_unionlist_build
+    // again so it's safe to increase the open count on list fids.
+    if(fl!=NULL && n>1)
+        for(i=0;i<n;i++)
+            fcb[fl[i]].nopen++;
     fcb[idx].uni.unionlist=fl;
-#if DEBUG
-    fcb_dump();
-#endif
-    return;
+//    fcb_dump();
+    return -1;
 }
 
 #if DEBUG

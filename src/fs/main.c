@@ -386,7 +386,7 @@ dostat:         if(ret!=-1 && !errno()) {
 
             case SYS_dup:
 //dbg_printf("fs dup(%d)\n",msg->arg0);
-                if(!taskctx_validfid(ctx,msg->arg0) || fcb[ctx->openfiles[msg->arg0].fid].type==FCB_TYPE_REG_DIR) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
@@ -398,7 +398,7 @@ dostat:         if(ret!=-1 && !errno()) {
 
             case SYS_dup2:
 //dbg_printf("fs dup2(%d,%d)\n",msg->arg0,msg->arg1);
-                if(!taskctx_validfid(ctx,msg->arg0) || fcb[ctx->openfiles[msg->arg0].fid].type==FCB_TYPE_REG_DIR) {
+                if(!taskctx_validfid(ctx,msg->arg0)) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
@@ -456,18 +456,50 @@ dostat:         if(ret!=-1 && !errno()) {
                 break;
 
             case SYS_opendir:
-                ret=lookup(msg->ptr, false);
-//dbg_printf("fs opendir(%s) ret %d errno %d\n", msg->ptr, ret, errno());
+                if(msg->type==-1) {
+//dbg_printf("fs opendir(%s,%d)\n", msg->ptr,msg->type);
+                    ret=lookup(msg->ptr, false);
+                } else {
+//dbg_printf("fs opendir(%x[%d],%d)\n", msg->ptr,msg->size,msg->type);
+                    if(!taskctx_validfid(ctx,msg->type)) {
+                        seterr(EBADF);
+                        ret=-1;
+                        break;
+                    }
+                    ret=ctx->openfiles[msg->type].unionidx;
+                    ctx->openfiles[msg->type].unionidx=0;
+                }
                 if(ret!=-1 && !errno()) {
                     if(fcb[ret].type!=FCB_TYPE_REG_DIR && fcb[ret].type!=FCB_TYPE_UNION) {
                         seterr(ENOTDIR);
                         ret=-1;
                     } else {
+                        j=-1;
                         if(fcb[ret].type==FCB_TYPE_UNION) {
-                            fcb_unionlist_build(ret);
+                            j=fcb_unionlist_build(ret, (void*)(msg->type==-1?NULL:msg->ptr), msg->size);
                             if(ackdelayed) break;
+                            if(j!=-1) {
+                                k=ret;
+                                ret=taskctx_open(ctx,j,O_RDONLY,0,msg->type);
+                                if(ret==-1)
+                                    break;
+                                ctx->openfiles[ret].unionidx=k;
+                                ptr=statfs(j);
+                                if(ptr==NULL || ((stat_t*)ptr)->st_size==0)
+                                    taskctx_close(ctx, ret, true);
+                                else {
+                                    mq_send(EVT_SENDER(msg->evt), SYS_ack, ret, EVT_FUNC(msg->evt), 
+                                        msg->serial, ((stat_t*)ptr)->st_size);
+                                    ctx->msg.evt = 0;
+                                    continue;
+                                }
+                            }
                         }
-                        ret=taskctx_open(ctx,ret,O_RDONLY,0,-1);
+                        if(msg->type!=-1) {
+                            taskctx_close(ctx, msg->type, true);
+//dbg_printf("opening an union at %d\n",ret);fcb_dump();
+                        }
+                        ret=taskctx_open(ctx,ret,O_RDONLY,0,msg->type);
                         if(ret!=-1) {
                             ctx->openfiles[ret].mode|=OF_MODE_READDIR;
                         }
@@ -503,7 +535,7 @@ dostat:         if(ret!=-1 && !errno()) {
             // send result back to caller
             j = errno();
             mq_send(EVT_SENDER(msg->evt), j?SYS_nack:SYS_ack, j?j/*errno*/:ret/*return value*/,
-                EVT_FUNC(msg->evt), msg->serial);
+                EVT_FUNC(msg->evt), msg->serial, false);
             // clear delayed message buffer
             ctx->msg.evt = 0;
         } else {
