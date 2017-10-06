@@ -10,7 +10,12 @@ Either because I have used an unlimited algorithm or because the limit is boot t
 Errno
 -----
 
-In OS/Z's libc, `errno()` is a function and not a global variable. You can set it with `seterr(errno)`.
+In OS/Z's libc, `errno()` is a function and not a global variable. You can set it with `seterr(errno)`. Because
+the system was designed to be limitless as possible, a lot of errno values are meaningless and therefore non-existent
+in OS/Z. Like ENFILE (File table overflow) or EMFILE (Too many open files). Using [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) you'll
+never see EFBIG (File too large) or EMLINK (Too many links) errors either.
+
+It has also new values, like ENOTUNI (Not an union) or ENOTSHM (Not a shared memory buffer).
 
 Paths
 -----
