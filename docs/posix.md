@@ -15,7 +15,7 @@ the system was designed to be limitless as possible, a lot of errno values are m
 in OS/Z. Like ENFILE (File table overflow) or EMFILE (Too many open files). Using [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) you'll
 never see EFBIG (File too large) or EMLINK (Too many links) errors either.
 
-It has also new values, like ENOTUNI (Not an union) or ENOTSHM (Not a shared memory buffer).
+It also has [new values](https://github.com/bztsrc/osz/blob/master/etc/include/errno.h), like ENOTUNI (Not an union) or ENOTSHM (Not a shared memory buffer).
 
 Paths
 -----
