@@ -30,6 +30,7 @@
 #ifndef _FSDRV_H_
 #define _FSDRV_H_ 1
 
+/* state of locating a file */
 typedef struct {
     fid_t inode;
     fpos_t filesize;
@@ -39,17 +40,18 @@ typedef struct {
     bool_t creat;
 } locate_t;
 
+/* file system driver structure */
 typedef struct {
-    const char *name;
-    const char *desc;
-    bool_t (*detect)(fid_t fd, void *blk);
-    uint8_t (*locate)(fid_t fd, ino_t parent, locate_t *loc);
-    void (*resizefs)(fid_t fd);
-    bool_t (*checkfs)(fid_t fd);
-    bool_t (*stat)(fid_t fd, ino_t file, stat_t *st);
-    void* (*read)(fid_t fd, ino_t file, fpos_t offs, size_t *s);
-    void* (*write)(fid_t fd, ino_t file, fpos_t offs, size_t *s);
-    size_t (*getdirent)(void *buf, fpos_t offs, dirent_t *dirent);
+    const char *name;                                                               // unix name of the file system
+    const char *desc;                                                               // human readable name
+    bool_t  (*detect)   (fid_t fd, void *blk);                                      // check magic in block
+    uint8_t (*locate)   (fid_t fd, ino_t parent, locate_t *loc);                    // locate a path in file system
+    void    (*resizefs) (fid_t fd);                                                 // resize the file system
+    bool_t  (*checkfs)  (fid_t fd);                                                 // check fs consistency
+    bool_t  (*stat)     (fid_t fd, ino_t file, stat_t *st);                         // return stat structure
+    void*   (*read)     (fid_t fd, ino_t file, fpos_t offs, size_t *s);             // read from a file
+    bool_t  (*write)    (fid_t fd, ino_t file, fpos_t offs, void *blk, size_t *s);  // write to a file
+    size_t  (*getdirent)(void *buf, fpos_t offs, dirent_t *dirent);                 // parse directory entry to dirent
 } fsdrv_t;
 
 /* filesystem parsers */

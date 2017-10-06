@@ -56,9 +56,9 @@ void dumpdirent(dirent_t *de)
 void fs_test()
 {
     fid_t f;
-    f=fopen("/etc/valami/megint",O_CREAT);
+    f=fopen("/sys/etc/valami/megint",O_CREAT);
     dbg_printf("fopen ret %d errno %d %s\n", f, errno(), strerror(errno()));
-
+/*
     dirent_t *de;
     f=mount("/dev/valami", "/etc", NULL);
     dbg_printf("mount ret %d errno %d\n", f, errno());
@@ -117,5 +117,6 @@ void fs_test()
 
     mq_call(SRV_FS, SYS_dump);
     mq_send(SRV_FS, SYS_exit);
+*/
     mq_call(SRV_FS, SYS_dump);
 }

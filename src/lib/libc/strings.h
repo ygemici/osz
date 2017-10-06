@@ -1,7 +1,7 @@
 /*
  * lib/libc/strings.h
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -41,6 +41,8 @@ char *errstrs[] = { ""/*Success*/,
     "ENODEV No such device",
     "ENOTDIR Not a directory",
     "EISDIR Is a directory",
+    "ENOTUNI Not an union",
+    "EISUNI Is an union",
     "ENOFS Unknown file system",
     "EBADFS Corrupt file system",
     "EROFS Read-only file system",

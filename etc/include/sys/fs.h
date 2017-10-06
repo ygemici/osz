@@ -32,7 +32,7 @@
 #define SYS_mountfs     ( 6)
 #define SYS_mount       ( 7)
 #define SYS_umount      ( 8)
-#define SYS_fsck        ( 9) //
+#define SYS_fsck        ( 9)
 // file operations
 #define SYS_mknod       (10)
 #define SYS_ioctl       (11)

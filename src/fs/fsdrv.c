@@ -50,8 +50,9 @@ public uint16_t fsdrv_reg(const fsdrv_t *fs)
     if(!isdevfs && (fs->detect==NULL || fs->locate==NULL))
         return -1;
     fsdrv=(fsdrv_t*)realloc(fsdrv,++nfsdrv*sizeof(fsdrv_t));
+    // abort if we cannot allocate file system drivers
     if(fsdrv==NULL || errno())
-        abort();
+        exit(2);
     memcpy((void*)&fsdrv[nfsdrv-1], (void*)fs, sizeof(fsdrv_t));
     // record devfs index
     if(devfsidx==(uint16_t)-1 && isdevfs)
@@ -100,15 +101,19 @@ void fsdrv_dump()
     dbg_printf("File system drivers %d:\n",nfsdrv);
     for(i=0;i<nfsdrv;i++) {
         dbg_printf("%3d. '%s' %s %x:",i,fsdrv[i].name,fsdrv[i].desc,fsdrv[i].detect);
-        if(fsdrv[i].detect) dbg_printf(" detect");
-        if(fsdrv[i].locate) dbg_printf(" locate");
-        if(fsdrv[i].resizefs) dbg_printf(" resizefs");
-        if(fsdrv[i].checkfs) dbg_printf(" checkfs");
-        if(fsdrv[i].stat) dbg_printf(" stat");
-        if(fsdrv[i].read) dbg_printf(" read");
-        if(fsdrv[i].write) dbg_printf(" write");
-        if(fsdrv[i].getdirent) dbg_printf(" getdirent");
-        dbg_printf("\n");
+        if(i==devfsidx) {
+            dbg_printf(" (built-in)\n");
+        } else {
+            if(fsdrv[i].detect) dbg_printf(" detect");
+            if(fsdrv[i].locate) dbg_printf(" locate");
+            if(fsdrv[i].resizefs) dbg_printf(" resizefs");
+            if(fsdrv[i].checkfs) dbg_printf(" checkfs");
+            if(fsdrv[i].stat) dbg_printf(" stat");
+            if(fsdrv[i].read) dbg_printf(" read");
+            if(fsdrv[i].write) dbg_printf(" write");
+            if(fsdrv[i].getdirent) dbg_printf(" getdirent");
+            dbg_printf("\n");
+        }
     }
 }
 #endif

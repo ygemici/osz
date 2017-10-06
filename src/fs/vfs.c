@@ -239,7 +239,7 @@ public fpos_t getoffs(char *abspath)
 }
 
 /**
- * read a block from an fcb entry, offs is a LSN
+ * read a block from an fcb entry (allowed when device is blocked)
  */
 public void *readblock(fid_t fd, blkcnt_t lsn)
 {
@@ -247,7 +247,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
     void *blk=NULL;
     size_t bs;
     // failsafe
-    if(fd==-1 || fd>=nfcb || lsn==-1 || fsck.dev==fd)
+    if(fd==-1 || fd>=nfcb || lsn==-1)
         return NULL;
 #if DEBUG
     if(_debug&DBG_BLKIO)
@@ -257,9 +257,17 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
         case FCB_TYPE_REG_FILE:
             // reading a block from a regular file
             if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv ||
-              fsdrv[fcb[fd].reg.fs].read==NULL)
+              fsdrv[fcb[fd].reg.fs].read==NULL) {
+                seterr(EINVAL);
                 return NULL;
+            }
+            devfs_used(fcb[fcb[fd].reg.storage].device.inode);
             bs=fcb[fcb[fd].reg.storage].device.blksize;
+            // valid address?
+            if((lsn+1)*bs>fcb[fd].reg.filesize) {
+                seterr(EFAULT);
+                return NULL;
+            }
             // call file system driver to read block
             blk=(*fsdrv[fcb[fd].reg.fs].read)(fcb[fd].reg.storage, fcb[fd].reg.inode, lsn*bs, &bs);
             // skip if block is not in cache or eof
@@ -270,30 +278,34 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
                 return zeroblk;
             }
             return blk;
-            break;
 
         case FCB_TYPE_DEVICE:
             // reading a block from a device file
             if(fcb[fd].device.inode<ndev) {
                 device=&dev[fcb[fd].device.inode];
+                devfs_used(fcb[fd].device.inode);
+                bs=fcb[fd].device.blksize;
                 // in memory device?
                 if(device->drivertask==MEMFS_MAJOR) {
                     switch(device->device) {
+                        // lsn does not matter for these
                         case MEMFS_NULL:
                             return NULL;
                         case MEMFS_ZERO:
-                            zeroblk=(void*)realloc(zeroblk, fcb[fd].device.blksize);
+                            zeroblk=(void*)realloc(zeroblk, bs);
                             return zeroblk;
                         case MEMFS_RANDOM:
-                            rndblk=(void*)realloc(rndblk, fcb[fd].device.blksize);
+                            rndblk=(void*)realloc(rndblk, bs);
                             if(rndblk!=NULL)
-                                getentropy(rndblk, fcb[fd].device.blksize);
+                                getentropy(rndblk, bs);
                             return rndblk;
                         case MEMFS_RAMDISK:
-                            if((lsn+1)*fcb[fd].device.blksize>_initrd_size) {
+                            // valid address?
+                            if((lsn+1)*bs>fcb[fd].device.filesize) {
+                                seterr(EFAULT);
                                 return NULL;
                             }
-                            return (void *)(_initrd_ptr + lsn*fcb[fd].device.blksize);
+                            return (void *)(_initrd_ptr + lsn*bs);
                         default:
                             // should never reach this
                             seterr(ENODEV);
@@ -301,19 +313,15 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
                     }
                 }
                 // real device, use block cache
-                if((lsn+1)*fcb[fd].device.blksize>fcb[fd].device.filesize) {
+                if((lsn+1)*bs>fcb[fd].device.filesize) {
+                    seterr(EFAULT);
                     return NULL;
                 }
                 seterr(SUCCESS);
                 blk=cache_getblock(fd, lsn);
-                if(blk==NULL && errno()==EAGAIN) {
-                    // block not found in cache. Send a message to a driver
-                    mq_send(device->drivertask, DRV_read, device->device, lsn, fcb[fd].device.blksize,
-                        ctx->pid, fcb[fd].device.inode);
-                    // delay ack message to the original caller
-                    ackdelayed = true;
-                }
+                break;
             }
+            seterr(ENODEV);
             break;
 
         default:
@@ -325,11 +333,83 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
 }
 
 /**
- * write a block to a device with given priority
+ * write a block to a device with given priority (allowed when device is blocked)
  */
-public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, size_t size, blkprio_t prio)
+public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio)
 {
-    return true;
+    devfs_t *device;
+    size_t bs;
+    if(fd==-1 || fd>=nfcb || lsn==-1)
+        return false;
+#if DEBUG
+    if(_debug&DBG_BLKIO)
+        dbg_printf("FS: writeblock(fd %d, sector %d, buf %x, prio %d)\n",fd,lsn,blk,prio);
+#endif
+    switch(fcb[fd].type) {
+        case FCB_TYPE_REG_FILE:
+            // writing a block to a regular file
+            if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv ||
+              fsdrv[fcb[fd].reg.fs].write==NULL) {
+                seterr(EINVAL);
+                return false;
+            }
+            devfs_used(fcb[fcb[fd].reg.storage].device.inode);
+            bs=fcb[fcb[fd].reg.storage].device.blksize;
+            // valid address?
+            if((lsn+1)*bs>fcb[fd].reg.filesize) {
+                seterr(EFAULT);
+                return false;
+            }
+            // call file system driver to write block
+            return (*fsdrv[fcb[fd].reg.fs].write)(fcb[fd].reg.storage, fcb[fd].reg.inode, lsn*bs, blk, &bs);
+
+        case FCB_TYPE_DEVICE:
+            // writing a block to a device file
+            if(fcb[fd].device.inode<ndev) {
+                device=&dev[fcb[fd].device.inode];
+                devfs_used(fcb[fd].device.inode);
+                bs=fcb[fd].device.blksize;
+                // in memory device?
+                if(device->drivertask==MEMFS_MAJOR) {
+                    switch(device->device) {
+                        case MEMFS_NULL:
+                            return true;
+                        case MEMFS_RAMDISK:
+                            // valid address?
+                            if((lsn+1)*bs>fcb[fd].device.filesize) {
+                                seterr(EFAULT);
+                                return false;
+                            }
+                            // if it's in place, just return
+                            if(blk==(void *)(_initrd_ptr + lsn*bs))
+                                return true;
+                            // copy the block
+                            memcpy((void *)(_initrd_ptr + lsn*bs), blk, bs);
+                            return true;
+
+                        default:
+                            seterr(EACCES);
+                            return false;
+                    }
+                }
+                // real device, use block cache
+                if((lsn+1)*bs>fcb[fd].device.filesize) {
+                    seterr(EFAULT);
+                    return false;
+                }
+                seterr(SUCCESS);
+                cache_setblock(fd, lsn, blk, prio);
+                return true;
+            }
+            seterr(ENODEV);
+            break;
+
+        default:
+            // invalid request
+            seterr(EPERM);
+            break;
+    }
+    return false;
 }
 
 /**
@@ -339,11 +419,11 @@ fid_t lookup(char *path, bool_t creat)
 {
     locate_t loc;
     char *abspath,*tmp=NULL, *c;
-    fid_t f,fd,ff;
+    fid_t f,fd,ff,re=0;
     int16_t fs;
     int i,j,l,k;
 again:
-//dbg_printf("lookup '%s' creat %d\n",path,creat);
+dbg_printf("lookup '%s' creat %d\n",path,creat);
     if(tmp!=NULL) {
         free(tmp);
         tmp=NULL;
@@ -454,8 +534,10 @@ again:
                 seterr(EBADFS);
                 break;
             case UPDIR:
+                // TODO: handle up directory
                 break;
             case FILEINPATH:
+                // TODO: detect file system in image
                 break;
             case SYMINPATH:
 //dbg_printf("SYMLINK %s %s\n",loc.fileblk,loc.path);
@@ -481,6 +563,11 @@ again:
                 // iterate on union members
                 c=(char*)loc.fileblk;
                 while(f==-1 && *c!=0 && (c-(char*)loc.fileblk)<__PAGESIZE-1024) {
+                    // no unions on file creation
+                    if(creat) {
+                        seterr(EISUNI);
+                        break;
+                    }
 //dbg_printf("UNION %s %s\n",c,loc.path);
                     // unions must be absolute paths
                     if(*c!='/') {
@@ -495,6 +582,26 @@ again:
                     free(tmp);
                     c+=strlen(c)+1;
                 }
+                break;
+            
+            case NOSPACE:
+#if DEBUG
+                if(_debug&DBG_FS)
+                    dbg_printf("No space left on device %s (fcb %d)\n", fcb[fd].abspath,fd);
+#endif
+                // handle initrd a bit differently. Allocate extra memory to it and retry,
+                // but only if resizefs() hasn't failed earlier for any reason
+                if(fcb[fd].type==FCB_TYPE_DEVICE && dev[fcb[fd].device.inode].drivertask==MEMFS_MAJOR && 
+                    dev[fcb[fd].device.inode].device==MEMFS_RAMDISK && fsdrv[fs].resizefs!=NULL && re!=loc.inode &&
+                    mmap((void*)(_initrd_ptr+fcb[fd].device.filesize), __PAGESIZE,
+                        MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS)!=MAP_FAILED) {
+                            fcb[fd].device.filesize += __PAGESIZE;
+                            free(abspath);
+                            (*fsdrv[fs].resizefs)(fd);
+                            re=loc.inode;
+                            goto again;
+                }
+                seterr(ENOSPC);
                 break;
         }
     }
@@ -593,6 +700,7 @@ size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     // input checks
     if(!taskctx_validfid(tc,idx))
         return 0;
+    cache_currfid=tc->openfiles[idx].fid;
     fc=&fcb[tc->openfiles[idx].fid];
     switch(fc->type) {
         case FCB_TYPE_PIPE:

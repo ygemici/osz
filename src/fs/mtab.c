@@ -148,7 +148,7 @@ void mtab_fstab(char *ptr, size_t size)
     char *fstab = (char*)malloc(size);
     // create a copy 'cos we are going to convert strings to asciiz in it
     if(!fstab || errno())
-        abort();
+        exit(2);
     memcpy(fstab,ptr,size);
     end=fstab+size;
     // make sure we call mtab_add in order

@@ -33,6 +33,7 @@
 #define MAXINDIRECT 8
 
 void resizefs(fid_t fd);
+uint64_t allocateblock(fid_t fd);
 
 /**
  * check magic to detect file system
@@ -59,7 +60,7 @@ bool_t detect(fid_t fd, void *blk)
 uint8_t locate(fid_t fd, ino_t parent, locate_t *loc)
 {
     // failsafe
-    if(loc==NULL || loc->path==NULL || fd>=nfcb || fcb[fd].abspath==NULL)
+    if(loc==NULL || loc->path==NULL || fd==-1 || fd>=nfcb || fcb[fd].abspath==NULL)
         return NOTFOUND;
     // get superblock
     FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd, 0);
@@ -226,6 +227,10 @@ nextdir:
     // TODO: if loc->creat, then create dir or path
     if(loc->creat) {
 dbg_printf("locate create inode lsn %d '%s'\n",lsn,loc->path);
+        loc->inode=lsn;
+        i=allocateblock(fd);
+        if(i==-1)
+            return NOSPACE;
     }
     return NOTFOUND;
 }
@@ -235,9 +240,11 @@ dbg_printf("locate create inode lsn %d '%s'\n",lsn,loc->path);
  */
 void resizefs(fid_t fd)
 {
-//    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
-//    dbg_printf("FS/Z resizefs, currently %d should be %d\n",
-//      sb->numsec, fcb[fd].device.filesize/fcb[fd].device.blksize);
+    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
+    dbg_printf("FS/Z resizefs, currently %d should be %d\n",
+      sb->numsec, fcb[fd].device.filesize/fcb[fd].device.blksize);
+    sb->numsec=fcb[fd].device.filesize/fcb[fd].device.blksize;
+    writeblock(fd, 0, (void*)sb, BLKPRIO_CRIT);
 }
 
 /**
@@ -391,6 +398,19 @@ size_t getdirent(void *buf, fpos_t offs, dirent_t *dirent)
     memcpy(&dirent->d_name, ent->name, strlen((char*)ent->name));
     s+=sizeof(FSZ_DirEnt);
     return s;
+}
+
+uint64_t allocateblock(fid_t fd)
+{
+    uint64_t i=-1;
+    FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
+    // do we have free segments map?
+    if(sb->freesecfid==0) {
+    }
+    // do we have free space at the end?
+    if(i==-1 && sb->freesec<sb->numsec) {
+    }
+    return i;
 }
 
 void _init()

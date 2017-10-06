@@ -36,28 +36,31 @@ typedef struct {
     mode_t mode;
     fpos_t offs;
     uint32_t unionidx;
+    uint32_t trid;
 } openfiles_t;
 
 /* task context for file system operations */
 typedef struct {
-    pid_t pid;
-    fid_t rootdir;
-    fid_t workdir;
-    size_t workoffs;
-    size_t workleft;
-    uint64_t nopenfiles;
-    uint64_t nfiles;
-    openfiles_t *openfiles;
-    msg_t msg;
-    uint16_t fs;
-    void *next;
+    pid_t pid;              // task id
+    fid_t rootdir;          // root directory fcb
+    fid_t workdir;          // working directory fcb
+    size_t workoffs;        // block aligned offset during read / write
+    size_t workleft;        // bytes left during read / write
+    uint64_t nopenfiles;    // number of open files array
+    uint64_t nfiles;        // real number of open files
+    openfiles_t *openfiles; // open files array
+    msg_t msg;              // suspended message for task
+    void *next;             // next task context
 } taskctx_t;
 
+/* task contexts */
 extern uint64_t ntaskctx;
 extern taskctx_t *taskctx[];
 
+/* current context */
 extern taskctx_t *ctx;
 
+/* task context functions */
 extern taskctx_t *taskctx_get(pid_t pid);
 extern void taskctx_del(pid_t pid);
 extern void taskctx_rootdir(taskctx_t *tc, fid_t fid);

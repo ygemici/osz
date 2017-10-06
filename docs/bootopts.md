@@ -31,6 +31,7 @@ Boot Parameters
 | sound     | true     | boolean | core | disable sound service |
 | pathmax   | 512      | number  | fs   | Maximum length of path, minimum 256 |
 | cachelines | 16      | number  | fs   | Number of block cache lines, minimum 16 |
+| cachelimit | 5       | percentage | fs | Flush and free up block cache if free RAM drops below this limit, 1%-50% |
 | fps       | 10       | number  | ui   | requested frame rate |
 | keymap    | en_us    | string  | ui   | keyboard layout, see [etc/kbd](https://github.com/bztsrc/osz/blob/master/etc/sys/etc/kbd) |
 | lefthanded | false   | boolean | ui   | swap pointers |
@@ -64,7 +65,8 @@ This can be a numeric value, or a comma separated list of flags, see [debug.h](h
 | 4096  | ma   | DBG_MALLOC | debug [libc memory allocation](https://github.com/bztsrc/osz/blob/master/src/lib/libc/bztalloc.c) |
 | 8192  | bl   | DBG_BLKIO | debug [block level I/O](https://github.com/bztsrc/osz/blob/master/src/fs/vfs.c) |
 | 16384 | fs   | DBG_FS | debug [file systems](https://github.com/bztsrc/osz/blob/master/src/fs/main.c) |
-| 32768 | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
+| 32768 | ca   | DBG_CACHE | debug [block cache](https://github.com/bztsrc/osz/blob/master/src/fs/cache.c) |
+| 65536 | te   | DBG_TESTS | run [tests](https://github.com/bztsrc/osz/blob/master/src/test) instead of [init](https://github.com/bztsrc/osz/blob/master/src/init) task |
 
 Most of these only available when compiled with [DEBUG = 1](https://github.com/bztsrc/osz/blob/master/Config). Normally you can only use two to troubleshoot boot: DBG_DEVICES and DBG_LOG.
 
@@ -73,9 +75,9 @@ Display
 
 A numeric value or exactly one flag.
 
-| Value | Flag | Define | Description |
-| ----: | ---- | ------ | ----------- |
-| 0     | mc   | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32xRGB0 color pixels |
+| Value | Flag  | Define | Description |
+| ----: | ----  | ------ | ----------- |
+| 0     | mc    | DSP_MONO_COLOR | a simple 2D pixelbuffer with 32xRGB0 color pixels |
 | 1     | sm,an | DSP_STEREO_MONO | two 2D pixelbuffers*, they are converted grayscale and a red-cyan filtering applied, anaglyph |
 | 2     | sc,re | DSP_STEREO_COLOR | two 2D pixelbuffers*, the way of combining left and right eye's view is 100% driver specific, real 3D |
 

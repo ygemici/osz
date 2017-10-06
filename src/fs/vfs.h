@@ -45,6 +45,7 @@
 #define FILEINPATH  5   // file image referenced as directory
 #define SYMINPATH   6   // symlink in path
 #define UNIONINPATH 7   // union in path
+#define NOSPACE     8   // no space left on device
 
 #define PATHEND(a) (a==';' || a=='#' || a==0)
 
@@ -81,7 +82,7 @@ extern char *canonize(const char *path);
 extern uint8_t getver(char *abspath);
 extern fpos_t getoffs(char *abspath);
 extern void *readblock(fid_t fd, blkcnt_t lsn);
-public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, size_t size, blkprio_t prio);
+public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio);
 /* wrappers around file system driver functions */
 extern fid_t lookup(char *abspath, bool_t creat);
 extern size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size);

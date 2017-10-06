@@ -38,6 +38,8 @@ extern uint64_t _initrd_size;
 uint64_t ndev = 0;
 devfs_t *dev = NULL;
 
+uint64_t dev_recent = 0;
+
 /**
  * add a device
  */
@@ -52,8 +54,9 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blks
             return i;
     ndev++;
     dev=(devfs_t*)realloc(dev, ndev*sizeof(devfs_t));
+    // abort if we cannot allocate devfs
     if(dev==NULL)
-        return -1;
+        exit(2);
     f=fcb_add(tmp, FCB_TYPE_DEVICE);
     fcb[f].nopen++;
     fcb[f].mode=mode;
@@ -64,6 +67,7 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blks
     dev[i].fid=f;
     dev[i].drivertask=drivertask;
     dev[i].device=device;
+    dev[i].recent=++dev_recent;
     return i;
 }
 
@@ -75,6 +79,7 @@ void devfs_del(uint64_t idx)
     int i;
     if(idx==-1 || idx>=ndev)
         return;
+    
     // remove from mtab
     for(i=0;i<nmtab;i++)
         if(mtab[i].storage==dev[idx].fid) {
@@ -90,7 +95,7 @@ void devfs_del(uint64_t idx)
             fcb_del(i);
         }
     // free all blocks
-    cache_freeblocks(dev[idx].fid);
+    cache_freeblocks(dev[idx].fid, 0);
     // remove the device from file list
     fcb[dev[idx].fid].nopen=0;
     fcb_del(dev[idx].fid);
@@ -103,6 +108,42 @@ void devfs_del(uint64_t idx)
     }
     // we don't remove taskctx with open files on the device, as they will
     // automatically report feof() / ferror() on next operation
+}
+
+/**
+ * mark a device used
+ */
+void devfs_used(uint64_t idx)
+{
+    uint64_t i;
+    if(idx==-1 || idx>=ndev)
+        return;
+    // overflow protection, just to be bullet proof :-)
+    if(dev_recent>0xFFFFFFFFFFFFFFFUL) {
+        dev_recent>>=48;
+        for(i=0;i<ndev;i++)
+            if(dev[i].fid!=-1) {
+                dev[i].recent>>=48;
+                dev[i].recent++;
+            }
+    }
+    dev[idx].recent=++dev_recent;
+}
+
+/**
+ * get the last recently used device
+ */
+uint64_t devfs_lastused(bool_t all)
+{
+    uint64_t i,l=0,k=dev_recent;
+    for(i=0;i<ndev;i++)
+        if(dev[i].fid!=-1 && dev[i].recent<k && (all || dev[i].recent!=0)) {
+            k=dev[i].recent;
+            l=i;
+        }
+    if(!all)
+        dev[l].recent=0;
+    return l;
 }
 
 /**
@@ -125,10 +166,12 @@ void devfs_init()
     fsdrv_reg(&devdrv);
 
     fcb_add(DEVPATH, FCB_TYPE_REG_DIR);
-    if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, O_RDWR, __PAGESIZE, 1)==-1) abort();
-    if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, O_RDWR, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)==-1) abort();
-    if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, O_RDONLY, __PAGESIZE, 1)==-1) abort();
-    if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, O_RDWR, __PAGESIZE, 0)==-1) abort();
+    if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, O_RDWR, __PAGESIZE, 1)==-1) exit(2);
+    if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, O_RDWR, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)
+        ==-1) exit(2);
+    if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, O_RDONLY, __PAGESIZE, 1)==-1) exit(2);
+    if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, O_RDWR, __PAGESIZE, 0)==-1) exit(2);
+
 }
 
 #if DEBUG

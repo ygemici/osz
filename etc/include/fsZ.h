@@ -1,7 +1,7 @@
 /*
  * fsZ.h
  *
- * 2016 Public Domain bztsrc@github
+ * 2017 Public Domain bztsrc@github
  * 
  * IMPORTANT NOTE: the on disk format of FS/Z is public domain, you
  * can use it without any restrictions and free of charge. The right

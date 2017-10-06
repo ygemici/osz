@@ -27,17 +27,20 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
+#include "cache.h"
 #include "mtab.h"
 #include "devfs.h"
 #include "vfs.h"
 
-public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory
-public uint64_t _initrd_size=0;     // initrd size in bytes
-public char *_fstab_ptr=NULL;       // pointer to /etc/fstab data
-public size_t _fstab_size=0;        // fstab size
+public uint8_t *_initrd_ptr=NULL;   // initrd offset in memory (filled in by real-time linker)
+public uint64_t _initrd_size=0;     // initrd size in bytes (filled in by real-time linker)
+public char *_fstab_ptr=NULL;       // pointer to /etc/fstab data (filler in by real-time linker)
+public size_t _fstab_size=0;        // fstab size (filled in by real-time linker)
 public uint32_t pathmax;            // maximum length of path
 public uint32_t cachelines;         // number of block cache lines
-uint8_t ackdelayed;
+public uint32_t cachelimit;         // if free RAM drops below this percentage, free up half of cache
+bool_t ackdelayed;                  // flag to indicate async block read 
+bool_t nomem=false;                 // flag to indicate cache needs to be freed
 
 /**
  * File System task main procedure
@@ -48,16 +51,19 @@ void _init(int argc, char **argv)
     uint64_t ret = 0, j, k;
     off_t o;
     void *ptr;
+    meminfo_t m;
 
     // environment
-    pathmax=env_num("pathmax",512,256,1024*1024);
-    cachelines=env_num("cachelines",16,16,65535);
+    pathmax    = env_num("pathmax",512,256,1024*1024);
+    cachelines = env_num("cachelines",16,16,65535);
+    cachelimit = env_num("cachelimit",5,1,50);
 
     // initialize vfs structures
     mtab_init();    // registers "/" as first fcb
     devfs_init();   // registers "/dev/" as second fcb
     cache_init();
-    fsck.dev=-1;    // no locked device
+    fsck.dev=-1;    // no locked device at start
+    nomem=false;    // we have memory at start
 
     /*** endless loop ***/
     while(1) {
@@ -65,12 +71,15 @@ void _init(int argc, char **argv)
         msg = mq_recv();
         // clear state
         seterr(SUCCESS);
-        ackdelayed = false;
+        // suspend all messages in a nomem situation, otherwise
+        // only if it requires an ack from a driver task
+        ackdelayed = nomem;
         ret=0;
+        cache_currfid=0;
         // if it's a block ready message
         if(EVT_FUNC(msg->evt) == SYS_setblock) {
             // save it to block cache
-            cache_setblock(msg->ptr/*blk*/, msg->attr0/*fcbdev*/, msg->attr1/*offs*/,BLKPRIO_NOTDIRTY);
+            cache_setblock(msg->attr0/*fcbdev*/, msg->attr1/*offs*/, msg->ptr/*blk*/, BLKPRIO_NOTDIRTY);
             // resume original message that caused it. Don't use taskctx_get here,
             // as that would always return a valid context
             ctx=taskctx[msg->arg4 & 0xFF]; if(ctx==NULL) continue;
@@ -81,14 +90,13 @@ void _init(int argc, char **argv)
         } else
         // if it's a block written out acknowledge
         if(EVT_FUNC(msg->evt) == SYS_ackblock) {
-            // failsafe
-            if(msg->arg0==-1 || msg->arg0>=ndev) continue;
-            // increase number of blocks written out
-            dev[msg->arg0].out++;
-            if(dev[msg->arg0].out >= dev[msg->arg0].total)
-                dev[msg->arg0].out=dev[msg->arg0].total=0;
-            // notify UI to update progressbar
-            mq_send(SRV_UI, SYS_devprogress, dev[msg->arg0].fid, dev[msg->arg0].out, dev[msg->arg0].total);
+            // failsafe, no block count and cache for character devices
+            if(msg->arg0==-1 || msg->arg0>=ndev || fcb[dev[msg->arg0].fid].device.blksize<=1) continue;
+            // if we have a nomem situation and all cache flushed, free cache
+            if(cache_cleardirty(msg->arg0,(void*)msg->arg1) && nomem) {
+                cache_free();
+                nomem=false;
+            }
             continue;
         } else {
             // get task context and create it on demand
@@ -365,6 +373,8 @@ dostat:         if(ret!=-1 && !errno()) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
+                    if(ctx->openfiles[msg->arg0].mode & O_WRITE)
+                        cache_flush(ctx->openfiles[msg->arg0].fid);
                     ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
                 }
 //taskctx_dump();
@@ -372,6 +382,7 @@ dostat:         if(ret!=-1 && !errno()) {
 
             case SYS_fcloseall:
 //dbg_printf("fs fcloseall\n");
+                cache_flush(0);
                 for(j=0;j<ctx->nopenfiles;j++)
                     taskctx_close(ctx, j, false);
                 ret=0;
@@ -580,6 +591,13 @@ dostat:         if(ret!=-1 && !errno()) {
                 seterr(EPERM);
                 ret=-1;
                 break;
+        }
+        // try to be ahead of out of ram scenario
+        m=meminfo();j=m.freepages*100/m.totalpages;
+        if(j<cachelimit || errno()==ENOMEM) {
+            // when out of memory, flush the cache, and clear nomem when finished and cache freed
+            cache_flush(-1);
+            nomem=true;
         }
         if(!ackdelayed) {
             // send result back to caller

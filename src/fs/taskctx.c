@@ -31,15 +31,11 @@
 #include "fsdrv.h"
 #include "taskctx.h"
 
-// union lists
-int32_t nunionlist = 0;
-fid_t **unionlist = NULL;
-
-// task contexts
+/* task contexts */
 uint64_t ntaskctx = 0;
 taskctx_t *taskctx[256];
 
-// current context
+/* current context */
 public taskctx_t *ctx;
 
 /**
@@ -64,7 +60,6 @@ taskctx_t *taskctx_get(pid_t pid)
         tc->next=ntc;
     else
         taskctx[pid & 0xFF]=ntc;
-    ntc->fs=-1;
     fcb[0].nopen+=2;
     ntaskctx++;
     return ntc;
@@ -169,7 +164,7 @@ found:
     // deceide operation mode
     if(!(mode & O_READ) && !(mode & O_WRITE))
         mode |= O_READ;
-    if(mode & O_CREAT)
+    if((mode & O_CREAT) || (mode & O_APPEND))
         mode |= O_WRITE;
     // save open file descriptor
     tc->openfiles[i].fid=fid;
@@ -191,7 +186,6 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
     if(tc->openfiles[idx].mode & O_TMPFILE && fcb[tc->openfiles[idx].fid].mode!=FCB_TYPE_REG_DIR) {
         //unlink()
     } else {
-        //cache_flush(tc->openfiles[idx].fid)
         fcb[tc->openfiles[idx].fid].mode &= ~O_EXCL;
         fcb_del(tc->openfiles[idx].fid);
     }

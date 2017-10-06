@@ -1,7 +1,7 @@
 /*
  * tools/mkfs.c
  *
- * Copyright 2016 CC-by-nc-sa-4.0 bztsrc@github
+ * Copyright 2017 CC-by-nc-sa-4.0 bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -26,19 +26,10 @@
  *
  *  Compile: gcc mkfs.c -o mkfs
  *
- *  Usage:
- *  ./mkfs (file) (dir) - creates a new FS/Z image file
- *  ./mkfs (file) initrdrom (romfile) - create Option ROM from file
- *  ./mkfs (file) union (path) (members...) - add an union directory to image file
- *  ./mkfs (file) symlink (path) (target) - add a symbolic link to image file
- *  ./mkfs (file) mime (path) (mimetype) - change the mime type of a file in image file
- *  ./mkfs (file) ls (path) - parse FS/Z image and list contents
- *  ./mkfs (file) cat (path) - parse FS/Z image and return file content
- *  ./mkfs (file) dump (lsn) - dump a sector into C header format
- *  ./mkfs disk - assemble partition images into one big GPT disk, bin/disk.dd
+ * Without arguments prints out usage.
  *
  * It's a minimal implementation, has several limitations compared to the FS/Z spec.
- * For example it supports only 24 entries per directory (entries are inlined in inode).
+ * For example it supports only 24 entries per directory (only inlined entries in inode).
  */
 
 #include <stdio.h>
@@ -72,7 +63,9 @@ int initrd;
 //-------------CODE-----------
 
 /* Misc functions */
-//reads a file into memory
+/**
+ * read a file into memory, returning buffer. Also sets read_size
+ */
 char* readfileall(char *file)
 {
     char *data=NULL;
@@ -91,16 +84,23 @@ char* readfileall(char *file)
     }
     return data;
 }
-//gets or sets integer values in a char array
+/**
+ * get or set integer values in a char array
+ */
 int getint(char *ptr) { return (unsigned char)ptr[0]+(unsigned char)ptr[1]*256+(unsigned char)ptr[2]*256*256+ptr[3]*256*256*256; }
 void setint(int val, char *ptr) { memcpy(ptr,&val,4); }
-//orders files in a directory
+/**
+ * ordering files in a directory
+ */
 static int direntcmp(const void *a, const void *b)
 {
     return strcasecmp((char *)((FSZ_DirEnt *)a)->name,(char *)((FSZ_DirEnt *)b)->name);
 }
 
-//adds a superblock to the output
+/* file system functions */
+/**
+ * add an FS/Z superblock to the output
+ */
 void add_superblock()
 {
     FSZ_SuperBlock *sb;
@@ -122,7 +122,9 @@ void add_superblock()
     size+=secsize;
 }
 
-//appends an inode
+/**
+ * create and append an inode returning it's lsn
+ */
 int add_inode(char *filetype, char *mimetype)
 {
     int i,j=!strcmp(filetype,FILETYPE_SYMLINK)||!strcmp(filetype,FILETYPE_UNION)?secsize-1024:43;
@@ -163,7 +165,9 @@ int add_inode(char *filetype, char *mimetype)
     return size/secsize-1;
 }
 
-//registers an inode in the directory hierarchy
+/**
+ * register an inode in the directory hierarchy
+ */
 void link_inode(int inode, char *path, int toinode)
 {
     int ns=0,cnt=0;
@@ -199,7 +203,9 @@ void link_inode(int inode, char *path, int toinode)
     in2->checksum=crc32_calc((char*)in2->filetype,1016);
 }
 
-//reads a file and adds it to the output
+/**
+ * read a file and add it to the output
+ */
 void add_file(char *name, char *datafile)
 {
     FSZ_Inode *in;
@@ -321,7 +327,9 @@ void add_file(char *name, char *datafile)
     link_inode(inode,name,0);
 }
 
-//recursively add a directory to the output
+/**
+ * recursively add a directory to the output
+ */
 void add_dirs(char *dirname,int parent,int level)
 {
     DIR *dir;
@@ -357,6 +365,10 @@ void add_dirs(char *dirname,int parent,int level)
     }
 }
 
+/* functions for the mkfs tool */
+/**
+ * locate a file inside an FS/Z image
+ */
 FSZ_Inode *locate(char *data, int inode, char *path)
 {
     int ns=0,cnt=0;
@@ -387,7 +399,9 @@ FSZ_Inode *locate(char *data, int inode, char *path)
     return NULL;
 }
 
-//packed check
+/**
+ * packed check
+ */
 void checkcompilation()
 {
     //Self tests.
@@ -416,7 +430,9 @@ void checkcompilation()
 }
 
 /* command line interface routines */
-//Assemble all together. Get the partition images and write out as a whole disk
+/**
+ * assemble all together. Get the partition images and write out as a whole disk
+ */
 int createdisk()
 {
     unsigned long int i,j=0,gs=7*512,rs=0,es,us,vs,hs,ss=4096;
@@ -658,8 +674,9 @@ int createdisk()
     return 1;
 }
 
-
-//creates an fs image of a directory
+/**
+ * create an fs image of a directory
+ */
 int createimage(char *image,char *dir)
 {
     // are we creating initrd? Needed by add_file
@@ -691,6 +708,9 @@ int createimage(char *image,char *dir)
     return 1;
 }
 
+/**
+ * list a directory or union in an image
+ */
 void ls(int argc, char **argv)
 {
     char *data=readfileall(argv[1]);
@@ -725,6 +745,9 @@ void ls(int argc, char **argv)
     }
 }
 
+/**
+ * extract a file from an image
+ */
 void cat(int argc, char **argv)
 {
     char *data=readfileall(argv[1]);
@@ -745,6 +768,9 @@ void cat(int argc, char **argv)
     }
 }
 
+/**
+ * change the mime type of a file in the image
+ */
 void changemime(int argc, char **argv)
 {
     char *data=readfileall(argv[1]);
@@ -770,6 +796,9 @@ void changemime(int argc, char **argv)
     }
 }
 
+/**
+ * add an union directory to the image
+ */
 void addunion(int argc, char **argv)
 {
     int i;
@@ -793,6 +822,9 @@ void addunion(int argc, char **argv)
     fclose(f);
 }
 
+/**
+ * add a symbolic link to the output
+ */
 void addsymlink(int argc, char **argv)
 {
     fs=readfileall(argv[1]); size=read_size;
@@ -804,6 +836,9 @@ void addsymlink(int argc, char **argv)
     fclose(f);
 }
 
+/**
+ * create an Option ROM out of an image for in-ROM initrd
+ */
 void initrdrom(int argc, char **argv)
 {
     int i;
@@ -827,6 +862,9 @@ void initrdrom(int argc, char **argv)
     fclose(f);
 }
 
+/**
+ * dump sectors inside an image into C structs
+ */
 void dump(int argc, char **argv)
 {
     int i=argv[3]!=NULL?atoi(argv[3]):0;
@@ -988,6 +1026,9 @@ dumpdir:
     }
 }
 
+/**
+ * main entry point
+ */
 int main(int argc, char **argv)
 {
     char *path=strdup(argv[0]);
@@ -1014,16 +1055,17 @@ int main(int argc, char **argv)
 
     //parse arguments
     if(argv[1]==NULL||!strcmp(argv[1],"help")) {
-        printf("FS/Z mkfs utility\n"
-            "./mkfs (imagetoread) initrdrom (romfile)\n"
-            "./mkfs (imagetoread) union (path) (members...)\n"
-            "./mkfs (imagetoread) symlink (path) (target)\n"
-            "./mkfs (imagetoread) mime (path) (mimetype)\n"
-            "./mkfs (imagetoread) cat (path)\n"
-            "./mkfs (imagetoread) ls (path)\n"
-            "./mkfs (imagetoread) dump (lsn)\n"
-            "./mkfs (imagetocreate) (createfromdir)\n"
-            "./mkfs disk\n");
+        printf("FS/Z mkfs utility - Copyright 2017 CC-by-nc-sa-4.0 bztsrc@github\n\n"
+            "./mkfs (imagetocreate) (createfromdir)         - create a new FS/Z image file\n"
+            "./mkfs (imagetoread) initrdrom (romfile)       - create Option ROM from file\n"
+            "./mkfs (imagetoread) union (path) (members...) - add an union directory to image file\n"
+            "./mkfs (imagetoread) symlink (path) (target)   - add a symbolic link to image file\n"
+            "./mkfs (imagetoread) mime (path) (mimetype)    - change the mime type of a file in image file\n"
+            "./mkfs (imagetoread) ls (path)                 - parse FS/Z image and list contents\n"
+            "./mkfs (imagetoread) cat (path)                - parse FS/Z image and return file content\n"
+            "./mkfs (imagetoread) dump (lsn)                - dump a sector in image into C header format\n"
+            "./mkfs disk                                    - assemble OS/Z partition images into one GPT disk\n"
+            "\nNOTE the FS/Z on disk format is Public Domain, but this utility is not.\n");
         exit(0);
     }
     if(!strcmp(argv[1],"disk")) {

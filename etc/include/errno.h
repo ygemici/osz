@@ -1,7 +1,7 @@
 /*
  * errno.h
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -47,17 +47,19 @@ extern int errno();
 #define ENODEV      12  // No such device
 #define ENOTDIR     13  // Not a directory
 #define EISDIR      14  // Is a directory
-#define ENOFS       15  // No filesystem found
-#define EBADFS      16  // Corrupt filesystem
-#define EROFS       17  // Read-only file system
-#define ENOSPC      18  // No space left on device
-#define ENOTSUP     19  // File type not supported by file system
-#define EIO         20  // I/O error
-#define EPIPE       21  // Broken pipe
-#define ESPIPE      22  // Illegal seek
-#define ENOTSHM     23  // Not a shared memory buffer
-#define EBADF       24  // Bad file number
-#define ENOTBIG     25  // Buffer not big enough
+#define ENOTUNI     15  // Not an union
+#define EISUNI      16  // Is an union
+#define ENOFS       17  // No filesystem found
+#define EBADFS      18  // Corrupt filesystem
+#define EROFS       19  // Read-only file system
+#define ENOSPC      20  // No space left on device
+#define ENOTSUP     21  // File type not supported by file system
+#define EIO         22  // I/O error
+#define EPIPE       23  // Broken pipe
+#define ESPIPE      24  // Illegal seek
+#define ENOTSHM     25  // Not a shared memory buffer
+#define EBADF       26  // Bad file number
+#define ENOTBIG     27  // Buffer not big enough
 
 /*
 #define EINTR        4  // Interrupted system call

@@ -38,6 +38,7 @@ typedef struct {
     fid_t fid;          // name in fcb
     pid_t drivertask;   // major
     dev_t device;       // minor
+    uint64_t recent;    // next device in most recently used list
     blkcnt_t total;     // total number of blocks to be written
     blkcnt_t out;       // number of blocks already written out
 } devfs_t;
@@ -48,6 +49,8 @@ extern devfs_t *dev;
 extern void devfs_init();
 extern uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blksize_t blksize, blkcnt_t blkcnt);
 extern void devfs_del(uint64_t idx);
+extern void devfs_used(uint64_t idx);
+extern uint64_t devfs_lastused(bool_t all);
 
 #if DEBUG
 extern void devfs_dump();
