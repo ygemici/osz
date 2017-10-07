@@ -222,8 +222,6 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
                     }
                     j+=l;
                 }
-                //TODO: read direnties from f, iterate on all subdirs with lookup((ptr+i)+d->d_name+(ptr+i+k+4));
-                //if lookup!=-1, add to fl
             }
             free(fn);
         } else {
