@@ -8,8 +8,8 @@
 ./src/init/services.c:36:    // TODO: load and start user services
 ./src/drivers/fs/fsz/main.c:139:            // TODO: extents
 ./src/drivers/fs/fsz/main.c:227:    // TODO: if loc->creat, then create dir or path
-./src/fs/vfs.c:563:                // TODO: handle up directory
-./src/fs/vfs.c:566:                // TODO: detect file system in image
+./src/fs/vfs.c:561:                // TODO: handle up directory
+./src/fs/vfs.c:564:                // TODO: detect file system in image
 ./src/fs/fcb.c:225:                //TODO: read direnties from f, iterate on all subdirs with lookup((ptr+i)+d->d_name+(ptr+i+k+4));
 ./src/core/x86_64/libk.S:220:// TODO: use SSE2 copy
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc

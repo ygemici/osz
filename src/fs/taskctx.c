@@ -26,10 +26,7 @@
  */
 
 #include <osZ.h>
-#include <stdio.h>
-#include "fcb.h"
-#include "fsdrv.h"
-#include "taskctx.h"
+#include "vfs.h"
 
 /* task contexts */
 uint64_t ntaskctx = 0;
@@ -255,6 +252,170 @@ bool_t taskctx_validfid(taskctx_t *tc, uint64_t idx)
     return !(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
         fcb[tc->openfiles[idx].fid].abspath==NULL);
 }
+
+/**
+ * read from file. ptr is either a virtual address in ctx->pid's address space (so not
+ * writable directly) or in shared memory (writable)
+ */
+size_t taskctx_read(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
+{
+    size_t bs, ret=0;
+    void *blk,*p;
+    fcb_t *f;
+    openfiles_t *of;
+    writebuf_t *w;
+    off_t o,e,we;
+    // input checks
+    if(!taskctx_validfid(tc,idx)) {
+        seterr(EBADF);
+        return 0;
+    }
+    of=&tc->openfiles[idx];
+    f=&fcb[of->fid];
+    if(!(f->mode & O_READ)) { seterr(EACCES); return 0; }
+    switch(f->type) {
+        case FCB_TYPE_PIPE:
+            break;
+
+        case FCB_TYPE_SOCKET:
+            break;
+
+        default:
+            // check if this device is locked
+            if(f->reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return 0; }
+            if(f->type==FCB_TYPE_UNION && (of->mode & OF_MODE_READDIR)) {
+                if(f->uni.unionlist[of->unionidx]==0)
+                    return 0;
+                f=&fcb[f->uni.unionlist[of->unionidx]];
+            }
+            if(f->fs >= nfsdrv || fsdrv[f->fs].read==NULL) { seterr(EACCES); return 0; }
+            // check if the read can be served from write buf entirely
+            if(tc->workleft==-1) {
+                e=of->offs+size;
+                for(w=f->reg.buf;w!=NULL;w=w->next) {
+                    //     ####
+                    //  +--------+
+                    if(of->offs>=w->offs && e<=w->offs+w->size) {
+                        if((int64_t)ptr < 0)
+                            memcpy((void*)ptr, w->data+of->offs-w->offs, size);
+                        else
+                            p2pcpy(tc->pid, (void*)ptr, w->data+of->offs-w->offs, size);
+                        return size;
+                    }
+                }
+                // no, we have to split it up into blocks and serve one by one
+                // set up first time run parameters
+                tc->workleft=size; tc->workoffs=0;
+            }
+//dbg_printf("readfs storage %d file %d offs %d\n",fc->reg.storage, tc->openfiles[idx].fid, tc->openfiles[idx].offs);
+            // read all blocks in
+            while(tc->workleft>0) {
+                // read max one block
+                bs=fcb[f->reg.storage].device.blksize;
+//dbg_printf("readfs %d %d left %d\n",tc->openfiles[idx].offs + tc->workoffs,bs,tc->workleft);
+                blk=NULL;
+                // let's see if one block can be served from write buf
+                o=of->offs + tc->workoffs; e=o+bs;
+                for(w=f->reg.buf;w!=NULL;w=w->next) {
+                    //     ####
+                    //  +--------+
+                    if(o>=w->offs && e<=w->offs+w->size) {
+                        blk=w->data+o-w->offs;
+                        break;
+                    }
+                }
+                if(blk==NULL) {
+                    // call file system driver
+                    blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, o, &bs);
+//dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
+                    // skip if block is not in cache
+                    if(ackdelayed) break;
+                    // if eof
+                    if(bs==0) {
+                        ret = tc->workoffs; tc->workleft=-1; break;
+                    } else if(blk==NULL) {
+                        // spare portion of file? return zero block
+                        zeroblk=(void*)realloc(zeroblk, fcb[f->reg.storage].device.blksize);
+                        blk=zeroblk;
+                    }
+                    // Merging with write buf
+                    for(w=f->reg.buf;w!=NULL;w=w->next) {
+                        we=w->offs+w->size;
+                        // ####
+                        //   +----+
+                        if(o<w->offs && e>w->offs && e<=we) {
+                            p=malloc(we-o);
+                            if(p==NULL) break;
+                            memcpy(p,blk,w->offs-o); memcpy(p+w->offs-o,w->data,w->size);
+                            free(w->data); w->size=we-o; w->offs=o; w->data=p; blk=p;
+                            break;
+                        }
+                        //     ####
+                        // +----+
+                        if(o>w->offs && o<we && e>we) {
+                            w->data=realloc(w->data,e-w->offs);
+                            if(w->data==NULL) break;
+                            memcpy(w->data+w->size,blk+we-o,e-we);
+                            w->size=e-w->offs; blk=w->data+o-w->offs;
+                            break;
+                        }
+                    }
+                }
+                // failsafe, get number of bytes read
+                if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=-1; ret=tc->workoffs+bs; } else tc->workleft-=bs;
+                // copy result to caller. If shared memory, directly; otherwise via a core syscall
+                if((int64_t)ptr < 0)
+                    memcpy((void*)(ptr + tc->workoffs), blk, bs);
+                else
+                    p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
+                tc->workoffs+=bs;
+            }
+            // only alter seek offset when read is finished and it's not readdir
+            if(!(of->mode & OF_MODE_READDIR))
+                of->offs += ret;
+            break;
+    }
+    return ret;
+}
+
+/**
+ * write to file. ptr is either a buffer in message queue or shared memory, so it's readable
+ * in both cases
+ */
+size_t taskctx_write(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
+{
+    fcb_t *f;
+    // input checks
+    if(!taskctx_validfid(tc,idx)) {
+        seterr(EBADF);
+        return 0;
+    }
+    f=&fcb[tc->openfiles[idx].fid];
+    if(!(f->mode & O_WRITE)) { seterr(EACCES); return 0; }
+    switch(f->type) {
+        case FCB_TYPE_PIPE:
+            break;
+
+        case FCB_TYPE_SOCKET:
+            break;
+
+        default:
+            // check if this device is locked
+            if(f->reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return 0; }
+            if(f->fs >= nfsdrv || fsdrv[f->fs].write==NULL) {
+                seterr(EACCES);
+                return 0;
+            }
+            // set up first time run parameters
+            if(tc->workleft==-1) {
+                tc->workleft=size;
+                tc->workoffs=0;
+            }
+            break;
+    }
+    return 0;
+}
+
 
 #if DEBUG
 void taskctx_dump()

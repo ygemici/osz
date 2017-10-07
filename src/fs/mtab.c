@@ -55,13 +55,15 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     // get device fcb
     fd = fcb_get(dev);
     if(fd == -1 || (fd!=DEVFCB && fcb[fd].type!=FCB_TYPE_DEVICE && fcb[fd].type!=FCB_TYPE_REG_FILE)) {
-        seterr(ENODEV);
+        if(!errno())
+            seterr(ENODEV);
         return -1;
     }
     // get mount point fcb
     ff = fcb_get(file);
     if(ff == -1 || fcb[ff].type!=FCB_TYPE_REG_DIR) {
-        seterr(ENOTDIR);
+        if(!errno())
+            seterr(ENOTDIR);
         return -1;
     }
     // chicken and egg scenario, need /dev before / mounted

@@ -27,9 +27,7 @@
 
 #include <osZ.h>
 #include <sys/driver.h>
-#include "fcb.h"
 #include "vfs.h"
-#include "cache.h"
 #include "devfs.h"
 #include "mtab.h"
 
@@ -637,119 +635,6 @@ dbg_printf("lookup '%s' creat %d\n",path,creat);
     if(f==-1 && !errno())
         seterr(ENOENT);
     return f;
-}
-
-/**
- * read from file. ptr is either a virtual address in ctx->pid's address space (so not
- * writable directly) or in shared memory (writable)
- */
-size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
-{
-    size_t bs, ret=0;
-    void *blk;
-    fcb_t *fc;
-    // input checks
-    if(!taskctx_validfid(tc,idx))
-        return 0;
-    fc=&fcb[tc->openfiles[idx].fid];
-    switch(fc->type) {
-        case FCB_TYPE_PIPE:
-            break;
-
-        case FCB_TYPE_SOCKET:
-            break;
-
-        default:
-            // check if this device is locked
-            if(fsck.dev==fc->reg.storage) {
-                seterr(EAGAIN);
-                return 0;
-            }
-            if(fc->type==FCB_TYPE_UNION && (tc->openfiles[idx].mode&OF_MODE_READDIR)) {
-                if(fc->uni.unionlist[tc->openfiles[idx].unionidx]==0)
-                    return 0;
-                fc=&fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]];
-            }
-            if(fc->fs >= nfsdrv || fsdrv[fc->fs].read==NULL)
-                return 0;
-            // set up first time run parameters
-            if(tc->workleft==-1) {
-                tc->workleft=size;
-                tc->workoffs=0;
-            }
-//dbg_printf("readfs storage %d file %d offs %d\n",fc->reg.storage, tc->openfiles[idx].fid, tc->openfiles[idx].offs);
-            // read all blocks in
-            while(tc->workleft>0) {
-                // read max one block
-                bs=fcb[fc->reg.storage].device.blksize;
-//dbg_printf("readfs %d %d left %d\n",tc->openfiles[idx].offs + tc->workoffs,bs,tc->workleft);
-                // call file system driver
-                blk=(*fsdrv[fc->fs].read)(
-                    fc->reg.storage, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
-//dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
-                // skip if block is not in cache
-                if(ackdelayed) break;
-                // if eof
-                if(bs==0) {
-                    ret = tc->workoffs;
-                    tc->workleft=-1;
-                    break;
-                } else if(blk==NULL) {
-                    // spare portion of file? return zero block
-                    zeroblk=(void*)realloc(zeroblk, fcb[fc->reg.storage].device.blksize);
-                    blk=zeroblk;
-                }
-                // failsafe, get number of bytes read
-                if(bs>=tc->workleft) { bs=tc->workleft; tc->workleft=-1; ret=tc->workoffs+bs; } else tc->workleft-=bs;
-                // copy result to caller. If shared memory, directly; otherwise via a core syscall
-                if((int64_t)ptr < 0)
-                    memcpy((void*)(ptr + tc->workoffs), blk, bs);
-                else
-                    p2pcpy(tc->pid, (void*)(ptr + tc->workoffs), blk, bs);
-                tc->workoffs+=bs;
-            }
-            // only alter seek offset when read is finished and it's nor readdir
-            if(!(tc->openfiles[idx].mode&OF_MODE_READDIR))
-                tc->openfiles[idx].offs += ret;
-            break;
-    }
-    return ret;
-}
-
-/**
- * write to file. ptr is either a buffer in message queue or shared memory, so it's readable
- * in both cases
- */
-size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
-{
-    fcb_t *fc;
-    // input checks
-    if(!taskctx_validfid(tc,idx))
-        return 0;
-    fc=&fcb[tc->openfiles[idx].fid];
-    switch(fc->type) {
-        case FCB_TYPE_PIPE:
-            break;
-
-        case FCB_TYPE_SOCKET:
-            break;
-
-        default:
-            // check if this device is locked
-            if(fsck.dev==fc->reg.storage) {
-                seterr(EAGAIN);
-                return 0;
-            }
-            if(fc->fs>=nfsdrv)
-                return 0;
-            // set up first time run parameters
-            if(tc->workleft==-1) {
-                tc->workleft=size;
-                tc->workoffs=0;
-            }
-            break;
-    }
-    return 0;
 }
 
 /**

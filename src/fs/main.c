@@ -492,17 +492,7 @@ dostat:         if(ret!=-1 && !errno()) {
                         seterr(EINVAL);
                     ret=0;
                 } else
-                if(!taskctx_validfid(ctx,msg->type)) {
-                    seterr(EBADF);
-                    ret=0;
-                } else
-                if(!(ctx->openfiles[msg->type].mode & O_READ) ||
-                   !(fcb[ctx->openfiles[msg->type].fid].mode & O_READ)) {
-                    seterr(EACCES);
-                    ret=0;
-                } else {
-                    ret=readfs(ctx,msg->type,(virt_t)msg->ptr,msg->size);
-                }
+                    ret=taskctx_read(ctx,msg->type,(virt_t)msg->ptr,msg->size);
                 break;
             
             case SYS_fwrite:
@@ -513,20 +503,14 @@ dostat:         if(ret!=-1 && !errno()) {
                     seterr(EBADF);
                     ret=0;
                 } else
-                if(!(ctx->openfiles[msg->type].mode & O_WRITE) ||
-                   !(fcb[ctx->openfiles[msg->type].fid].mode & O_WRITE)) {
-                    seterr(EACCES);
-                    ret=0;
-                } else
                 if(msg->ptr==NULL || msg->size==0) {
                     // nothing to write
                     // when no buffer, report error
                     if(msg->ptr==NULL && msg->size>0)
                         seterr(EINVAL);
                     ret=0;
-                } else {
-                    ret=writefs(ctx,msg->type,msg->ptr,msg->size);
-                }
+                } else
+                    ret=taskctx_write(ctx,msg->type,msg->ptr,msg->size);
                 break;
 
             case SYS_opendir:
