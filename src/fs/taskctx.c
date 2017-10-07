@@ -134,10 +134,20 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64
         return -1;
     }
     // check if it's already opened for exclusive access
-    if(fcb[fid].mode & O_EXCL) {
+    if(fcb[fid].flags & FCB_FLAG_EXCL) {
         seterr(EBUSY);
         return -1;
     }
+    // Check if the requested operation permitted on the device
+    if(!(mode & O_READ) && !(mode & O_WRITE))
+        mode |= O_READ;
+    // Matches flags, or needs creat or append and has write permission
+    if((mode & O_AMSK) != (fcb[fid].mode & O_AMSK) && !((mode & (O_APPEND|O_CREAT)) && (fcb[fid].mode & O_WRITE))) {
+        seterr(EACCES);
+        return -1;
+    }
+    if((mode & O_CREAT) || (mode & O_APPEND))
+        mode |= O_WRITE;
     // force file descriptor index
     if(idx!=-1 && idx<tc->nopenfiles && tc->openfiles[idx].fid==-1) {
         i=idx;
@@ -158,14 +168,10 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64
         return -1;
     // add new open file descriptor
 found:
-    // handle exclusive access
-    if(mode & O_EXCL)
-        fcb[fid].mode |= O_EXCL;
-    // deceide operation mode
-    if(!(mode & O_READ) && !(mode & O_WRITE))
-        mode |= O_READ;
-    if((mode & O_CREAT) || (mode & O_APPEND))
-        mode |= O_WRITE;
+    // handle exclusive access. Either user asked for it
+    // or it's a special device
+    if((mode & O_EXCL) || (fcb[fid].mode & O_EXCL))
+        fcb[fid].flags |= FCB_FLAG_EXCL;
     // save open file descriptor
     tc->openfiles[i].fid=fid;
     tc->openfiles[i].mode=mode;
@@ -186,7 +192,7 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
     if(tc->openfiles[idx].mode & O_TMPFILE && fcb[tc->openfiles[idx].fid].mode!=FCB_TYPE_REG_DIR) {
         //unlink()
     } else {
-        fcb[tc->openfiles[idx].fid].mode &= ~O_EXCL;
+        fcb[tc->openfiles[idx].fid].flags &= ~FCB_FLAG_EXCL;
         fcb_del(tc->openfiles[idx].fid);
     }
     tc->openfiles[idx].fid=-1;

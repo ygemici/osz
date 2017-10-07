@@ -126,8 +126,8 @@ nextdir:
     }
 
     // get inode data
-    memset(sdptr,0,MAXINDIRECT*sizeof(uint16_t));
-    memset(sdblk,0,MAXINDIRECT*sizeof(void*));
+    memzero(sdptr,MAXINDIRECT*sizeof(uint16_t));
+    memzero(sdblk,MAXINDIRECT*sizeof(void*));
     switch(FLAG_TRANSLATION(in->flags)) {
         case FSZ_IN_FLAG_INLINE:
             loc->fileblk=in->inlinedata;

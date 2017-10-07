@@ -96,7 +96,19 @@ static int direntcmp(const void *a, const void *b)
 {
     return strcasecmp((char *)((FSZ_DirEnt *)a)->name,(char *)((FSZ_DirEnt *)b)->name);
 }
-
+void printf_uuid(FSZ_Access *mem)
+{
+    printf("%08x-%04x-%04x-%02x%02x%02x%02x%02x%02x%02x:",mem->Data1,mem->Data2,mem->Data3,
+        mem->Data4[0],mem->Data4[1],mem->Data4[2],mem->Data4[3],mem->Data4[4],mem->Data4[5],mem->Data4[6]);
+    printf("%c%c%c%c%c%c%c",
+        mem->access&FSZ_READ?'r':'-',
+        mem->access&FSZ_WRITE?'w':'-',
+        mem->access&FSZ_EXEC?'e':'-',
+        mem->access&FSZ_APPEND?'a':'-',
+        mem->access&FSZ_DELETE?'d':'-',
+        mem->access&FSZ_READ?'u':'-',
+        mem->access&FSZ_READ?'s':'-');
+}
 /* file system functions */
 /**
  * add an FS/Z superblock to the output
@@ -869,7 +881,7 @@ void dump(int argc, char **argv)
 {
     int i=argv[3]!=NULL?atoi(argv[3]):0;
     uint64_t j,*k,l,secs=secsize;
-    char unit='k';
+    char unit='k',*c;
     fs=readfileall(argv[1]);
     FSZ_SuperBlock *sb=(FSZ_SuperBlock *)fs;
     FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader*)(fs+i*secsize);
@@ -879,7 +891,7 @@ void dump(int argc, char **argv)
     }
     secs=1<<(sb->logsec+11);
     if(i*secs>read_size) { printf("mkfs: Unable to allocate %d sector\n",i); exit(2); }
-    printf("Dumping LSN %d:\n",i);
+    printf("  ---------------- Dumping sector #%d ----------------\n",i);
     if(i==0) {
         printf("FSZ_SuperBlock {\n");
         printf("\tmagic: %s\n",FSZ_MAGIC);
@@ -892,7 +904,8 @@ void dump(int argc, char **argv)
         printf("\tcurrmounts / maxmounts: %d / %d\n",sb->currmounts,sb->maxmounts);
         j=sb->numsec*(1<<(sb->logsec+11))/1024;
         if(j>1024) { j/=1024; unit='M'; } printf("\tnumsec: %ld (total capacity %ld %cbytes)\n",sb->numsec,j,unit); 
-        printf("\tfreesec: %ld (%ld%% free, not including free holes)\n",sb->freesec,sb->freesec*100/sb->numsec);
+        printf("\tfreesec: %ld (%ld%% free, not including free holes)\n",sb->freesec,
+            (sb->numsec-sb->freesec)*100/sb->numsec);
         printf("\trootdirfid: LSN %ld\n",sb->rootdirfid);
         printf("\tfreesecfid: LSN %ld %s\n",sb->freesecfid,sb->freesecfid==0?"(no free holes)":"");
         printf("\tbadsecfid: LSN %ld\n",sb->badsecfid);
@@ -904,7 +917,7 @@ void dump(int argc, char **argv)
         j=sb->lastmountdate/1000000; printf("\tlastmountdate: %ld %s",sb->lastmountdate,ctime((time_t*)&j));
         j=sb->lastcheckdate/1000000; printf("\tlastcheckdate: %ld %s",sb->lastcheckdate,ctime((time_t*)&j));
         j=sb->lastdefragdate/1000000; printf("\tlastdefragdate: %ld %s",sb->lastmountdate,ctime((time_t*)&j));
-        printf("\towner: "); for(j=0;j<16;j++) printf("%02x",((char*)&sb->owner)[j]); printf("\n");
+        printf("\towner: "); printf_uuid((FSZ_Access*)&sb->owner); printf("\n");
         printf("\tmagic2: %s\n",FSZ_MAGIC);
         printf("\tchecksum: 0x%04x %s\n",sb->checksum,
             sb->checksum==crc32_calc((char *)sb->magic,508)?"correct":"invalid");
@@ -942,21 +955,34 @@ void dump(int argc, char **argv)
             default: printf("FSZ_IN_FLAG_SD%d",FLAG_TRANSLATION(in->flags)); break;
         }
         printf("\n\t};\n");
-        printf("\towner: "); for(j=0;j<15;j++) printf("%02x",((char*)&in->owner)[j]);
-        printf(":%c%c%c%c%c%c%c\n",
-            in->owner.access&FSZ_READ?'r':'-',
-            in->owner.access&FSZ_READ?'w':'-',
-            in->owner.access&FSZ_READ?'e':'-',
-            in->owner.access&FSZ_READ?'a':'-',
-            in->owner.access&FSZ_READ?'d':'-',
-            in->owner.access&FSZ_READ?'u':'-',
-            in->owner.access&FSZ_READ?'s':'-');
-        printf("\tinlinedata: '");
+        printf("\towner: "); printf_uuid(&in->owner);
+        printf("\n\tinlinedata: ");
         if(!memcmp(in->filetype,FILETYPE_SYMLINK,4))
-            printf("%s",in->inlinedata);
+            printf(" symlink target\n\t  '%s'",in->inlinedata);
         else
-            printf("%c%c%c%c...",in->inlinedata[0],in->inlinedata[1],in->inlinedata[2],in->inlinedata[3]);
-        printf("'\n};\n");
+        if(!memcmp(in->filetype,FILETYPE_UNION,4)) {
+            printf("union list\n");
+            c=(char*)in->inlinedata;
+            while(*c!=0) {
+                printf("\t  '%s'\n",c);
+                while(*c!=0) c++;
+                c++;
+            }
+        } else
+        if(!memcmp(in->inlinedata,FSZ_DIR_MAGIC,4))
+            printf("directory entries\n");
+        else {
+            printf("\n");
+            for(j=0;j<8;j++) {
+                printf("\t  ");
+                for(l=0;l<16;l++) printf("%02x %s",in->inlinedata[j*16+l],l%4==3?" ":"");
+                for(l=0;l<16;l++) printf("%c",in->inlinedata[j*16+l]>=30&&
+                    in->inlinedata[j*16+l]<127?in->inlinedata[j*16+l]:'.');
+                printf("\n");
+            }
+            printf("\t  ... etc.\n");
+        }
+        printf("\n};\n");
         printf("Data sectors: ");
         switch(FLAG_TRANSLATION(in->flags)){
             case FSZ_IN_FLAG_INLINE: printf("%ld", in->sec); break;
@@ -1020,8 +1046,17 @@ dumpdir:
                 printf("\tLSN %ld\t\t(LSN/size) %ld%s",*k,*(k+2),j%2==0?"\t\t":"\n");
                 k+=4;
             }
+            printf("\n");
         } else {
             printf("File data\n");
+            c=(char*)(fs+i*secs);
+            for(j=0;j<8;j++) {
+                printf("  ");
+                for(l=0;l<16;l++) printf("%02x %s",(unsigned char)(c[j*16+l]),l%4==3?" ":"");
+                for(l=0;l<16;l++) printf("%c",(unsigned char)(c[j*16+l]>=30&&c[j*16+l]<127?c[j*16+l]:'.'));
+                printf("\n");
+            }
+            printf("  ... etc.\n");
         }
     }
 }

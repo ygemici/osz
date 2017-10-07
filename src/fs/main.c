@@ -72,10 +72,9 @@ void _init(int argc, char **argv)
         // clear state
         seterr(SUCCESS);
         // suspend all messages in a nomem situation, otherwise
-        // only if it requires an ack from a driver task
+        // only if it requires an ack message from a driver task
         ackdelayed = nomem;
         ret=0;
-        cache_currfid=0;
         // if it's a block ready message
         if(EVT_FUNC(msg->evt) == SYS_setblock) {
             // save it to block cache
@@ -85,34 +84,35 @@ void _init(int argc, char **argv)
             ctx=taskctx[msg->arg4 & 0xFF]; if(ctx==NULL) continue;
             while(ctx!=NULL) { if(ctx->pid==msg->arg4) break; ctx=ctx->next; }
             if(ctx==NULL || EVT_FUNC(ctx->msg.evt)==0) continue;
-            // ok, msg->arg4 points to a pid with a valid context and with a suspended message
+            // ok, msg->arg4 points to a pid with a valid context with a suspended message
             msg = &ctx->msg;
         } else
         // if it's a block written out acknowledge
         if(EVT_FUNC(msg->evt) == SYS_ackblock) {
             // failsafe, no block count and cache for character devices
             if(msg->arg0==-1 || msg->arg0>=ndev || fcb[dev[msg->arg0].fid].device.blksize<=1) continue;
-            // if we have a nomem situation and all cache flushed, free cache
-            if(cache_cleardirty(msg->arg0,(void*)msg->arg1) && nomem) {
+            // if we have cleared the last dirty block and we have a nomem situation, free cache
+            if(cache_cleardirty(msg->arg0, msg->arg1) && nomem) {
                 cache_free();
                 nomem=false;
             }
             continue;
         } else {
-            // get task context and create it on demand
+            // get task context or if not found, create it on demand
             ctx = taskctx_get(EVT_SENDER(msg->evt));
-            // new query, reset work counter
+            // new query (not a resumed one), reset work counter
             ctx->workleft = -1;
         }
         /* serve requests */
         switch(EVT_FUNC(msg->evt)) {
 #if DEBUG
-            case SYS_dump:
+            case SYS_fsdump:
                 taskctx_dump();
                 fsdrv_dump();
                 devfs_dump();
                 mtab_dump();
                 fcb_dump();
+                cache_dump();
                 break;
 #endif
 
@@ -123,6 +123,7 @@ void _init(int argc, char **argv)
                 for(j=0;j<ndev;j++)
                     if(dev[j].drivertask==ctx->pid)
                         devfs_del(j);
+                fcb_cleanup();
                 continue;
 
             case SYS_mountfs:
@@ -175,6 +176,7 @@ void _init(int argc, char **argv)
                     break;
                 }
                 ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
+                fcb_cleanup();
 #if DEBUG
                 if(_debug&DBG_FS)
                     mtab_dump();
@@ -188,7 +190,7 @@ void _init(int argc, char **argv)
 #endif
                 ret=lookup(msg->ptr, false);
                 if(fsck.dev!=-1 && fsck.dev!=ret) {
-                    seterr(EAGAIN);
+                    seterr(EBUSY);
                     ret=-1;
                     break;
                 }
@@ -385,6 +387,7 @@ dostat:         if(ret!=-1 && !errno()) {
                 cache_flush(0);
                 for(j=0;j<ctx->nopenfiles;j++)
                     taskctx_close(ctx, j, false);
+                fcb_cleanup();
                 ret=0;
 //taskctx_dump();
                 break;
@@ -432,7 +435,7 @@ dostat:         if(ret!=-1 && !errno()) {
                     ret=-1;
                 } else
                     // force EOF flag on closed files
-                    ret=ctx->openfiles[msg->arg0].mode >> 32 | (fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL?1:0);
+                    ret=ctx->openfiles[msg->arg0].mode >> 16 | (fcb[ctx->openfiles[msg->arg0].fid].abspath==NULL?1:0);
                 break;
 
             case SYS_fclrerr:
@@ -440,7 +443,7 @@ dostat:         if(ret!=-1 && !errno()) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
-                    ctx->openfiles[msg->arg0].mode &= 0xffffffffULL;
+                    ctx->openfiles[msg->arg0].mode &= 0xffff;
                     ret=0;
                 }
                 break;
@@ -489,8 +492,13 @@ dostat:         if(ret!=-1 && !errno()) {
                         seterr(EINVAL);
                     ret=0;
                 } else
-                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_READ)) {
+                if(!taskctx_validfid(ctx,msg->type)) {
                     seterr(EBADF);
+                    ret=0;
+                } else
+                if(!(ctx->openfiles[msg->type].mode & O_READ) ||
+                   !(fcb[ctx->openfiles[msg->type].fid].mode & O_READ)) {
+                    seterr(EACCES);
                     ret=0;
                 } else {
                     ret=readfs(ctx,msg->type,(virt_t)msg->ptr,msg->size);
@@ -499,10 +507,15 @@ dostat:         if(ret!=-1 && !errno()) {
             
             case SYS_fwrite:
 //dbg_printf("fs fwrite(%d,%x,%d)\n",msg->type,msg->ptr,msg->size);
-                if(!taskctx_validfid(ctx,msg->type) || !(ctx->openfiles[msg->type].mode & O_WRITE) ||
+                if(!taskctx_validfid(ctx,msg->type) ||
                    fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_REG_DIR ||
                    fcb[ctx->openfiles[msg->type].fid].type==FCB_TYPE_UNION) {
                     seterr(EBADF);
+                    ret=0;
+                } else
+                if(!(ctx->openfiles[msg->type].mode & O_WRITE) ||
+                   !(fcb[ctx->openfiles[msg->type].fid].mode & O_WRITE)) {
+                    seterr(EACCES);
                     ret=0;
                 } else
                 if(msg->ptr==NULL || msg->size==0) {
@@ -526,6 +539,12 @@ dostat:         if(ret!=-1 && !errno()) {
                         seterr(EBADF);
                         ret=-1;
                         break;
+                    } else
+                    if(!(ctx->openfiles[msg->type].mode & O_READ) ||
+                       !(fcb[ctx->openfiles[msg->type].fid].mode & O_READ)) {
+                            seterr(EACCES);
+                            ret=-1;
+                            break;
                     }
                     ret=ctx->openfiles[msg->type].unionidx;
                     ctx->openfiles[msg->type].unionidx=0;
@@ -595,8 +614,9 @@ dostat:         if(ret!=-1 && !errno()) {
         // try to be ahead of out of ram scenario
         m=meminfo();j=m.freepages*100/m.totalpages;
         if(j<cachelimit || errno()==ENOMEM) {
-            // when out of memory, flush the cache, and clear nomem when finished and cache freed
-            cache_flush(-1);
+            fcb_cleanup();
+            // when out of memory, flush the cache, and clear nomem only when finished (and cache freed)
+            cache_flush();
             nomem=true;
         }
         if(!ackdelayed) {

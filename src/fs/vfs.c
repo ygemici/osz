@@ -244,8 +244,11 @@ public fpos_t getoffs(char *abspath)
 public void *readblock(fid_t fd, blkcnt_t lsn)
 {
     devfs_t *device;
-    void *blk=NULL;
+    void *blk=NULL, *ptr;
+    writebuf_t *w;
+    fcb_t *f;
     size_t bs;
+    off_t o,e,we;
     // failsafe
     if(fd==-1 || fd>=nfcb || lsn==-1)
         return NULL;
@@ -253,38 +256,74 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
     if(_debug&DBG_BLKIO)
         dbg_printf("FS: readblock(fd %d, sector %d)\n",fd,lsn);
 #endif
-    switch(fcb[fd].type) {
+    f=&fcb[fd];
+    if(!(f->mode & O_READ)) { seterr(EACCES); return NULL; }
+    switch(f->type) {
         case FCB_TYPE_REG_FILE:
             // reading a block from a regular file
-            if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv ||
-              fsdrv[fcb[fd].reg.fs].read==NULL) {
-                seterr(EINVAL);
-                return NULL;
+            if(f->reg.storage==-1 || fcb[f->reg.storage].type!=FCB_TYPE_DEVICE ||
+                f->fs >= nfsdrv || fsdrv[f->fs].read==NULL) { seterr(ENODEV); return NULL; }
+            devfs_used(fcb[f->reg.storage].device.inode);
+            bs=fcb[f->reg.storage].device.blksize;
+            // check if block is in the write buf entirely
+            o=lsn*bs; e=o+bs;
+            for(w=f->reg.buf;w!=NULL;w=w->next) {
+                //     ####
+                //  +--------+
+                if(o>=w->offs && e<=w->offs+w->size)
+                    return (w->data + o-w->offs);
             }
-            devfs_used(fcb[fcb[fd].reg.storage].device.inode);
-            bs=fcb[fcb[fd].reg.storage].device.blksize;
             // valid address?
-            if((lsn+1)*bs>fcb[fd].reg.filesize) {
+            if((lsn+1)*bs>f->reg.filesize) {
                 seterr(EFAULT);
                 return NULL;
             }
-            // call file system driver to read block
-            blk=(*fsdrv[fcb[fd].reg.fs].read)(fcb[fd].reg.storage, fcb[fd].reg.inode, lsn*bs, &bs);
+            // call file system driver to read block. This must return a cache block
+            blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, lsn*bs, &bs);
             // skip if block is not in cache or eof
             if(ackdelayed || bs==0) return NULL;
             if(blk==NULL) {
                 // spare portion of file? return zero block
-                zeroblk=(void*)realloc(zeroblk, fcb[fcb[fd].reg.storage].device.blksize);
-                return zeroblk;
+                zeroblk=(void*)realloc(zeroblk, fcb[f->reg.storage].device.blksize);
+                blk=zeroblk;
             }
+            // Merging with write buf
+            for(w=f->reg.buf;w!=NULL;w=w->next) {
+                we=w->offs+w->size;
+                // ####
+                //   +----+
+                if(o<w->offs && e>w->offs && e<=we) {
+                    ptr=malloc(we-o);
+                    if(ptr==NULL)
+                        return blk;
+                    memcpy(ptr,blk,w->offs-o);
+                    memcpy(ptr+w->offs-o,w->data,w->size);
+                    free(w->data);
+                    w->size=we-o;
+                    w->offs=o;
+                    w->data=ptr;
+                    return ptr;
+                }
+                //     ####
+                // +----+
+                if(o>w->offs && o<we && e>we) {
+                    w->data=realloc(w->data,e-w->offs);
+                    if(w->data==NULL)
+                        return blk;
+                    memcpy(w->data+w->size,blk+we-o,e-we);
+                    w->size=e-w->offs;
+                    return w->data+o-w->offs;
+                }
+            }
+            // not interfering, then return block as-is
             return blk;
 
         case FCB_TYPE_DEVICE:
-            // reading a block from a device file
-            if(fcb[fd].device.inode<ndev) {
-                device=&dev[fcb[fd].device.inode];
-                devfs_used(fcb[fd].device.inode);
-                bs=fcb[fd].device.blksize;
+            // reading a block from a device
+            if(f->device.inode<ndev) {
+                device=&dev[f->device.inode];
+                devfs_used(f->device.inode);
+                bs=f->device.blksize;
                 // in memory device?
                 if(device->drivertask==MEMFS_MAJOR) {
                     switch(device->device) {
@@ -301,7 +340,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
                             return rndblk;
                         case MEMFS_RAMDISK:
                             // valid address?
-                            if((lsn+1)*bs>fcb[fd].device.filesize) {
+                            if((lsn+1)*bs>f->device.filesize) {
                                 seterr(EFAULT);
                                 return NULL;
                             }
@@ -313,23 +352,17 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
                     }
                 }
                 // real device, use block cache
-                if((lsn+1)*bs>fcb[fd].device.filesize) {
-                    seterr(EFAULT);
-                    return NULL;
-                }
-                seterr(SUCCESS);
-                blk=cache_getblock(fd, lsn);
-                break;
+                return cache_getblock(fd, lsn);
             }
             seterr(ENODEV);
-            break;
+            return NULL;
 
         default:
-            // invalid request
-            seterr(EPERM);
             break;
     }
-    return blk;
+    // invalid request, only files and devices support readblock
+    seterr(EPERM);
+    return NULL;
 }
 
 /**
@@ -337,38 +370,36 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
  */
 public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio)
 {
+    fcb_t *f;
     devfs_t *device;
     size_t bs;
-    if(fd==-1 || fd>=nfcb || lsn==-1)
-        return false;
 #if DEBUG
     if(_debug&DBG_BLKIO)
         dbg_printf("FS: writeblock(fd %d, sector %d, buf %x, prio %d)\n",fd,lsn,blk,prio);
 #endif
-    switch(fcb[fd].type) {
+    if(fd==-1 || fd>=nfcb || lsn==-1)
+        return false;
+    f=&fcb[fd];
+    if(!(f->mode & O_WRITE)) { seterr(EACCES); return false; }
+    switch(f->type) {
         case FCB_TYPE_REG_FILE:
             // writing a block to a regular file
-            if(fcb[fd].reg.storage==-1 || fcb[fd].reg.fs==-1 || fcb[fd].reg.fs >= nfsdrv ||
-              fsdrv[fcb[fd].reg.fs].write==NULL) {
-                seterr(EINVAL);
-                return false;
+            if(f->reg.storage==-1 || fcb[f->reg.storage].type!=FCB_TYPE_DEVICE) { seterr(ENODEV); return false; }
+            if(fsck.dev==f->reg.storage) { seterr(EBUSY); return false; }
+            if(!(fcb[f->reg.storage].mode & O_WRITE) || f->fs >= nfsdrv || fsdrv[f->fs].write==NULL) {
+                seterr(EROFS); return false;
             }
-            devfs_used(fcb[fcb[fd].reg.storage].device.inode);
-            bs=fcb[fcb[fd].reg.storage].device.blksize;
-            // valid address?
-            if((lsn+1)*bs>fcb[fd].reg.filesize) {
-                seterr(EFAULT);
-                return false;
-            }
-            // call file system driver to write block
-            return (*fsdrv[fcb[fd].reg.fs].write)(fcb[fd].reg.storage, fcb[fd].reg.inode, lsn*bs, blk, &bs);
+            devfs_used(fcb[f->reg.storage].device.inode);
+            bs=fcb[f->reg.storage].device.blksize;
+            // put it to write buf
+            return fcb_write(fd,lsn*bs,blk,bs);
 
         case FCB_TYPE_DEVICE:
             // writing a block to a device file
-            if(fcb[fd].device.inode<ndev) {
-                device=&dev[fcb[fd].device.inode];
-                devfs_used(fcb[fd].device.inode);
-                bs=fcb[fd].device.blksize;
+            if(f->device.inode<ndev) {
+                device=&dev[f->device.inode];
+                devfs_used(f->device.inode);
+                bs=f->device.blksize;
                 // in memory device?
                 if(device->drivertask==MEMFS_MAJOR) {
                     switch(device->device) {
@@ -376,7 +407,7 @@ public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio)
                             return true;
                         case MEMFS_RAMDISK:
                             // valid address?
-                            if((lsn+1)*bs>fcb[fd].device.filesize) {
+                            if((lsn+1)*bs>f->device.filesize) {
                                 seterr(EFAULT);
                                 return false;
                             }
@@ -393,22 +424,16 @@ public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio)
                     }
                 }
                 // real device, use block cache
-                if((lsn+1)*bs>fcb[fd].device.filesize) {
-                    seterr(EFAULT);
-                    return false;
-                }
-                seterr(SUCCESS);
-                cache_setblock(fd, lsn, blk, prio);
-                return true;
+                return cache_setblock(fd, lsn, blk, prio);
             }
             seterr(ENODEV);
             break;
 
         default:
-            // invalid request
-            seterr(EPERM);
             break;
     }
+    // invalid request, only files and devices support writeblock
+    seterr(EPERM);
     return false;
 }
 
@@ -519,10 +544,11 @@ dbg_printf("lookup '%s' creat %d\n",path,creat);
                 }
                 if(f==-1)
                     f=fcb_add(abspath,loc.type);
+                fcb[f].fs=fs;
+                fcb[f].mode=fcb[fd].mode;   // inherit device's mode
                 fcb[f].reg.storage=fd;
                 fcb[f].reg.inode=loc.inode;
                 fcb[f].reg.filesize=loc.filesize;
-                fcb[f].reg.fs=fs;
                 break;
             case NOBLOCK:
                 // errno set to EAGAIN on block cache miss and ENOMEM on memory shortage
@@ -644,7 +670,7 @@ size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
                     return 0;
                 fc=&fcb[fc->uni.unionlist[tc->openfiles[idx].unionidx]];
             }
-            if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv || fsdrv[fc->reg.fs].read==NULL)
+            if(fc->fs >= nfsdrv || fsdrv[fc->fs].read==NULL)
                 return 0;
             // set up first time run parameters
             if(tc->workleft==-1) {
@@ -658,7 +684,7 @@ size_t readfs(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
                 bs=fcb[fc->reg.storage].device.blksize;
 //dbg_printf("readfs %d %d left %d\n",tc->openfiles[idx].offs + tc->workoffs,bs,tc->workleft);
                 // call file system driver
-                blk=(*fsdrv[fc->reg.fs].read)(
+                blk=(*fsdrv[fc->fs].read)(
                     fc->reg.storage, fc->reg.inode, tc->openfiles[idx].offs + tc->workoffs, &bs);
 //dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
                 // skip if block is not in cache
@@ -700,7 +726,6 @@ size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     // input checks
     if(!taskctx_validfid(tc,idx))
         return 0;
-    cache_currfid=tc->openfiles[idx].fid;
     fc=&fcb[tc->openfiles[idx].fid];
     switch(fc->type) {
         case FCB_TYPE_PIPE:
@@ -715,7 +740,7 @@ size_t writefs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
                 seterr(EAGAIN);
                 return 0;
             }
-            if(fc->reg.fs==-1)
+            if(fc->fs>=nfsdrv)
                 return 0;
             // set up first time run parameters
             if(tc->workleft==-1) {
@@ -740,7 +765,7 @@ stat_t *statfs(fid_t idx)
         seterr(EAGAIN);
         return 0;
     }
-    memset(&st,0,sizeof(stat_t));
+    memzero(&st,sizeof(stat_t));
 //dbg_printf("statfs(%d)\n",idx);
     // add common fcb fields
     st.st_dev=fcb[idx].reg.storage;
@@ -764,8 +789,8 @@ stat_t *statfs(fid_t idx)
             break;
         default:
             // call file system driver to fill in various stat_t fields
-            if(fcb[idx].reg.fs==-1 || fcb[idx].reg.fs>=nfsdrv || fsdrv[fcb[idx].reg.fs].stat==NULL ||
-                !(*fsdrv[fcb[idx].reg.fs].stat)(fcb[idx].reg.storage, fcb[idx].reg.inode, &st))
+            if(fcb[idx].fs>=nfsdrv || fsdrv[fcb[idx].fs].stat==NULL ||
+                !(*fsdrv[fcb[idx].fs].stat)(fcb[idx].reg.storage, fcb[idx].reg.inode, &st))
                 return NULL;
             st.st_blksize=fcb[fcb[idx].reg.storage].device.blksize;
             break;
@@ -786,16 +811,16 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     if(!taskctx_validfid(tc,idx))
         return NULL;
     fc=&fcb[tc->openfiles[idx].fid];
-    if(fc->reg.fs==-1 || fc->reg.fs >= nfsdrv || fsdrv[fc->reg.fs].getdirent==NULL)
+    if(fc->fs >= nfsdrv || fsdrv[fc->fs].getdirent==NULL)
         return 0;
     // check if this device is locked
     if(fsck.dev==fc->reg.storage) {
         seterr(EAGAIN);
         return 0;
     }
-    memset(&dirent,0,sizeof(dirent_t));
+    memzero(&dirent,sizeof(dirent_t));
     // call file system driver to parse the directory entry
-    s=(*fsdrv[fc->reg.fs].getdirent)(ptr, tc->openfiles[idx].offs, &dirent);
+    s=(*fsdrv[fc->fs].getdirent)(ptr, tc->openfiles[idx].offs, &dirent);
     // failsafe
     if(s==0 || dirent.d_ino==0 || dirent.d_name[0]==0)
         return NULL;
@@ -806,8 +831,8 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     // assume regular file
     dirent.d_type=FCB_TYPE_REG_FILE;
     // call file system driver to fill in st_mode stat_t field
-    memset(&st,0,sizeof(stat_t));
-    if(fsdrv[fc->reg.fs].stat!=NULL && (*fsdrv[fc->reg.fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
+    memzero(&st,sizeof(stat_t));
+    if(fsdrv[fc->fs].stat!=NULL && (*fsdrv[fc->fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
         dirent.d_type=st.st_mode>>16;
         // if it's a symlink, get the target's type and size
         if(lastlink!=NULL) {
@@ -825,8 +850,7 @@ dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
                 }
             }
             if(ackdelayed) return NULL;
-            if(f!=-1 && fcb[f].reg.fs!=-1 && fcb[f].reg.fs<nfsdrv &&
-                (*fsdrv[fcb[f].reg.fs].stat)(fcb[f].reg.storage, fcb[f].reg.inode, &st)) {
+            if(f!=-1 && fcb[f].fs<nfsdrv && (*fsdrv[fcb[f].fs].stat)(fcb[f].reg.storage, fcb[f].reg.inode, &st)) {
                     dirent.d_type &= ~(S_IFMT>>16);
                     dirent.d_type |= st.st_mode>>16;
                     dirent.d_filesize=st.st_size;

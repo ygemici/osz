@@ -33,29 +33,28 @@
 
 extern uint8_t ackdelayed;      // flag to indicate async block read
 extern uint16_t cachelines;     // number of cache lines
-fid_t cache_currfid=0;          // fcb id of current open file
-uint64_t cache_inflush=0;       // number of blocks in flush
+uint64_t cache_inflush=0;       // number of blocks flushing
 
+#define CACHE_FD(x) (x&0xFFFFFFFFFFFFFFFULL)
+#define CACHE_PRIO(x) (x>>60)
+
+// sizeof=32
 typedef struct {
     fid_t fd;
     blkcnt_t lsn;
-    fid_t fid;
     void *blk;
+    void *next;
 } cache_t;
 
-typedef struct {
-    uint64_t ncache;
-    cache_t *blks;
-} cacheline_t;
-
-cacheline_t *cache;
+// sizeof=cachelines*8
+cache_t **cache;
 
 void cache_init()
 {
     // failsafe
     if(cachelines<16)
         cachelines=16;
-    cache=(cacheline_t*)malloc(cachelines*sizeof(cacheline_t));
+    cache=(cache_t**)malloc(cachelines*sizeof(cache_t*));
     // abort if we cannot allocate cache
     if(cache==NULL || errno())
         exit(2);
@@ -67,19 +66,30 @@ void cache_init()
 public void* cache_getblock(fid_t fd, blkcnt_t lsn)
 {
     uint64_t i,j=lsn%cachelines;
+    cache_t *c,*l=NULL;
 #if DEBUG
     if(_debug&DBG_CACHE)
         dbg_printf("FS: cache_getblock(fd %d, sector %d)\n",fd,lsn);
 #endif
-    if(fd==(fid_t)-1 || fd>=nfcb || lsn==(blkcnt_t)-1 || fcb[fd].type!=FCB_TYPE_DEVICE || cache[j].ncache==0)
-        return NULL;
-    for(i=0;i<cache[j].ncache;i++)
-        if(cache[j].blks[i].fd==fd && cache[j].blks[i].lsn==lsn)
-            return cache[j].blks[i].blk;
-    j=fcb[fd].device.inode;
-    // block not found in cache. Send a message to a driver
-    mq_send(dev[j].drivertask, DRV_read, dev[j].device, lsn, fcb[fd].device.blksize, ctx->pid, j);
-    // delay ack message to the original caller
+    // failsafe
+    if(fd==-1 || fd>=nfcb || lsn==-1 || fcb[fd].type!=FCB_TYPE_DEVICE || cache[j]==NULL) return NULL;
+    if((lsn+1)*fcb[fd].device.blksize>fcb[fd].device.filesize) { seterr(EFAULT); return NULL; }
+    // walk through the cacheline chain looking for the block
+    for(c=cache[j];c!=NULL;c=c->next) {
+        if(CACHE_FD(c->fd)==fd && c->lsn==lsn) {
+            if(l!=NULL)
+                l->next=c->next;
+            // move block in front of the chain
+            c->next=cache[j];
+            cache[j]=c;
+            return c->blk;
+        }
+        l=c;
+    }
+    // block not found in cache. Send a message to the driver task to read it
+    i=fcb[fd].device.inode;
+    mq_send(dev[i].drivertask, DRV_read, dev[i].device, lsn, fcb[fd].device.blksize, ctx->pid, i);
+    // delay ack message to the original caller (will be resumed when driver fills in cache)
     ackdelayed = true;
     return NULL;
 }
@@ -89,43 +99,45 @@ public void* cache_getblock(fid_t fd, blkcnt_t lsn)
  */
 public bool_t cache_setblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio)
 {
-    uint64_t i,j=lsn%cachelines,bs,f=-1;
-    void *ptr;
-    cache_t *cptr;
+    uint64_t j=lsn%cachelines,bs;
+    cache_t *c,*l=NULL,*nc=NULL;
 #if DEBUG
     if(_debug&DBG_CACHE)
-        dbg_printf("FS: cache_setblock(fd %d, sector %d, buf %x, prio %d) fid %d\n",fd,lsn,blk,prio,cache_currfid);
+        dbg_printf("FS: cache_setblock(fd %d, sector %d, buf %x, prio %d)\n",fd,lsn,blk,prio);
 #endif
-    if(fd==-1 || fd>=nfcb || lsn==-1 || fcb[fd].type!=FCB_TYPE_DEVICE)
-        return false;
+    // failsafe
+    if(fd==-1 || fd>=nfcb || lsn==-1 || fcb[fd].type!=FCB_TYPE_DEVICE) return false;
+    // block size
     bs=fcb[fd].device.blksize;
-    if(bs<=1)
-        return false;
-    for(i=0;i<cache[j].ncache;i++) {
-        cptr=&cache[j].blks[i];
-        if(cptr->fd==fd && cptr->lsn==lsn) {
-            cptr->fid=cache_currfid|((uint64_t)prio<<60);
-            memcpy(cptr->blk, blk, bs);
-            return true;
+    if(bs<=1) return false;
+    if((lsn+1)*bs>fcb[fd].device.filesize) { seterr(EFAULT); return false; }
+    // already in cache?
+    for(c=cache[j];c!=NULL;c=c->next) {
+        if(c->fd==fd && c->lsn==lsn) {
+            if(l!=NULL)
+                l->next=c->next;
+            nc=c;
+            break;
         }
-        if(f==-1 && cptr->fid==-1)
-            f=i;
+        l=c;
     }
-    if(f==-1) {
-        f=cache[j].ncache;
-        cache[j].blks=(cache_t*)realloc(cache[j].blks,++cache[j].ncache*sizeof(cache_t));
-        if(cache[j].blks==NULL)
+    // allocate new cache block if not found
+    if(nc==NULL) {
+        nc=(cache_t*)malloc(sizeof(cache_t));
+        if(nc==NULL)
             return false;
+        nc->blk=(void*)malloc(bs);
+        if(nc->blk==NULL)
+            return false;
+        nc->fd=fd;
+        nc->lsn=lsn;
     }
-    ptr=malloc(bs);
-    if(ptr==NULL)
-        return false;
-    memcpy(ptr,blk,bs);
-    cptr=&cache[j].blks[f];
-    cptr->fd=fd;
-    cptr->lsn=lsn;
-    cptr->fid=cache_currfid|((uint64_t)prio<<60);
-    cptr->blk=ptr;
+    // move block in front of the chain
+    nc->next=cache[j];
+    cache[j]=nc;
+    // update cache block
+    nc->fd=fd|((uint64_t)(prio*0xF)<<60);
+    memcpy(nc->blk,blk,bs);
     return true;
 }
 
@@ -134,80 +146,134 @@ public bool_t cache_setblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio)
  */
 public blkcnt_t cache_freeblocks(fid_t fd, blkcnt_t needed)
 {
-    uint64_t i,j;
+    uint64_t i,j,k;
     blkcnt_t cnt=0;
-    cache_t *cptr;
+    cache_t *c,*l,**r=NULL;
 #if DEBUG
-    if(_debug&DBG_CACHE)
+//    if(_debug&DBG_CACHE)
         dbg_printf("FS: cache_freeblocks(fd %d, needed %d)\n",fd,needed);
 #endif
-    for(j=0;j<cachelines && (needed==0 || cnt<needed);j++) {
-        for(i=cache[j].ncache-1;i>=0 && (needed==0 || cnt<needed);i--) {
-            cptr=&cache[j].blks[i];
-            if(cptr->fd==fd) {
-                free(cptr->blk);
-                cptr->fd=-1;
+    // failsafe
+    if(fd==-1 || fd>=nfcb || fcb[fd].type!=FCB_TYPE_DEVICE || fcb[fd].device.blksize<=1) return 0;
+    // assume 512 blocks per cachelines at first, so allocate one page for indexing
+    k=512; r=(cache_t**)malloc(k*sizeof(cache_t*));
+    if(r==NULL) goto failsafe;
+    // reverse order, so the superblock will be freed in the last round
+    for(j=cachelines-1;(int)j>=0 && (needed==0 || cnt<needed);j--) {
+        if(cache[j]==NULL)
+            continue;
+        // I decided not to store prev links all the time in a double
+        // linked list, so we have to build an index now.
+        i=0;
+        for(c=cache[j];c!=NULL;c=c->next) {
+            r[i++]=c;
+            // resize index array if needed
+            if(i+1>=k) {
+                k<<=1; r=(cache_t**)realloc(r,k*sizeof(cache_t*));
+                if(r==NULL) goto failsafe;
+            }
+        }
+        // free up blocks, going in reverse order, so starting with the last recently used one
+        for(i--;(int)i>=0;i--) {
+            c=r[i];
+            if(CACHE_FD(c->fd)==fd) {
+                if(i>0)
+                    r[i-1]->next=c->next;
+                else
+                    cache[j]=c->next;
+                free(c->blk);
+                free(c);
                 cnt++;
             }
         }
-        i=cache[j].ncache; while(i>0 && cache[j].blks[i].fd==-1) i--;
-        if(i!=cache[j].ncache) {
-            cache[j].ncache=i;
-            cache[j].blks=(cache_t*)realloc(cache[j].blks,cache[j].ncache*sizeof(cache_t));
+    }
+    free(r);
+    return cnt;
+    /* failsafe implementation. Does not need extra memory, but it also does not
+     * guarantee that last recently used block freed first. But in out of RAM
+     * scenario, better than nothing */
+failsafe:
+    for(j=cachelines-1;(int)j>=0 && (needed==0 || cnt<needed);j--) {
+        if(cache[j]==NULL)
+            continue;
+        l=cache[j];
+        for(c=cache[j];c!=NULL;c=c->next) {
+            if(CACHE_FD(c->fd)==fd) {
+                l->next=c->next;
+                l=c->next;
+                free(c->blk);
+                free(c);
+                c=l;
+                cnt++;
+            }
+            l=c;
         }
     }
     return cnt;
 }
 
 /**
- * flush cache to device
+ * flush cache to drives
  */
-void cache_flush(fid_t fid)
+void cache_flush()
 {
-    uint64_t i,j,k,p,pm;
+    uint64_t i,k,p;
     fid_t f;
-    cache_t *cptr;
-    for(p=BLKPRIO_CRIT;p<=BLKPRIO_META;p++) {
-        pm=(p<<60);
-        for(j=0;j<cachelines;j++) {
-            for(i=0;i<cache[j].ncache;i++) {
-                cptr=&cache[j].blks[i];
-                f=cptr->fid & 0xFFFFFFFFFFFFFFFUL;
-                if((cptr->fid & pm) && (f==0 || fid==-1 || f==fid)) {
-                    k=fcb[cptr->fd].device.inode;
-                    // block dirty in cache. Send a message to a driver to write out
-                    mq_send(dev[k].drivertask, DRV_write|MSG_PTRDATA, cptr->blk, fcb[cptr->fd].device.blksize,
-                        dev[k].device, cptr->lsn, k, cptr, ctx->pid);
+    cache_t *c;
+    cache_inflush=0;
+    // make sure it's flushed according to soft update priority
+    for(p=BLKPRIO_CRIT;p<=BLKPRIO_META;p++)
+        for(i=0;i<cachelines;i++) {
+            if(cache[i]==NULL)
+                continue;
+            for(c=cache[i];c!=NULL;c=c->next)
+                if(CACHE_PRIO(c->fd)==p) {
+                    f=CACHE_FD(c->fd);
+                    k=fcb[f].device.inode;
+                    // block dirty in cache. Send a message to the driver to write out
+                    mq_send(dev[k].drivertask, DRV_write|MSG_PTRDATA, c->blk, fcb[f].device.blksize,
+                        dev[k].device, f, c->lsn, k, ctx->pid);
                     dev[k].total++;
                     cache_inflush++;
                 }
-            }
         }
-    }
 #if DEBUG
     if(_debug&DBG_CACHE)
-        dbg_printf("FS: cache_flush(fid %d) flushing %d blks\n",fid,cache_inflush);
+        dbg_printf("FS: cache_flush() flushing %d blks\n",cache_inflush);
 #endif
 }
 
 /**
  * clear dirty flag on cache block and increase written out counter on dev
  */
-bool_t cache_cleardirty(uint64_t idx,void *cptr)
+bool_t cache_cleardirty(fid_t fd, blkcnt_t lsn)
 {
+    uint64_t i,j=lsn%cachelines;
+    cache_t *c;
+#if DEBUG
+    if(_debug&DBG_CACHE)
+        dbg_printf("FS: cache_cleardirty(fd %d, sector %d)\n",fd,lsn);
+#endif
+    // failsafe
+    if(fd==-1 || fd>=nfcb || lsn==-1 || fcb[fd].type!=FCB_TYPE_DEVICE || cache[j]==NULL)
+        return false;
+    // find it in block chain
+    for(c=cache[j];c!=NULL;c=c->next)
+        if(CACHE_FD(c->fd)==fd && c->lsn==lsn) {
+            c->fd=CACHE_FD(fd);
+            break;
+        }
     // increase number of blocks written out
-    dev[idx].out++;
-    if(dev[idx].out >= dev[idx].total)
-        dev[idx].out=dev[idx].total=0;
-    // if arg1 is a cache block, clear dirty flag
-    if(cptr!=NULL && ((cache_t*)cptr)->fd==dev[idx].fid)
-        ((cache_t*)cptr)->fid &= 0xFFFFFFFFFFFFFFFUL;
+    i=fcb[fd].device.inode;
+    dev[i].out++;
+    if(dev[i].out >= dev[i].total)
+        dev[i].out=dev[i].total=0;
     // notify UI to update progressbar on dock icons
-    mq_send(SRV_UI, SYS_devprogress, dev[idx].fid, dev[idx].out, dev[idx].total);
+    mq_send(SRV_UI, SYS_devprogress, fd, dev[i].out, dev[i].total);
     cache_inflush--;
 #if DEBUG
     if(_debug&DBG_CACHE && cache_inflush==0)
-        dbg_printf("FS: cache_cleardirty() all blks flushed\n");
+        dbg_printf("FS: cache_cleardirty() all blks written out\n");
 #endif
     return cache_inflush==0;
 }
@@ -217,17 +283,19 @@ bool_t cache_cleardirty(uint64_t idx,void *cptr)
  */
 void cache_free()
 {
-    uint64_t i,j,k;
-    blkcnt_t total=0,freed=0;
-    for(j=0;j<cachelines;j++)
-        for(i=0;i<cache[j].ncache;i++)
-            if(cache[j].blks[i].fd!=-1)
-                total++;
-#if DEBUG
-    if(_debug&DBG_CACHE)
-        dbg_printf("FS: cache_free() total %d blks\n", total);
-#endif
-    total/=2; i=0;k=-1;
+    uint64_t i,k;
+    blkcnt_t total=0, freed=0;
+    cache_t *c;
+    // count the total number of blocks. We rarely need this, so it's
+    // acceptable not to keep track of the number all the time
+    for(i=0;i<cachelines;i++) {
+        if(cache[i]==NULL)
+            continue;
+        for(c=cache[i];c!=NULL;c=c->next)
+            total++;
+    }
+    // we need to free at least half of it
+    total>>=1; i=0;k=-1;
     // failsafe, got the same device as last time?
     while(freed<total && i!=k) {
         i=k;
@@ -238,12 +306,30 @@ void cache_free()
     }
 #if DEBUG
     if(_debug&DBG_CACHE)
-        dbg_printf("FS: cache_free() freed %d blks\n", freed);
+        dbg_printf("FS: cache_free() freed %d out of %d blks\n", freed, total<<1);
 #endif
 }
 
 #if DEBUG
 void cache_dump()
 {
+    uint64_t i;
+    cache_t *c;
+    blkcnt_t total=0;
+    for(i=0;i<cachelines;i++) {
+        if(cache[i]==NULL)
+            continue;
+        for(c=cache[i];c!=NULL;c=c->next)
+            total++;
+    }
+    dbg_printf("Block cache %d:\n",total);
+    for(i=0;i<cachelines;i++) {
+        if(cache[i]==NULL)
+            continue;
+        dbg_printf("%3d:",i);
+        for(c=cache[i];c!=NULL;c=c->next)
+            dbg_printf(" (prio %d, fd %d, lsn %d)",CACHE_PRIO(c->fd),CACHE_FD(c->fd),c->lsn);
+        dbg_printf("\n");
+    }
 }
 #endif

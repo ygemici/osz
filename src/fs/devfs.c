@@ -59,7 +59,7 @@ uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mode, blks
         exit(2);
     f=fcb_add(tmp, FCB_TYPE_DEVICE);
     fcb[f].nopen++;
-    fcb[f].mode=mode;
+    fcb[f].mode=mode & O_AMSK;
     fcb[f].device.inode=i;
     fcb[f].device.blksize=blksize;
     fcb[f].device.filesize=blksize*blkcnt;

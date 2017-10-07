@@ -76,5 +76,5 @@
 // socket operations
 
 #if DEBUG
-#define SYS_dump        (255)
+#define SYS_fsdump     (255)
 #endif

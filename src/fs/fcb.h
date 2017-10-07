@@ -38,13 +38,23 @@
 #define FCB_TYPE_PIPE       4
 #define FCB_TYPE_SOCKET     5
 
+#define FCB_FLAG_EXCL       (1<<0)
+
+// write buffer
+typedef struct {
+    off_t offs;
+    size_t size;
+    void *data;
+    void *next;
+} writebuf_t;
+
 // regular. Files and directories
 typedef struct {
     fid_t storage;
     ino_t inode;
     fpos_t filesize;
     blksize_t blksize;
-    uint16_t fs;
+    writebuf_t *buf;
 } __attribute__((packed)) fcb_reg_t;
 
 // Directory unions
@@ -53,12 +63,15 @@ typedef struct {
     ino_t inode;
     fpos_t filesize;
     fid_t *unionlist;
-    uint16_t fs;
 } __attribute__((packed)) fcb_union_t;
 
-// uses the same as regular files, only this time
-// storage points to devfs
-typedef fcb_reg_t fcb_dev_t;
+// Devices
+typedef struct {
+    fid_t storage;
+    ino_t inode;
+    fpos_t filesize;
+    blksize_t blksize;
+} __attribute__((packed)) fcb_dev_t;
 
 typedef struct {
 } __attribute__((packed)) fcb_pipe_t;
@@ -67,10 +80,12 @@ typedef struct {
 } __attribute__((packed)) fcb_socket_t;
 
 typedef struct {
-    char *abspath;
-    uint64_t nopen;
-    uint8_t type;
-    mode_t mode;
+    char *abspath;              //8
+    uint64_t nopen;             //16
+    uint8_t type;               //17
+    uint8_t flags;              //18
+    uint16_t fs;                //20
+    mode_t mode;                //24
     union {
         fcb_reg_t reg;
         fcb_dev_t device;
@@ -78,7 +93,7 @@ typedef struct {
         fcb_pipe_t pipe;
         fcb_socket_t socket;
     };
-} fcb_t;
+} __attribute__((packed)) fcb_t;
 
 extern uint64_t nfcb;
 extern uint64_t nfiles;
@@ -87,7 +102,10 @@ extern fcb_t *fcb;
 extern fid_t fcb_get(char *abspath);
 extern fid_t fcb_add(char *abspath, uint8_t type);
 extern void fcb_del(fid_t idx);
+extern void fcb_cleanup();
 extern fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t size);
+extern bool_t fcb_write(fid_t idx, off_t offs, void *buf, size_t size);
+extern bool_t fcb_flush(fid_t idx);
 
 #if DEBUG
 extern void fcb_dump();

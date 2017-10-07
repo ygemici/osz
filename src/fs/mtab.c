@@ -96,7 +96,8 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     mtab[i].storage=fd;
     mtab[i].mountpoint=ff;
     mtab[i].fstype=fs;
-    fcb[ff].reg.fs=fs;
+    fcb[ff].fs=fs;
+    fcb[ff].mode=fcb[fd].mode;
     fcb[fd].nopen++;
 
 //dbg_printf("dev '%s' file '%s' opts '%s' fs %d\n",dev,file,opts,fs);
@@ -201,7 +202,7 @@ void mtab_dump()
     dbg_printf("Mounts %d:\n",nmtab);
     for(i=0;i<nmtab;i++) {
         dbg_printf("%3d. %s %s %s\n", i, fcb[mtab[i].storage].abspath,
-            mtab[i].fstype==-1?"???":fsdrv[mtab[i].fstype].name,
+            mtab[i].fstype>=nfsdrv?"???":fsdrv[mtab[i].fstype].name,
             fcb[mtab[i].mountpoint].abspath);
     }
 }

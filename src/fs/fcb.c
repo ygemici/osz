@@ -91,7 +91,7 @@ fid_t fcb_add(char *abspath, uint8_t type)
     fcb[i].abspath=abspath;
     fcb[i].type=type;
     if(type<FCB_TYPE_PIPE)
-        fcb[i].reg.fs=-1;
+        fcb[i].fs=(uint16_t)-1;
     return i;
 }
 
@@ -131,6 +131,23 @@ void fcb_del(fid_t idx)
 }
 
 /**
+ * delete all unused entries from fcb cache
+ */
+void fcb_cleanup()
+{
+    int i;
+    bool_t was=true;
+    while(was) {
+        was=false;
+        for(i=0;i<nfcb;i++)
+            if(fcb[i].nopen==0) {
+                was=true;
+                fcb_del(i);
+            }
+    }
+}
+
+/**
  * add a fid_t to a fid_t list if it's not already in the list
  */
 size_t fcb_unionlist_add(fid_t **fl,fid_t f,size_t n)
@@ -158,12 +175,12 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
     fid_t f,*fl=NULL;
     // failsafe
     if(idx>=nfcb || fcb[idx].abspath==NULL || fcb[idx].type!=FCB_TYPE_UNION || 
-      fcb[idx].uni.fs==-1 ||fcb[idx].uni.fs>=nfsdrv || fsdrv[fcb[idx].uni.fs].read==NULL)
+      fcb[idx].fs >= nfsdrv || fsdrv[fcb[idx].fs].read==NULL)
         return -1;
 //dbg_printf("fcb_unionlist_build(%d,%x,%d)\n",idx,buf,s);
     bs=fcb[fcb[idx].uni.storage].device.blksize;
     // call file system driver
-    ptr=(*fsdrv[fcb[idx].uni.fs].read)(fcb[idx].uni.storage, fcb[idx].uni.inode, 0, &bs);
+    ptr=(*fsdrv[fcb[idx].fs].read)(fcb[idx].uni.storage, fcb[idx].uni.inode, 0, &bs);
     // ptr should not be NULL, as union data inlined in inode and inode is in the cache already
     if(ptr==NULL || ptr[0]==0 || ackdelayed)
         return -1;
@@ -186,15 +203,15 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
             f=lookup(fn,false);
 //dbg_printf("  unionlist '%s'...'%s' %d buf=%x s=%d\n",fn,ptr+i+k+4,f,buf,s);
             if(ackdelayed) { free(fn); return -1; }
-            if(f!=-1 && fcb[f].reg.fs!=-1 && fcb[f].reg.fs<nfsdrv && fsdrv[fcb[f].reg.fs].getdirent!=NULL) {
+            if(f!=-1 && fcb[f].fs<nfsdrv && fsdrv[fcb[f].fs].getdirent!=NULL) {
                 if(buf==NULL) return f;
                 j=0; l=1;
                 fn=realloc(fn,pathmax);
                 if(fn==NULL) continue;
                 while(j<s && l!=0) {
                     fn[k]=0;
-                    memset(&dirent.d_name,0,FILENAME_MAX);
-                    l=(*fsdrv[fcb[f].reg.fs].getdirent)(buf+j, j, &dirent);
+                    memzero(&dirent.d_name,FILENAME_MAX);
+                    l=(*fsdrv[fcb[f].fs].getdirent)(buf+j, j, &dirent);
                     if(dirent.d_name[0]!=0 && dirent.d_name[strlen(dirent.d_name)-1]=='/') {
                         pathcat(fn,dirent.d_name);
                         pathcat(fn,ptr+i+k+4);
@@ -228,6 +245,101 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
     return -1;
 }
 
+/**
+ * write to an fcb, saves changes in a buffer
+ */
+public bool_t fcb_write(fid_t idx, off_t offs, void *buf, size_t size)
+{
+    fcb_t *f;
+    writebuf_t *w,*nw,*l=NULL;
+    size_t s;
+    off_t e,we;
+    bool_t chk;
+    // failsafe
+    if(idx==-1 || idx>=nfcb || fcb[idx].type!=FCB_TYPE_REG_FILE)
+        return false;
+    f=&fcb[idx];
+    // failsafe
+    if(fcb[idx].reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return false; }
+    if(!(f->mode & O_WRITE)) { seterr(EACCES); return false; }
+    // allocate a new write buffer
+    nw=(writebuf_t*)malloc(sizeof(writebuf_t));
+    if(nw==NULL)
+        return false;
+    nw->data=(void*)malloc(size);
+    nw->offs=offs;
+    nw->size=size;
+    e=offs+size;
+    if(nw->data==NULL)
+        return false;
+    // remove old buffers entirely covered by the new one
+    l=NULL;
+    for(w=f->reg.buf;w!=NULL;w=w->next) {
+        we=w->offs+w->size;
+        // ##############       offs,e
+        //  +--+ +----+         w->offs,we
+        if((offs<=w->offs && e>=we) || w->data==NULL) {
+            if(l!=NULL) l->next=w->next; else f->reg.buf=w->next;
+            if(w->data) { free(w->data); } free(w); w=l;
+        }
+        l=w;
+    }
+    l=NULL; chk=false;
+    for(w=f->reg.buf;w!=NULL;w=w->next) {
+        we=w->offs+w->size;
+        // #######              offs,e
+        //          +--------+  w->offs,we
+        if(e<w->offs) {
+            if(l!=NULL) l->next=nw; else f->reg.buf=nw;
+            nw->next=w; memcpy(nw->data,buf,size); chk=true;
+            break;
+        } else
+        // ########
+        //    +-------+
+        if(offs<w->offs && e>=w->offs && e<we) {
+            s=we-offs;
+            nw->data=(void*)realloc(nw->data,s); if(nw->data==NULL) return false;
+            memcpy(nw->data,buf,size); memcpy(nw->data+size,w->data,we-e);
+            w->offs=offs; w->size=s; free(w->data); w->data=nw->data; free(nw); chk=true;
+            break;
+        } else
+        //     ####
+        //  +--------+
+        if(offs>=w->offs && e<=we) {
+            memcpy(w->data+offs-w->offs,buf,size); free(nw->data); free(nw); chk=true;
+            break;
+        } else
+        //     ##########
+        // +-------+
+        if(offs>w->offs && offs<=we && e>we) {
+            w->data=(void*)realloc(nw->data,we-offs); if(w->data==NULL) return false;
+            memcpy(w->data+offs-w->offs,buf,size); free(nw->data); free(nw); chk=true;
+            break;
+        } else
+        //           ##########
+        // +-------+             +----+?
+        if(offs>we && offs<=we && e>we && w->next!=NULL) {
+            nw->next=w->next; w->next=nw; memcpy(nw->data,buf,size); chk=true;
+            break;
+        }
+    }
+    if(!chk) {
+#if DEBUG
+dbg_printf("fcb_write new buffer NOT ADDED! Should never happen!!!\n");
+#endif
+        if(l!=NULL) { nw->next=l->next; l->next=nw; memcpy(nw->data,buf,size); chk=true; }
+    }
+    return chk;
+}
+
+/**
+ * flush fcb write buffer to it's storage
+ */
+public bool_t fcb_flush(fid_t idx)
+{
+    return true;
+}
+
 #if DEBUG
 void fcb_dump()
 {
@@ -235,8 +347,15 @@ void fcb_dump()
     char *types[]={"file", "dir ", "uni ", "dev ", "pipe", "sock"};
     dbg_printf("File Control Blocks %d:\n",nfcb);
     for(i=0;i<nfcb;i++) {
-        dbg_printf("%3d. %3d %s %4d %8s ",i,fcb[i].nopen,types[fcb[i].type],
-            fcb[i].type!=FCB_TYPE_UNION?fcb[i].reg.blksize:0,fcb[i].reg.fs<nfsdrv?fsdrv[fcb[i].reg.fs].name:"nofs");
+        dbg_printf("%3d. %3d ",i,fcb[i].nopen);
+        if(fcb[i].abspath==NULL) {
+            dbg_printf("(free slot)\n");
+            continue;
+        }
+        dbg_printf("%s %4d %8s ",types[fcb[i].type],
+            fcb[i].type!=FCB_TYPE_UNION?fcb[i].reg.blksize:0,fcb[i].fs<nfsdrv?fsdrv[fcb[i].fs].name:"nofs");
+        dbg_printf("%c%c%c%c ",fcb[i].mode&O_READ?'r':'-',fcb[i].mode&O_READ?'w':'-',fcb[i].mode&O_READ?'a':'-',
+            fcb[i].flags&FCB_FLAG_EXCL?'L':'-');
         dbg_printf("%3d:%3d %8d %s",fcb[i].reg.storage,fcb[i].reg.inode,fcb[i].reg.filesize,fcb[i].abspath);
         if(fcb[i].type==FCB_TYPE_UNION && fcb[i].uni.unionlist!=NULL) {
             dbg_printf("\t[");

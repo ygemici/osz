@@ -103,8 +103,11 @@ typedef struct {
 
 //sizeof = 16, one Access Control Entry, UUID without the last byte
 typedef struct {
-    uint8_t uuid[15];
-    uint8_t access;
+    uint32_t Data1;
+    uint16_t Data2;
+    uint16_t Data3;
+    uint8_t  Data4[7];
+    uint8_t  access;
 } __attribute__((packed)) FSZ_Access;
 
 //access rights are stored in the last byte. Make sure this matches

@@ -276,7 +276,7 @@ void kprintf_putascii(int64_t c)
 }
 
 /**
- * similar, for %A
+ * similar, for %A, mask out control chars
  */
 void kprintf_dumpascii(int64_t c)
 {
@@ -377,6 +377,25 @@ void kprintf_dumpmem(uint8_t *mem)
         mem+=16;
         kprintf("\n");
     }
+}
+
+/**
+ * for %U, uuid
+ */
+void kprintf_uuid(uuid_t *mem)
+{
+    int i;
+    cnt=4;
+    kprintf_puthex((uint32_t)mem->Data1);
+    kprintf_putchar('-'); kx++;
+    cnt=2;
+    kprintf_puthex((uint16_t)mem->Data2);
+    kprintf_putchar('-'); kx++;
+    kprintf_puthex((uint16_t)mem->Data3);
+    kprintf_putchar('-'); kx++;
+    cnt=1;
+    for(i=0;i<8;i++)
+        kprintf_puthex(mem->Data4[i]);
 }
 
 /**
@@ -599,6 +618,9 @@ void kprintf(char* fmt, ...)
             } else
             if(fmt[0]=='x') {
                 kprintf_puthex(arg);
+            } else
+            if(fmt[0]=='U') {
+                kprintf_uuid((uuid_t*)arg);
             } else
             if(fmt[0]=='s') {
                 kprintf(p);

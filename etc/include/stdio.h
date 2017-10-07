@@ -61,16 +61,19 @@
 /* open flags */
 #define O_READ      (1<<0)  // read
 #define O_WRITE     (1<<1)  // write
-#define O_CREAT     (1<<2)  // create if not exists
-#define O_APPEND    (1<<3)  // append only
-#define O_EXCL      (1<<4)  // exclusive access (lock)
+#define O_APPEND    (1<<2)  // append only
+#define O_EXCL      (1<<3)  // exclusive access (lock)
+#define O_CREAT     (1<<4)  // create if not exists
 #define O_TRUNC     (1<<5)  // truncate
 #define O_NONBLOCK  (1<<6)  // non blocking
 #define O_ASYNC     (1<<7)  // no cache write-through
 #define O_TMPFILE   (1<<8)  // delete on close
+#define O_FIFO      (1<<9)  // open as named pipe
 #define O_RDONLY    O_READ
 #define O_WRONLY    O_WRITE
 #define O_RDWR      (O_READ|O_WRITE)
+
+#define O_AMSK      (O_READ|O_WRITE|O_APPEND|O_EXCL)
 
 /* macros and flags for stat_t */
 #define S_IFLG   0xFF000000 // mask

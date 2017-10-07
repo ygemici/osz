@@ -31,7 +31,6 @@ char buff[65536];
 
 void dumpstat(stat_t *st)
 {
-    int i;
     if(st==NULL)
         return;
     dbg_printf("    st_dev %d st_ino %d st_mode %4x\n",st->st_dev,st->st_ino,st->st_mode);
@@ -40,8 +39,7 @@ void dumpstat(stat_t *st)
     dbg_printf("    st_nlink %d st_size %d st_blksize %d st_blocks %d\n",st->st_nlink,st->st_size,st->st_blksize,
         st->st_blocks);
     dbg_printf("    st_atime %d st_ctime %d st_mtime %d\n",st->st_atime,st->st_ctime,st->st_mtime);
-    dbg_printf("    st_owner ");
-    for(i=0;i<16;i++) dbg_printf("%1x",((uint8_t*)&st->st_owner)[i]);
+    dbg_printf("    st_owner %U\n", &st->st_owner);
     dbg_printf("\n");
 }
 
@@ -58,7 +56,7 @@ void fs_test()
     fid_t f;
     f=fopen("/sys/etc/valami/megint",O_CREAT);
     dbg_printf("fopen ret %d errno %d %s\n", f, errno(), strerror(errno()));
-/*
+
     dirent_t *de;
     f=mount("/dev/valami", "/etc", NULL);
     dbg_printf("mount ret %d errno %d\n", f, errno());
@@ -115,8 +113,8 @@ void fs_test()
     }
 //    closedir(f);
 
-    mq_call(SRV_FS, SYS_dump);
+    mq_call(SRV_FS, SYS_fsdump);
     mq_send(SRV_FS, SYS_exit);
-*/
-    mq_call(SRV_FS, SYS_dump);
+
+    mq_call(SRV_FS, SYS_fsdump);
 }

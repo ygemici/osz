@@ -25,8 +25,8 @@
  * @brief OS/Z specific system types
  */
 
-#ifndef	_SYS_TYPES_H
-#define	_SYS_TYPES_H	1
+#ifndef _SYS_TYPES_H
+#define _SYS_TYPES_H    1
 
 /*** visibility ***/
 #define public __attribute__ ((__visibility__("default")))
@@ -70,30 +70,27 @@
 #ifndef _AS
 
 typedef struct {
-	uint32_t Data1;
-	uint16_t Data2;
-	uint16_t Data3;
-	uint8_t Data4[8];
+    uint32_t Data1;
+    uint16_t Data2;
+    uint16_t Data3;
+    uint8_t  Data4[8];
 } __attribute__((packed)) uuid_t;
 #define UUID_ACCESS(a) (a.Data4[7])
 
-typedef struct
-  {
+typedef struct {
     int quot;               // Quotient.
     int rem;                // Remainder.
-  } div_t;
+} div_t;
 
-typedef struct
-  {
+typedef struct {
     long int quot;          // Quotient.
     long int rem;           // Remainder.
-  } ldiv_t;
+} ldiv_t;
 
-typedef struct
-  {
+typedef struct {
     long long int quot;     // Quotient.
     long long int rem;      // Remainder.
-  } lldiv_t;
+} lldiv_t;
 
 typedef unsigned char uchar;
 typedef unsigned int uint;
@@ -103,7 +100,7 @@ typedef uint64_t fid_t;     // file index
 typedef uint64_t ino_t;     // inode number
 typedef uint64_t dev_t;     // device index
 typedef uuid_t gid_t;       // group id
-typedef uint64_t mode_t;    // mode
+typedef uint32_t mode_t;    // mode
 typedef uint64_t nlink_t;   // number of links
 typedef uuid_t uid_t;       // user id
 typedef int64_t off_t;      // offset
@@ -112,7 +109,7 @@ typedef uint64_t id_t;      // identify
 typedef uint64_t ssize_t;   // ?
 typedef uint64_t key_t;     // ?
 typedef int register_t;     // register type
-typedef uint64_t blksize_t; // block size
+typedef uint32_t blksize_t; // block size
 typedef uint64_t blkcnt_t;  // number of disk blocks.
 typedef uint64_t fpos_t;    // file position
 typedef uint32_t keymap_t;  // keymap entry

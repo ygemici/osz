@@ -40,10 +40,9 @@ typedef uint8_t blkprio_t;
 extern void cache_init();
 extern void *cache_getblock(fid_t fd, blkcnt_t lsn);
 extern bool_t cache_setblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio);
-extern void cache_freedev(fid_t fd);
-extern void cache_flush(fid_t fid);
 extern blkcnt_t cache_freeblocks(fid_t fd, blkcnt_t needed);
-extern bool_t cache_cleardirty(uint64_t idx,void *cptr);
+extern void cache_flush();
+extern bool_t cache_cleardirty(fid_t fd, blkcnt_t lsn);
 extern void cache_free();
 
 #if DEBUG

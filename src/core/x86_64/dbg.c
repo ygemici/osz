@@ -268,7 +268,7 @@ void dbg_tcb()
             prio[tcb->priority], tcb->priority,
             tcb->state<sizeof(states)? states[tcb->state] : "???", tcb->state
         );
-        kprintf("Owner user: %s, last exception error code: %d\n", tcb->owner, tcb->excerr);
+        kprintf("Owner user: %U, last exception error code: %d\n", &tcb->owner, tcb->excerr);
 
         fg=dbg_theme[4];
         if(dbg_tui)
@@ -376,7 +376,7 @@ uint64_t dbg_getrip(int *idx)
         }
         if(sys_fault)
             break;
-        if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
+        if((*rsp>MQ_ADDRESS && *rsp<BSS_ADDRESS) ||
            (*rsp>((uint64_t)&__bss_start))) {
             if(sys_fault)
                 break;
@@ -423,7 +423,7 @@ void dbg_code(uint64_t rip, uint64_t rs, int *idx)
     uchar *symstr;
     virt_t ptr, dmp, lastsymsave;
     int i=0;
-    uint64_t j, *rsp=(uint64_t*)(rs!=0?rs:tcb->rsp), *o;
+    uint64_t j, k, *rsp=(uint64_t*)(rs!=0?rs:tcb->rsp), *o;
 
     /* registers and stack dump */
     if(!dbg_full) {
@@ -475,7 +475,7 @@ void dbg_code(uint64_t rip, uint64_t rs, int *idx)
         o=rsp;
         while(i++<11 && !sys_fault && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
             kprintf("rsp+%1x rbp-%1x: ",
-                !dbg_inst?((uint64_t)rsp)&0xFF:(uint32_t)(uint64_t)rsp - (uint64_t)tcb->rsp,
+                !dbg_inst?((uint64_t)rsp)&0xFF:(uint32_t)(uint64_t)rsp - (uint64_t)o,
                 (uint32_t)((uint64_t)(tcb->gpr+112)-(uint64_t)rsp)
             );
             kprintf(dbg_inst?"%8x \n":"'%A' \n", *rsp);
@@ -511,11 +511,11 @@ void dbg_code(uint64_t rip, uint64_t rs, int *idx)
         fg=dbg_theme[3];
         if(dbg_tui)
             dbg_settheme();
+        i=0;j=1;k=8;
+btagain:
         sys_fault = false;
-        i=0;j=1;
-        while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
-            if((((rsp[1]==0x23||rsp[1]==0x08) &&
-                (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
+        while(i++<k && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
+            if(o!=0 && (((rsp[1]==0x23||rsp[1]==0x08) && (rsp[4]==0x1b||rsp[4]==0x18))) && !sys_fault) {
                 if(*idx==j)
                     fg=0xFFDD33;
                 else
@@ -531,17 +531,11 @@ void dbg_code(uint64_t rip, uint64_t rs, int *idx)
                 o=0;
                 continue;
             }
-            if(sys_fault)
-                break;
-            if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
-               (*rsp>((uint64_t)&__bss_start))) {
-                if(sys_fault)
-                    break;
+            sys_fault=false;
+            if(((*rsp>MQ_ADDRESS && *rsp<BSS_ADDRESS) || (*rsp>((uint64_t)&__bss_start))) && !sys_fault) {
                 symstr = elf_sym(*rsp);
-                if(sys_fault)
-                    break;
-                if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
-                    (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata")) {
+                if(!sys_fault && ((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
+                    (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata"))) {
                     if(*idx==j)
                         fg=0xFFDD33;
                     else
@@ -554,36 +548,13 @@ void dbg_code(uint64_t rip, uint64_t rs, int *idx)
                     if(dbg_tui)
                         dbg_settheme();
                 }
+                sys_fault=false;
             }
             rsp++;
         }
         if(o) {
-            rsp=o; i=0;
-            while(i++<4 && !sys_fault && rsp!=0 && ((uint64_t)rsp<(uint64_t)TEXT_ADDRESS||(uint64_t)rsp>(uint64_t)&__bss_start)){
-                if((*rsp>TEXT_ADDRESS && *rsp<BSS_ADDRESS) ||
-                   (*rsp>((uint64_t)&__bss_start))) {
-                    if(sys_fault)
-                        break;
-                    symstr = elf_sym(*rsp);
-                    if(sys_fault)
-                        break;
-                    if((virt_t)symstr>(virt_t)TEXT_ADDRESS &&
-                        (virt_t)symstr<(virt_t)BSS_ADDRESS && kstrcmp(symstr,"_edata")) {
-                        if(*idx==j)
-                            fg=0xFFDD33;
-                        else
-                            fg=dbg_theme[3];
-                        if(dbg_tui)
-                            dbg_settheme();
-                        kprintf("%8x: %s \n", *rsp, symstr);
-                        j++;
-                        fg=dbg_theme[3];
-                        if(dbg_tui)
-                            dbg_settheme();
-                    }
-                }
-                rsp++;
-            }
+            rsp=o; k=14; i=0; o=0;
+            goto btagain;
         }
         kprintf("\n");
     }
@@ -1363,6 +1334,7 @@ virt_t dbg_getaddr(char *cmd, size_t size)
         if(ts==3 && s[0]=='r' && s[1]=='1' && s[2]=='4') base = *((uint64_t*)(tcb->gpr+96)); else
         if(ts==3 && s[0]=='r' && s[1]=='1' && s[2]=='5') base = *((uint64_t*)(tcb->gpr+104)); else
         if(ts==3 && s[0]=='r' && s[1]=='b' && s[2]=='p') base = *((uint64_t*)(tcb->gpr+112)); else
+        if(ts==3 && s[0]=='r' && s[1]=='s' && s[2]=='p') base = tcb->rsp; else
         /* neither, lookup sym */
             base = elf_lookupsym((uchar*)s,ts);
     }
