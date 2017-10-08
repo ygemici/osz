@@ -83,7 +83,7 @@ char *env_str(char *key, char *default);
 ```
 
 to parse the [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) file mapped by the run-time linker. These
-functions will return the appropirate value for the key, or `default` if key not found. Number format can be decimal or
+functions will return the appropriate value for the key, or `default` if key not found. Number format can be decimal or
 hexadecimal (with the '0x' prefix). Boolean understands 0,1,true,false,enabled,disabled,on,off. The `env_str` returns a
 malloc'd string, which must be freed later by the caller.
 
@@ -92,7 +92,7 @@ Note that you don't have to do any message receive calls, just create public fun
 Additionaly to Makefile, the build system looks for [two more files](https://github.com/bztsrc/osz/blob/master/docs/drivers.md#files) along with a device driver source.
 
  * `platforms` - if this file exists, it can limit the compilation of the driver for specific platform(s)
- * `devices` - specifies which devices the driver supports, used by `core` during system bus enumeration.
+ * `devices` - specifies which devices are supported by the driver, used by `core` during system bus enumeration.
 
 Entry points
 ------------

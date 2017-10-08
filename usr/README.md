@@ -26,6 +26,7 @@ Examples:
 
 | OS/Z version | Usual place on UNIX |
 | ------------ | ------------------- |
+| /usr/X11R6/bin | /usr/X11R6/bin |
 | /usr/core/include | /usr/include |
 | /usr/openssl/include | /usr/include/openssl |
 | /usr/gcc/bin/gcc | /usr/bin/gcc |
