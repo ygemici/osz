@@ -41,8 +41,8 @@ extern void cache_init();
 extern void *cache_getblock(fid_t fd, blkcnt_t lsn);
 extern bool_t cache_setblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio);
 extern blkcnt_t cache_freeblocks(fid_t fd, blkcnt_t needed);
-extern void cache_flush();
 extern bool_t cache_cleardirty(fid_t fd, blkcnt_t lsn);
+extern void cache_flush();
 extern void cache_free();
 
 #if DEBUG

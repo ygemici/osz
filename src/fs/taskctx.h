@@ -69,6 +69,7 @@ extern uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs,
 extern bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree);
 extern bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence);
 extern bool_t taskctx_validfid(taskctx_t *tc, uint64_t idx);
+extern dirent_t *taskctx_readdir(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
 extern size_t taskctx_read(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size);
 extern size_t taskctx_write(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
 

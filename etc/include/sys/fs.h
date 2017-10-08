@@ -43,8 +43,8 @@
 #define SYS_fseek       (16)
 #define SYS_ftell       (17)
 #define SYS_fread       (18)
-#define SYS_fwrite      (19) //
-#define SYS_fflush      (20) //
+#define SYS_fwrite      (19)
+#define SYS_fflush      (20)
 #define SYS_feof        (21)
 #define SYS_ferror      (22)
 #define SYS_fclrerr     (23)

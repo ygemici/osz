@@ -49,9 +49,11 @@ typedef struct {
     void    (*resizefs) (fid_t fd);                                                 // resize the file system
     bool_t  (*checkfs)  (fid_t fd);                                                 // check fs consistency
     bool_t  (*stat)     (fid_t fd, ino_t file, stat_t *st);                         // return stat structure
-    void*   (*read)     (fid_t fd, ino_t file, fpos_t offs, size_t *s);             // read from a file
-    bool_t  (*write)    (fid_t fd, ino_t file, fpos_t offs, void *blk, size_t *s);  // write to a file
     size_t  (*getdirent)(void *buf, fpos_t offs, dirent_t *dirent);                 // parse directory entry to dirent
+    void*   (*read)     (fid_t fd, ino_t file, fpos_t offs, size_t *s);             // read from a file
+    bool_t  (*writetrb) (fid_t fd, ino_t file);                                     // write transaction begins
+    bool_t  (*write)    (fid_t fd, ino_t file, fpos_t offs, void *blk, size_t s);   // write data to a file
+    bool_t  (*writetre) (fid_t fd, ino_t file);                                     // write transaction ends
 } fsdrv_t;
 
 /* filesystem parsers */

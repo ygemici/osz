@@ -126,12 +126,15 @@ void taskctx_workdir(taskctx_t *tc, fid_t fid)
 uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64_t idx)
 {
     uint64_t i;
+    fcb_t *f;
+    openfiles_t *of;
     if(tc==NULL || fid>=nfcb || fcb[fid].abspath==NULL) {
         seterr(ENOENT);
         return -1;
     }
+    f=&fcb[fid];
     // check if it's already opened for exclusive access
-    if(fcb[fid].flags & FCB_FLAG_EXCL) {
+    if(f->flags & FCB_FLAG_EXCL) {
         seterr(EBUSY);
         return -1;
     }
@@ -139,7 +142,7 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64
     if(!(mode & O_READ) && !(mode & O_WRITE))
         mode |= O_READ;
     // Matches flags, or needs creat or append and has write permission
-    if((mode & O_AMSK) != (fcb[fid].mode & O_AMSK) && !((mode & (O_APPEND|O_CREAT)) && (fcb[fid].mode & O_WRITE))) {
+    if((mode & O_AMSK) != (f->mode & O_AMSK) && !((mode & (O_APPEND|O_CREAT)) && (f->mode & O_WRITE))) {
         seterr(EACCES);
         return -1;
     }
@@ -165,17 +168,18 @@ uint64_t taskctx_open(taskctx_t *tc, fid_t fid, mode_t mode, fpos_t offs, uint64
         return -1;
     // add new open file descriptor
 found:
+    of=&tc->openfiles[i];
     // handle exclusive access. Either user asked for it
     // or it's a special device
-    if((mode & O_EXCL) || (fcb[fid].mode & O_EXCL))
-        fcb[fid].flags |= FCB_FLAG_EXCL;
+    if((mode & O_EXCL) || (f->mode & O_EXCL))
+        f->flags |= FCB_FLAG_EXCL;
     // save open file descriptor
-    tc->openfiles[i].fid=fid;
-    tc->openfiles[i].mode=mode;
-    tc->openfiles[i].offs=offs;
-    tc->openfiles[i].unionidx=0;
+    of->fid=fid;
+    of->mode=mode;
+    of->offs=offs;
+    of->unionidx=0;
     tc->nfiles++;
-    fcb[fid].nopen++;
+    f->nopen++;
     return i;
 }
 
@@ -184,15 +188,21 @@ found:
  */
 bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
 {
+    fcb_t *f;
+    openfiles_t *of;
     if(!taskctx_validfid(tc,idx))
         return false;
-    if(tc->openfiles[idx].mode & O_TMPFILE && fcb[tc->openfiles[idx].fid].mode!=FCB_TYPE_REG_DIR) {
+    of=&tc->openfiles[idx];
+    f=&fcb[of->fid];
+    if(of->mode & O_WRITE)
+        fcb_flush(of->fid);
+    if(of->mode & O_TMPFILE && f->mode!=FCB_TYPE_REG_DIR) {
         //unlink()
     } else {
-        fcb[tc->openfiles[idx].fid].flags &= ~FCB_FLAG_EXCL;
-        fcb_del(tc->openfiles[idx].fid);
+        f->flags &= ~FCB_FLAG_EXCL;
+        fcb_del(of->fid);
     }
-    tc->openfiles[idx].fid=-1;
+    of->fid=-1;
     tc->nfiles--;
     if(dontfree)
         return true;
@@ -217,27 +227,29 @@ bool_t taskctx_close(taskctx_t *tc, uint64_t idx, bool_t dontfree)
  */
 bool_t taskctx_seek(taskctx_t *tc, uint64_t idx, off_t offs, uint8_t whence)
 {
+    openfiles_t *of;
     if(!taskctx_validfid(tc,idx)){
         seterr(EBADF);
         return false;
     }
-    if(fcb[tc->openfiles[idx].fid].type!=FCB_TYPE_REG_FILE) {
+    of=&tc->openfiles[idx];
+    if(fcb[of->fid].type!=FCB_TYPE_REG_FILE) {
         seterr(ESPIPE);
         return false;
     }
     switch(whence) {
         case SEEK_CUR:
-            tc->openfiles[idx].offs += offs;
+            of->offs += offs;
             break;
         case SEEK_END:
-            tc->openfiles[idx].offs = fcb[tc->openfiles[idx].fid].reg.filesize + offs;
+            of->offs = fcb[of->fid].reg.filesize + offs;
             break;
         default:
-            tc->openfiles[idx].offs = offs;
+            of->offs = offs;
             break;
     }
-    if((off_t)tc->openfiles[idx].offs<0) {
-        tc->openfiles[idx].offs = 0;
+    if((off_t)of->offs<0) {
+        of->offs = 0;
         seterr(EINVAL);
         return false;
     }
@@ -251,6 +263,82 @@ bool_t taskctx_validfid(taskctx_t *tc, uint64_t idx)
 {
     return !(tc==NULL || tc->openfiles==NULL || tc->nopenfiles<=idx || tc->openfiles[idx].fid==-1 ||
         fcb[tc->openfiles[idx].fid].abspath==NULL);
+}
+
+/**
+ * read the next directory entry
+ */
+dirent_t *taskctx_readdir(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
+{
+    fcb_t *fc;
+    size_t s;
+    fid_t f;
+    openfiles_t *of;
+    char *abspath;
+    // failsafe
+    if(!taskctx_validfid(tc,idx))
+        return NULL;
+    of=&tc->openfiles[idx];
+    fc=&fcb[of->fid];
+    if(fc->fs >= nfsdrv || fsdrv[fc->fs].getdirent==NULL) {
+        seterr(ENOTSUP);
+        return 0;
+    }
+    // check if this device is locked
+    if(fsck.dev==fc->reg.storage) {
+        seterr(EBUSY);
+        return 0;
+    }
+    memzero(&dirent,sizeof(dirent_t));
+    // call file system driver to parse the directory entry
+    s=(*fsdrv[fc->fs].getdirent)(ptr, of->offs, &dirent);
+    // failsafe
+    if(s==0 || dirent.d_ino==0 || dirent.d_name[0]==0)
+        return NULL;
+    if(dirent.d_len==0)
+        dirent.d_len=strlen(dirent.d_name);
+    dirent.d_dev=fc->reg.storage;
+    dirent.d_filesize=fc->reg.filesize;
+    // assume regular file
+    dirent.d_type=FCB_TYPE_REG_FILE;
+    // call file system driver to fill in st_mode stat_t field
+    memzero(&st,sizeof(stat_t));
+    if(fsdrv[fc->fs].stat!=NULL && (*fsdrv[fc->fs].stat)(fc->reg.storage, dirent.d_ino, &st)) {
+        dirent.d_type=st.st_mode>>16;
+        // if it's a symlink, get the target's type and size
+        if(lastlink!=NULL) {
+            f=-1;
+            if(lastlink[0]=='/') {
+                f=lookup(lastlink, false);
+            } else {
+                abspath=(char*)malloc(pathmax);
+                if(abspath!=NULL) {
+                    strcpy(abspath, fc->type==FCB_TYPE_UNION ?
+                            fcb[fc->uni.unionlist[of->unionidx]].abspath : fc->abspath);
+                    pathcat(abspath,lastlink);
+                    f=lookup(abspath, false);
+                    free(abspath);
+                }
+            }
+            if(ackdelayed) return NULL;
+            if(f!=-1 && fcb[f].fs<nfsdrv && (*fsdrv[fcb[f].fs].stat)(fcb[f].reg.storage, fcb[f].reg.inode, &st)) {
+                    dirent.d_type &= ~(S_IFMT>>16);
+                    dirent.d_type |= st.st_mode>>16;
+                    dirent.d_filesize=st.st_size;
+                    // let it copy the icon from the updated stat_t buf
+            }
+        }
+        memcpy(&dirent.d_icon,&st.st_type,8);
+        if(dirent.d_icon[3]==':')
+            dirent.d_icon[3]=0;
+    }
+    // move open file pointer
+    of->offs += s;
+    if(fc->type==FCB_TYPE_UNION && of->offs >= fcb[fc->uni.unionlist[of->unionidx]].uni.filesize) {
+        of->offs = 0;
+        of->unionidx++;
+    }
+    return &dirent;
 }
 
 /**
@@ -290,7 +378,7 @@ size_t taskctx_read(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
             }
             if(f->fs >= nfsdrv || fsdrv[f->fs].read==NULL) { seterr(EACCES); return 0; }
             // check if the read can be served from write buf entirely
-            if(tc->workleft==-1) {
+            if(tc->workleft==(size_t)-1) {
                 e=of->offs+size;
                 for(w=f->reg.buf;w!=NULL;w=w->next) {
                     //     ####
@@ -385,12 +473,14 @@ size_t taskctx_read(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
 size_t taskctx_write(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
 {
     fcb_t *f;
+    openfiles_t *of;
     // input checks
     if(!taskctx_validfid(tc,idx)) {
         seterr(EBADF);
         return 0;
     }
-    f=&fcb[tc->openfiles[idx].fid];
+    of=&tc->openfiles[idx];
+    f=&fcb[of->fid];
     if(!(f->mode & O_WRITE)) { seterr(EACCES); return 0; }
     switch(f->type) {
         case FCB_TYPE_PIPE:
@@ -399,17 +489,19 @@ size_t taskctx_write(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
         case FCB_TYPE_SOCKET:
             break;
 
+        case FCB_TYPE_DEVICE:
+            break;
+
+        case FCB_TYPE_REG_DIR:
+        case FCB_TYPE_UNION:
+            // should never reach this, but failsafe
+            seterr(EPERM);
+            break;
+
         default:
-            // check if this device is locked
-            if(f->reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return 0; }
-            if(f->fs >= nfsdrv || fsdrv[f->fs].write==NULL) {
-                seterr(EACCES);
-                return 0;
-            }
-            // set up first time run parameters
-            if(tc->workleft==-1) {
-                tc->workleft=size;
-                tc->workoffs=0;
+            if(fcb_write(of->fid, of->offs, ptr, size)) {
+                of->offs += size;
+                return size;
             }
             break;
     }

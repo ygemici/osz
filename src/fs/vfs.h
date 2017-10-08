@@ -65,10 +65,11 @@ typedef struct {
 extern fsck_t fsck;
 
 extern uint8_t ackdelayed;      // flag to indicate async block read
-extern char *lastlink;          // last symlink's target, filled in by fsdrv's stat()
-extern dirent_t dirent;         // buffer for readdir()
 extern uint32_t pathmax;        // maximum length of path
 extern void *zeroblk;           // zero block
+extern stat_t st;               // buffer for lstat() and fstat()
+extern dirent_t dirent;         // buffer for readdir()
+extern char *lastlink;          // last symlink's target, filled in by fsdrv's stat()
 
 typedef struct {
     ino_t inode;
@@ -87,5 +88,4 @@ public bool_t writeblock(fid_t fd, blkcnt_t lsn, void *blk, blkprio_t prio);
 /* wrappers around file system driver functions */
 extern fid_t lookup(char *abspath, bool_t creat);
 extern stat_t *statfs(fid_t idx);
-extern dirent_t *readdirfs(taskctx_t *tc, fid_t idx, void *ptr, size_t size);
 extern bool_t dofsck(fid_t fd, bool_t fix);

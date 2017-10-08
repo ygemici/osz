@@ -166,11 +166,11 @@ void devfs_init()
     fsdrv_reg(&devdrv);
 
     fcb_add(DEVPATH, FCB_TYPE_REG_DIR);
-    if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, O_RDWR, __PAGESIZE, 1)==-1) exit(2);
+    if(devfs_add("zero", MEMFS_MAJOR, MEMFS_ZERO, O_RDONLY, __PAGESIZE, 1)==-1) exit(2);
     if(devfs_add("root", MEMFS_MAJOR, MEMFS_RAMDISK, O_RDWR, __PAGESIZE, (_initrd_size+__PAGESIZE-1)/__PAGESIZE)
         ==-1) exit(2);
     if(devfs_add("random", MEMFS_MAJOR, MEMFS_RANDOM, O_RDONLY, __PAGESIZE, 1)==-1) exit(2);
-    if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, O_RDWR, __PAGESIZE, 0)==-1) exit(2);
+    if(devfs_add("null", MEMFS_MAJOR, MEMFS_NULL, O_WRONLY, __PAGESIZE, 0)==-1) exit(2);
 
 }
 

@@ -43,10 +43,10 @@ void mtab_init()
 /**
  * add a mount point to mount list
  */
-int16_t mtab_add(char *dev, char *file, char *opts)
+uint16_t mtab_add(char *dev, char *file, char *opts)
 {
     fid_t fd, ff;
-    int16_t fs;
+    uint16_t fs;
     int i;
     if(dev==NULL || dev[0]==0 || file==NULL || file[0]==0) {
         seterr(EINVAL);
@@ -74,7 +74,7 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     }
     // detect file system
     fs=fsdrv_detect(fd);
-    if(fs==-1) {
+    if(fs==(uint16_t)-1) {
         // extra check
         if(!rootmounted || nmtab==0)
             exit(1);
@@ -98,6 +98,8 @@ int16_t mtab_add(char *dev, char *file, char *opts)
     mtab[i].storage=fd;
     mtab[i].mountpoint=ff;
     mtab[i].fstype=fs;
+    if(ff!=DEVFCB)
+        fcb[ff].reg.storage=fd;
     fcb[ff].fs=fs;
     fcb[ff].mode=fcb[fd].mode;
     fcb[fd].nopen++;

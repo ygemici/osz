@@ -123,7 +123,7 @@ void _init(int argc, char **argv)
                 for(j=0;j<ndev;j++)
                     if(dev[j].drivertask==ctx->pid)
                         devfs_del(j);
-                fcb_cleanup();
+                fcb_free();
                 continue;
 
             case SYS_mountfs:
@@ -158,7 +158,7 @@ void _init(int argc, char **argv)
                 if(_debug&DBG_FS)
                     dbg_printf("FS: mount(%s, %s, %s)\n",msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1);
 #endif
-                ret = mtab_add(msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1)!=-1 ? 0 : -1;
+                ret = mtab_add(msg->ptr, msg->ptr+j+1, msg->ptr+j+1+k+1)!=(uint16_t)-1 ? 0 : -1;
 #if DEBUG
                 if(_debug&DBG_FS)
                     mtab_dump();
@@ -176,7 +176,7 @@ void _init(int argc, char **argv)
                     break;
                 }
                 ret = mtab_del(msg->ptr, msg->ptr) ? 0 : -1;
-                fcb_cleanup();
+                fcb_free();
 #if DEBUG
                 if(_debug&DBG_FS)
                     mtab_dump();
@@ -375,8 +375,6 @@ dostat:         if(ret!=-1 && !errno()) {
                     seterr(EBADF);
                     ret=-1;
                 } else {
-                    if(ctx->openfiles[msg->arg0].mode & O_WRITE)
-                        cache_flush(ctx->openfiles[msg->arg0].fid);
                     ret=taskctx_close(ctx, msg->arg0, false) ? 0 : -1;
                 }
 //taskctx_dump();
@@ -384,10 +382,10 @@ dostat:         if(ret!=-1 && !errno()) {
 
             case SYS_fcloseall:
 //dbg_printf("fs fcloseall\n");
-                cache_flush(0);
                 for(j=0;j<ctx->nopenfiles;j++)
                     taskctx_close(ctx, j, false);
-                fcb_cleanup();
+                cache_flush(0);
+                fcb_free();
                 ret=0;
 //taskctx_dump();
                 break;
@@ -513,6 +511,18 @@ dostat:         if(ret!=-1 && !errno()) {
                     ret=taskctx_write(ctx,msg->type,msg->ptr,msg->size);
                 break;
 
+            case SYS_fflush:
+                if(!taskctx_validfid(ctx,msg->arg0)) {
+                    seterr(EBADF);
+                    ret=-1;
+                } else
+                if(!(ctx->openfiles[msg->arg0].mode & O_WRITE)) {
+                    seterr(EACCES);
+                    ret=-1;
+                } else
+                    ret=fcb_flush(ctx->openfiles[msg->arg0].fid) ? 0 : -1;
+                break;
+
             case SYS_opendir:
                 if(msg->type==-1) {
 //dbg_printf("fs opendir(%s,%d)\n", msg->ptr,msg->type);
@@ -579,7 +589,7 @@ dostat:         if(ret!=-1 && !errno()) {
                     seterr(EBADF);
                     ret=0;
                 } else {
-                    ptr=(void*)readdirfs(ctx,msg->type,msg->ptr,msg->size);
+                    ptr=(void*)taskctx_readdir(ctx,msg->type,msg->ptr,msg->size);
                     if(ptr!=NULL && !errno()) {
                         p2pcpy(EVT_SENDER(msg->evt), (void*)msg->attr0, ptr, sizeof(dirent_t));
                         ret=0;
@@ -598,7 +608,7 @@ dostat:         if(ret!=-1 && !errno()) {
         // try to be ahead of out of ram scenario
         m=meminfo();j=m.freepages*100/m.totalpages;
         if(j<cachelimit || errno()==ENOMEM) {
-            fcb_cleanup();
+            fcb_free();
             // when out of memory, flush the cache, and clear nomem only when finished (and cache freed)
             cache_flush();
             nomem=true;

@@ -102,7 +102,7 @@ extern fcb_t *fcb;
 extern fid_t fcb_get(char *abspath);
 extern fid_t fcb_add(char *abspath, uint8_t type);
 extern void fcb_del(fid_t idx);
-extern void fcb_cleanup();
+extern void fcb_free();
 extern fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t size);
 extern bool_t fcb_write(fid_t idx, off_t offs, void *buf, size_t size);
 extern bool_t fcb_flush(fid_t idx);

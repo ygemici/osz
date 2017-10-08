@@ -423,9 +423,11 @@ void _init()
         resizefs,
         checkfs,
         stat,
+        getdirent,
         read,
         NULL,
-        getdirent
+        NULL,
+        NULL
     };
     //uint16_t id = 
     fsdrv_reg(&drv);

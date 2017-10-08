@@ -100,26 +100,28 @@ fid_t fcb_add(char *abspath, uint8_t type)
  */
 void fcb_del(fid_t idx)
 {
-    int i;
+    uint64_t i;
+    fcb_t *f;
     // failsafe
     if(idx>=nfcb || fcb[idx].abspath==NULL)
         return;
+    f=&fcb[idx];
     // decrease link counter
-    if(fcb[idx].nopen>0)
-        fcb[idx].nopen--;
+    if(f->nopen>0)
+        f->nopen--;
     // remove if reached zero
-    if(fcb[idx].nopen==0) {
-        if(fcb[idx].type==FCB_TYPE_UNION && fcb[idx].uni.unionlist!=NULL) {
-            for(i=0;fcb[idx].uni.unionlist[i]!=0;i++)
-                if(idx!=fcb[idx].uni.unionlist[i])
-                    fcb_del(fcb[idx].uni.unionlist[i]);
-            free(fcb[idx].uni.unionlist);
-            fcb[idx].uni.unionlist=NULL;
+    if(f->nopen==0) {
+        if(f->type==FCB_TYPE_UNION && f->uni.unionlist!=NULL) {
+            for(i=0;f->uni.unionlist[i]!=0;i++)
+                if(idx!=f->uni.unionlist[i])
+                    fcb_del(f->uni.unionlist[i]);
+            free(f->uni.unionlist);
+            f->uni.unionlist=NULL;
         }
-        if(fcb[idx].abspath!=NULL)
-            free(fcb[idx].abspath);
-        fcb[idx].abspath=NULL;
-        fcb[idx].reg.filesize=0;
+        if(f->abspath!=NULL)
+            free(f->abspath);
+        f->abspath=NULL;
+        f->reg.filesize=0;
         nfiles--;
         idx=nfcb;
         while(idx>0 && fcb[idx-1].abspath==NULL) idx--;
@@ -133,9 +135,9 @@ void fcb_del(fid_t idx)
 /**
  * delete all unused entries from fcb cache
  */
-void fcb_cleanup()
+void fcb_free()
 {
-    int i;
+    uint64_t i;
     bool_t was=true;
     while(was) {
         was=false;
@@ -152,7 +154,7 @@ void fcb_cleanup()
  */
 size_t fcb_unionlist_add(fid_t **fl,fid_t f,size_t n)
 {
-    int i;
+    uint64_t i;
     if(f!=-1) {
         for(i=0;i<n;i++)
             if((*fl)[i]==f)
@@ -169,7 +171,7 @@ size_t fcb_unionlist_add(fid_t **fl,fid_t f,size_t n)
  */
 fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
 {
-    int i,j,k,l,n;
+    int64_t i,j,k,l,n;
     uint64_t bs;
     char *ptr,*fn;
     fid_t f,*fl=NULL;
@@ -253,13 +255,16 @@ public bool_t fcb_write(fid_t idx, off_t offs, void *buf, size_t size)
     size_t s;
     off_t e,we;
     bool_t chk;
-    // failsafe
-    if(idx==-1 || idx>=nfcb || fcb[idx].type!=FCB_TYPE_REG_FILE)
-        return false;
+    // only files supported here. Pipe and sockets are handled in taskctx_write
+    // and devices does not use write buffer, they use cache with writeblock()
+    // finally writes on dirent are not permitted
+    if(idx==-1 || idx>=nfcb || offs<0) { seterr(EFAULT); return false; }
     f=&fcb[idx];
+    if(f->type!=FCB_TYPE_REG_FILE) { seterr(EBADF); return false; }
     // failsafe
-    if(fcb[idx].reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return false; }
+    if(f->reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return false; }
     if(!(f->mode & O_WRITE)) { seterr(EACCES); return false; }
+    if(f->fs >= nfsdrv || fsdrv[f->fs].write==NULL) { seterr(EROFS); return 0; }
     // allocate a new write buffer
     nw=(writebuf_t*)malloc(sizeof(writebuf_t));
     if(nw==NULL)
@@ -335,6 +340,85 @@ dbg_printf("fcb_write new buffer NOT ADDED! Should never happen!!!\n");
  */
 public bool_t fcb_flush(fid_t idx)
 {
+    fcb_t *f;
+    writebuf_t *w;
+    void *blk=NULL, *ptr;
+    off_t o;
+    size_t bs,s,a;
+    // failsafe
+    if(idx==-1 || idx>=nfcb) { seterr(EFAULT); return false; }
+    f=&fcb[idx];
+    bs=fcb[f->reg.storage].device.blksize;
+    // more failsafes on first call
+    if(ctx->workleft==(size_t)-1) {
+        if(f->type!=FCB_TYPE_REG_FILE) { seterr(EBADF); return false; }
+        if(f->reg.storage!=-1 && fsck.dev==f->reg.storage) { seterr(EBUSY); return false; }
+        if(!(f->mode & O_WRITE)) { seterr(EACCES); return false; }
+        if(f->fs >= nfsdrv || fsdrv[f->fs].write==NULL) { seterr(EROFS); return false; }
+        if((int64_t)bs<1) { seterr(EINVAL); return false; }
+        ctx->workleft=0;
+        // send write transaction begins to file system driver
+        if(fsdrv[f->fs].writetrb!=NULL)
+            (*fsdrv[f->fs].writetrb)(f->reg.storage, f->reg.inode);
+    }
+    // we have to convert all buffers block aligned and sized
+    for(w=f->reg.buf;f->reg.buf!=NULL;) {
+        // ####
+        //   +----+
+        a=w->offs%bs;
+        if(a!=0) {
+            if(fsdrv[f->fs].read!=NULL) {
+                // call file system driver to read block. This must return a cache block
+                blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, w->offs, &bs);
+                // skip if block is not in cache or eof
+                if(ackdelayed || bs==0) return false;
+            }
+            // failsafe, return could change it to less
+            bs=fcb[f->reg.storage].device.blksize;
+            ptr=malloc(w->size+a);
+            if(ptr==NULL)
+                return false;
+            if(blk!=NULL)
+                memcpy(ptr,blk,bs);
+            memcpy(ptr+a,w->data,w->size);
+            free(w->data);
+            w->size+=a;
+            w->offs-=a;
+            w->data=ptr;
+            ptr=NULL;
+        }
+        //     ####
+        // +----+
+        if(w->size%bs!=0) {
+            a=(w->size%bs);
+            o=w->offs+w->size-a;
+            s=w->size-a+bs;
+            if(fsdrv[f->fs].read!=NULL) {
+                // call file system driver to read block. This must return a cache block
+                blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, o, &bs);
+                // skip if block is not in cache or eof
+                if(ackdelayed || bs==0) return false;
+            }
+            bs=fcb[f->reg.storage].device.blksize;
+            w->data=realloc(w->data,s);
+            if(w->data==NULL)
+                return false;
+            if(blk!=NULL)
+                memcpy(w->data+w->size,blk+a,bs-a);
+            w->size=s;
+        }
+        // write buffer out. Should never return false
+        if(!(*fsdrv[f->fs].write)(f->reg.storage, f->reg.inode, w->offs, w->data, w->size))
+            return false;
+        // unlink from chain and free write buffer
+        f->reg.buf=w->next;
+        free(w->data);
+        free(w);
+    }
+    // send write transaction ends to file system driver
+    if(fsdrv[f->fs].writetre!=NULL)
+        (*fsdrv[f->fs].writetre)(f->reg.storage, f->reg.inode);
+    ctx->workleft=-1;
     return true;
 }
 
@@ -352,8 +436,9 @@ void fcb_dump()
         }
         dbg_printf("%s %4d %8s ",types[fcb[i].type],
             fcb[i].type!=FCB_TYPE_UNION?fcb[i].reg.blksize:0,fcb[i].fs<nfsdrv?fsdrv[fcb[i].fs].name:"nofs");
-        dbg_printf("%c%c%c%c ",fcb[i].mode&O_READ?'r':'-',fcb[i].mode&O_READ?'w':'-',fcb[i].mode&O_READ?'a':'-',
-            fcb[i].flags&FCB_FLAG_EXCL?'L':'-');
+        dbg_printf("%02x %c%c%c%c ",fcb[i].mode,
+            fcb[i].mode&O_READ?'r':'-',fcb[i].mode&O_WRITE?'w':'-',fcb[i].mode&O_APPEND?'a':'-',
+            fcb[i].flags&FCB_FLAG_EXCL?'L':(fcb[i].mode&O_EXCL?'l':'-'));
         dbg_printf("%3d:%3d %8d %s",fcb[i].reg.storage,fcb[i].reg.inode,fcb[i].reg.filesize,fcb[i].abspath);
         if(fcb[i].type==FCB_TYPE_UNION && fcb[i].uni.unionlist!=NULL) {
             dbg_printf("\t[");
