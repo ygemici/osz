@@ -182,6 +182,10 @@ fid_t fcb_unionlist_build(fid_t idx, void *buf, size_t s)
 //dbg_printf("fcb_unionlist_build(%d,%x,%d)\n",idx,buf,s);
     bs=fcb[fcb[idx].uni.storage].device.blksize;
     // call file system driver
+#if DEBUG
+    if(_debug&DBG_FILEIO)
+        dbg_printf("FS: file read(fd %d, ino %d, offs %d, size %d)\n",fcb[idx].uni.storage, fcb[idx].uni.inode, 0, bs);
+#endif
     ptr=(*fsdrv[fcb[idx].fs].read)(fcb[idx].uni.storage, fcb[idx].uni.inode, 0, &bs);
     // ptr should not be NULL, as union data inlined in inode and inode is in the cache already
     if(ptr==NULL || ptr[0]==0 || ackdelayed)
@@ -369,6 +373,11 @@ public bool_t fcb_flush(fid_t idx)
         if(a!=0) {
             if(fsdrv[f->fs].read!=NULL) {
                 // call file system driver to read block. This must return a cache block
+#if DEBUG
+                if(_debug&DBG_FILEIO)
+                    dbg_printf("FS: file read(fd %d, ino %d, offs %d, size %d)\n",
+                        f->reg.storage, f->reg.inode, w->offs, bs);
+#endif
                 blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, w->offs, &bs);
                 // skip if block is not in cache or eof
                 if(ackdelayed || bs==0) return false;
@@ -395,6 +404,11 @@ public bool_t fcb_flush(fid_t idx)
             s=w->size-a+bs;
             if(fsdrv[f->fs].read!=NULL) {
                 // call file system driver to read block. This must return a cache block
+#if DEBUG
+                if(_debug&DBG_FILEIO)
+                    dbg_printf("FS: file read(fd %d, ino %d, offs %d, size %d)\n",
+                        f->reg.storage, f->reg.inode, o, bs);
+#endif
                 blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, o, &bs);
                 // skip if block is not in cache or eof
                 if(ackdelayed || bs==0) return false;
@@ -408,6 +422,11 @@ public bool_t fcb_flush(fid_t idx)
             w->size=s;
         }
         // write buffer out. Should never return false
+#if DEBUG
+        if(_debug&DBG_FILEIO)
+            dbg_printf("FS: file write(fd %d, ino %d, offs %d, buf %x, size %d)\n",
+                f->reg.storage, f->reg.inode, w->offs, w->data, w->size);
+#endif
         if(!(*fsdrv[f->fs].write)(f->reg.storage, f->reg.inode, w->offs, w->data, w->size))
             return false;
         // unlink from chain and free write buffer

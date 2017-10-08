@@ -113,7 +113,7 @@ void fs_test()
 //    closedir(f);
 
     mq_call(SRV_FS, SYS_fsdump);
-*/
     mq_send(SRV_FS, SYS_exit);
     mq_call(SRV_FS, SYS_fsdump);
+*/
 }

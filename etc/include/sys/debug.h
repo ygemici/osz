@@ -43,8 +43,9 @@
 #define DBG_VMM      (1<<11)// vm 2048
 #define DBG_MALLOC   (1<<12)// ma 4096
 #define DBG_BLKIO    (1<<13)// bl 8192
-#define DBG_FS       (1<<14)// fs 16382
-#define DBG_CACHE    (1<<15)// ca 32768
-#define DBG_TESTS    (1<<16)// te 65536
+#define DBG_FILEIO   (1<<14)// fi 16382
+#define DBG_FS       (1<<15)// fs 32768
+#define DBG_CACHE    (1<<16)// ca 65536
+#define DBG_TESTS    (1<<17)// te 131072
 
 #endif /* sys/debug.h */

@@ -61,8 +61,8 @@
 /* open flags */
 #define O_READ      (1<<0)  // read
 #define O_WRITE     (1<<1)  // write
-#define O_APPEND    (1<<2)  // append only
-#define O_EXCL      (1<<3)  // exclusive access (lock)
+#define O_EXCL      (1<<2)  // exclusive access (lock)
+#define O_APPEND    (1<<3)  // append only
 #define O_CREAT     (1<<4)  // create if not exists
 #define O_TRUNC     (1<<5)  // truncate
 #define O_NONBLOCK  (1<<6)  // non blocking

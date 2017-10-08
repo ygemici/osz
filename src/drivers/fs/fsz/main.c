@@ -35,6 +35,8 @@
 void resizefs(fid_t fd);
 uint64_t allocateblock(fid_t fd);
 
+uint64_t lastsec=0;   // last sector read
+
 /**
  * check magic to detect file system
  */
@@ -70,7 +72,7 @@ uint8_t locate(fid_t fd, ino_t parent, locate_t *loc)
     FSZ_DirEnt *dirent;
     ino_t lsn,*sdblk[MAXINDIRECT];
     uint16_t sdptr[MAXINDIRECT];
-    uint64_t bp,sdmax,i;
+    uint64_t bp,sdmax,i,l;
     char *e;
 
     // start with root directory if parent not given
@@ -98,10 +100,10 @@ nextdir:
         return NOBLOCK;
     if(memcmp(in->magic, FSZ_IN_MAGIC, 4))
         return FSERROR;
-//dbg_printf("  %04d: %x '%s' %x\n", lsn, in, in->filetype, FLAG_TRANSLATION(in->flags));
+//dbg_printf("  %04d: %x '%s' %x\n", lsn, in, in->filetype, FSZ_FLAG_TRANSLATION(in->flags));
 
     // inode types with inlined data
-    if(!memcmp(in->filetype, FILETYPE_SYMLINK, 4)) {
+    if(!memcmp(in->filetype, FSZ_FILETYPE_SYMLINK, 4)) {
         loc->fileblk=in->inlinedata;
         return SYMINPATH;
     }
@@ -110,17 +112,17 @@ nextdir:
     if(PATHEND(*loc->path)) {
         loc->inode = lsn;
         loc->filesize = in->size;
-        if(!memcmp(in->filetype, FILETYPE_DIR, 4))
+        if(!memcmp(in->filetype, FSZ_FILETYPE_DIR, 4))
             loc->type = FCB_TYPE_REG_DIR;
         else
-        if(!memcmp(in->filetype, FILETYPE_UNION, 4))
+        if(!memcmp(in->filetype, FSZ_FILETYPE_UNION, 4))
             loc->type = FCB_TYPE_UNION;
         else
             loc->type = FCB_TYPE_REG_FILE;
         return SUCCESS;
     }
 
-    if(!memcmp(in->filetype, FILETYPE_UNION, 4)) {
+    if(!memcmp(in->filetype, FSZ_FILETYPE_UNION, 4)) {
         loc->fileblk=in->inlinedata;
         return UNIONINPATH;
     }
@@ -128,7 +130,8 @@ nextdir:
     // get inode data
     memzero(sdptr,MAXINDIRECT*sizeof(uint16_t));
     memzero(sdblk,MAXINDIRECT*sizeof(void*));
-    switch(FLAG_TRANSLATION(in->flags)) {
+    l=FSZ_FLAG_TRANSLATION(in->flags);
+    switch(l) {
         case FSZ_IN_FLAG_INLINE:
             loc->fileblk=in->inlinedata;
             break;
@@ -145,18 +148,23 @@ nextdir:
             if(loc->fileblk==NULL)
                 return NOBLOCK;
             break;
+        case FSZ_IN_FLAG_SDINLINE:
+            l=1;
+            sdblk[0]=(ino_t*)&in->inlinedata;
+            goto sd;
+            break;
         default:
             // get the first level sd
             if(in->sec==0)
                 return NOBLOCK;
             sdblk[0]=readblock(fd, in->sec);
-            if(sdblk[0]==NULL)
+sd:         if(sdblk[0]==NULL)
                 return NOBLOCK;
             // failsafe
-            if(FLAG_TRANSLATION(in->flags)>=MAXINDIRECT)
+            if(l>=MAXINDIRECT)
                 return FSERROR;
             // load each sd along the indirection path
-            for(i=1;i<FLAG_TRANSLATION(in->flags);i++) {
+            for(i=1;i<l;i++) {
                 if(sdblk[i-1][0]==0)
                     return NOBLOCK;
                 sdblk[i]=readblock(fd, sdblk[i-1][0]);
@@ -172,11 +180,11 @@ nextdir:
             break;
     }
 
-    if(!memcmp(in->filetype, FILETYPE_REG_APP, 4)) {
+    if(!memcmp(in->filetype, FSZ_FILETYPE_REG_APP, 4)) {
         return FILEINPATH;
     } else
 
-    if(!memcmp(in->filetype, FILETYPE_DIR, 4)) {
+    if(!memcmp(in->filetype, FSZ_FILETYPE_DIR, 4)) {
         dirent=(FSZ_DirEnt *)(loc->fileblk);
         if(memcmp(((FSZ_DirEntHeader *)dirent)->magic, FSZ_DIR_MAGIC, 4))
             return FSERROR;
@@ -229,6 +237,7 @@ nextdir:
 dbg_printf("locate create inode lsn %d '%s'\n",lsn,loc->path);
         loc->inode=lsn;
         i=allocateblock(fd);
+dbg_printf("allocated block %d\n",i);
         if(i==-1)
             return NOSPACE;
     }
@@ -275,18 +284,18 @@ bool_t stat(fid_t fd, ino_t file, stat_t *st)
     memcpy(st->st_type,in->filetype,4);
     if(in->filetype[3]!=':')
         memcpy(st->st_mime,in->mimetype,44);
-    if(!memcmp(in->filetype,FILETYPE_SYMLINK,4)) {
+    if(!memcmp(in->filetype,FSZ_FILETYPE_SYMLINK,4)) {
         lastlink=(char*)in->inlinedata;
         st->st_mode &= ~S_IFMT;
         st->st_mode |= S_IFREG;
         st->st_mode |= S_IFLNK;
     }
-    if(!memcmp(in->filetype,FILETYPE_UNION,4)) {
+    if(!memcmp(in->filetype,FSZ_FILETYPE_UNION,4)) {
         st->st_mode &= ~S_IFMT;
         st->st_mode |= S_IFDIR;
         st->st_mode |= S_IFUNI;
     }
-    if(!memcmp(in->filetype,FILETYPE_DIR,4)) {
+    if(!memcmp(in->filetype,FSZ_FILETYPE_DIR,4)) {
         st->st_mode &= ~S_IFMT;
         st->st_mode |= S_IFDIR;
     }
@@ -316,6 +325,7 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
     // failsafe
     if( file==0 || fd==-1 || fd>=nfcb || fcb[fd].device.blksize==0 ||
         in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4) || in->size<=offs) goto read_err;
+    lastsec=file;
     bs=fcb[fd].device.blksize;
     // eof check when reading from end of file
     if(offs+*s > in->size) {
@@ -323,15 +333,26 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
         // failsafe
         if(*s==0) return NULL;
     }
-    l=FLAG_TRANSLATION(in->flags);
+    l=FSZ_FLAG_TRANSLATION(in->flags);
     // simplest case, data inlined in inode
-    if(l==FSZ_IN_FLAG_INLINE || !memcmp(in->filetype,FILETYPE_SYMLINK,4) || !memcmp(in->filetype,FILETYPE_UNION,4))
+    if(l==FSZ_IN_FLAG_INLINE || 
+        !memcmp(in->filetype,FSZ_FILETYPE_SYMLINK,4) || !memcmp(in->filetype,FSZ_FILETYPE_UNION,4))
         return (void*)(in->inlinedata + offs);
+    // sector directory inlined, one level
+    if(l==FSZ_IN_FLAG_SDINLINE) {
+        i=offs/bs;
+        i=((uint64_t*)&in->inlinedata)[i<<1];
+        if(i==0) return NULL;
+        blk=readblock(fd,in->sec);
+        if(blk==NULL) goto read_err;
+        return blk;
+    }
     // one block referenced directly
     if(in->sec==0)
         return NULL;
     blk=readblock(fd,in->sec);
     if(blk==NULL) goto read_err;
+    lastsec=in->sec;
     if(l==FSZ_IN_FLAG_DIRECT)
         return (void*)(blk + offs);
     // otherwise translate sector directories
@@ -362,10 +383,11 @@ void *read(fid_t fd, ino_t file, fpos_t offs, size_t *s)
         if(i==0) return NULL;
         blk=readblock(fd,i);
         if(blk==NULL) goto read_err;
+        lastsec=i;
         j/=bs;
     }
 //dbg_printf(" end %d s %d\n", offs%bs, *s);
-    // okay, we got the data block at last
+    // okay, we got the data block finally
     return (void*)(blk+offs%bs);
     
 read_err:
@@ -404,11 +426,32 @@ uint64_t allocateblock(fid_t fd)
 {
     uint64_t i=-1;
     FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
+    FSZ_SectorList *sl,*ptr;
+    size_t bs=fcb[fd].device.blksize;
+    // not found in cache?
+    if(sb==NULL) return -1;
     // do we have free segments map?
-    if(sb->freesecfid==0) {
+    if(sb->freesecfid!=0) {
+        sl=(FSZ_SectorList*)read(fd,sb->freesecfid,0,&bs);
+        if(sl==NULL) return -1;
+        if(bs>0) {
+            for(ptr=sl;(int64_t)bs>=0;bs-=sizeof(FSZ_SectorList)) {
+                if(ptr->numsec>0) {
+                    i=ptr->sec;
+                    ptr->sec++;
+                    ptr->numsec--;
+                    bs=fcb[fd].device.blksize;
+                    writeblock(fd,lastsec,(void*)sl-((uint64_t)sl%bs),BLKPRIO_CRIT);
+                    return i;
+                }
+                ptr++;
+            }
+        }
     }
     // do we have free space at the end?
-    if(i==-1 && sb->freesec<sb->numsec) {
+    if(sb->freesec<sb->numsec) {
+        i=sb->freesec++;
+        writeblock(fd,0,(void*)sb,BLKPRIO_CRIT);
     }
     return i;
 }

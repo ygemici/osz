@@ -39,6 +39,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#if HAS_ZLIB
+#include <zlib.h>
+#endif
 #include "../etc/include/fsZ.h"
 #include "../etc/include/crc32.h"
 
@@ -65,22 +68,45 @@ int initrd;
 /* Misc functions */
 /**
  * read a file into memory, returning buffer. Also sets read_size
+ * when compiled with -DHAS_ZLIB flag, allow read of gzipped files
  */
 char* readfileall(char *file)
 {
     char *data=NULL;
+    unsigned char hdr[2];
     FILE *f;
+#if HAS_ZLIB
+    gzFile g;
+#endif
     read_size=0;
     f=fopen(file,"r");
     if(f){
+#if HAS_ZLIB
+        fread(&hdr,2,1,f);
+        if(hdr[0]==0x1f && hdr[1]==0x8b) {
+            fseek(f,-4L,SEEK_END);
+            fread(&read_size,4,1,f);
+        } else {
+            fseek(f,0L,SEEK_END);
+            read_size=ftell(f);
+        }
+        fclose(f);
+        g=gzopen(file,"r");
+#else
         fseek(f,0L,SEEK_END);
         read_size=ftell(f);
         fseek(f,0L,SEEK_SET);
+#endif
         data=(char*)malloc(read_size+secsize+1);
         if(data==NULL) { printf("mkfs: Unable to allocate %ld memory\n",read_size+secsize+1); exit(1); }
         memset(data,0,read_size+secsize+1);
+#if HAS_ZLIB
+        gzread(g,data,read_size);
+        gzclose(g);
+#else
         fread(data,read_size,1,f);
         fclose(f);
+#endif
     }
     return data;
 }
@@ -139,7 +165,7 @@ void add_superblock()
  */
 int add_inode(char *filetype, char *mimetype)
 {
-    int i,j=!strcmp(filetype,FILETYPE_SYMLINK)||!strcmp(filetype,FILETYPE_UNION)?secsize-1024:43;
+    int i,j=!strcmp(filetype,FSZ_FILETYPE_SYMLINK)||!strcmp(filetype,FSZ_FILETYPE_UNION)?secsize-1024:43;
     FSZ_Inode *in;
     fs=realloc(fs,size+secsize);
     if(fs==NULL) exit(4);
@@ -151,7 +177,7 @@ int add_inode(char *filetype, char *mimetype)
     if(filetype!=NULL){
         i=strlen(filetype);
         memcpy(in->filetype,filetype,i>4?4:i);
-        if(!strcmp(filetype,FILETYPE_DIR)){
+        if(!strcmp(filetype,FSZ_FILETYPE_DIR)){
             FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)(in->inlinedata);
             in->sec=size/secsize;
             in->flags=FSZ_IN_FLAG_INLINE;
@@ -161,7 +187,7 @@ int add_inode(char *filetype, char *mimetype)
         }
     }
     if(mimetype!=NULL){
-        if(!strcmp(filetype,FILETYPE_UNION)){
+        if(!strcmp(filetype,FSZ_FILETYPE_UNION)){
             for(i=1;i<j && !(mimetype[i-1]==0 && mimetype[i]==0);i++);
         } else {
             i=strlen(mimetype);
@@ -222,7 +248,7 @@ void add_file(char *name, char *datafile)
 {
     FSZ_Inode *in;
     char *data=readfileall(datafile);
-    long int i,j,k,s=((read_size+secsize-1)/secsize)*secsize;
+    long int i,j,k,l,s=((read_size+secsize-1)/secsize)*secsize;
     int inode=add_inode("application","octet-stream");
     fs=realloc(fs,size+s+secsize);
     if(fs==NULL) exit(4);
@@ -243,20 +269,31 @@ void add_file(char *name, char *datafile)
         if(read_size>secsize) {
             char *ptr;
             // sector directory
-            ptr=fs+size; j=s/secsize;
-            in->numblocks=1;
-            if(j*8>secsize){
+            j=s/secsize;
+            if(j*16>secsize){
                 fprintf(stderr,"File too big: %s\n",datafile);
                 exit(5);
             }
-            k=inode+2;
+            // can be inlined?
+            if(j*16<=secsize-1024) {
+                ptr=(char*)&in->inlinedata;
+                in->flags=FSZ_IN_FLAG_SDINLINE;
+                in->numblocks=0;
+                l=0;
+            } else {
+                ptr=fs+size;
+                in->flags=FSZ_IN_FLAG_SD;
+                in->numblocks=1;
+                l=1;
+            }
+            k=inode+1+l;
             for(i=0;i<j;i++){
                 // no spare files (holes) for initrd, as core/fs.c maps the
                 // files on it as-is, and we will gzip the initrd anyway
                 if(initrd || memcmp(data+i*secsize,emptysec,secsize)) {
                     memcpy(ptr,&k,4);
-                    memcpy(fs+size+(i+1)*secsize,data+i*secsize,
-                        (i+1)*secsize>read_size?read_size%secsize:secsize);
+                    memcpy(fs+size+(i+l)*secsize,data+i*secsize,
+                        (i+l)*secsize>read_size?read_size%secsize:secsize);
                     k++;
                     in->numblocks++;
                 } else {
@@ -264,8 +301,8 @@ void add_file(char *name, char *datafile)
                 }
                 ptr+=16;
             }
-            size+=secsize;
-            in->flags=FSZ_IN_FLAG_SD;
+            if(in->flags==FSZ_IN_FLAG_SD)
+                size+=secsize;
         } else {
             // direct sector link
             in->flags=FSZ_IN_FLAG_DIRECT;
@@ -368,7 +405,7 @@ void add_dirs(char *dirname,int parent,int level)
         if(ent->d_type==DT_LNK) {
             // add a symbolic link
             int s=readlink(full,ptrto,FSZ_SECSIZE-1024-1); ptrto[s]=0;
-            int i=add_inode(FILETYPE_SYMLINK,ptrto);
+            int i=add_inode(FSZ_FILETYPE_SYMLINK,ptrto);
             link_inode(i,full+parent,0);
         }
         // maybe add other types, blkdev, socket etc.
@@ -700,7 +737,7 @@ int createimage(char *image,char *dir)
     // superblock
     add_superblock();
     // add root directory
-    ((FSZ_SuperBlock *)fs)->rootdirfid = add_inode("dir:",MIMETYPE_DIR_ROOT);
+    ((FSZ_SuperBlock *)fs)->rootdirfid = add_inode("dir:",FSZ_MIMETYPE_DIR_ROOT);
     ((FSZ_Inode*)(fs+secsize))->numlinks++;
     ((FSZ_Inode*)(fs+secsize))->checksum=crc32_calc((char*)(((FSZ_Inode*)(fs+secsize))->filetype),1016);
 
@@ -726,6 +763,7 @@ int createimage(char *image,char *dir)
 void ls(int argc, char **argv)
 {
     char *data=readfileall(argv[1]);
+    if(data==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
     FSZ_Inode *dir;
     if(argc<4) {
         dir=(FSZ_Inode*)(data+(((FSZ_SuperBlock *)data)->rootdirfid)*secsize);
@@ -734,7 +772,7 @@ void ls(int argc, char **argv)
 
     if(dir==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
     int cnt=0;
-    if(!memcmp(dir->filetype,FILETYPE_UNION,4)){
+    if(!memcmp(dir->filetype,FSZ_FILETYPE_UNION,4)){
         char *c=((char*)dir+1024);
         printf("Union list of:\n");
         while(*c!=0) {
@@ -744,7 +782,7 @@ void ls(int argc, char **argv)
         }
         return;
     }
-    if(memcmp(dir->filetype,FILETYPE_DIR,4)) { printf("mkfs: not a directory\n"); exit(2); }
+    if(memcmp(dir->filetype,FSZ_FILETYPE_DIR,4)) { printf("mkfs: not a directory\n"); exit(2); }
     FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader *)((char*)dir+1024);
     FSZ_DirEnt *ent;
     ent=(FSZ_DirEnt *)hdr; ent++;
@@ -763,20 +801,31 @@ void ls(int argc, char **argv)
 void cat(int argc, char **argv)
 {
     char *data=readfileall(argv[1]);
+    if(data==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
     FSZ_Inode *file = locate(data,0,argv[3]);
     if(file==NULL) { printf("mkfs: Unable to find path in image\n"); exit(2); }
-    if(size<secsize-1024) {
-        fwrite((char*)file + 1024,file->size,1,stdout);
-    } else
-    if(size<secsize) {
-        fwrite(data + file->sec*secsize,file->size,1,stdout);
-    } else {
-        int i, s=file->size;
-        for(i=0;i<file->size/secsize && s>=0;i++) {
-            unsigned char *sd = (unsigned char*)(data + file->sec*secsize);
-            fwrite(data + ((unsigned int)(*sd))*secsize, s>secsize?secsize:s,1,stdout);
-            s-=secsize; sd+=16;
-        }
+    switch(FSZ_FLAG_TRANSLATION(file->flags)) {
+        case FSZ_IN_FLAG_INLINE:
+            // inline data
+            fwrite((char*)file + 1024,file->size,1,stdout);
+            break;
+        case FSZ_IN_FLAG_SECLIST:
+        case FSZ_IN_FLAG_SDINLINE:
+            // sector directory or list inlined
+            fwrite(data + *((uint64_t*)&file->inlinedata)*secsize,file->size,1,stdout);
+            break;
+        case FSZ_IN_FLAG_DIRECT:
+            // direct data
+            fwrite(data + file->sec*secsize,file->size,1,stdout);
+            break;
+        // sector directory (only one level supported here, and no holes in files)
+        case FSZ_IN_FLAG_SECLIST0:
+        case FSZ_IN_FLAG_SD:
+            fwrite(data + *((uint64_t*)(data + file->sec*secsize))*secsize,file->size,1,stdout);
+            break;
+        default:
+            printf("Unsupported translation %x\n",FSZ_FLAG_TRANSLATION(file->flags));
+            break;
     }
 }
 
@@ -786,6 +835,7 @@ void cat(int argc, char **argv)
 void changemime(int argc, char **argv)
 {
     char *data=readfileall(argv[1]);
+    if(data==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
     FSZ_Inode *in=NULL;
     if(argc>=4)
         in = locate(data,0,argv[3]);
@@ -822,7 +872,8 @@ void addunion(int argc, char **argv)
         c+=strlen(argv[i])+1;
     }
     fs=readfileall(argv[1]); size=read_size;
-    i=add_inode(FILETYPE_UNION,(char*)&items);
+    if(fs==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
+    i=add_inode(FSZ_FILETYPE_UNION,(char*)&items);
     memset(&items,0,sizeof(items));
     memcpy(&items,argv[3],strlen(argv[3]));
     if(items[strlen(argv[3])-1]!='/')
@@ -835,18 +886,36 @@ void addunion(int argc, char **argv)
 }
 
 /**
+ * add a hard link to the output
+ */
+void addlink(int argc, char **argv)
+{
+    fs=readfileall(argv[1]); size=read_size;
+    if(fs==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
+    FSZ_Inode *file = locate(fs,0,argv[4]);
+    if(file==NULL) { printf("mkfs: Unable to find target in image\n"); exit(2); }
+    link_inode(((uint64_t)file-(uint64_t)fs)/secsize,argv[3],0);
+    //write out new image
+    f=fopen(argv[1],"wb");
+    fwrite(fs,size,1,f);
+    fclose(f);
+}
+
+/**
  * add a symbolic link to the output
  */
 void addsymlink(int argc, char **argv)
 {
     fs=readfileall(argv[1]); size=read_size;
-    int i=add_inode(FILETYPE_SYMLINK,argv[4]);
+    if(fs==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
+    int i=add_inode(FSZ_FILETYPE_SYMLINK,argv[4]);
     link_inode(i,argv[3],0);
     //write out new image
     f=fopen(argv[1],"wb");
     fwrite(fs,size,1,f);
     fclose(f);
 }
+
 
 /**
  * create an Option ROM out of an image for in-ROM initrd
@@ -856,6 +925,7 @@ void initrdrom(int argc, char **argv)
     int i;
     unsigned char *buf, c=0;
     fs=readfileall(argv[1]); size=((read_size+32+511)/512)*512;
+    if(fs==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
     buf=(unsigned char*)malloc(size+1);
     //Option ROM Header
     buf[0]=0x55; buf[1]=0xAA; buf[2]=(read_size+32+511)/512;
@@ -883,14 +953,15 @@ void dump(int argc, char **argv)
     uint64_t j,*k,l,secs=secsize;
     char unit='k',*c;
     fs=readfileall(argv[1]);
+    if(fs==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
     FSZ_SuperBlock *sb=(FSZ_SuperBlock *)fs;
     FSZ_DirEntHeader *hdr=(FSZ_DirEntHeader*)(fs+i*secsize);
     FSZ_DirEnt *d;
     if(memcmp(&sb->magic, FSZ_MAGIC, 4) || memcmp(&sb->magic2, FSZ_MAGIC, 4)) {
-        printf("mkfs: Not an FS/Z image, bad magic. Compressed?\n"); exit(2);
+        printf("mkfs: Not an FS/Z image, bad magic.\n"); exit(2);
     }
     secs=1<<(sb->logsec+11);
-    if(i*secs>read_size) { printf("mkfs: Unable to allocate %d sector\n",i); exit(2); }
+    if(i*secs>read_size) { printf("mkfs: Unable to allocate %d sector (max %ld)\n",i,read_size/secs); exit(2); }
     printf("  ---------------- Dumping sector #%d ----------------\n",i);
     if(i==0) {
         printf("FSZ_SuperBlock {\n");
@@ -943,7 +1014,7 @@ void dump(int argc, char **argv)
         j=in->modifydate/1000000; printf("\t\tmodifydate: %ld %s",in->modifydate,ctime((time_t*)&j));
         printf("\t\tfilechksum: 0x%04x %s\n",in->filechksum,in->filechksum==0?"not implemented":"");
         printf("\t\tflags: 0x%04x ",in->flags);
-        switch(FLAG_TRANSLATION(in->flags)){
+        switch(FSZ_FLAG_TRANSLATION(in->flags)){
             case FSZ_IN_FLAG_INLINE: printf("FSZ_IN_FLAG_INLINE"); break;
             case FSZ_IN_FLAG_DIRECT: printf("FSZ_IN_FLAG_DIRECT"); break;
             case FSZ_IN_FLAG_SECLIST: printf("FSZ_IN_FLAG_SECLIST"); break;
@@ -951,16 +1022,23 @@ void dump(int argc, char **argv)
             case FSZ_IN_FLAG_SECLIST1: printf("FSZ_IN_FLAG_SECLIST1"); break;
             case FSZ_IN_FLAG_SECLIST2: printf("FSZ_IN_FLAG_SECLIST2"); break;
             case FSZ_IN_FLAG_SECLIST3: printf("FSZ_IN_FLAG_SECLIST3"); break;
+            case FSZ_IN_FLAG_SDINLINE: printf("FSZ_IN_FLAG_SDINLINE"); break;
             case FSZ_IN_FLAG_SD: printf("FSZ_IN_FLAG_SD"); break;
-            default: printf("FSZ_IN_FLAG_SD%d",FLAG_TRANSLATION(in->flags)); break;
+            default: printf("FSZ_IN_FLAG_SD%d",FSZ_FLAG_TRANSLATION(in->flags)); break;
         }
         printf("\n\t};\n");
         printf("\towner: "); printf_uuid(&in->owner);
         printf("\n\tinlinedata: ");
-        if(!memcmp(in->filetype,FILETYPE_SYMLINK,4))
-            printf(" symlink target\n\t  '%s'",in->inlinedata);
+        if(FSZ_FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SDINLINE)
+            printf("sector directory\n");
         else
-        if(!memcmp(in->filetype,FILETYPE_UNION,4)) {
+        if(FSZ_FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SECLIST) {
+            printf("sector list\n");
+        } else
+        if(!memcmp(in->filetype,FSZ_FILETYPE_SYMLINK,4))
+            printf("symlink target\n\t  '%s'",in->inlinedata);
+        else
+        if(!memcmp(in->filetype,FSZ_FILETYPE_UNION,4)) {
             printf("union list\n");
             c=(char*)in->inlinedata;
             while(*c!=0) {
@@ -984,7 +1062,7 @@ void dump(int argc, char **argv)
         }
         printf("\n};\n");
         printf("Data sectors: ");
-        switch(FLAG_TRANSLATION(in->flags)){
+        switch(FSZ_FLAG_TRANSLATION(in->flags)){
             case FSZ_IN_FLAG_INLINE: printf("%ld", in->sec); break;
             case FSZ_IN_FLAG_DIRECT: printf("%ld", in->sec); break;
             case FSZ_IN_FLAG_SECLIST: printf("sl"); break;
@@ -992,12 +1070,19 @@ void dump(int argc, char **argv)
             case FSZ_IN_FLAG_SECLIST1: printf("sd %ld [ sl ]", in->sec); break;
             case FSZ_IN_FLAG_SECLIST2: printf("sd %ld [ sd [ sl ]]", in->sec); break;
             case FSZ_IN_FLAG_SECLIST3: printf("sd %ld [ sd [ sd [ sl ]]]", in->sec); break;
+            case FSZ_IN_FLAG_SDINLINE:
+                printf(" inline [");
+                k=(uint64_t*)&in->inlinedata;
+                l=(secs-1024)/16;
+                goto sddump;
             default:
                 printf("sd %ld [", in->sec);
                 k=(uint64_t*)(fs+in->sec*secs);
-                l=secs/16; while(l>1 && k[l*2-1]==0 && k[l*2-2]==0) l--;
+                l=secs/16;
+sddump:         while(l>1 && k[l*2-1]==0 && k[l*2-2]==0) l--;
                 for(j=0;j<l;j++) {
-                    if(FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SD)
+                    if(FSZ_FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SD ||
+                       FSZ_FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SDINLINE)
                         printf(" %ld",*k);
                     else
                         printf(" sd %ld [...]",*k);
@@ -1095,6 +1180,7 @@ int main(int argc, char **argv)
             "./mkfs (imagetoread) initrdrom (romfile)       - create Option ROM from file\n"
             "./mkfs (imagetoread) union (path) (members...) - add an union directory to image file\n"
             "./mkfs (imagetoread) symlink (path) (target)   - add a symbolic link to image file\n"
+            "./mkfs (imagetoread) link (path) (target)      - add a hard link to image file\n"
             "./mkfs (imagetoread) mime (path) (mimetype)    - change the mime type of a file in image file\n"
             "./mkfs (imagetoread) ls (path)                 - parse FS/Z image and list contents\n"
             "./mkfs (imagetoread) cat (path)                - parse FS/Z image and return file content\n"
@@ -1107,7 +1193,7 @@ int main(int argc, char **argv)
         diskname=malloc(i+64); sprintf(diskname,"%s%s",path,argv[2]!=NULL?argv[2]:"disk.dd");
         createdisk();
     } else
-    if(argc>1){
+    if(argc>2){
         if(!strcmp(argv[2],"initrdrom")) {
             initrdrom(argc,argv);
         } else
@@ -1116,6 +1202,9 @@ int main(int argc, char **argv)
         } else
         if(!strcmp(argv[2],"symlink") && argc>3) {
             addsymlink(argc,argv);
+        } else
+        if(!strcmp(argv[2],"link") && argc>3) {
+            addlink(argc,argv);
         } else
         if(!strcmp(argv[2],"mime") && argc>3) {
             changemime(argc,argv);
@@ -1129,11 +1218,9 @@ int main(int argc, char **argv)
         if(!strcmp(argv[2],"dump") && argc>=2) {
             dump(argc,argv);
         } else
-        if(argc>1) {
             createimage(argv[1],argv[2]);
-        } else {
-            printf("mkfs: unknown command.\n");
-        }
+    } else {
+        printf("mkfs: unknown command.\n");
     }
     return 0;
 }

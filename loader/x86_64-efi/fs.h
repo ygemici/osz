@@ -35,7 +35,7 @@ file_t fsz_initrd(unsigned char *initrd_p, char *kernel)
     }
     DBG(L" * FS/Z %s\n",a2u(kernel));
     // Get the inode
-    int i;
+    int i,ss=1<<(sb->logsec+11);
     char *s,*e;
     s=e=kernel;
     i=0;
@@ -46,9 +46,9 @@ again:
         //is it inlined?
         if(!CompareMem(in->inlinedata,FSZ_DIR_MAGIC,4)){
             ent=(FSZ_DirEnt *)(in->inlinedata);
-        } else if(!CompareMem(initrd_p+in->sec*FSZ_SECSIZE,FSZ_DIR_MAGIC,4)){
+        } else if(!CompareMem(initrd_p+in->sec*ss,FSZ_DIR_MAGIC,4)){
             // go, get the sector pointed
-            ent=(FSZ_DirEnt *)(initrd_p+in->sec*FSZ_SECSIZE);
+            ent=(FSZ_DirEnt *)(initrd_p+in->sec*ss);
         } else {
             return ret;
         }
@@ -63,7 +63,7 @@ again:
                     break;
                 } else {
                     s=e;
-                    in=(FSZ_Inode *)(initrd_p+ent->fid*FSZ_SECSIZE);
+                    in=(FSZ_Inode *)(initrd_p+ent->fid*ss);
                     goto again;
                 }
             }
@@ -74,21 +74,32 @@ again:
     }
     if(i!=0) {
         // fid -> inode ptr -> data ptr
-        FSZ_Inode *in=(FSZ_Inode *)(initrd_p+i*FSZ_SECSIZE);
+        FSZ_Inode *in=(FSZ_Inode *)(initrd_p+i*ss);
         if(!CompareMem(in->magic,FSZ_IN_MAGIC,4)){
             ret.size=in->size;
-            //inline
-            if(in->size<FSZ_SECSIZE-1024) {
-                ret.ptr=(UINT8*)(initrd_p+i*FSZ_SECSIZE+1024);
+            switch(FSZ_FLAG_TRANSLATION(in->flags)) {
+                case FSZ_IN_FLAG_INLINE:
+                    // inline data
+                    ret.ptr=(UINT8*)(initrd_p+i*ss+1024);
+                    break;
+                case FSZ_IN_FLAG_SECLIST:
+                case FSZ_IN_FLAG_SDINLINE:
+                    // sector directory or list inlined
+                    ret.ptr=(UINT8*)(initrd_p + *((UINT64*)&in->inlinedata) * ss);
+                    break;
+                case FSZ_IN_FLAG_DIRECT:
+                    // direct data
+                    ret.ptr=(UINT8*)(initrd_p + in->sec * ss);
+                    break;
+                // sector directory (only one level supported here, and no holes in files)
+                case FSZ_IN_FLAG_SECLIST0:
+                case FSZ_IN_FLAG_SD:
+                    ret.ptr=(UINT8*)(initrd_p + (unsigned int)(((FSZ_SectorList *)(initrd_p+in->sec*ss))->sec) * ss);
+                    break;
+                default:
+                    ret.size=0;
+                    break;
             }
-            //direct
-            if(in->size<FSZ_SECSIZE) {
-                ret.ptr=(UINT8*)(initrd_p + in->sec * FSZ_SECSIZE);
-            } else {
-                //sector directory
-                ret.ptr=(UINT8*)(initrd_p + (unsigned int)(((FSZ_SectorList *)(initrd_p+in->sec*FSZ_SECSIZE))->fid) * FSZ_SECSIZE);
-            }
-            return ret;
         }
     }
     return ret;

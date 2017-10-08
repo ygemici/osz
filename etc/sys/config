@@ -23,8 +23,8 @@ quantum=10
 //  ri = run-time linker imports, re = run-time exports
 //  ir = IRQ Routing Table, sc = scheduler, ms = messaging,
 //  ma = memory allocation, bl=block io, fs=file systems,
-//  te = run tests instead of init
-debug=ms,te,fs
+//  fi = file io, ca = cache, te = run tests instead of init
+debug=ms,te,bl,fi
 
 // display transformation type, decimal number 0-3 or one of:
 //  0 mc = mono channel, rgb color

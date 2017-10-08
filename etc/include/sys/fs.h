@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief OS/Z system calls for fs service. Include with osZ.h
+ * @brief OS/Z system calls for FS service. Include with osZ.h
  */
 
 // cache
@@ -70,9 +70,10 @@
 #define SYS_readdir     (42)
 #define SYS_rewind      (43)
 // pipe operations
-#define SYS_pipe        (44) //
-#define SYS_popen       (45) //
-#define SYS_pclose      (46) //
+#define SYS_mkfifo      (44) //
+#define SYS_pipe        (45) //
+#define SYS_popen       (46) //
+#define SYS_pclose      (47) //
 // socket operations
 
 #if DEBUG

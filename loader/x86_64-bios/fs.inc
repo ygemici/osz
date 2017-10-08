@@ -51,10 +51,17 @@ fsz_initrd:
             cmp         dword [esi], 'FSDR'
             je          .srchdir
             ; no, locate the data
+            mov         ecx, dword [esi]
             mov         eax, dword [esi-1024+448]   ; FSZ_Inode.sec
             shl         eax, 12
             mov         esi, dword [bootboot.initrd_ptr]
             add         esi, eax
+            cmp         dword [esi], 'FSDR'
+            je          .srchdir
+            ; inlined sector directory or list?
+            shl         ecx, 12
+            mov         esi, dword [bootboot.initrd_ptr]
+            add         esi, ecx
             cmp         dword [esi], 'FSDR'
             jne         .nolib
 .srchdir:   ; find sys/
@@ -85,10 +92,17 @@ fsz_initrd:
             cmp         dword [esi], 'FSDR'
             je          .srchcore
             ; no, locate the data
+            mov         ecx, dword [esi]
             mov         eax, dword [esi-1024+448]   ; FSZ_Inode.sec
             shl         eax, 12
             mov         esi, dword [bootboot.initrd_ptr]
             add         esi, eax
+            cmp         dword [esi], 'FSDR'
+            je          .srchdir
+            ; inlined sector directory or list?
+            shl         ecx, 12
+            mov         esi, dword [bootboot.initrd_ptr]
+            add         esi, ecx
             cmp         dword [esi], 'FSDR'
             jne         .nolib
 
@@ -115,21 +129,32 @@ fsz_initrd:
             ; get data
             mov         eax, dword [esi+448]    ; FSZ_Inode.sec
             mov         ecx, dword [esi+464]    ; FSZ_Inode.size
-            shl         eax, 12
-            mov         esi, dword [bootboot.initrd_ptr]
-            add         esi, eax
+            mov         bl, byte [esi+492]      ; FSZ_Inode.flags
+
             ; inline
-            cmp         ecx, 4096-1024
-            ja          @f
+            cmp         bl, 0FFh                ; FSZ_IN_FLAG_INLINE
+            jne          @f
             add         esi, 1024
             ret
             ; direct data block
-@@:         cmp         ecx, 4096
-            ja          @f
-            ret
-@@:         ; sector directory at esi, file size in ecx
-            mov         eax, dword [esi]    ; first FSZ_SectorList.sec
+@@:         or          bl, bl                  ; FSZ_IN_FLAG_DIRECT
+            je          .load
+            ; inlined sector directory or sector list
+@@:         cmp         bl, 07Fh                ; FSZ_IN_FLAG_SDINLINE
+            je          @f
+            cmp         bl, 080h                ; FSZ_IN_FLAG_SECLIST
+            je          @f
+            cmp         bl, 1                   ; FSZ_IN_FLAG_SD
+            jne         .nocore
             shl         eax, 12
+            mov         esi, dword [bootboot.initrd_ptr]
+            add         esi, eax
+            mov         eax, dword [esi]        ; first FSZ_SectorList.sec
+            jmp         .load
+@@:         add         esi, 1024
+            ; sector directory at esi, file size in ecx
+            mov         eax, dword [esi]        ; first FSZ_SectorList.sec
+.load:      shl         eax, 12
             mov         esi, dword [bootboot.initrd_ptr]
             add         esi, eax
             ret

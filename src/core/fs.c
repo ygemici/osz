@@ -46,7 +46,8 @@ void *fs_locate(char *fn)
     if(!kmemcmp(((FSZ_SuperBlock *)bootboot.initrd_ptr)->magic,FSZ_MAGIC,4)) {
         FSZ_SuperBlock *sb = (FSZ_SuperBlock *)bootboot.initrd_ptr;
         FSZ_DirEnt *ent;
-        FSZ_Inode *in=(FSZ_Inode *)(bootboot.initrd_ptr+sb->rootdirfid*FSZ_SECSIZE);
+        size_t ss=1<<(sb->logsec+11);
+        FSZ_Inode *in=(FSZ_Inode *)(bootboot.initrd_ptr+sb->rootdirfid*ss);
         // Get the inode from directory hierarchy
         char *s,*e;
         s=e=fn;
@@ -58,9 +59,9 @@ again:
             //is it inlined?
             if(!kmemcmp(in->inlinedata,FSZ_DIR_MAGIC,4)){
                 ent=(FSZ_DirEnt *)(in->inlinedata);
-            } else if(!kmemcmp((void *)(bootboot.initrd_ptr+in->sec*FSZ_SECSIZE),FSZ_DIR_MAGIC,4)){
+            } else if(!kmemcmp((void *)(bootboot.initrd_ptr+in->sec*ss),FSZ_DIR_MAGIC,4)){
                 // go, get the sector pointed
-                ent=(FSZ_DirEnt *)(bootboot.initrd_ptr+in->sec*FSZ_SECSIZE);
+                ent=(FSZ_DirEnt *)(bootboot.initrd_ptr+in->sec*ss);
             } else {
                 return NULL;
             }
@@ -75,7 +76,7 @@ again:
                         break;
                     } else {
                         s=e;
-                        in=(FSZ_Inode *)(bootboot.initrd_ptr+ent->fid*FSZ_SECSIZE);
+                        in=(FSZ_Inode *)(bootboot.initrd_ptr+ent->fid*ss);
                         goto again;
                     }
                 }
@@ -87,19 +88,31 @@ again:
         // if we have an inode, load it's contents
         if(i!=0) {
             // fid -> inode ptr -> data ptr
-            FSZ_Inode *in=(FSZ_Inode *)(bootboot.initrd_ptr+i*FSZ_SECSIZE);
+            FSZ_Inode *in=(FSZ_Inode *)(bootboot.initrd_ptr+i*ss);
             if(!kmemcmp(in->magic,FSZ_IN_MAGIC,4)){
                 fs_size = in->size;
-                if(in->sec==i) {
-                    // inline data
-                    return (void*)&in->inlinedata;
-                } else {
-                    if(in->size <= FSZ_SECSIZE)
+                switch(FSZ_FLAG_TRANSLATION(in->flags)) {
+                    case FSZ_IN_FLAG_INLINE:
+                        // inline data
+                        return (void*)&in->inlinedata;
+
+                    case FSZ_IN_FLAG_SECLIST:
+                    case FSZ_IN_FLAG_SDINLINE:
+                        // sector directory or list inlined
+                        return (void*)(bootboot.initrd_ptr + *((uint64_t*)&in->inlinedata) * ss);
+
+                    case FSZ_IN_FLAG_DIRECT:
                         // direct data
-                        return (void*)(bootboot.initrd_ptr + in->sec * FSZ_SECSIZE);
-                    else
-                        // sector directory (only one level supported here, and no holes in files)
-                        return (void*)(bootboot.initrd_ptr + (unsigned int)(((FSZ_SectorList *)(bootboot.initrd_ptr+in->sec*FSZ_SECSIZE))->fid) * FSZ_SECSIZE);
+                        return (void*)(bootboot.initrd_ptr + in->sec * ss);
+
+                    // sector directory (only one level supported here, and no holes in files)
+                    case FSZ_IN_FLAG_SECLIST0:
+                    case FSZ_IN_FLAG_SD:
+                        return (void*)(bootboot.initrd_ptr + 
+                            (unsigned int)(((FSZ_SectorList *)(bootboot.initrd_ptr+in->sec*ss))->sec) * ss);
+
+                    default:
+                        kpanic("Unsupported FS/Z complexity in initrd");
                 }
             }
         }

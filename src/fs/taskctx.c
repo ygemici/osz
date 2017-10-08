@@ -414,6 +414,11 @@ size_t taskctx_read(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
                 }
                 if(blk==NULL) {
                     // call file system driver
+#if DEBUG
+                    if(_debug&DBG_FILEIO)
+                        dbg_printf("FS: file read(fd %d, ino %d, offs %d, size %d)\n",
+                            f->reg.storage, f->reg.inode, o, bs);
+#endif
                     blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, o, &bs);
 //dbg_printf("readfs ret %x bs %d, delayed %d\n",blk,bs,ackdelayed);
                     // skip if block is not in cache

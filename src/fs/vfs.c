@@ -277,7 +277,12 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
             }
             if(f->fs < nfsdrv && fsdrv[f->fs].read!=NULL) {
                 // call file system driver to read block. This must return a cache block
-                blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, lsn*bs, &bs);
+ #if DEBUG
+                if(_debug&DBG_FILEIO)
+                    dbg_printf("FS: file read(fd %d, ino %d, offs %d, size %d)\n",
+                        f->reg.storage, f->reg.inode, lsn*bs, bs);
+#endif
+               blk=(*fsdrv[f->fs].read)(f->reg.storage, f->reg.inode, lsn*bs, &bs);
                 // skip if block is not in cache or eof
                 if(ackdelayed || bs==0) return NULL;
             }
@@ -447,8 +452,9 @@ fid_t lookup(char *path, bool_t creat)
     fid_t f,fd,ff,re=0;
     int16_t fs;
     int i,j,l,k;
+    uint8_t status;
 again:
-dbg_printf("lookup '%s' creat %d\n",path,creat);
+//dbg_printf("lookup '%s' creat %d\n",path,creat);
     if(tmp!=NULL) {
         free(tmp);
         tmp=NULL;
@@ -536,7 +542,9 @@ dbg_printf("lookup '%s' creat %d\n",path,creat);
         loc.fileblk=NULL;
         loc.creat=creat;
         pathstackidx=0;
-        switch((*fsdrv[fs].locate)(fd, 0, &loc)) {
+        status=(*fsdrv[fs].locate)(fd, 0, &loc);
+        if(ackdelayed) return -1;
+        switch(status) {
             case SUCCESS:
                 i=strlen(abspath);
                 if(loc.type==FCB_TYPE_REG_DIR && i>0 && abspath[i-1]!='/') {

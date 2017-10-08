@@ -94,8 +94,8 @@ typedef struct {
 
 //sizeof = 32
 typedef struct {
-    uint64_t    fid;
-    uint64_t    fid_hi;
+    uint64_t    sec;
+    uint64_t    sec_hi;
     uint64_t    numsec;
     uint64_t    numsec_hi;
 } __attribute__((packed)) FSZ_SectorList;
@@ -178,25 +178,25 @@ typedef struct {
 #define FSZ_IN_MAGIC "FSIN"
 
 // regular files, 4th character never ':'
-#define FILETYPE_REG_TEXT   "text"  // main part of mime type
-#define FILETYPE_REG_IMAGE  "imag"
-#define FILETYPE_REG_VIDEO  "vide"
-#define FILETYPE_REG_AUDIO  "audi"
-#define FILETYPE_REG_APP    "appl"
+#define FSZ_FILETYPE_REG_TEXT   "text"  // main part of mime type
+#define FSZ_FILETYPE_REG_IMAGE  "imag"
+#define FSZ_FILETYPE_REG_VIDEO  "vide"
+#define FSZ_FILETYPE_REG_AUDIO  "audi"
+#define FSZ_FILETYPE_REG_APP    "appl"
 // special entities, 4th character always ':'
-#define FILETYPE_DIR        "dir:"  // directory
-#define FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths with jokers
-#define FILETYPE_INTERNAL   "int:"  // internal files, like free and bad sectors and meta info
-#define FILETYPE_SYMLINK    "lnk:"  // symbolic link, inlined data is a path
+#define FSZ_FILETYPE_DIR        "dir:"  // directory
+#define FSZ_FILETYPE_UNION      "uni:"  // directory union, inlined data is a zero separated list of paths with jokers
+#define FSZ_FILETYPE_INTERNAL   "int:"  // internal files, like free and bad sectors and meta info
+#define FSZ_FILETYPE_SYMLINK    "lnk:"  // symbolic link, inlined data is a path
 // mime types for filesystem specific files
-// for FILETYPE_DIR
-#define MIMETYPE_DIR_ROOT   "fs-root"  // root directory (for recovery it has a special mime type)
-// for FILETYPE_INTERNAL
-#define MIMETYPE_INT_FREELST "fs-free-sectors" // for free sector list
-#define MIMETYPE_INT_BADLST  "fs-bad-sectors"  // for bad sector list
-#define MIMETYPE_INT_META    "fs-meta-labels"  // meta labels
-#define MIMETYPE_INT_INDEX   "fs-search-index" // search cache
-#define MIMETYPE_INT_JOURNAL "fs-journal-data" // journaling records
+// for FSZ_FILETYPE_DIR
+#define FSZ_MIMETYPE_DIR_ROOT   "fs-root"  // root directory (for recovery it has a special mime type)
+// for FSZ_FILETYPE_INTERNAL
+#define FSZ_MIMETYPE_INT_FREELST "fs-free-sectors" // for free sector list
+#define FSZ_MIMETYPE_INT_BADLST  "fs-bad-sectors"  // for bad sector list
+#define FSZ_MIMETYPE_INT_META    "fs-meta-labels"  // meta labels
+#define FSZ_MIMETYPE_INT_INDEX   "fs-search-index" // search cache
+#define FSZ_MIMETYPE_INT_JOURNAL "fs-journal-data" // journaling records
 
 // (*) numblocks counts sector directories, indirect sector lists and data sectors, but
 // not zero sectors (holes) for all versions alltogether
@@ -208,7 +208,7 @@ typedef struct {
 
 // if even that's not enough, you can use FSZ_SectorList (extents) to store file data.
 
-#define FLAG_TRANSLATION(x) ((x>>0)&0xFF)
+#define FSZ_FLAG_TRANSLATION(x) ((x>>0)&0xFF)
 
 /*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
@@ -219,13 +219,18 @@ typedef struct {
 /*  data size < sector size (4096)
     The inode points to data sector directly
     FSZ_Inode.sec -> data */
-#define FSZ_IN_FLAG_DIRECT  (0<<0)
+#define FSZ_IN_FLAG_DIRECT   (0<<0)
+
+/*  data size < (sector size - 1024) / 16 (768k)
+    FSZ_Inode.sec points to itself, sector directory inlined.
+    FSZ_Inode.sec -> FSZ_Inode.sec; sd -> data */
+#define FSZ_IN_FLAG_SDINLINE (0x7F<<0)
 
 /*  data size < sector size * sector size / 16 (1 M)
     FSZ_Inode.sec points to a sector directory,
     which is a sector with up to 256 sector addresses
     FSZ_Inode.sec -> sd -> data */
-#define FSZ_IN_FLAG_SD      (1<<0)
+#define FSZ_IN_FLAG_SD       (1<<0)
 
 /*  data size < sector size * sector size / 16 * sector size / 16 (256 M)
     FSZ_Inode.sec points to a sector directory,
@@ -233,33 +238,33 @@ typedef struct {
     directory addresses, which in turn point
     to 256*256 sector addresses
     FSZ_Inode.sec -> sd -> sd -> data */
-#define FSZ_IN_FLAG_SD2     (2<<0)
+#define FSZ_IN_FLAG_SD2      (2<<0)
 
 /*  data size < (64 G)
     FSZ_Inode.sec -> sd -> sd -> sd -> data */
-#define FSZ_IN_FLAG_SD3     (3<<0)
+#define FSZ_IN_FLAG_SD3      (3<<0)
 
 /*  data size < (16 T)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> data */
-#define FSZ_IN_FLAG_SD4     (4<<0)
+#define FSZ_IN_FLAG_SD4      (4<<0)
 
 /*  data size < (4 Peta, equals 4096 Terra)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> data */
-#define FSZ_IN_FLAG_SD5     (5<<0)
+#define FSZ_IN_FLAG_SD5      (5<<0)
 
 /*  data size < (1 Exa, equals 1024 Peta)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> data */
-#define FSZ_IN_FLAG_SD6     (6<<0)
+#define FSZ_IN_FLAG_SD6      (6<<0)
 
 /*  data size < (256 Exa)
     FSZ_Inode.sec -> sd -> sd -> sd -> sd -> sd -> sd -> sd -> data */
-#define FSZ_IN_FLAG_SD7     (7<<0)
+#define FSZ_IN_FLAG_SD7      (7<<0)
 
 /*  data size < (64 Zetta, equals 65536 Exa) */
-#define FSZ_IN_FLAG_SD8     (8<<0)
+#define FSZ_IN_FLAG_SD8      (8<<0)
 
 /*  data size < (16 Yotta, equals 16384 Zetta) */
-#define FSZ_IN_FLAG_SD9     (9<<0)
+#define FSZ_IN_FLAG_SD9      (9<<0)
 
 /*  inlined sector list (up to 96 entries)
     FSZ_Inode.sec points to itself, FSZ_SectorList entries inlined.

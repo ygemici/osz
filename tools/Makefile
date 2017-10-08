@@ -12,6 +12,10 @@ SRCS = mkfs.c elftool.c
 OPT  = -DOSZ_ARCH='"$(ARCH)"'
 LIBS =
 OBJS = $(SRCS:.c=.o)
+ifneq ("$(wildcard /usr/include/zlib.h)","")
+OPT += -DHAS_ZLIB=1
+LIBS+= -lz
+endif
 
 CFLAGS = -Wall -fshort-wchar
 
