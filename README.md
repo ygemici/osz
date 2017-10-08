@@ -6,24 +6,21 @@ OS/Z - an operating system for hackers
 <a href="https://github.com/bztsrc/osz/tree/master/docs/README.md">Documentation</a><br>
 <a href="https://github.com/bztsrc/osz/issues">Support</a><br><br>
 
-OS/Z is a hobby OS project. As such it's primary goal is not
-everyday use. Instead it demostrates different concepts to [POSIX](https://github.com/bztsrc/osz/tree/master/docs/posix.md)
-for those who like hacking with hobby OSes, like the good fellows on [OSDEV](http://forum.osdev.org/). It's aim is
+OS/Z is a POSIXish hobby OS project. As such it demostrates [different concepts to POSIX](https://github.com/bztsrc/osz/tree/master/docs/posix.md)
+for those who like hacking with OSes, like the good fellows on [OSDEV](http://forum.osdev.org/). It's aim is
 to be small, elegant, [portable](https://github.com/bztsrc/osz/tree/master/docs/porting.md) and to be able to handle enormous amounts of data in
-a user friendly way. To achieve that goal, I've eliminated
-as many limits as possible by design.
-For example only storage capacity limits the number of inodes
-on a disk. And only amount of RAM limits the number of concurent tasks
-at any given time. If I couldn't eliminate a hard limit, I've
-created a [boot option](https://github.com/bztsrc/osz/tree/master/docs/bootopts.md) for it so that you
-can tweek without recompilation. This makes OS/Z a very scalable system.
+a user friendly way. To achieve that goal, I've eliminated as many limits as possible by design.
+For example only storage capacity limits the number of inodes on a disk. And only amount of RAM limits the number of
+concurent tasks at any given time. If I couldn't eliminate a hard limit, I've
+created a [boot option](https://github.com/bztsrc/osz/tree/master/docs/bootopts.md) for it so that you can tweek it without
+recompilation. This makes OS/Z a very scalable system.
 
 Features
 --------
 
- - [GNU toolchain](https://github.com/bztsrc/osz/tree/master/docs/compile.md) without cross-compiler
+ - [GNU toolchain](https://github.com/bztsrc/osz/tree/master/docs/compile.md)
  - Microkernel architecture with an effective [messaging system](https://github.com/bztsrc/osz/tree/master/docs/messages.md)
- - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from BIOS or UEFI.
+ - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from BIOS or from UEFI.
  - [Higher half kernel](https://github.com/bztsrc/osz/tree/master/docs/memory.md) mapping, full 64 bit support
  - It's [filesystem](https://github.com/bztsrc/osz/tree/master/docs/fs.md) can handle YottaBytes of data (unimagineable as of writing)
  - ELF64 object format support
@@ -52,9 +49,10 @@ with [qemu](http://www.qemu.org/), [bochs](http://bochs.sourceforge.net/) and [v
 License
 -------
 
-The boot loader, the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol and the on-disk format of FS/Z are Public Domain.
+The boot loader, the [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) Protocol and the
+[on disk format of FS/Z](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h) are Public Domain.
 I hereby grant you the right to use them in your own project without any resctictions, although I would appreciate attribution.
-All the other parts of OS/Z (like my [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) implementation) licensed under CC-by-nc-sa-4.0:
+All the other parts of OS/Z (including my [FS/Z](https://github.com/bztsrc/osz/blob/master/docs/fs.md) implementation) licensed under CC-by-nc-sa-4.0:
 
  Copyright 2017 bzt (bztsrc@github) [CC-by-nc-sa-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
  
@@ -88,5 +86,5 @@ zlib: Mark Adler
 
 qsort: Copyright The Regents of the University of California
 
-BOOTBOOT, OS/Z: bzt
+BOOTBOOT, FS/Z, OS/Z, bztalloc: bzt
 

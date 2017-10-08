@@ -426,21 +426,25 @@ uint64_t allocateblock(fid_t fd)
 {
     uint64_t i=-1;
     FSZ_SuperBlock *sb=(FSZ_SuperBlock *)readblock(fd,0);
+    FSZ_Inode *in;
     FSZ_SectorList *sl,*ptr;
-    size_t bs=fcb[fd].device.blksize;
+    size_t s,bs=fcb[fd].device.blksize;
     // not found in cache?
     if(sb==NULL) return -1;
     // do we have free segments map?
     if(sb->freesecfid!=0) {
-        sl=(FSZ_SectorList*)read(fd,sb->freesecfid,0,&bs);
-        if(sl==NULL) return -1;
-        if(bs>0) {
-            for(ptr=sl;(int64_t)bs>=0;bs-=sizeof(FSZ_SectorList)) {
+        in=(FSZ_Inode*)readblock(fd,sb->freesecfid);
+        if(in==NULL || memcmp(in->magic, FSZ_IN_MAGIC, 4)) return -1;
+        sl=(FSZ_SectorList*)&in->inlinedata;
+        s=bs - ((uint64_t)in->inlinedata - (uint64_t)in);
+        if(s>0 && in->size>0) {
+            for(ptr=sl;(int64_t)s>=0;s-=sizeof(FSZ_SectorList)) {
                 if(ptr->numsec>0) {
-                    i=ptr->sec;
-                    ptr->sec++;
+                    in->size-=bs;
+                    i=ptr->sec++;
                     ptr->numsec--;
-                    bs=fcb[fd].device.blksize;
+                    if(ptr->numsec==0)
+                        memcpy(ptr,ptr+1,s-sizeof(FSZ_SectorList));
                     writeblock(fd,lastsec,(void*)sl-((uint64_t)sl%bs),BLKPRIO_CRIT);
                     return i;
                 }

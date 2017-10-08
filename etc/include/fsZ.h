@@ -75,8 +75,7 @@ typedef struct {
 
 #define FSZ_MAGIC "FS/Z"
 
-#define FSZ_SB_FLAG_HIST      (1<<0)   // indicates that previous file versions are kept
-#define FSZ_SB_FLAG_BIGINODE  (1<<1)   // indicates inode size is 2048 (ACL size 96 instead of 32)
+#define FSZ_SB_FLAG_BIGINODE  (1<<0)   // indicates inode size is 2048 (ACL size 96 instead of 32)
 
 #define FSZ_SB_SOFTRAID_NONE   0xff    // single disk
 #define FSZ_SB_SOFTRAID0          0    // mirror
@@ -175,6 +174,15 @@ typedef struct {
     };
 } __attribute__((packed)) FSZ_Inode;
 
+// (*) numblocks counts sector directories, indirect sector lists and data sectors, but
+// not zero sectors (holes) for all versions alltogether
+
+// (**) logical sector address to data sector translation. These file sizes
+// were calculated with 4096 sector size. That is configurable in the
+// FSZ_SuperBlock if you think 11 sector reads is too much to access
+// data at any arbitrary position in a Yotta magnitude file.
+// if even that's not enough, you can use FSZ_SectorList (extents) to store file data.
+
 #define FSZ_IN_MAGIC "FSIN"
 
 // regular files, 4th character never ':'
@@ -198,22 +206,16 @@ typedef struct {
 #define FSZ_MIMETYPE_INT_INDEX   "fs-search-index" // search cache
 #define FSZ_MIMETYPE_INT_JOURNAL "fs-journal-data" // journaling records
 
-// (*) numblocks counts sector directories, indirect sector lists and data sectors, but
-// not zero sectors (holes) for all versions alltogether
+// flags
+#define FSZ_IN_FLAG_HIST     (1<<8)   // indicates that previous file versions are kept
 
-// (**) logical sector address to data sector translation. These file sizes
-// were calculated with 4096 sector size. That is configurable in the
-// FSZ_SuperBlock if you think 11 sector reads is too much to access
-// data at any arbitrary position in a Yotta magnitude file.
-
-// if even that's not enough, you can use FSZ_SectorList (extents) to store file data.
-
+// sector translation part of flags
 #define FSZ_FLAG_TRANSLATION(x) ((x>>0)&0xFF)
 
 /*  data size < sector size - 1024 (3072 bytes)
     FSZ_Inode.sec points to itself.
     the data is included in the inode sector at 1024 (or 2048 if BIGINODE)
-    FSZ_Inode.sec -> FSZ_Inode.sec  */
+    FSZ_Inode.sec -> FSZ_Inode.sec; data  */
 #define FSZ_IN_FLAG_INLINE  (0xFF<<0)
 
 /*  data size < sector size (4096)
@@ -221,8 +223,9 @@ typedef struct {
     FSZ_Inode.sec -> data */
 #define FSZ_IN_FLAG_DIRECT   (0<<0)
 
-/*  data size < (sector size - 1024) / 16 (768k)
+/*  data size < (sector size - 1024) * sector size / 16 (768k)
     FSZ_Inode.sec points to itself, sector directory inlined.
+    with BIGINODE, this format supports 512k mapping.
     FSZ_Inode.sec -> FSZ_Inode.sec; sd -> data */
 #define FSZ_IN_FLAG_SDINLINE (0x7F<<0)
 
@@ -266,14 +269,18 @@ typedef struct {
 /*  data size < (16 Yotta, equals 16384 Zetta) */
 #define FSZ_IN_FLAG_SD9      (9<<0)
 
-/*  inlined sector list (up to 96 entries)
+/*  as sector list contains a number of sectors field it's impossible to tell
+ *  how big file it can store, so we measure it by the number of file fragments */
+
+/*  inlined sector list ((sector size - 1024) / 32, up to 96 entries)
     FSZ_Inode.sec points to itself, FSZ_SectorList entries inlined.
     FSZ_Inode.sec -> FSZ_Inode.sec; sl -> data */
 #define FSZ_IN_FLAG_SECLIST  (0x80<<0)
 
-/*  normal sector list (up to 128 entries)
-    FSZ_Inode.sec points to a sector with FSZ_SectorList entries.
-    FSZ_Inode.sec -> sl -> data */
+/*  normal sector list ((sector size - 1024) * sector size / 16 / 32, up to 24576 entries)
+    FSZ_Inode.sec points to itself, with an inlined sector directory
+    pointing to sectors with FSZ_SectorList entries.
+    FSZ_Inode.sec -> FSZ_Inode.sec; sd -> sl -> data */
 #define FSZ_IN_FLAG_SECLIST0 (0x81<<0)
 
 /*  indirect sector list (up to 32768 entries)
@@ -325,9 +332,9 @@ typedef struct {
  *                   Directory union                     *
  *********************************************************/
 
-/* inlined data is a list of asciiz paths that may contain the '*' joker character.
- * Terminated by and empty path.*/
- // Example union for /usr/bin: inlinedata=/bin(zero)/usr/*/bin(zero)(zero)
+/* inlined data is a list of asciiz paths that may contain the '...' joker directory.
+ * Terminated by and empty path. */
+ // Example union for /usr/bin: inlinedata=/bin(zero)/usr/.../bin(zero)(zero)
 
 /*********************************************************
  *                     Meta labels                       *
@@ -346,8 +353,8 @@ typedef struct {
  * Normally meta labels do not exceed logical sector size. But when they do, the allocation
  * must be careful to allocate continuous sectors for a meta block. This complicates things
  * a bit when large meta label blocks (>4096) are written, but simplifies a lot on read by
- * eliminating the need of translation LSNs for meta labels file. As meta labels are read more
- * often than written, and usually one block is smaller than 4096, this is intentional.
+ * eliminating the need of translating LSNs for meta labels file. As meta labels are read more
+ * often than written, and usually one JSON is smaller than 4096, this is intentional.
  * In other words, meta label blocks are one or more continuous sectors per inode on disk, and
  * meta labels file covers them just like bad sectors file covers bad sectors.
  */
@@ -362,6 +369,6 @@ typedef struct {
  *                    Journal data                       *
  *********************************************************/
 
-/* to be specified. Circular buffer of modified sectors with transaction done markers */
+/* to be specified. Circular buffer of modified sectors with transaction done marker */
 
 #endif /* fsZ.h */

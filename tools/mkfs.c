@@ -967,8 +967,7 @@ void dump(int argc, char **argv)
         printf("FSZ_SuperBlock {\n");
         printf("\tmagic: %s\n",FSZ_MAGIC);
         printf("\tversion_major.version_minor: %d.%d\n",sb->version_major,sb->version_minor);
-        printf("\tflags: 0x%02x %s %s\n",sb->flags,sb->flags&FSZ_SB_FLAG_HIST?"FSZ_SB_FLAG_HIST":"",
-            sb->flags&FSZ_SB_FLAG_BIGINODE?"FSZ_SB_FLAG_BIGINODE":"");
+        printf("\tflags: 0x%02x %s\n",sb->flags, sb->flags&FSZ_SB_FLAG_BIGINODE?"FSZ_SB_FLAG_BIGINODE":"");
         printf("\traidtype: 0x%02x %s\n",sb->raidtype,sb->raidtype==FSZ_SB_SOFTRAID_NONE?"none":"");
         printf("\tlogsec: %d (%ld bytes per sector)\n",sb->logsec,secs);
         printf("\tphysec: %d (%ld bytes per sector)\n",sb->physec,secs/sb->physec);
@@ -1026,7 +1025,7 @@ void dump(int argc, char **argv)
             case FSZ_IN_FLAG_SD: printf("FSZ_IN_FLAG_SD"); break;
             default: printf("FSZ_IN_FLAG_SD%d",FSZ_FLAG_TRANSLATION(in->flags)); break;
         }
-        printf("\n\t};\n");
+        printf(" %s\n\t};\n",in->flags&FSZ_IN_FLAG_HIST?"FSZ_IN_FLAG_HIST":"");
         printf("\towner: "); printf_uuid(&in->owner);
         printf("\n\tinlinedata: ");
         if(FSZ_FLAG_TRANSLATION(in->flags)==FSZ_IN_FLAG_SDINLINE)

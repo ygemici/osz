@@ -58,22 +58,23 @@
 #define SYS_unlink      (31) //
 #define SYS_rename      (32) //
 #define SYS_realpath    (33)
+#define SYS_purge       (34) // remove old versions
+#define SYS_setattr     (35) // set file attributes like flags and meta
+#define SYS_getattr     (36) //
 // directory operations
-#define SYS_chroot      (34)
-#define SYS_chdir       (35)
-#define SYS_getcwd      (36)
-#define SYS_mkdir       (37) //
-#define SYS_rmdir       (38) //
-#define SYS_mkunion     (39) //
-#define SYS_rmunion     (40) //
-#define SYS_opendir     (41)
-#define SYS_readdir     (42)
-#define SYS_rewind      (43)
+#define SYS_chroot      (37)
+#define SYS_chdir       (38)
+#define SYS_getcwd      (39)
+#define SYS_mkdir       (40) //
+#define SYS_mkunion     (41) //
+#define SYS_opendir     (42)
+#define SYS_readdir     (43)
+#define SYS_rewind      (44)
 // pipe operations
-#define SYS_mkfifo      (44) //
-#define SYS_pipe        (45) //
-#define SYS_popen       (46) //
-#define SYS_pclose      (47) //
+#define SYS_mkfifo      (45) //
+#define SYS_pipe        (46) //
+#define SYS_popen       (47) //
+#define SYS_pclose      (48) //
 // socket operations
 
 #if DEBUG
