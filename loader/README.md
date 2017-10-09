@@ -279,7 +279,7 @@ tar -czf ../INITRD *
 2. Create FS0:\BOOTBOOT directory on the boot partition, and copy the image you've created
         into it. If you want, create a text file named [CONFIG](https://github.com/bztsrc/osz/blob/master/etc/sys/config)
         there too, and put your [environment variables](https://github.com/bztsrc/osz/blob/master/docs/bootopts.md) there.
-        If you want to use a different name than "sys/core" for your kernel, specify "kernel=" in it.
+        If you use a different name than "sys/core" for your kernel, specify "kernel=" in it.
 
 Alternatively you can copy an uncompressed INITRD into the whole partition using your fs only, leaving FAT filesystem entirely out.
 You can also create an Option ROM out of INITRD (on BIOS there's not much space ~64-96k, but on EFI it can be 16M).
@@ -291,9 +291,11 @@ You can also create an Option ROM out of INITRD (on BIOS there's not much space 
 3.2. *EFI ROM*: use __bootboot.rom__ which is a standard **_PCI Option ROM image_**.
 
 3.3. *BIOS disk*: copy __bootboot.bin__ to **_FS0:\BOOTBOOT\LOADER_**. You can place it inside your INITRD partition
-        or outside of partition area as well. Install __boot.bin__ in the master boot record (or in volume boot record if you have a boot manager),
-        saving bootboot.bin's first logical sector's number in a dword at 0x1B0.
-    
+        or outside of partition area as well (with `dd conv=notrunc oseek=x`). Finally install __boot.bin__ in the
+        master boot record (or in volume boot record if you have a boot manager), saving bootboot.bin's first sector's
+        LBA number in a dword at 0x1B0. The [mkboot](https://github.com/bztsrc/osz/blob/master/loader/x86_64-bios/mkboot.c)
+        utility will do that for you.
+
 3.4. *BIOS ROM*: install __bootboot.bin__ in a **_BIOS Expansion ROM_**.
 
 3.5. *Raspberry Pi 3*: copy __kernel8.img__ on the boot partition, and add `initramfs BOOTBOOT\INITRD 0x80000` to [config.txt](http://elinux.org/RPi_config.txt#Boot).
