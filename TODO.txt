@@ -10,7 +10,7 @@
 ./src/drivers/fs/fsz/main.c:235:    // TODO: if loc->creat, then create dir or path
 ./src/fs/vfs.c:572:                // TODO: handle up directory
 ./src/fs/vfs.c:575:                // TODO: detect file system in image
-./src/core/x86_64/libk.S:220:// TODO: use SSE2 copy
+./src/core/x86_64/libk.S:238:// TODO: use SSE2 copy
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers
 ./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers

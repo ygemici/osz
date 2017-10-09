@@ -9,7 +9,7 @@ LIBS += -lc
 
 CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -fno-stack-protector -nostdinc \
 -I../../../../etc/include -I../../../core/$(ARCH) -I../../../lib/libc -I../../../lib/libc/$(ARCH) -I../../../fs
-LDFLAGS += -nostdlib -shared -L../../../../bin/initrd/sys/lib -lc
+LDFLAGS += -nostdlib -shared -Bshareable -L../../../../bin/initrd/sys/lib -L../../../lib -lc
 
 all: $(OBJS) $(EXTOBJS) $(BINTARGET)
 
@@ -23,7 +23,7 @@ $(BINTARGET):
 	@echo "  src		sys/drv/$(TARGET)"
 	@mkdir -p ../../../../bin/initrd/sys/drv/$(firstword $(subst /, ,$(TARGET)))
 	@../../../../tools/drivers.sh $(TARGET)
-	$(O)$(CC) $(LDFLAGS) $(EXTOBJS) $(OBJS) -Xlinker --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) $(LDFLAGS) $(EXTOBJS) $(OBJS) --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

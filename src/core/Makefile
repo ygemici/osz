@@ -12,7 +12,10 @@ ARCHOBJS+= $(wildcard $(ARCH)/$(PLATFORM)/*.o)
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' \
  -DOSZ_ARCH='"$(ARCH)"' -DOSZ_PLATFORM='"$(PLATFORM)"' -DOSZ_BUILD='$(BUILD)' \
  -fpic -fno-stack-protector -nostdinc -I. -I./$(ARCH) -I./$(ARCH)/$(PLATFORM) -I../../etc/include \
- -Wall -ffreestanding -fno-builtin -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+ -Wall -ffreestanding -fno-builtin
+ifeq ($(ARCH),x86_64)
+CFLAGS += -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+endif
 ifeq ($(DEBUG),1)
 CFLAGS +=
 else

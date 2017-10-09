@@ -6,3 +6,4 @@ These C sources are compiled to the host platform, and not for the platform it's
 - *drivers.sh* shell script to generate `devices` database
 - *elftool.c* quick and dirty tool to generate C header files for system services
 - *mkfs.c* utility to create [FS/Z](https://github.com/bztsrc/osz/tree/master/docs/fs.md) and disk images
+- *cross-gcc.sh* shell script to build gcc cross compiler

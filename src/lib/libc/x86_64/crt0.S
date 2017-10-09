@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Zero level C runtime (crt0-osZ-x86_64)
+ * @brief Zero level C runtime (x86_64-crt0)
  *
  * Calling convention: SystemV AMD64 ABI
  *  integer or pointer RDI, RSI, RDX, RCX, R8, R9

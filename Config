@@ -2,9 +2,9 @@
 # Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa
 
 # --- common configuration ---
-# x86_64 or AArch64
+# x86_64 or aarch64
 ARCH = x86_64
-# x86_64: ibmpc, acpi AArch64: rpi
+# x86_64: ibmpc, acpi aarch64: rpi
 PLATFORM = ibmpc
 DEBUG = 1
 OPTIMIZE = 0
@@ -21,3 +21,5 @@ HOMESIZE = 4
 
 # --- build system ---
 #CC=/usr/local/bin/$(ARCH)-tcc
+CC=${ARCH}-elf-gcc
+LD=${ARCH}-elf-ld

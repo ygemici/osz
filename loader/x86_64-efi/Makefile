@@ -20,19 +20,19 @@ all: tinflate.o $(TARGET)
 	@echo "  src		x86_64-efi (UEFI)"
 	@objcopy -j .text -j .sdata -j .data -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-$(ARCH) --subsystem=13 $^ $@
 	@echo -n "BOOTBOOT Loader do not " | dd conv=notrunc of=$(TARGET) bs=1 seek=78 1>/dev/null 2>/dev/null
-	@$(CC) $(GNUEFI_INCLUDES) -Wall -fshort-wchar efirom.c -o efirom $(LIBS)
+	@gcc $(GNUEFI_INCLUDES) -Wall -fshort-wchar efirom.c -o efirom $(LIBS)
 	@./efirom $(TARGET) ../bootboot.rom || true
 	@mv $(TARGET) ../$(TARGET)
 	@rm tinflate.o efirom
 
 %.so: %.o
-	@$(LD) $(LDFLAGS) tinflate.o $^ -o $@ -lefi -lgnuefi -T $(GNUEFI_LDS)
+	@ld $(LDFLAGS) tinflate.o $^ -o $@ -lefi -lgnuefi -T $(GNUEFI_LDS)
 
 %.o: %.c
-	@$(CC) $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
+	@gcc $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
 
 %.o: %.S
-	@$(CC) $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
+	@gcc $(GNUEFI_INCLUDES) $(CFLAGS) -c $< -o $@
 
 clean:
 	@rm bootboot.o $(TARGET) ../$(TARGET) ../bootboot.rom *.so *.efi efirom tinflate.o 2>/dev/null || true

@@ -1,5 +1,5 @@
 /*
- * core/AArch64/rpi/platform.c
+ * core/aarch64/start.S
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,56 +22,13 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Platform glue code
+ * @brief Kernel entry point
  */
 
-/**
- * Initialize platform dependent part. Called by main()
- */
-void platform_init()
-{
-}
+.section .text
+.global _start
 
-/**
- * Parse platform specific parameters, called by env_init()
- */
-unsigned char *platform_parse(unsigned char *env)
-{
-    env++;
-    return env;
-}
-
-/**
- * Set up timer. Called by isr_init()
- */
-void platform_timer()
-{
-}
-
-/**
- * Detect devices on platform. Called by sys_init()
- */
-void platform_enumerate()
-{
-}
-
-/**
- * Power off the platform. Called by kprintf_poweroff()
- */
-void platform_poweroff()
-{
-}
-
-/**
- * Reboot computer. Called by kprintf_reboot()
- */
-void platform_reset()
-{
-}
-
-/**
- * Hang computer.
- */
-void platform_halt()
-{
-}
+/**********************************************************************
+ *                     OS/Z Loader entry point                        *
+ **********************************************************************/
+_start:

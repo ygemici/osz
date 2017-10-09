@@ -2,8 +2,7 @@
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
    notice and this notice are preserved.  */
-OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
-	      "elf64-x86-64")
+OUTPUT_FORMAT("elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_init)
 SEARCH_DIR("../bin/initrd/sys/lib");

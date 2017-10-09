@@ -4,7 +4,7 @@ OS/Z Compilation
 Requirements
 ------------
 
-- GNU toolchain (make, gcc, gas, ld, objcopy, strip)
+- GNU toolchain (make, gcc, gas, ld, objcopy, strip, see [cross-gcc.sh](https://github.com/bztsrc/osz/blob/master/tools/cross-gcc.sh))
 - bash (shell scripts are used to generate different files during compilation)
 - optionally fasm (for recompiling non-UEFI booting)
 
@@ -19,7 +19,7 @@ Valid combinations are:
 | ----   | -------- | ----------- |
 | x86_64 | ibmpc    | For old machines, uses PIC and PIT (or RTC), enumerates PCI bus |
 | x86_64 | acpi     | For new machines, APIC, x2APIC, IOAPIC, HPET and parses ACPI tables |
-| AArch64 | rpi     | Raspberry Pi 3 |
+| aarch64 | rpi     | Raspberry Pi 3+ |
 
 Compilation
 -----------

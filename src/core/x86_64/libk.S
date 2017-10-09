@@ -31,23 +31,41 @@
 
 .section .text
 .global idle
+.type idle, STT_FUNC
 .global kpanic
+.type kpanic, STT_FUNC
 .global kmemcpy
+.type kmemcpy, STT_FUNC
 .global kmemset
+.type kmemset, STT_FUNC
 .global kmemcmp
+.type kmemcmp, STT_FUNC
 .global kmap
+.type kmap, STT_FUNC
 .global kmap_init
+.type kmap_init, STT_FUNC
 .global kmap_mq
+.type kmap_mq, STT_FUNC
 .global kmap_buf
+.type kmap_buf, STT_FUNC
 .global kmap_getpte
+.type kmap_getpte, STT_FUNC
 .global kstrcpy
+.type kstrcpy, STT_FUNC
 .global kstrlen
+.type kstrlen, STT_FUNC
 .global kstrcmp
+.type kstrcmp, STT_FUNC
 .global ksend
+.type ksend, STT_FUNC
 .global kwaitkey
+.type kwaitkey, STT_FUNC
 .global kentropy
+.type kentropy, STT_FUNC
 .global klockacquire
+.type klockacquire, STT_FUNC
 .global klockrelease
+.type klockrelease, STT_FUNC
 
 /* idle task's code */
 idle:
@@ -421,7 +439,8 @@ kmap_mq:
     addq    $__PAGESIZE-24, %rax
     movq    %r12, (%rax)
     movw    nrmqmax, %cx
-    movq    $MQ_ADDRESS / __PAGESIZE, %rax
+    movq    $MQ_ADDRESS, %rax
+    shrq    $12, %rax   // /__PAGESIZE
     addw    %ax, %cx
     movq    $TMPQ_ADDRESS, %rax
 1:  invlpg  (%rax)

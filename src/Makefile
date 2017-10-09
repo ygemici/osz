@@ -1,3 +1,4 @@
+include ../Config
 DRVS = $(wildcard drivers/*/*/*) $(wildcard drivers/*/*)
 LIBS = $(filter-out libc drivers Makefile README.md,$(wildcard lib/*))
 APPS = $(filter-out core lib drivers Makefile README.md,$(wildcard *))
@@ -25,7 +26,7 @@ gensyms: $(APPS)
 .PHONY: Makefile
 
 %: Makefile
-	@test -f $@/Makefile && (test ! -f platforms || grep -q "$(ARCH)-$(PLATFORM)" platforms || grep -q "$(ARCH)-*" platforms) && make -e -C $@ $(CMD) | grep -v 'Nothing to be done' || true
+	@test -f $@/Makefile && (test ! -f $@/platforms || grep -q "$(ARCH)-$(PLATFORM)" $@/platforms || grep -q "$(ARCH)-*" $@/platforms) && make -e -C $@ $(CMD) | grep -v 'Nothing to be done' || true
 
 clean:
 	@rm ../bin/*.o */*.o */*/*.o */*/*/*.o */*/*/*/*.o 2>/dev/null || true

@@ -1,5 +1,5 @@
 /*
- * core/AArch64/arch.h
+ * core/aarch64/arch.h
  *
  * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

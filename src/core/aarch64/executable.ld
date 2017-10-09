@@ -1,16 +1,15 @@
+
 /* Copyright (C) 2014-2016 Free Software Foundation, Inc.
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
    notice and this notice are preserved.  */
-OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
-	      "elf64-x86-64")
-OUTPUT_ARCH(i386:x86-64)
-ENTRY(_init)
+OUTPUT_FORMAT("elf64-littleaarch64")
+OUTPUT_ARCH(aarch64)
+ENTRY(_start)
 SEARCH_DIR("../bin/initrd/sys/lib");
-SEARCH_DIR("../lib");
-SEARCH_DIR("../../lib");
-SEARCH_DIR("../../../lib");
-STARTUP("libc/x86_64/init.o");
+SEARCH_DIR("../../bin/initrd/sys/lib");
+SEARCH_DIR("../../../bin/initrd/sys/lib");
+STARTUP("crt0.o");
 
 PHDRS
 {
@@ -22,11 +21,12 @@ PHDRS
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  . = SEGMENT_START("text-segment", 0) + SIZEOF_HEADERS;
-  .text :
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0));
+  . = SEGMENT_START("text-segment", 0);
+  .text SIZEOF_HEADERS : AT(SIZEOF_HEADERS)
   {
     _code = .;
-    /* text segment must start with crt0 */
+    /* text segment must start with crt0 code */
     *(.crt0)
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
     *(.text.exit .text.exit.*)
@@ -75,10 +75,10 @@ SECTIONS
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)
-    *(.bss .bss.* .sbss* .gnu.linkonce.b.*)
     SORT(CONSTRUCTORS)
-    *(COMMON)
-    . = ALIGN(. != 0 ? 64 / 8 : 1);
+   *(.bss .bss.* .gnu.linkonce.b.*)
+   *(COMMON)
+   . = ALIGN(. != 0 ? 64 / 8 : 1);
   } :data
   .data1          : { *(.data1) }
   .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
@@ -86,10 +86,14 @@ SECTIONS
   . = ALIGN(8);
   .got            : { *(.got) *(.igot) } :data
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
+  PROVIDE (_edata = .);
+  __bss_start = 0x100000000;
+  .bss            :
+  {
+   *(.dynbss)
+  }
   _end = .;
-  . = ALIGN (4096);
   . = DATA_SEGMENT_END (.);
-  _edata = ABSOLUTE(.);
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }

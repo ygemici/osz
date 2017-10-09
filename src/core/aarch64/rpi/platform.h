@@ -1,5 +1,5 @@
 /*
- * core/AArch64/start.S
+ * core/aarch64/rpi/platform.h
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -22,13 +22,6 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Kernel entry point
+ * @brief Interrupt Controller and Timer definitions for the platform
  */
 
-.section .text
-.global _start
-
-/**********************************************************************
- *                     OS/Z Loader entry point                        *
- **********************************************************************/
-_start:

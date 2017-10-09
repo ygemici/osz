@@ -1,10 +1,10 @@
 /*
- * loader/rpi-AArch64/boot.S
+ * loader/aarch64-rpi/boot.S
  * 
- * Copyright 2016 Public Domain bztsrc@github
+ * Copyright 2017 Public Domain bztsrc@github
  *
  * This file is part of the BOOTBOOT Protocol package.
- * @brief Boot loader for the Raspberry Pi AArch64
+ * @brief Boot loader for the Raspberry Pi 3 Armv8
  */
 
 .section ".text.boot"

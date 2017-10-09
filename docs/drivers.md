@@ -61,7 +61,7 @@ These informations along with the driver's path will be gathered to `sys/drivers
 will be looked up in order to find out which shared object should be loaded for a specific
 device.
 
-Platform files just list platforms, like "x86_64-ibmpc" or "AArch64-rpi". At compilation time it will be checked,
+Platform files just list platforms, like "x86_64-ibmpc" or "aarch64-rpi". At compilation time it will be checked,
 and if the platform it's compiling for not listed there, the driver won't be compiled. This
 is an easy way to avoid having platform specific drivers in non-compatible images, yet
 you won't have to rewrite multi-platform drivers for every architecture (like an usb storage

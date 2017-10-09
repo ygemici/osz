@@ -8,7 +8,7 @@ OBJS = $(TMP:.S=.o)
 LIBS += -lc
 export O
 
-CFLAGS += -Wall -fPIC -ffreestanding -fvisibility=hidden -DOSZ_LIBRARY=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH)
+CFLAGS += -Wall -fPIC -ffreestanding -DOSZ_LIBRARY=1 -nostdinc -I../../../../etc/include -I../../../core/$(ARCH)
 LDFLAGS += -nostdlib -shared -L../../../../bin/initrd/sys/lib
 
 all: $(OBJS) $(BINTARGET)

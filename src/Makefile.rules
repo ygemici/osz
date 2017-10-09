@@ -4,8 +4,8 @@ SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
-CFLAGS += -g -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -fno-stack-protector
-LDFLAGS += -nostdlib -L../../bin/initrd/sys/lib
+CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fno-stack-protector -fvisibility=hidden
+LDFLAGS += -nostdlib -L../../bin/initrd/sys/lib -L../lib
 ifeq ($(LINKER),sharedlib)
 LDFLAGS += -shared -Bsymbolic -Bshareable
 endif
@@ -21,10 +21,10 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
-	$(O)$(CC) $(LDFLAGS) $(OBJS) $(EXTOBJ) -Xlinker --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) $(LDFLAGS) $(OBJS) $(EXTOBJ) --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
 ifeq ($(LINKER),sharedlib)
 ifneq ($(HASHEADER),1)
-	@../../tools/elftool.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h
+	@#../../tools/elftool.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h
 endif
 endif
 

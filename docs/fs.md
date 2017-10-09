@@ -9,7 +9,7 @@ The filesystem is designed to be recoverable by `fsck` as much as possible. A to
 by examining the sectors on a disk, looking for inodes of meta data.
 
 Block size can be 2048, 4096, 8192... etc. The suggested size matches the memory page size on the architecture. That is 4096
-for x86_64 and AArch64.
+for x86_64 and aarch64.
 
 For detailed bit level specification and on disk format see [fsZ.h](https://github.com/bztsrc/osz/blob/master/etc/include/fsZ.h).
 

@@ -8,8 +8,10 @@ LIBS =
 export O
 
 # without the -no flags, gcc generates extra, unwanted xmm code in printf...
-CFLAGS = -Wall -fPIC -ffreestanding -fno-stack-protector -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -nostdinc \
-  -I../../../etc/include -I. -I../../core/$(ARCH)
+CFLAGS = -Wall -fPIC -ffreestanding -fno-stack-protector -nostdinc -I../../../etc/include -I. -I../../core/$(ARCH)
+ifeq ($(ARCH),x86_64)
+CFLAGS += -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+endif
 ifeq ($(DEBUG),1)
 CFLAGS += -DDEBUG=1
 endif
@@ -25,7 +27,7 @@ $(BINTARGET): $(SRCS)
 	$(O)$(CC) $(OPT) $(CFLAGS) -c service.c -o ../../../bin/service.o || true
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 	@echo "  lnk		$(TARGET) ($(ARCH))"
-	$(O)$(CC) -nostdlib -shared -Bsymbolic -Bshareable -L../../../bin/initrd/sys/lib *.o $(ARCH)/*.o -Xlinker --build-id=sha1 -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) -nostdlib -shared -Bsymbolic -Bshareable -L../../../bin/initrd/sys/lib -L.. *.o $(ARCH)/*.o -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/initrd/sys/lib/crt0.o ../../../bin/service.o 2>/dev/null || true

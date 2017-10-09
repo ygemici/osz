@@ -23,7 +23,7 @@ all: selfcheck $(OBJS)
 
 %.o: %.c
 	@echo "  src		$<"
-	@$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS)
+	@gcc $(OPT) $(CFLAGS) $< -o $@ $(LIBS)
 
 clean:
 	@rm *.o 2>/dev/null || true

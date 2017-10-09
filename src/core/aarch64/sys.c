@@ -1,5 +1,5 @@
 /*
- * core/AArch64/sys.c
+ * core/aarch64/sys.c
  *
  * Copyright 2016 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/

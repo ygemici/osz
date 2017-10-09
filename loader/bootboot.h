@@ -101,7 +101,7 @@ typedef struct {
       uint64_t unused3;
       uint64_t unused4;
       uint64_t unused5;
-    } AArch64;
+    } aarch64;
   };
 
   /* from 128th byte, MMapEnt[], more records may follow */

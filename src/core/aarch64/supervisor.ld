@@ -2,7 +2,7 @@
 CORE_ADDRESS  = 0xffffffffffe02000;
 
 ENTRY(_start)
-OUTPUT_FORMAT(elf64-x86-64)
+OUTPUT_FORMAT(elf64-littleaarch64)
 PHDRS
 {
   text PT_LOAD FILEHDR PHDRS FLAGS(5);
