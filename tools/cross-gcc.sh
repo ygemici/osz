@@ -32,7 +32,7 @@ echo "OK"
 cd binutils-* && for i in isl; do ln -s ../$i-* $i 2>/dev/null || true; done && cd ..
 cd gcc-* && for i in mpfr gmp mpc cloog; do ln -s ../$i-* $i 2>/dev/null || true; done && cd ..
 
-#path buggy gcc configure script
+#patch buggy gcc configure script
 cd gcc-*/gcc
 cat configure | sed 's/gcc_cv_as_hidden=no/gcc_cv_as_hidden=yes/' | sed 's/gcc_cv_ld_hidden=no/gcc_cv_ld_hidden=yes/' >..c
 mv ..c configure
