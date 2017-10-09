@@ -15,15 +15,15 @@ In order to boot OS/Z, a [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/lo
 the platform. The loader is not strictly part of the OS, as it can load kernels other than OS/Z `core`, and also from
 `core`'s perspective the loader abstracts the boot firmware away with a [common interface](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
 
+Porting core
+------------
+
 Note there's a distinction between platform and architecture. The latter only includes the CPU with some essentional
 features like MMU or FPU (usually built-in CPU, but not necessairly), while the former includes everything shipped on
 the motherboard or SoC (usually not replaceable by the end user), like interrupt controllers, nvram, PCI(e) bus and
 BIOS or UEFI firmware.
 
 For valid architecture and platform combinations, see [compilation](https://github.com/bztsrc/osz/blob/master/docs/compile.md).
-
-Porting core
-------------
 
 The `core` is responsible for handling the lowest level of the hardware, such as
 
