@@ -2,7 +2,8 @@ FS/Z File System
 ================
 
 It was designed to store unimagineable amounts of data. It's a classic UNIX type filesystem with inodes and superblock
-but without their limitations. Logical sector numbers are stored in 2^128 bits to be future proof. Current implementation
+but without their limitations. There's no limit on number of files or directories in FS/Z (save storage capacity).
+Logical sector numbers are stored in 2^128 bits to be future proof. Current implementation
 only uses 2^64 bits (can handle drives up to 64 Zettabytes with 4096 bytes logical sector size).
 
 The filesystem is designed to be recoverable by `fsck` as much as possible. A totally screwed up superblock can be reconstructed
@@ -18,7 +19,7 @@ Implementations
 The filesystem driver is implemented 3 times:
  1. in the [loader](https://github.com/bztsrc/osz/blob/master/loader), which supports GPT and FAT to locate initrd, and FS/Z, cpio, tar, sfs to locate kernel inside the initrd. This is a read-only implementation, that requires defragmented files.
  2. in the [core](https://github.com/bztsrc/osz/blob/master/src/core/fs.c), which is used at early boot stage to load various files (like the FS/Z filesystem driver) from initrd. This is also a read-only implementation for defragmented files.
- 3. as a [filesystem driver](https://github.com/bztsrc/osz/blob/master/src/drivers/fs/fsz) for the FS service, which is a fully featured implementation.
+ 3. as a [filesystem driver](https://github.com/bztsrc/osz/blob/master/src/drivers/fs/fsz/main.c) for the FS service, which is a fully featured implementation.
 
 Fully Qualified File Path
 -------------------------
