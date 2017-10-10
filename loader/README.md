@@ -78,7 +78,6 @@ Glossary
 
 * _BOOTBOOT structure_: an informational structure defined in [bootboot.h](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
 
-
 Boot process
 ------------
 
@@ -90,6 +89,13 @@ Boot process
 6. parses executable header and symbols to get link addresses (only level 2 compatible loaders).
 7. maps linear framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
 8. sets up stack, registers and jumps to kernel [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See example kernel below.
+
+Protocol levels
+---------------
+
+0. *PROTOCOL_MINIMAL*: hardcoded kernel name, mapped at fixed address
+1. *PROTOCOL_STATIC*: kernel name parsed from environment, mapped at fixed address
+2. *PROTOCOL_DYNAMIC*: kernel name parsed, and memory mapped according to symbols in kernel
 
 Machine state
 -------------
