@@ -33,9 +33,12 @@ chainload from MBR or VBR (GPT hybrid booting) or run as a BIOS Expansion ROM
 On EFI machines, the PCI Option ROM is created from a standard EFI
 OS loader application.
 
-The difference to other booting protocols is flexibility and that
-BOOTBOOT expects the kernel to fit inside the initial ramdisk. This is ideal for
-hobby OSes and microkernels. The advantage it gaves is that your kernel
+On [Raspberry Pi 3](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bootmodes/sdcard.md) board the kernel8.img
+is loaded from the boot partition on SD card by start.elf.
+
+The difference to other booting protocols is flexibility and portability;
+only clean 64 bit support; and that BOOTBOOT expects the kernel to fit inside the
+initial ramdisk. This is ideal for hobby OSes and microkernels. The advantage it gaves is that your kernel
 can be splitted up into several files and yet they will be loaded together
 as if it were a monolitic kernel. And you can use your own file system for the initrd.
 
