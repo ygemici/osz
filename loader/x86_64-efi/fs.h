@@ -178,8 +178,8 @@ file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
     file_t ret = { NULL, 0 };
     if(initrd_p==NULL || kernel==NULL || (CompareMem(initrd_p+0x1AC,"SFS",3) && CompareMem(initrd_p+0x1A6,"SFS",3)))
         return ret;
-    // 1.0 Brendan's version, 1.1 BenLunt's version
-    ver=!CompareMem(initrd_p+0x1A6,"SFS",3)?1:0;
+    // 1.0 Brendan's version, 1.10 BenLunt's version
+    ver=!CompareMem(initrd_p+0x1A6,"SFS",3)?10:0;
     bs=1<<(7+(UINT8)initrd_p[ver?0x1B6:0x1BC]);
     end=initrd_p + *((UINT64 *)&initrd_p[ver?0x1AA:0x1B0]) * bs; // base + total_number_of_blocks * blocksize
     // get index area
