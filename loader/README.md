@@ -64,8 +64,8 @@ Glossary
   and "kernel" for the name of the executable inside the initrd.
 
 * _initrd_: initial [ramdisk image](https://github.com/bztsrc/osz/blob/master/loader/README.md#installation)
-  (probably in ROM or on a GPT boot partition at BOOTBOOT\INITRD or it can occupy the whole partition or loaded
-  over network). It's format and whereabouts are not specified (the good part :-) ) and can be optionally gzip compressed.
+  (probably in ROM or flash, or on a GPT boot partition at BOOTBOOT\INITRD, or it can occupy the whole partition, or can be loaded
+  over the network). It's format and whereabouts are not specified (the good part :-) ) and can be optionally gzip compressed.
 
 * _loader_: a native executable on the boot partition or in ROM. For multi-bootable disks
   more loader implementations can co-exists.
@@ -74,7 +74,7 @@ Glossary
   Without one the first executable found will be loaded.
 
 * _kernel file_: an ELF64 / PE32+ [executable inside initrd](https://github.com/bztsrc/osz/blob/master/loader/README.md#example-kernel),
-  optionally with the following symbols: `fb`, `environment`, `bootboot` (see linker script).
+  optionally with the following symbols: `fb`, `environment`, `bootboot` (see machine state and linker script).
 
 * _BOOTBOOT structure_: an informational structure defined in [bootboot.h](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
 
@@ -93,37 +93,42 @@ Boot process
 Protocol levels
 ---------------
 
-0. *PROTOCOL_MINIMAL*: hardcoded kernel name, mapped at fixed address
 1. *PROTOCOL_STATIC*: kernel name parsed from environment, mapped at fixed address
 2. *PROTOCOL_DYNAMIC*: kernel name parsed, and memory mapped according to symbols in kernel
 
 Machine state
 -------------
 
-When the kernel gains control, the memory mapping looks like this (unless symbol table is provided.
-A fully compatible level 2 loader should map these where the symbols in the kernel tell to):
+When the kernel gains control, the memory mapping looks like this (level 1 loaders):
 
 ```
-   -64M         framebuffer           (0xFFFFFFFFFC000000)
-    -2M         bootboot structure    (0xFFFFFFFFFFE00000)
-    -2M+1page   environment           (0xFFFFFFFFFFE01000)
-    -2M+2page.. v kernel text segment (0xFFFFFFFFFFE02000)
-     ..0        ^ kernel stack
-    0-16G       RAM identity mapped
+   -64M         "fb" framebuffer      (0xFFFFFFFFFC000000)
+    -2M         "bootboot" structure  (0xFFFFFFFFFFE00000)
+    -2M+1page   "environment" string  (0xFFFFFFFFFFE01000)
+    -2M+2page.. code segment   v      (0xFFFFFFFFFFE02000)
+     ..0        stack          ^      (0x0000000000000000)
+    0-16G       RAM identity mapped   (0x0000000400000000)
 ```
 
-Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0 (supervisor mode).
-The stack is at the top of the memory, starting at zero and growing downwards. The first 16G of RAM is identity mapped.
-Kernel is mapped at ELF's `p_vaddr` or PE's `code_base`.
+The first 16G of RAM (the positive address range) is identity mapped. Interrups are turned off (on x86_64 GDT unspecified,
+but valid, IDT unset) and code is running in supervisor mode (on x86_64 that's ring 0, on aarch64 EL1).
 
-The main information structure is mapped at `bootboot` symbol. You can locate your initrd in memory using this
-[bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
-The boot time and a platform independent memory map is also provided in here.
+The screen is properly set up with a 32 bit linear framebuffer, mapped at the negative address defined by the `fb` symbol
+(level 2 only). Level 1 loaders limit the framebuffer size somewhere around 4096 x 4096 pixels (depends on scanline size
+and aspect ratio too). That's more than enough for [Ultra HD 4K](https://en.wikipedia.org/wiki/4K_resolution) (3840 x 2160).
 
-The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the location defined by the `fb` symbol
-(the physical address of the framebuffer can be found in the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s fb_ptr field).
+The main information [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) is mapped
+at `bootboot` symbol (level 2 only). Your initrd (with the additional kernel modules and servers) is enitrely in the memory,
+and you can locate it using this struct's *initrd_ptr* and *initrd_size* members. The physical address of the framebuffer
+can be found in the *fb_ptr* field. The *boot time* and a platform independent *memory map* are also provided.
 
-The configuration string (or command line if you like) is mapped at `environment` symbol.
+The configuration string (or command line if you like) is mapped at `environment` symbol (level 2 only).
+
+Kernel's code segment is mapped at ELF header's `p_vaddr` or PE header's `code_base` (level 2 only). Level 1 loaders
+limit the kernel's size in 2M, including configuration, data and stack. That should be more than enough for all
+micro-kernels.
+
+The stack is at the top of the memory, starting at zero and growing downwards (all levels).
 
 Environment file
 ----------------
@@ -154,8 +159,8 @@ BOOTBOOT\CONFIG on the boot partition. With UEFI, you can use the `edit` command
 File system drivers
 -------------------
 
-For boot partition, BIOS/Multiboot and RPi3 versions expect *defragmented* FAT12, FAT16 or FAT32 file systems if the
-initrd is a file and does not occupy the whole boot partition. EFI version relies on any file system that's supported by
+For boot partition, BIOS / Multiboot and RPi3 versions expect *defragmented* FAT12, FAT16 or FAT32 file systems (if the
+initrd is a file and does not occupy the whole boot partition). EFI version relies on any file system that's supported by
 EFI Simple File System Protocol.
 
 Luckily the EFI loader can load files from the boot partition with the
