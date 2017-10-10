@@ -1254,13 +1254,15 @@ protmode_start:
             add         eax, esi
             cmp         dword [eax], 00004550h ; PE magic
             jne         @b
-            cmp         word [eax+4], 8664h
+            cmp         word [eax+4], 8664h    ; x86_64
             jne         @b
             cmp         word [eax+20], 20Bh
             jne         @b
-.alt:       cmp         word [esi+4], 0102h ;lsb 64 bit
+.alt:       cmp         word [esi+4], 0102h    ;lsb 64 bit
             jne         @b
-            cmp         word [esi+0x38], 0  ;e_phnum > 0
+            cmp         word [esi+18], 62      ;x86_64
+            jne         @b
+            cmp         word [esi+0x38], 0     ;e_phnum > 0
             jz          @b
 .coreok:
             ; parse PE
@@ -1295,7 +1297,9 @@ protmode_start:
             je          @f
             cmp         dword [esi], 464C457Fh ; ELF magic
             jne         .badcore
-@@:         cmp         word [esi+4], 0102h    ;lsb 64 bit, shared object
+@@:         cmp         word [esi+4], 0102h    ;lsb 64 bit, little endian
+            jne         .badcore
+            cmp         word [esi+18], 62      ;x86_64 architecture
             je          @f
 .badcore:   mov         esi, badcore
             jmp         prot_diefunc

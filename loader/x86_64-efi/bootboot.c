@@ -21,6 +21,7 @@
 #include "../bootboot.h"
 #include "tinf.h"
 // get filesystem drivers for initrd
+#include "../../etc/include/fsZ.h"
 #include "fs.h"
 
 /*** ELF64 defines and structs ***/
@@ -31,6 +32,7 @@
 #define EI_DATA     5       /* Data encoding byte index */
 #define ELFDATA2LSB 1       /* 2's complement, little endian */
 #define PT_LOAD     1       /* Loadable program segment */
+#define EM_X86_64   62      /* AMD x86-64 architecture */
 
 typedef struct
 {
@@ -65,7 +67,7 @@ typedef struct
 /*** PE32+ defines and structs ***/
 #define MZ_MAGIC                    0x5a4d      /* "MZ" */
 #define PE_MAGIC                    0x00004550  /* "PE\0\0" */
-#define IMAGE_FILE_MACHINE_AMD64    0x8664      /* x86_64 */
+#define IMAGE_FILE_MACHINE_AMD64    0x8664      /* AMD x86_64 architecture */
 #define PE_OPT_MAGIC_PE32PLUS       0x020b      /* PE32+ format */
 typedef struct
 {
@@ -491,6 +493,7 @@ LoadCore()
             if((!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||!CompareMem(ehdr->e_ident,"OS/Z",4))&&
                 ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
                 ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
+                ehdr->e_machine==EM_X86_64&&
                 ehdr->e_phnum>0){
                     break;
                 }
@@ -508,7 +511,7 @@ LoadCore()
         pe_hdr *pehdr=(pe_hdr*)(core.ptr + ((mz_hdr*)(core.ptr))->peaddr);
         if((!CompareMem(ehdr->e_ident,ELFMAG,SELFMAG)||!CompareMem(ehdr->e_ident,"OS/Z",4))&&
             ehdr->e_ident[EI_CLASS]==ELFCLASS64&&ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
-            ehdr->e_phnum>0){
+            ehdr->e_machine==EM_X86_64&&ehdr->e_phnum>0){
             // Parse ELF64
             DBG(L" * Parsing ELF64 @%lx\n",core.ptr);
             Elf64_Phdr *phdr=(Elf64_Phdr *)((UINT8 *)ehdr+ehdr->e_phoff);

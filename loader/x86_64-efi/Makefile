@@ -10,10 +10,6 @@ LDFLAGS += -shared -Bsymbolic -L. $(GNUEFI_CRT_OBJS)
 
 TARGET  = bootboot.efi
 
-ifneq ($(wildcard ../../etc/include/fsZ.h),)
-GNUEFI_INCLUDES += -include ../../etc/include/fsZ.h
-endif
-
 all: tinflate.o $(TARGET)
 
 %.efi: %.so

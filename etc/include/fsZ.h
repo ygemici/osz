@@ -15,9 +15,6 @@
 #ifndef _FS_Z_H_
 #define _FS_Z_H_    1
 
-#include <stdint.h>
-#include <sys/types.h>
-
 #define FSZ_VERSION_MAJOR 1
 #define FSZ_VERSION_MINOR 0
 #define FSZ_SECSIZE 4096

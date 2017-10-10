@@ -374,10 +374,10 @@ drivers and scanning haven't found a valid executable header in it.
 BOOTBOOT-PANIC: Kernel is not a valid executable
 ```
 
-The file that was specified as kernel could be loaded by fs drivers, but it's not an ELF, it's class is not
-CLASS64, endianness does not mach architecture, or does not have any program header with a loadable segment
-in the negative p_vaddr range (see linker script); or it's not a 64 bit PE32+ executable for the architecture.
-The same error is shown if the address of fb, bootboot and environment symbols are not in the range -4G..0.
+The file that was specified as kernel could be loaded by fs drivers, but it's not an ELF64 or PE32+,
+does not match the architecture, or does not have any program header with a loadable segment (p_vaddr or core_base)
+in the negative range (see linker script). This error is also shown by level 2 loaders if the address of `fb`,
+`bootboot` and `environment` symbols are not in the negative range.
 
 ```
 BOOTBOOT-PANIC: GOP failed, no framebuffer

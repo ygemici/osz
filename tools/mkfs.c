@@ -32,6 +32,7 @@
  * For example it supports only 24 entries per directory (only inlined entries in inode).
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +40,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #if HAS_ZLIB
 #include <zlib.h>
 #endif
