@@ -28,7 +28,7 @@
 #include "fsdrv.h"
 #include "vfs.h"
 
-/* devfs index in mount list */
+/* devfs index in fsdrv list */
 uint16_t devfsidx = -1;
 
 /* filesystem parsers */

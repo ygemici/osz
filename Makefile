@@ -93,37 +93,42 @@ clean:
 
 debug: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
 ifeq ($(DEBUG),1)
-	@#qemu-system-x86_64 -s -S -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -cpu IvyBridge,+ssse3,+avx,+x2apic -serial stdio
-	qemu-system-x86_64 -s -S -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -serial mon:stdio
+	@#qemu-system-x86_64 -s -S -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -cpu IvyBridge,+ssse3,+avx,+x2apic -serial stdio
+	qemu-system-x86_64 -s -S -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -serial stdio
 else
 	@echo Compiled without debugging symbols! Set DEBUG = 1 in Config and recompile.
 endif
 
 gdb:
-	@gdb -w -x "etc/script.gdb"
+	@gdb -w -x "etc/script.gdb" || true
 	@pkill qemu
 
+ifeq ($(ARCH),x86_64)
 test: testq
+else
+test: testr
+endif
 
 testesp: 
 	@echo "TEST"
 	@echo
 	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda fat:bin/ESP -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-teste: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
+teste: bin/osZ-latest-x86_64-$(PLATFORM).dd
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom loader/bootboot.rom -d guest_errors -enable-kvm -cpu host,+avx,+x2apic -serial mon:stdio
 	qemu-system-x86_64 -name OS/Z -bios /usr/share/qemu/bios-TianoCoreEFI.bin -m 64 -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom bin/initrd.rom -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-testq: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
+testq: bin/osZ-latest-x86_64-$(PLATFORM).dd
 	@echo "TEST"
 	@echo
 	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom loader/bootboot.bin -enable-kvm -cpu host,+avx,+x2apic,enforce -serial mon:stdio
 	@#qemu-system-x86_64 -no-hpet -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -option-rom loader/bootboot.bin -enable-kvm -machine kernel-irqchip=on -cpu host,+avx,+x2apic,enforce -serial mon:stdio
-	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
+	@#qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -hda bin/osZ-latest-$(ARCH)-$(PLATFORM).dd -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
+	qemu-system-x86_64 -name OS/Z -sdl -m 32 -d guest_errors -drive file=bin/osZ-latest-$(ARCH)-$(PLATFORM).dd,format=raw -enable-kvm -cpu host,+ssse3,+avx,+x2apic -serial mon:stdio
 
-testb: bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
+testb: bin/osZ-latest-x86_64-$(PLATFORM).dd
 	@echo "TEST"
 	@echo
 	@rm bin/disk.dd.lock 2>/dev/null || true
@@ -146,3 +151,8 @@ testv: bin/disk.vdi
 	@echo "TEST"
 	@echo
 	VBoxManage startvm "OS/Z"
+
+testr: bin/osZ-latest-aarch64-rpi.dd
+	@echo "TEST"
+	@echo
+	qemu-system-aarch64 -name OS/Z -sdl -m 32 -d quest_errors -machine raspi3 -cpu cortex-a53 -kernel loader/kernel8.img -drive file=bin/osZ-latest-$(ARCH)-$(PLATFORM).dd,if=sd,format=raw -serial mon:stdio

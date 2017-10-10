@@ -51,6 +51,7 @@ extern uint64_t devfs_add(char *name, pid_t drivertask, dev_t device, mode_t mod
 extern void devfs_del(uint64_t idx);
 extern void devfs_used(uint64_t idx);
 extern uint64_t devfs_lastused(bool_t all);
+extern size_t devfs_getdirent(fpos_t offs);
 
 #if DEBUG
 extern void devfs_dump();

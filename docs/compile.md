@@ -4,15 +4,15 @@ OS/Z Compilation
 Requirements
 ------------
 
-- GNU toolchain (make, gcc, gas, ld, objcopy, strip, see [cross-gcc.sh](https://github.com/bztsrc/osz/blob/master/tools/cross-gcc.sh))
-- bash (shell scripts are used to generate different files during compilation)
-- optionally fasm (for recompiling non-UEFI booting)
+- GNU toolchain (make, gcc, binutils (gas, ld, objcopy, strip), see [tools/cross-gcc.sh](https://github.com/bztsrc/osz/blob/master/tools/cross-gcc.sh))
+- bash or dash (shell scripts are used to [generate different files](https://github.com/bztsrc/osz/blob/master/tools/drivers.sh) during compilation)
+- optionally fasm (for recompiling BIOS booting)
 
 Configuration
 -------------
 
-The `core` is always compiled for a specific [platform](https://github.com/bztsrc/osz/blob/master/docs/porting.md),
-which can be controlled in [Config](https://github.com/bztsrc/osz/blob/master/Config) with ARCH and PLATFORM variables. 
+The `core` is always compiled for a specific [machine](https://github.com/bztsrc/osz/blob/master/docs/porting.md),
+which can be controlled in [Config](https://github.com/bztsrc/osz/blob/master/Config) with `ARCH` and `PLATFORM` variables.
 Valid combinations are:
 
 | ARCH   | PLATFORM | Description |
@@ -81,9 +81,8 @@ Non-EFI loader
 --------------
 
 If you want to recompile `loader/boot.bin` and `loader/bootboot.bin`, you'll need [fasm](http://flatassembler.net).
-Unfortunately GAS is not good at mixing 16, 32 and 64 bit instuctions, which is necessary for BIOS booting. So
-I've added those images to the source. With those pre-built binaries you should be able to compile the source using
-GNU toolchain only.
+Unfortunately GAS is not good enough at mixing 16, 32 and 64 bit instuctions, which is necessary for BIOS booting. To keep
+my promise that you'll only need the GNU toolchain, I've added those pre-compiled binaries to the source.
 
 See what you've done!
 ---------------------

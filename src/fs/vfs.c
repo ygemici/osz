@@ -260,7 +260,10 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
             // reading a block from a regular file
             if(f->reg.storage==-1 || fcb[f->reg.storage].type!=FCB_TYPE_DEVICE) { seterr(ENODEV); return NULL; }
             devfs_used(fcb[f->reg.storage].device.inode);
+            // we read more for first sector to allow proper detection of fs
             bs=fcb[f->reg.storage].device.blksize;
+            if(lsn==0 && bs<BUFSIZ)
+                bs=BUFSIZ;
             if((int64_t)bs<1) { seterr(EINVAL); return NULL; }
             // check if block is in the write buf entirely
             o=lsn*bs; e=o+bs;
@@ -289,7 +292,7 @@ public void *readblock(fid_t fd, blkcnt_t lsn)
             // now bs!=0 for sure
             if(blk==NULL) {
                 // no read support or spare portion of file? return zero block
-                zeroblk=(void*)realloc(zeroblk, fcb[f->reg.storage].device.blksize);
+                zeroblk=(void*)realloc(zeroblk, bs);
                 blk=zeroblk;
             }
             // Merging with write buf

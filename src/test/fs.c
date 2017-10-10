@@ -93,15 +93,16 @@ void fs_test()
 //    f=fcloseall();
 //    dbg_printf("fcloseall ret %d errno %d\n\n", f, errno());
     
-    f=opendir("/sys");
-    dbg_printf("opendir(/sys) ret %d errno %d\n\n", f, errno());
+    f=opendir("/dev");
+    dbg_printf("opendir(/dev) ret %d errno %d\n\n", f, errno());
     de=(dirent_t*)1;
     while(de!=NULL) {
         de=readdir(f);
         dbg_printf("readdir(%d) ret %x errno %d %s\n", f, de, errno(), strerror(errno()));
         dumpdirent(de);
     }
-//    closedir(f);
+    closedir(f);
+
     f=opendir("/etc");
     dbg_printf("opendir(/etc) ret %d errno %d\n\n", f, errno());
     de=(dirent_t*)1;

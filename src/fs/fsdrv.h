@@ -30,6 +30,9 @@
 #ifndef _FSDRV_H_
 #define _FSDRV_H_ 1
 
+/* devfs index in fsdrv list */
+extern uint16_t devfsidx;
+
 /* state of locating a file */
 typedef struct {
     fid_t inode;

@@ -1,20 +1,45 @@
 #!/bin/bash
 
+#
+# tools/cross-gcc.sh
+#
+# Copyright 2017 CC-by-nc-sa-4.0 bztsrc@github
+# https://creativecommons.org/licenses/by-nc-sa/4.0/
+#
+# You are free to:
+#
+# - Share — copy and redistribute the material in any medium or format
+# - Adapt — remix, transform, and build upon the material
+#     The licensor cannot revoke these freedoms as long as you follow
+#     the license terms.
+#
+# Under the following terms:
+#
+# - Attribution — You must give appropriate credit, provide a link to
+#     the license, and indicate if changes were made. You may do so in
+#     any reasonable manner, but not in any way that suggests the
+#     licensor endorses you or your use.
+# - NonCommercial — You may not use the material for commercial purposes.
+# - ShareAlike — If you remix, transform, or build upon the material,
+#     you must distribute your contributions under the same license as
+#     the original.
+#
+# @brief Small utility to download and compile cross-compiler gcc
+#
+
+### Configuration
+ARCHS="x86_64 aarch64"
 DIR="/usr/local/gcc"
 CFG=" --enable-shared --enable-threads=posix --enable-libmpx --with-system-zlib --with-isl --enable-__cxa_atexit \
---disable-libunwind-exceptions --enable-clocale=gnu --disable-libstdcxx-pch --disable-libssp --enable-gnu-unique-object \
---disable-linker-build-id --enable-lto --enable-plugin --enable-install-libiberty --with-linker-hash-style=gnu \
+--disable-libunwind-exceptions --enable-clocale=gnu --disable-libstdcxx-pch --disable-libssp --enable-plugin \
+--disable-linker-build-id --enable-lto --enable-install-libiberty --with-linker-hash-style=gnu --with-gnu-ld\
 --enable-gnu-indirect-function --disable-multilib --disable-werror --enable-checking=release --enable-default-pie \
---enable-default-ssp --with-gnu-ld"
+--enable-default-ssp --enable-gnu-unique-object"
 
-#sudo mkdir -p $DIR
-#sudo chown `whoami` $DIR
-#rm -rf $DIR/*
-
+### Get binutils and gcc source. Modify versions in filenames as you like. Only place where versions referenced
 [ ! -d tarballs ] && mkdir tarballs
-cd tarballs
-
 echo "Downloading tarballs..."
+cd tarballs
 [ ! -f binutils-*tar* ] && wget http://ftpmirror.gnu.org/binutils/binutils-2.29.tar.gz
 [ ! -f gcc-*tar* ] && wget http://ftpmirror.gnu.org/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 [ ! -f mpfr-*tar* ] && wget http://ftpmirror.gnu.org/mpfr/mpfr-3.1.6.tar.gz
@@ -24,6 +49,7 @@ echo "Downloading tarballs..."
 [ ! -f cloog-*tar* ] && wget ftp://gcc.gnu.org/pub/gcc/infrastructure/cloog-0.18.1.tar.gz
 cd ..
 
+### Don't change anything below this line
 echo -n "Unpacking tarballs... "
 for i in tarballs/*.tar.gz; do d=${i%%.tar*};d=${d#*/}; echo -n "$d "; [ ! -d $d ] && tar -xzf $i; done
 for i in tarballs/*.tar.bz2; do d=${i%%.tar*};d=${d#*/}; echo -n "$d "; [ ! -d $d ] && tar -xjf $i; done
@@ -32,15 +58,21 @@ echo "OK"
 cd binutils-* && for i in isl; do ln -s ../$i-* $i 2>/dev/null || true; done && cd ..
 cd gcc-* && for i in mpfr gmp mpc cloog; do ln -s ../$i-* $i 2>/dev/null || true; done && cd ..
 
-#patch buggy gcc configure script
+#patch buggy gcc configure script to enable -fvisibility in gcc
 cd gcc-*/gcc
-cat configure | sed 's/gcc_cv_as_hidden=no/gcc_cv_as_hidden=yes/' | sed 's/gcc_cv_ld_hidden=no/gcc_cv_ld_hidden=yes/' >..c
+cat configure|sed 's/gcc_cv_as_hidden=no/gcc_cv_as_hidden=yes/'|sed 's/gcc_cv_ld_hidden=no/gcc_cv_ld_hidden=yes/'>..c
 mv ..c configure
 chmod +x configure
 cd ../..
 
-for arch in aarch64 x86_64; do
-    echo "  -------------------------------------------------- $arch -----------------------------------------------------------"
+### Create target directory
+#sudo mkdir -p $DIR
+#sudo chown `whoami` $DIR
+#rm -rf $DIR/*
+
+### Compile gcc
+for arch in $ARCHS; do
+    echo "  -------------------------------------------- $arch -----------------------------------------------------"
     mkdir $arch-binutils 2>/dev/null
     cd $arch-binutils
     ../binutils-*/configure --prefix=$DIR --target=${arch}-elf $CFG

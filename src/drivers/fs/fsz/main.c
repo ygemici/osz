@@ -440,8 +440,12 @@ uint64_t allocateblock(fid_t fd)
         if(s>0 && in->size>0) {
             for(ptr=sl;(int64_t)s>=0;s-=sizeof(FSZ_SectorList)) {
                 if(ptr->numsec>0) {
+                    i=ptr->sec;
+                    // make sure the block we're returning is in the cache
+                    if(readblock(fd, i)==NULL)
+                        return -1;
                     in->size-=bs;
-                    i=ptr->sec++;
+                    ptr->sec++;
                     ptr->numsec--;
                     if(ptr->numsec==0)
                         memcpy(ptr,ptr+1,s-sizeof(FSZ_SectorList));
@@ -454,7 +458,11 @@ uint64_t allocateblock(fid_t fd)
     }
     // do we have free space at the end?
     if(sb->freesec<sb->numsec) {
-        i=sb->freesec++;
+        i=sb->freesec;
+        // make sure the block we're returning is in the cache
+        if(readblock(fd, i)==NULL)
+            return -1;
+        sb->freesec++;
         writeblock(fd,0,(void*)sb,BLKPRIO_CRIT);
     }
     return i;

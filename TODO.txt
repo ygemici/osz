@@ -1,6 +1,6 @@
  --- Error fixes ---
 ./src/drivers/fs/fsz/main.c:196:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
-./src/fs/main.c:339:                //FIXME: no sprintf yet
+./src/fs/main.c:341:                //FIXME: no sprintf yet
 ./src/core/msg.c:263:            /* FIXME: naive implementation, no checks */
 ./src/lib/libc/stdio.c:43:    // FIXME: use fprintf(stderr,...
  --- Features ---
@@ -8,8 +8,8 @@
 ./src/init/services.c:36:    // TODO: load and start user services
 ./src/drivers/fs/fsz/main.c:142:            // TODO: extents
 ./src/drivers/fs/fsz/main.c:235:    // TODO: if loc->creat, then create dir or path
-./src/fs/vfs.c:572:                // TODO: handle up directory
-./src/fs/vfs.c:575:                // TODO: detect file system in image
+./src/fs/vfs.c:575:                // TODO: handle up directory
+./src/fs/vfs.c:578:                // TODO: detect file system in image
 ./src/core/x86_64/libk.S:238:// TODO: use SSE2 copy
 ./src/core/x86_64/disasm.c:1216:            //TODO: esc
 ./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers

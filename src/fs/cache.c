@@ -67,6 +67,7 @@ public void* cache_getblock(fid_t fd, blkcnt_t lsn)
 {
     uint64_t i,j=lsn%cachelines;
     cache_t *c,*l=NULL;
+    blksize_t bs;
 #if DEBUG
     if(_debug&DBG_CACHE)
         dbg_printf("FS: cache_getblock(fd %d, sector %d)\n",fd,lsn);
@@ -88,7 +89,11 @@ public void* cache_getblock(fid_t fd, blkcnt_t lsn)
     }
     // block not found in cache. Send a message to the driver task to read it
     i=fcb[fd].device.inode;
-    mq_send(dev[i].drivertask, DRV_read, dev[i].device, lsn, fcb[fd].device.blksize, ctx->pid, i);
+    // we read more for first sector to allow proper detection of fs
+    bs=fcb[fd].device.blksize;
+    if(lsn==0 && bs<BUFSIZ)
+        bs=BUFSIZ;
+    mq_send(dev[i].drivertask, DRV_read, dev[i].device, lsn, bs, ctx->pid, i);
     // delay ack message to the original caller (will be resumed when driver fills in cache)
     ackdelayed = true;
     return NULL;

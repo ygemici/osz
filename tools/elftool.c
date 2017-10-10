@@ -103,7 +103,9 @@ int main(int argc,char** argv)
             while(d->d_tag != DT_NULL) {
                 if(dump && d->d_tag<1000)
                     printf("     %3d %08lx %s\n",(int)d->d_tag,d->d_un.d_ptr,
-                        (d->d_tag==DT_STRTAB?"strtab":(d->d_tag==DT_SYMTAB?"symtab":"")));
+                        (d->d_tag==DT_STRTAB?"strtab":(d->d_tag==DT_SYMTAB?"symtab":
+                        (d->d_tag==DT_RELA?"rela":(d->d_tag==DT_RELASZ?"relasz":
+                        (d->d_tag==DT_RELAENT?"relaent":""))))));
                 if(d->d_tag == DT_STRTAB) {
                     strtable = elf + (d->d_un.d_ptr&0xFFFFFFFF);
                 }
@@ -257,7 +259,7 @@ int main(int argc,char** argv)
             if(relat_sh) {
                 Elf64_Rela *rela=(Elf64_Rela *)(elf + relat_sh->sh_offset);
                 printf("\nRela text %08lx (%d bytes, one entry %d):\n",
-                    rela_sh->sh_offset, (int)rela_sh->sh_size, (int)rela_sh->sh_entsize
+                    relat_sh->sh_offset, (int)relat_sh->sh_size, (int)relat_sh->sh_entsize
                 );
 
                 for(i = 0; i < relat_sh->sh_size / relat_sh->sh_entsize; i++){

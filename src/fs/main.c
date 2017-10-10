@@ -69,6 +69,8 @@ void _init(int argc, char **argv)
     while(1) {
         /* get work */
         msg = mq_recv();
+        // this will change errno
+        m = meminfo();
         // clear state
         seterr(SUCCESS);
         // suspend all messages in a nomem situation, otherwise
@@ -544,7 +546,7 @@ dostat:         if(ret!=-1 && !errno()) {
                     ctx->openfiles[msg->type].unionidx=0;
                 }
                 if(ret!=-1 && !errno()) {
-                    if(fcb[ret].type!=FCB_TYPE_REG_DIR && fcb[ret].type!=FCB_TYPE_UNION) {
+                    if(fcb[ret].fs!=devfsidx && fcb[ret].type!=FCB_TYPE_REG_DIR && fcb[ret].type!=FCB_TYPE_UNION) {
                         seterr(ENOTDIR);
                         ret=-1;
                     } else {
@@ -577,6 +579,7 @@ dostat:         if(ret!=-1 && !errno()) {
                         if(ret!=-1) {
                             ctx->openfiles[ret].mode|=OF_MODE_READDIR;
                         }
+fcb_dump();
                     }
                 }
 //taskctx_dump();
@@ -606,7 +609,7 @@ dostat:         if(ret!=-1 && !errno()) {
                 break;
         }
         // try to be ahead of out of ram scenario
-        m=meminfo();j=m.freepages*100/m.totalpages;
+        j=m.freepages*100/m.totalpages;
         if(j<cachelimit || errno()==ENOMEM) {
             fcb_free();
             // when out of memory, flush the cache, and clear nomem only when finished (and cache freed)

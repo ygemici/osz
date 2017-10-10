@@ -98,10 +98,12 @@ uint16_t mtab_add(char *dev, char *file, char *opts)
     mtab[i].storage=fd;
     mtab[i].mountpoint=ff;
     mtab[i].fstype=fs;
-    if(ff!=DEVFCB)
-        fcb[ff].reg.storage=fd;
     fcb[ff].fs=fs;
     fcb[ff].mode=fcb[fd].mode;
+    if(ff!=DEVFCB)
+        fcb[ff].reg.storage=fd;
+    else
+        fcb[ff].mode=O_RDONLY;
     fcb[fd].nopen++;
 
 //dbg_printf("dev '%s' file '%s' opts '%s' fs %d\n",dev,file,opts,fs);

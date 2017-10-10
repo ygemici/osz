@@ -12,7 +12,6 @@
 .global _start
 
 _start:
-/*
     // Setup the stack.
     mov     sp, #0x8000
  
@@ -38,7 +37,7 @@ _start:
 halt:
     wfe
     b       halt
-*/
+
 .align 16
 //magic
 .ascii "BOOTBOOT"

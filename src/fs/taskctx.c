@@ -27,6 +27,7 @@
 
 #include <osZ.h>
 #include "vfs.h"
+#include "devfs.h"
 
 /* task contexts */
 uint64_t ntaskctx = 0;
@@ -278,8 +279,21 @@ dirent_t *taskctx_readdir(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
     // failsafe
     if(!taskctx_validfid(tc,idx))
         return NULL;
+    memzero(&dirent,sizeof(dirent_t));
     of=&tc->openfiles[idx];
     fc=&fcb[of->fid];
+    // handle built-in devfs entries
+    if(fc->fs == devfsidx) {
+        s=devfs_getdirent(of->offs);
+        of->offs+=s;
+        if(s==0 || dirent.d_name[0]==0) {
+            of->offs=ndev;
+            seterr(ENOENT);
+            return NULL;
+        }
+        return &dirent;
+    }
+    // other file systems
     if(fc->fs >= nfsdrv || fsdrv[fc->fs].getdirent==NULL) {
         seterr(ENOTSUP);
         return 0;
@@ -289,11 +303,10 @@ dirent_t *taskctx_readdir(taskctx_t *tc, fid_t idx, void *ptr, size_t size)
         seterr(EBUSY);
         return 0;
     }
-    memzero(&dirent,sizeof(dirent_t));
     // call file system driver to parse the directory entry
     s=(*fsdrv[fc->fs].getdirent)(ptr, of->offs, &dirent);
     // failsafe
-    if(s==0 || dirent.d_ino==0 || dirent.d_name[0]==0)
+    if(s==0 || dirent.d_name[0]==0)
         return NULL;
     if(dirent.d_len==0)
         dirent.d_len=strlen(dirent.d_name);
@@ -360,6 +373,9 @@ size_t taskctx_read(taskctx_t *tc, fid_t idx, virt_t ptr, size_t size)
     }
     of=&tc->openfiles[idx];
     f=&fcb[of->fid];
+    // handle built-in devfs entries
+    if(f->fs == devfsidx && (of->mode & OF_MODE_READDIR))
+        return of->offs<ndev;
     if(!(f->mode & O_READ)) { seterr(EACCES); return 0; }
     switch(f->type) {
         case FCB_TYPE_PIPE:

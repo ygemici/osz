@@ -512,7 +512,6 @@ bool_t elf_rtlink()
             continue;
         Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
         Elf64_Dyn *d;
-        uint64_t got = 0;
         Elf64_Sym *sym, *s;
         Elf64_Rela *rela;
         Elf64_Rela *relad;
@@ -562,9 +561,6 @@ bool_t elf_rtlink()
                         case DT_RELAENT:
                             relaent = d->d_un.d_val;
                             break;
-                        case DT_PLTGOT:
-                            got = d->d_un.d_ptr;
-                            break;
                         default:
                             break;
                     }
@@ -577,60 +573,59 @@ bool_t elf_rtlink()
             phdr = (Elf64_Phdr *)((uint8_t *)phdr + ehdr->e_phentsize);
         }
 
-        if(got) {
-            virt_t vo;
-            phy_t po;
-            /* GOT data entries */
-            for(i = 0; i < reladsz / relaent; i++){
-                kentropy();
-                // failsafe
-                if(n >= 2*__PAGESIZE/sizeof(rela_t))
-                    break;
-                vo = (virt_t)((int64_t)relad->r_offset + j*__PAGESIZE);
-                /* because the task is not mapped yet, we have to translate
-                 * address manually */
-                po = (paging[vo/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (vo&(__PAGESIZE-1));
-                s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(relad->r_info) * syment);
-                if(s!=NULL && *(strtable + s->st_name)!=0) {
-                    /* get the physical address and sym from stringtable */
-                    rel->offs = po;
-                    rel->sym = strtable + s->st_name;
-#if DEBUG
-                    if(debug&DBG_RTIMPORT)
-                        kprintf("    %x D %s\n", po, strtable + s->st_name);
-#endif
-                    n++; rel++;
-                } else {
-#if DEBUG
-                    if(debug&DBG_RTIMPORT)
-                        kprintf("    %x D %x base+%x\n", po, vo, *((uint64_t*)po));
-#endif
-                    *((uint64_t*)po) += TEXT_ADDRESS + j*__PAGESIZE;
-                    //*((uint64_t*)po) = TEXT_ADDRESS + j*__PAGESIZE + relad->r_addend;
-                }
-                /* move pointer to next rela entry */
-                relad = (Elf64_Rela *)((uint8_t *)relad + relaent);
-            }
-            /* GOT plt entries */
-            for(i = 0; i < relasz / relaent; i++){
-                // failsafe
-                if(n >= 2*__PAGESIZE/sizeof(rela_t))
-                    break;
-                s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(rela->r_info) * syment);
+        // relocation and GOT entries
+        virt_t vo;
+        phy_t po;
+        /* GOT data entries */
+        for(i = 0; i < reladsz / relaent; i++){
+            kentropy();
+            // failsafe
+            if(n >= 2*__PAGESIZE/sizeof(rela_t))
+                break;
+            vo = (virt_t)((int64_t)relad->r_offset + j*__PAGESIZE);
+            /* because the task is not mapped yet, we have to translate
+             * address manually */
+            po = (paging[vo/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (vo&(__PAGESIZE-1));
+            s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(relad->r_info) * syment);
+            if(s!=NULL && *(strtable + s->st_name)!=0) {
                 /* get the physical address and sym from stringtable */
-                vo = (virt_t)((int64_t)rela->r_offset + j*__PAGESIZE);
-                /* because the task is not mapped yet, we have to translate
-                 * address manually */
-                rel->offs = (paging[vo/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (vo&(__PAGESIZE-1));
+                rel->offs = po;
                 rel->sym = strtable + s->st_name;
 #if DEBUG
                 if(debug&DBG_RTIMPORT)
-                    kprintf("    %x T %s\n", rel->offs, strtable + s->st_name);
+                    kprintf("    %x D %s\n", po, strtable + s->st_name);
 #endif
                 n++; rel++;
-                /* move pointer to next rela entry */
-                rela = (Elf64_Rela *)((uint8_t *)rela + relaent);
+            } else {
+#if DEBUG
+                if(debug&DBG_RTIMPORT)
+                    kprintf("    %x D %x base+%x\n", po, vo, *((uint64_t*)po));
+#endif
+                *((uint64_t*)po) += TEXT_ADDRESS + j*__PAGESIZE;
+                //*((uint64_t*)po) = TEXT_ADDRESS + j*__PAGESIZE + relad->r_addend;
             }
+            /* move pointer to next rela entry */
+            relad = (Elf64_Rela *)((uint8_t *)relad + relaent);
+        }
+        /* GOT plt entries */
+        for(i = 0; i < relasz / relaent; i++){
+            // failsafe
+            if(n >= 2*__PAGESIZE/sizeof(rela_t))
+                break;
+            s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(rela->r_info) * syment);
+            /* get the physical address and sym from stringtable */
+            vo = (virt_t)((int64_t)rela->r_offset + j*__PAGESIZE);
+            /* because the task is not mapped yet, we have to translate
+             * address manually */
+            rel->offs = (paging[vo/__PAGESIZE]&~(__PAGESIZE-1)&~((uint64_t)1<<63)) + (vo&(__PAGESIZE-1));
+            rel->sym = strtable + s->st_name;
+#if DEBUG
+            if(debug&DBG_RTIMPORT)
+                kprintf("    %x T %s\n", rel->offs, strtable + s->st_name);
+#endif
+            n++; rel++;
+            /* move pointer to next rela entry */
+            rela = (Elf64_Rela *)((uint8_t *)rela + relaent);
         }
     }
 

@@ -147,6 +147,30 @@ uint64_t devfs_lastused(bool_t all)
 }
 
 /**
+ * return a dirent_t for devfs entry
+ */
+public size_t devfs_getdirent(fpos_t offs)
+{
+    fcb_t *f;
+    size_t s=1;
+    // handle empty slots
+    while(offs!=-1 && offs<ndev && dev[offs].fid==-1) { s++; offs++; }
+    // handle EOF
+    if(offs==-1 || offs>=ndev) return 0;
+    // fill in dirent struct fields
+    f=&fcb[dev[offs].fid];
+    dirent.d_dev=DEVFCB;
+    dirent.d_ino=offs;
+    memcpy(&dirent.d_icon,"dev",3);
+    dirent.d_filesize=f->device.filesize;
+    dirent.d_type=FCB_TYPE_DEVICE | (f->device.blksize<=1?S_IFCHR>>16:0);
+    strcpy(dirent.d_name,f->abspath + strlen(DEVPATH));
+    dirent.d_len=strlen(dirent.d_name);
+    return s;
+}
+
+
+/**
  * initialize devfs
  */
 void devfs_init()
