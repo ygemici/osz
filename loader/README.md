@@ -1,6 +1,8 @@
 BOOTBOOT Reference Implementations
 ==================================
 
+I provide pre-compiled images ready for use.
+
 1. *x86_64-efi* the preferred way of booting on x86_64 architecture.
     Standard GNU toolchain and a few files from gnuefi (included).
     [bootboot.efi](https://github.com/bztsrc/osz/blob/master/loader/bootboot.efi?raw=true) (74k), [bootboot.rom](https://github.com/bztsrc/osz/blob/master/loader/bootboot.rom?raw=true) (74k)
@@ -14,7 +16,7 @@ BOOTBOOT Reference Implementations
 
 Please note that the reference implementations do not support
 the full protocol at level 2, they only handle static mappings
-which makes them level 1 loaders. I provide pre-compiled images ready for use.
+which makes them level 1 loaders.
 
 BOOTBOOT Protocol
 =================
