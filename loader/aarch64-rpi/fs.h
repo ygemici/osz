@@ -117,7 +117,7 @@ file_t cpio_initrd(unsigned char *initrd_p, char *kernel)
         (memcmp(initrd_p,"070701",6) && memcmp(initrd_p,"070702",6) && memcmp(initrd_p,"070707",6)))
         return ret;
     DBG(" * cpio %s\n",kernel);
-    k=strlena((unsigned char*)kernel);
+    k=strlen((unsigned char*)kernel);
     // hpodc archive
     while(!memcmp(ptr,"070707",6)){
         int ns=oct2bin(ptr+8*6+11,6);

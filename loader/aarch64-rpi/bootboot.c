@@ -1,133 +1,115 @@
-#include <stddef.h>
-#include <stdint.h>
- 
-// Memory-Mapped I/O output
-static inline void mmio_write(uint32_t reg, uint32_t data)
+/*
+ * loader/aarch64-rpi/bootboot.c
+ *
+ * Copyright 2017 Public Domain BOOTBOOT bztsrc@github
+ *
+ * This file is part of the BOOTBOOT Protocol package.
+ * @brief Boot loader for the Raspberry Pi 3+ ARMv8
+ *
+ */
+#define DEBUG 1
+
+/* we don't have stdint.h */
+typedef signed char         int8_t;
+typedef short int           int16_t;
+typedef int                 int32_t;
+typedef long int            int64_t;
+typedef unsigned char       uint8_t;
+typedef unsigned short int  uint16_t;
+typedef unsigned int        uint32_t;
+typedef unsigned long int   uint64_t;
+
+/* implemented in boot.S */
+extern void delay(uint32_t cnt);
+
+/* get BOOTBOOT structure */
+#define _BOOTBOOT_LOADER 1
+#include "../bootboot.h"
+extern uint8_t _end;
+BOOTBOOT *bootboot = (BOOTBOOT*)&_end;
+
+#define NULL ((void*)0)
+
+#define MMIO_BASE       0x3F000000
+#define ARM_TIMER_CTL   (MMIO_BASE+0x0000B408)
+#define ARM_TIMER_CNT   (MMIO_BASE+0x0000B420)
+
+#define GPFSEL1         (MMIO_BASE+0x00200004)
+#define GPSET0          (MMIO_BASE+0x0020001C)
+#define GPCLR0          (MMIO_BASE+0x00200028)
+#define GPPUD           (MMIO_BASE+0x00200094)
+#define GPPUDCLK0       (MMIO_BASE+0x00200098)
+
+#if DEBUG
+
+#define AUX_ENABLE      (MMIO_BASE+0x00215004)
+#define AUX_MU_IO       (MMIO_BASE+0x00215040)
+#define AUX_MU_IER      (MMIO_BASE+0x00215044)
+#define AUX_MU_IIR      (MMIO_BASE+0x00215048)
+#define AUX_MU_LCR      (MMIO_BASE+0x0021504C)
+#define AUX_MU_MCR      (MMIO_BASE+0x00215050)
+#define AUX_MU_LSR      (MMIO_BASE+0x00215054)
+#define AUX_MU_MSR      (MMIO_BASE+0x00215058)
+#define AUX_MU_SCRATCH  (MMIO_BASE+0x0021505C)
+#define AUX_MU_CNTL     (MMIO_BASE+0x00215060)
+#define AUX_MU_STAT     (MMIO_BASE+0x00215064)
+#define AUX_MU_BAUD     (MMIO_BASE+0x00215068)
+
+/* UART stuff */
+char uart_recv () { while(!(*((uint32_t*)AUX_MU_LSR)&0x01)); return (char)(*((uint32_t*)AUX_MU_IO)&0xFF); }
+void uart_send (uint32_t c) { while(!(*((uint32_t*)AUX_MU_LSR)&0x20)); *((uint32_t*)AUX_MU_IO)=c; }
+void uart_flush () { while(*((uint32_t*)AUX_MU_LSR)&0x100); }
+#define uart_getc uart_recv
+void uart_putc(char c) { uart_send((uint32_t)c); if(c=='\n') uart_send((uint32_t)'\r'); }
+void uart_puts(const char *s) { while(*s) uart_putc(*s++); }
+#define DBG(s,...)
+#else
+#define DBG(s,...)
+#endif
+
+/* string.h */
+uint32_t strlen(unsigned char *s) { uint32_t n=0; while(*s++) n++; return n; }
+void memcpy(void *dst, void *src, uint32_t n){uint8_t *a=dst,*b=src;while(n--) *a++=*b++; }
+int memcmp(void *s1, void *s2, uint32_t n){uint8_t *a=s1,*b=s2;while(n--){if(*a!=*b){return *a-*b;}a++;b++;} return 0; }
+/* other string functions */
+int atoi(unsigned char *c) { int r=0;while(*c>='0'&&*c<='9') {r*=10;r+=*c++-'0';} return r; }
+int oct2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=3;r+=*s++-'0';} return r; }
+int hex2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=4;
+    if(*s>='0' && *s<='9')r+=*s-'0';else if(*s>='A'&&*s<='F')r+=*s-'A'+10;s++;} return r; }
+
+#include "fs.h"
+
+/**
+ * bootboot entry point
+ */
+void bootboot_main()
 {
-    *(volatile uint32_t*)reg = data;
-}
- 
-// Memory-Mapped I/O input
-static inline uint32_t mmio_read(uint32_t reg)
-{
-    return *(volatile uint32_t*)reg;
-}
- 
-// Loop <delay> times in a way that the compiler won't optimize away
-static inline void delay(int32_t count)
-{
-    asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n"
-         : "=r"(count): [count]"0"(count) : "cc");
-}
- 
-enum
-{
-    // The GPIO registers base address.
-    GPIO_BASE = 0x3F200000, // for raspi2 & 3, 0x20200000 for raspi1
- 
-    // The offsets for reach register.
- 
-    // Controls actuation of pull up/down to ALL GPIO pins.
-    GPPUD = (GPIO_BASE + 0x94),
- 
-    // Controls actuation of pull up/down for specific GPIO pin.
-    GPPUDCLK0 = (GPIO_BASE + 0x98),
- 
-    // The base address for UART.
-    UART0_BASE = 0x3F201000, // for raspi2 & 3, 0x20201000 for raspi1
- 
-    // The offsets for reach register for the UART.
-    UART0_DR     = (UART0_BASE + 0x00),
-    UART0_RSRECR = (UART0_BASE + 0x04),
-    UART0_FR     = (UART0_BASE + 0x18),
-    UART0_ILPR   = (UART0_BASE + 0x20),
-    UART0_IBRD   = (UART0_BASE + 0x24),
-    UART0_FBRD   = (UART0_BASE + 0x28),
-    UART0_LCRH   = (UART0_BASE + 0x2C),
-    UART0_CR     = (UART0_BASE + 0x30),
-    UART0_IFLS   = (UART0_BASE + 0x34),
-    UART0_IMSC   = (UART0_BASE + 0x38),
-    UART0_RIS    = (UART0_BASE + 0x3C),
-    UART0_MIS    = (UART0_BASE + 0x40),
-    UART0_ICR    = (UART0_BASE + 0x44),
-    UART0_DMACR  = (UART0_BASE + 0x48),
-    UART0_ITCR   = (UART0_BASE + 0x80),
-    UART0_ITIP   = (UART0_BASE + 0x84),
-    UART0_ITOP   = (UART0_BASE + 0x88),
-    UART0_TDR    = (UART0_BASE + 0x8C),
-};
- 
-void uart_init()
-{
-    // Disable UART0.
-    mmio_write(UART0_CR, 0x00000000);
-    // Setup the GPIO pin 14 && 15.
- 
-    // Disable pull up/down for all GPIO pins & delay for 150 cycles.
-    mmio_write(GPPUD, 0x00000000);
+#if DEBUG
+    /* initialize UART */
+    uint32_t r;
+    *((uint32_t*)AUX_ENABLE) |=1;       // enable mini uart
+    *((uint32_t*)AUX_MU_IER) = 0;
+    *((uint32_t*)AUX_MU_CNTL) = 0;
+    *((uint32_t*)AUX_MU_LCR) = 3;   // 8 bits
+    *((uint32_t*)AUX_MU_MCR) = 0;
+    *((uint32_t*)AUX_MU_IER) = 0;
+    *((uint32_t*)AUX_MU_IIR) = 0xc6;// disable interrupts
+    *((uint32_t*)AUX_MU_BAUD) = 270;// 115200 baud
+    r=*((uint32_t*)AUX_MU_MCR);
+    r&=~((7<<12)|(7<<15));              // gpio14, gpio15
+    r|=(2<<12)|(2<<15);                 // alt5
+    *((uint32_t*)GPFSEL1) = r;
+    *((uint32_t*)GPPUD) = 0;
     delay(150);
- 
-    // Disable pull up/down for pin 14,15 & delay for 150 cycles.
-    mmio_write(GPPUDCLK0, (1 << 14) | (1 << 15));
+    *((uint32_t*)GPPUDCLK0) = (1<<14)|(1<<15);
     delay(150);
- 
-    // Write 0 to GPPUDCLK0 to make it take effect.
-    mmio_write(GPPUDCLK0, 0x00000000);
- 
-    // Clear pending interrupts.
-    mmio_write(UART0_ICR, 0x7FF);
- 
-    // Set integer & fractional part of baud rate.
-    // Divider = UART_CLOCK/(16 * Baud)
-    // Fraction part register = (Fractional part * 64) + 0.5
-    // UART_CLOCK = 3000000; Baud = 115200.
- 
-    // Divider = 3000000 / (16 * 115200) = 1.627 = ~1.
-    mmio_write(UART0_IBRD, 1);
-    // Fractional part register = (.627 * 64) + 0.5 = 40.6 = ~40.
-    mmio_write(UART0_FBRD, 40);
- 
-    // Enable FIFO & 8 bit data transmissio (1 stop bit, no parity).
-    mmio_write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));
- 
-    // Mask all interrupts.
-    mmio_write(UART0_IMSC, (1 << 1) | (1 << 4) | (1 << 5) | (1 << 6) |
-                           (1 << 7) | (1 << 8) | (1 << 9) | (1 << 10));
- 
-    // Enable UART0, receive & transfer part of UART.
-    mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
-}
- 
-void uart_putc(unsigned char c)
-{
-    // Wait for UART to become ready to transmit.
-    while ( mmio_read(UART0_FR) & (1 << 5) ) { }
-    mmio_write(UART0_DR, c);
-}
- 
-unsigned char uart_getc()
-{
-    // Wait for UART to have received something.
-    while ( mmio_read(UART0_FR) & (1 << 4) ) { }
-    return mmio_read(UART0_DR);
-}
- 
-void uart_puts(const char* str)
-{
-    for (size_t i = 0; str[i] != '\0'; i ++)
-        uart_putc((unsigned char)str[i]);
-}
- 
-void bootboot_main(uint32_t r0, uint32_t r1, uint32_t atags)
-{
-    // Declare as unused
-    (void) r0;
-    (void) r1;
-    (void) atags;
- 
-    uart_init();
-    uart_puts("Booting OS\r\n");
- 
-    while (1)
-        uart_putc(uart_getc());
+    *((uint32_t*)GPPUDCLK0) = 0;    // flush GPIO setup
+    *((uint32_t*)AUX_MU_CNTL) = 3;  // enable Tx, Rx
+    uart_puts("Booting OS...\n");
+#endif
+    memcpy(&bootboot->magic, "BOOT", 4);
+    bootboot->protocol = PROTOCOL_STATIC;
+    bootboot->loader_type = LOADER_RPI;
+    bootboot->size = 128;
+    bootboot->pagesize = 4096;
 }

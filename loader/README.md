@@ -9,7 +9,7 @@ BOOTBOOT Reference Implementations
     If you want to recompile this, you'll need fasm (not included).
     [boot.bin](https://github.com/bztsrc/osz/blob/master/loader/boot.bin?raw=true) (512 bytes, works as MBR and VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin?raw=true) (8k)
 
-3. *aarch64-rpi* ARM boot loader for Raspberry Pi 3 (only planned as of now)
+3. *aarch64-rpi* ARMv8 boot loader for Raspberry Pi 3 (work in progress)
     [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img?raw=true)
 
 Please note that the reference implementations do not support
