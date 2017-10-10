@@ -5,7 +5,7 @@ BOOTBOOT Reference Implementations
     Standard GNU toolchain and a few files from gnuefi (included).
     [bootboot.efi](https://github.com/bztsrc/osz/blob/master/loader/bootboot.efi?raw=true) (74k), [bootboot.rom](https://github.com/bztsrc/osz/blob/master/loader/bootboot.rom?raw=true) (74k)
 
-2. *x86_64-bios* BIOS and MultiBoot (GRUB) compatible, OBSOLETE loader.
+2. *x86_64-bios* BIOS and Multiboot (GRUB) compatible, OBSOLETE loader.
     If you want to recompile this, you'll need fasm (not included).
     [boot.bin](https://github.com/bztsrc/osz/blob/master/loader/boot.bin?raw=true) (512 bytes, works as MBR and VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin?raw=true) (8k)
 
@@ -22,15 +22,15 @@ BOOTBOOT Protocol
 Rationale
 ---------
 
-The protocol describes how to boot an ELF64 or PE32+ executable inside an
-initial ram disk image on a GPT disk or from ROM into 64 bit mode, without
-using any configuration or even knowing the file system of initrd.
+The protocol describes how to boot an ELF64 or PE32+ executable inside an initial ram disk image
+into clean 64 bit mode, without using any configuration or even knowing the file system of initrd.
 
-On BIOS based systems, the same image can be loaded via MultiBoot,
+On [BIOS](http://www.scs.stanford.edu/05au-cs240c/lab/specsbbs101.pdf) based systems, the same image can be loaded via
+[Multiboot](https://www.gnu.org/software/grub/manual/multiboot/multiboot.html),
 chainload from MBR or VBR (GPT hybrid booting) or run as a BIOS Expansion ROM
 (so not only the ramdisk can be in ROM, but the loader as well).
 
-On EFI machines, the PCI Option ROM is created from a standard EFI
+On [UEFI machines](http://www.uefi.org/), the PCI Option ROM is created from a standard EFI
 OS loader application.
 
 On [Raspberry Pi 3](https://www.raspberrypi.org/documentation/hardware/raspberrypi/bootmodes/sdcard.md) board the kernel8.img
@@ -62,7 +62,7 @@ Glossary
   and "kernel" for the name of the executable inside the initrd.
 
 * _initrd_: initial [ramdisk image](https://github.com/bztsrc/osz/blob/master/loader/README.md#installation)
-  (probably in ROM or on boot partition at BOOTBOOT\INITRD or it can occupy the whole partition or loaded
+  (probably in ROM or on a GPT boot partition at BOOTBOOT\INITRD or it can occupy the whole partition or loaded
   over network). It's format and whereabouts are not specified (the good part :-) ) and can be optionally gzip compressed.
 
 * _loader_: a native executable on the boot partition or in ROM. For multi-bootable disks
@@ -146,7 +146,7 @@ initrd is a file and does not occupy the whole boot partition. EFI version relie
 EFI Simple File System Protocol.
 
 Luckily the EFI loader can load files from the boot partition with the
-help of the firmware. BIOS/MultiBoot and RPi3 implementations are not so lucky,
+help of the firmware. BIOS / Multiboot and RPi3 implementations are not so lucky,
 therefore they need an extra function to do that. That function however
 is out of the scope of this specification: the BOOTBOOT Protocol only
 states that a compatible loader must be able to load initrd and the environment file,
