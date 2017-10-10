@@ -52,7 +52,7 @@ Glossary
   a rather small one. Most likely an EFI System Partition with FAT, but can be
   any other partition as well if the partition is bootable (bit 2 set in flags).
 
-* _environment file_: a maximum one page frame long, utf-8 [file](https://github.com/bztsrc/osz/blob/master/loader/README.md#environemnt-file) on boot partition
+* _environment file_: a maximum one page frame long, utf-8 [file](https://github.com/bztsrc/osz/blob/master/loader/README.md#environment-file) on boot partition
   at BOOTBOOT\CONFIG or (when your initrd is the entire partition) /sys/config. It
   has "key=value" pairs (separated by newlines). The protocol
   only specifies two of the keys: "screen" for screen size,
