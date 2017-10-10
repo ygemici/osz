@@ -114,11 +114,16 @@ A fully compatible level 2 loader should map these where the symbols in the kern
 
 Interrups are turned off, GDT unspecified, but valid and code segment running on ring 0 (supervisor mode).
 The stack is at the top of the memory, starting at zero and growing downwards. The first 16G of RAM is identity mapped.
+Kernel is mapped at ELF's `p_vaddr` or PE's `code_base`.
 
-You can locate your initrd in memory using the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
-The boot time and a platform independent memory map is also provided in bootboot structure.
+The main information structure is mapped at `bootboot` symbol. You can locate your initrd in memory using this
+[bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s initrd_ptr and initrd_size members.
+The boot time and a platform independent memory map is also provided in here.
 
-The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the defined location (the physical address of the framebuffer can be found in the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s fb_ptr field).
+The screen is properly set up with a 32 bit (x8r8g8b8) linear framebuffer, mapped at the location defined by the `fb` symbol
+(the physical address of the framebuffer can be found in the [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h)'s fb_ptr field).
+
+The configuration string (or command line if you like) is mapped at `environment` symbol.
 
 Environment file
 ----------------
