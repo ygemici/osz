@@ -684,6 +684,23 @@ foundinrom:
             status=LoadFile(initrdfile,&initrd.ptr, &initrd.size);
         }
     }
+    // if not found, try architecture specific initrd file
+    if(EFI_ERROR(status) || initrd.ptr==NULL){
+        initrdfile=L"\\BOOTBOOT\\X86_64";
+        DBG(L" * Locate initrd in %s\n",initrdfile);
+        // Initialize FS with the DeviceHandler from loaded image protocol
+        status = uefi_call_wrapper(BS->HandleProtocol,
+                    3,
+                    image,
+                    &lipGuid,
+                    (void **) &loaded_image);
+        if (!EFI_ERROR(status) && loaded_image!=NULL) {
+            status=EFI_LOAD_ERROR;
+            RootDir = LibOpenRoot(loaded_image->DeviceHandle);
+            // load ramdisk
+            status=LoadFile(initrdfile,&initrd.ptr, &initrd.size);
+        }
+    }
     // if even that failed, look for a partition
     if(status!=EFI_SUCCESS || initrd.size==0){
         DBG(L" * Locate initrd in GPT%s\n",L"");
@@ -714,7 +731,9 @@ foundinrom:
                 if((ret.ptr[0]==0 && ret.ptr[1]==0 && ret.ptr[2]==0 && ret.ptr[3]==0) || gptEnt->EndingLBA==0)
                     break;
                 // use first partition with bootable flag as INITRD
-                if(gptEnt->Attributes & EFI_PART_USED_BY_OS) {
+                if((gptEnt->Attributes & EFI_PART_USED_BY_OS) || 
+                    // or use the first OS/Z partition for this architecture
+                    (!CompareMem(&gptEnt->PartitionTypeGUID.Data1,"OS/Z",4) && gptEnt->PartitionTypeGUID.Data2==0x8664)) {
                     lba_s=gptEnt->StartingLBA; lba_e=gptEnt->EndingLBA;
                     initrd.size = (((lba_e-lba_s)*bio->Media->BlockSize + PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                     status=EFI_SUCCESS;
@@ -998,6 +1017,6 @@ get_memory_map:
             "retq"
             : : "a"(entrypoint): "memory" );
     }
-    return report(status,L"FS0:\\BOOTBOOT\\INITRD not found");
+    return report(status,L"INITRD not found");
 }
 

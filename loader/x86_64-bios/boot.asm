@@ -49,10 +49,14 @@ end if
             USE16
 
 bootboot_record:
-            cli
             jmp         short .skipid
+            nop
 .system:    db          "BOOTBOOT",0
+            ;skip BPB area so that we can use this
+            ;boot code on a FAT volume if needed
+            db          05Ah-($-$$) dup 0
 .skipid:    ;relocate our code to offset 600h
+            cli
             xor         ax, ax
             mov         ss, ax
             mov         sp, 600h

@@ -10,11 +10,9 @@
 .section ".text.boot"
 
 .global _start
-.global delay
-.type delay, STT_FUNC
 
 /*********************************************************************
- *    Entry point called by start.elf, must be at address 0x80000    *
+ *     Entry point called by start.elf, loaded at address 0x80000    *
  *********************************************************************/
 _start:
     // magic
@@ -26,8 +24,10 @@ _start:
     cbz     x7, 2f
 1:  wfe
     b       1b
-    // setup stack before our code
-2:  mov     sp, #0x80000
+2:  // set stack page aligned before our code
+    mov     x7, x30
+    and     x7, x7, #0xFFFFF000
+    mov     sp, x7
     // clear bss
     ldr     w0, =__bss_start
     ldr     w1, =__bss_size
@@ -39,12 +39,3 @@ _start:
 2:  bl      bootboot_main
 1:  wfe
     b       1b
-
-delay:
-    // do something, call an empty function
-1:  bl      1f
-    // count down
-    sub     x0, x0, #1
-    cbnz    x0, 1b
-1:  nop
-    ret

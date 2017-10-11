@@ -29,10 +29,11 @@ Features
 Hardware Requirements
 ---------------------
 
- - 3 Mb free disk space
+ - 64 Mb free disk space
  - 32 Mb RAM
  - 800 x 600 / ARGB display
- - x86_64 processor with SSSE3
+ - IBM PC with x86_64 processor  - or -
+ - Raspberry Pi 3 with AArch64 processor
  - [Supported devices](https://github.com/bztsrc/osz/tree/master/docs/drivers.md)
 
 Testing

@@ -1,8 +1,12 @@
 include ../Config
-INITRD = ../bin/ESP/BOOTBOOT/INITRD
+ifeq ($(ARCH),x86_64)
+INITRD = ../bin/ESP/BOOTBOOT/X86_64
+else
+INITRD = ../bin/ESP/BOOTBOOT/AARCH64
+endif
 ESPFILE = ../bin/esp.part
-SYSFILE = ../bin/sys.part
-USRFILE = ../bin/usr.part
+SYSFILE = ../bin/sys.$(ARCH).part
+USRFILE = ../bin/usr.$(ARCH).part
 VARFILE = ../bin/var.part
 HOMEFILE = ../bin/home.part
 DDIMAGE = ../bin/osZ-latest-$(ARCH)-$(PLATFORM).dd
@@ -10,6 +14,11 @@ VDIIMAGE = ../bin/disk.vdi
 VMDKIMAGE = ../bin/disk.vmdk
 SRCS = mkfs.c elftool.c
 OPT  = -DOSZ_ARCH='"$(ARCH)"'
+ifeq ($(ARCH),x86_64)
+OPT += -DPART_ARCH=0x8664
+else
+OPT += -DPART_ARCH=0xAA64
+endif
 LIBS =
 OBJS = $(SRCS:.c=.o)
 ifneq ("$(wildcard /usr/include/zlib.h)","")
@@ -39,11 +48,20 @@ ifneq ("$(wildcard ../loader/bootboot.bin)","")
 	$(O)cp ../loader/bootboot.bin ../bin/ESP/BOOTBOOT/LOADER || true
 endif
 endif
+ifeq ($(ARCH),x86_64)
 ifneq ("$(wildcard ../loader/bootboot.efi)","")
-	$(O)cp ../loader/bootboot.efi ../bin/ESP/EFI/BOOT/BOOTX64.EFI || true
+	$(O)cp ../loader/bootboot.efi ../bin/ESP/BOOTMGR.EFI || true
+endif
+else
+ifneq ("$(wildcard ../loader/kernel8.img)","")
+	$(O)cp ../loader/kernel8.img ../bin/ESP/kernel8.img || true
+endif
+ifneq ("$(wildcard ../loader/aarch64-rpi/start.elf)","")
+	$(O)cp ../loader/aarch64-rpi/LIC* ../loader/aarch64-rpi/*.bin ../loader/aarch64-rpi/*.elf ../loader/aarch64-rpi/*.dat ../bin/ESP/ || true
+endif
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
-	$(O)mkfs.vfat -F 12 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
+	$(O)mkfs.vfat -F 32 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
 	@mkdir ../bin/tmp 2>/dev/null || true
 	@sudo /usr/bin/mount -o loop,user $(ESPFILE) ../bin/tmp
 	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
@@ -124,12 +142,9 @@ selfcheck:
 ifeq ("$(wildcard ../bin)","")
 	@mkdir ../bin
 endif
-ifeq ("$(wildcard ../bin/ESP/EFI/BOOT)","")
-	@mkdir -p ../bin/ESP/EFI/BOOT
-endif
 ifneq ($(NOINITRD),1)
 ifeq ("$(wildcard ../bin/ESP/BOOTBOOT)","")
-	@mkdir ../bin/ESP/BOOTBOOT
+	@mkdir -p ../bin/ESP/BOOTBOOT
 endif
 endif
 ifeq ("$(wildcard ../bin/initrd)","")

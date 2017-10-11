@@ -4,3 +4,7 @@
 bin/*.txt
 bin/home
 bin/var
+loader/aarch64-rpi/LIC*
+loader/aarch64-rpi/*.bin
+loader/aarch64-rpi/*.dat
+loader/aarch64-rpi/*.elf

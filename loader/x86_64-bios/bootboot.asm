@@ -827,7 +827,11 @@ protmode_start:
             je          .loadesp
             bt          word [esi+48], 2        ;or bootable?
             jc          .loadesp
-            add         esi, ebx
+            cmp         dword [esi], 'OS/Z'     ;or OS/Z partition for this archicture?
+            jne         .noto
+            cmp         word [esi+4], 08664h
+            je          .loadesp
+.noto:      add         esi, ebx
             dec         ecx
             jnz         @b
             ; no ESP nor bootable partition, try the first one
@@ -984,14 +988,19 @@ protmode_start:
             pop         esi
             jmp         .notinit
 
-.notcfg:    cmp         dword [esi], 'INIT'
+.notcfg:
+            cmp         dword [esi], 'X86_'
+            jne         @f
+            cmp         dword [esi+4], '64  '
+            je          .altinitrd
+@@:         cmp         dword [esi], 'INIT'
             jne         .notinit
             cmp         dword [esi+4], 'RD  '
             jne         .notinit
             cmp         dword [esi+7], '    '
             jne         .notinit
 
-            mov         eax, dword [esi + fatdir.size]
+.altinitrd: mov         eax, dword [esi + fatdir.size]
             mov         dword [bootboot.initrd_size], eax
             xor         eax, eax
             cmp         byte [fattype], 0
@@ -1709,7 +1718,7 @@ nogzmem:    db          "Inflating: "
 noenmem:    db          "Not enough memory",0
 noacpi:     db          "ACPI not found",0
 nogpt:      db          "No boot partition",0
-nord:       db          "FS0:\BOOTBOOT\INITRD not found",0
+nord:       db          "INITRD not found",0
 nolib:      db          "/sys not found in initrd",0
 nocore:     db          "Kernel not found in initrd",0
 badcore:    db          "Kernel is not a valid executable",0

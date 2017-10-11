@@ -51,8 +51,10 @@
 char *diskname;     //entire disk
 char *stage1;       //boot sector code
 char *espfile;      //EFI System Partition imagefile
-char *sysfile;      //system partition imagefile
-char *usrfile;      //usr partition imagefile
+char *sys1file;     //system1 partition imagefile
+char *sys2file;     //system2 partition imagefile
+char *usr1file;     //usr1 partition imagefile
+char *usr2file;     //usr2 partition imagefile
 char *varfile;      //var partition imagefile
 char *homefile;     //home partition imagefile
 
@@ -486,14 +488,18 @@ void checkcompilation()
  */
 int createdisk()
 {
-    unsigned long int i,j=0,gs=7*512,rs=0,es,us,vs,hs,ss=4096;
+    unsigned long int i,j=0,gs=7*512,rs1=0,rs2=0,es,us1=0,us2=0,vs,hs,ss=4096;
     unsigned long int uuid[4]={0x12345678,0x12345678,0x12345678,0x12345678};
     char *esp=readfileall(espfile);
     es=read_size;
-    char *ssp=readfileall(sysfile);
-    rs=read_size;
-    char *usr=readfileall(usrfile);
-    us=read_size;
+    char *ssp1=readfileall(sys1file);
+    rs1=read_size;
+    char *ssp2=readfileall(sys2file);
+    rs2=read_size;
+    char *usr1=readfileall(usr1file);
+    us1=read_size;
+    char *usr2=readfileall(usr2file);
+    us2=read_size;
     char *var=readfileall(varfile);
     vs=read_size;
     char *home=readfileall(homefile);
@@ -525,13 +531,13 @@ int createdisk()
         }
     }
     // locate stage2 loader /sys/loader on root partition
-    if(!j && rs>0) {
-        for(i=0;i<rs-512;i+=512) {
-            if((unsigned char)ssp[i+0]==0x55 &&
-               (unsigned char)ssp[i+1]==0xAA &&
-               (unsigned char)ssp[i+3]==0xE9 &&
-               (unsigned char)ssp[i+8]=='B' &&
-               (unsigned char)ssp[i+12]=='B') {
+    if(!j && rs1>0) {
+        for(i=0;i<rs1-512;i+=512) {
+            if((unsigned char)ssp1[i+0]==0x55 &&
+               (unsigned char)ssp1[i+1]==0xAA &&
+               (unsigned char)ssp1[i+3]==0xE9 &&
+               (unsigned char)ssp1[i+8]=='B' &&
+               (unsigned char)ssp1[i+12]=='B') {
                 // save stage2 address in stage1
                 setint(((i+gs+es)/512)+1,loader+0x1B0);
                 break;
@@ -541,10 +547,17 @@ int createdisk()
     // magic
     loader[0x1FE]=0x55; loader[0x1FF]=0xAA;
 
-    // copy stage1 loader to VBR too. This will be used when
-    // later a boot manager is installed on disk
+    // copy stage1 loader to VBR too. This can be used when
+    // later a legacy boot manager is installed on disk.
     if(loader[0]!=0) {
-        memcpy(rs>0?ssp:usr, loader, 512);
+        if(es>0) {
+            // if we have an ESP partition
+            memcpy(esp, loader, 11);
+            // skip BPB area
+            memcpy(esp+0x5A, loader+0x5A, 512-0x5A);
+        } else
+            // otherwise use initrd partition, or final resort usr partition
+            memcpy(rs1>0?ssp1:usr1, loader, 512);
     }
 
     // WinNT disk id
@@ -558,29 +571,33 @@ int createdisk()
     // 3rd part: OS/Z public (0x31, /var)
     // 4th part: OS/Z private (0x32, /home)
 
-    // MBR, GPT record
-    setint(1,loader+0x1C0);                     //start CHS
-    loader[0x1C2]=0xEE;                         //type
-    setint((gs/512)+1,loader+0x1C4);            //end CHS
-    setint(1,loader+0x1C6);                     //start lba
-    setint((gs/512),loader+0x1CA);              //number of sectors
-    j=0x1D0;
-    // MBR, EFI System Partition record
+    j=0x1C0;
     if(es>0) {
+        // MBR, EFI System Partition record
+        loader[j-2]=0x80;                       //bootable flag
         setint((gs/512)+2,loader+j);            //start CHS
-        loader[j+2]=0xEF;                       //type
+        loader[j+2]=0xC;                        //type, FAT
         setint(((gs+es)/512)+2,loader+j+4);     //end CHS
         setint((gs/512)+1,loader+j+6);          //start lba
         setint(((es)/512),loader+j+10);         //number of sectors
-        j+=16;
     }
+    j+=16;
+    // MBR, GPT record
+    setint(1,loader+j);                         //start CHS
+    loader[j+2]=0xEE;                           //type
+    setint((gs/512)+1,loader+j+4);              //end CHS
+    setint(1,loader+j+6);                       //start lba
+    setint((gs/512),loader+j+10);               //number of sectors
+    j+=16;
     // MBR, bootable OS/Z System partition (for optional boot manager)
-    loader[j-2]=0x80;                           //bootable flag
+    // the same sectors used regardless if initrd partition exists or not
+    if(es==0)
+        loader[j-2]=0x80;                       //bootable flag
     setint(((gs+es)/512)+3,loader+j);           //start CHS
     loader[j+2]=0x30;                           //type
     setint(((gs+es)/512)+3+512,loader+j+4);     //end CHS
-    setint(((gs+es+rs)/512)+1,loader+j+6);      //start lba
-    setint(((us)/512),loader+j+10);             //number of sectors
+    setint(((gs+es+rs1)/512)+1,loader+j+6);     //start lba
+    setint(((rs1)/512),loader+j+10);            //number of sectors
 
     // GPT Header
     memset(gpt,0,gs);
@@ -589,15 +606,15 @@ int createdisk()
     setint(92,gpt+12);                              //size
     setint(0xDEADCC32,gpt+16);                      //crc
     setint(1,gpt+24);                               //primarylba
-    setint(((gs+gs+es+rs+us+vs+hs+ss)/512),gpt+32); //backuplba
+    setint(((gs+gs+es+rs1+rs2+us1+us2+vs+hs+ss)/512),gpt+32); //backuplba
     setint((gs/512)+1,gpt+40);                      //firstusable
-    setint(((gs+es+rs+us+vs+hs+ss)/512),gpt+48);    //lastusable
+    setint(((gs+es+rs1+rs2+us1+us2+vs+hs+ss)/512),gpt+48);    //lastusable
     setint(uuid[0],gpt+56);                         //disk UUID
     setint(uuid[1],gpt+60);
     setint(uuid[2],gpt+64);
     setint(uuid[3],gpt+68);
     setint(2,gpt+72);                               //partitionlba
-    setint(3+(es?1:0)+(rs?1:0),gpt+80);             //numentries
+    setint(3+(es?1:0)+(rs1?1:0)+(rs2?1:0)+(us1?1:0)+(us2?1:0),gpt+80); //numentries
     setint(128,gpt+84);                             //entrysize
     setint(0xDEADCC32,gpt+88);                      //entriescrc
 
@@ -617,73 +634,106 @@ int createdisk()
         memcpy(p+64,L"EFI System Partition",42);     //name
         p+=128;
     }
+    j=gs+es;
 
     // GPT, OS/Z System Partition (mounted at /) OPTIONAL MBR type 0x30
-    if(rs>0) {
+    if(rs1>0) {
         memcpy(p,"OS/Z",4);                      //entrytype, magic
-        setint(256,p+4);                         //version 1.0, no flags
+        setint(0x8664,p+4);                      //version
         memcpy(p+12,"root",4);                   //mount point
         setint(uuid[0]+2,p+16);                  //partition UUID
         setint(uuid[1],p+20);
         setint(uuid[2],p+24);
         setint(uuid[3],p+28);
-        setint(((gs+es)/512)+1,p+32);            //startlba
-        setint(((gs+es+rs)/512),p+40);           //endlba
-        setint(4,p+48);                          //bootable flag
+        setint((j/512)+1,p+32);                  //startlba
+        setint(((j+rs1)/512),p+40);              //endlba
+        setint(4,p+48);                          //bootable attribute for BOOTBOOT
         memcpy(p+64,L"OS/Z Root",22);            //name
         p+=128;
+        j+=rs1;
+    }
+    if(rs2>0) {
+        memcpy(p,"OS/Z",4);                      //entrytype, magic
+        setint(0xAA64,p+4);                      //version
+        memcpy(p+12,"root",4);                   //mount point
+        setint(uuid[0]+2,p+16);                  //partition UUID
+        setint(uuid[1],p+20);
+        setint(uuid[2],p+24);
+        setint(uuid[3],p+28);
+        setint((j/512)+1,p+32);                  //startlba
+        setint(((j+rs2)/512),p+40);              //endlba
+        setint(4,p+48);                          //bootable attribute for BOOTBOOT
+        memcpy(p+64,L"OS/Z Root",22);            //name
+        p+=128;
+        j+=rs2;
     }
     // GPT, OS/Z System Partition (mounted at /usr) MBR type 0x30
-    memcpy(p,"OS/Z",4);                          //entrytype, magic
-    setint(256,p+4);                             //version 1.0, no flags
-    memcpy(p+12,"usr",3);                        //mount point
-    setint(uuid[0]+3,p+16);                      //partition UUID
-    setint(uuid[1],p+20);
-    setint(uuid[2],p+24);
-    setint(uuid[3],p+28);
-    setint(((gs+es+rs)/512)+1,p+32);             //startlba
-    setint(((gs+es+rs+us)/512),p+40);            //endlba
-    memcpy(p+64,L"OS/Z System",22);              //name
-    p+=128;
-
+    if(us1>0) {
+        memcpy(p,"OS/Z",4);                      //entrytype, magic
+        setint(0x8664,p+4);                      //version
+        memcpy(p+12,"usr",3);                    //mount point
+        setint(uuid[0]+3,p+16);                  //partition UUID
+        setint(uuid[1],p+20);
+        setint(uuid[2],p+24);
+        setint(uuid[3],p+28);
+        setint((j/512)+1,p+32);                  //startlba
+        setint(((j+us1)/512),p+40);              //endlba
+        memcpy(p+64,L"OS/Z System",22);          //name
+        p+=128;
+        j+=us1;
+    }
+    if(us2>0) {
+        memcpy(p,"OS/Z",4);                      //entrytype, magic
+        setint(0xAA64,p+4);                      //version
+        memcpy(p+12,"usr",3);                    //mount point
+        setint(uuid[0]+3,p+16);                  //partition UUID
+        setint(uuid[1],p+20);
+        setint(uuid[2],p+24);
+        setint(uuid[3],p+28);
+        setint((j/512)+1,p+32);                  //startlba
+        setint(((j+us2)/512),p+40);              //endlba
+        memcpy(p+64,L"OS/Z System",22);          //name
+        p+=128;
+        j+=us2;
+    }
     // GPT, OS/Z Public Data Partition (mounted at /var) MBR type 0x31
     memcpy(p,"OS/Z",4);                          //entrytype, magic
-    setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"var",3);                        //mount point
     setint(uuid[0]+4,p+16);                      //partition UUID
     setint(uuid[1],p+20);
     setint(uuid[2],p+24);
     setint(uuid[3],p+28);
-    setint(((gs+es+rs+us)/512)+1,p+32);          //startlba
-    setint(((gs+es+rs+us+vs)/512),p+40);         //endlba
+    setint((j/512)+1,p+32);                      //startlba
+    setint(((j+vs)/512),p+40);                   //endlba
     memcpy(p+64,L"OS/Z Public Data",32);         //name
     p+=128;
+    j+=vs;
 
     // GPT, OS/Z Home Partition (mounted at /home) MBR type 0x32
     memcpy(p,"OS/Z",4);                          //entrytype, magic
-    setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"home",4);                       //mount point
     setint(uuid[0]+5,p+16);                      //partition UUID
     setint(uuid[1],p+20);
     setint(uuid[2],p+24);
     setint(uuid[3],p+28);
-    setint(((gs+es+rs+us+vs)/512)+1,p+32);       //startlba
-    setint(((gs+es+rs+us+vs+hs)/512),p+40);      //endlba
+    setint((j/512)+1,p+32);                      //startlba
+    setint(((j+hs)/512),p+40);                   //endlba
     memcpy(p+64,L"OS/Z Private Data",34);        //name
     p+=128;
+    j+=hs;
 
     // GPT, OS/Z Swap Partition (mounted at /dev/swap) MBR type 0x33
     memcpy(p,"OS/Z",4);                          //entrytype, magic
-    setint(256,p+4);                             //version 1.0, no flags
     memcpy(p+12,"swap",4);                       //mount point
     setint(uuid[0]+6,p+16);                      //partition UUID
     setint(uuid[1],p+20);
     setint(uuid[2],p+24);
     setint(uuid[3],p+28);
-    setint(((gs+es+rs+us+vs+hs)/512)+1,p+32);    //startlba
-    setint(((gs+es+rs+us+vs+hs+ss)/512),p+40);   //endlba
+    setint((j/512)+1,p+32);                      //startlba
+    setint(((j+ss)/512),p+40);                   //endlba
     memcpy(p+64,L"OS/Z Swap Area",30);           //name
     p+=128;
+    j+=ss;
 
     // Checksums
     //partitions
@@ -702,9 +752,14 @@ int createdisk()
     // Partitions
     if(es>0)
         fwrite(esp,es,1,f);
-    if(rs>0)
-        fwrite(ssp,rs,1,f);
-    fwrite(usr,us,1,f);
+    if(rs1>0)
+        fwrite(ssp1,rs1,1,f);
+    if(rs2>0)
+        fwrite(ssp2,rs2,1,f);
+    if(us1>0)
+        fwrite(usr1,us1,1,f);
+    if(us2>0)
+        fwrite(usr2,us2,1,f);
     fwrite(var,vs,1,f);
     fwrite(home,hs,1,f);
     fwrite(swap,ss,1,f);
@@ -730,8 +785,8 @@ int createdisk()
  */
 int createimage(char *image,char *dir)
 {
-    // are we creating initrd? Needed by add_file
-    initrd=(strlen(image)>7 && !memcmp(image+strlen(image)-6,"INITRD",6));
+    // are we creating initrd? Needed by add_file to skip holes
+    initrd=(strlen(dir)>7 && !memcmp(dir+strlen(dir)-6,"initrd",6));
 
     fs=malloc(secsize);
     if(fs==NULL) exit(3);
@@ -1163,9 +1218,11 @@ int main(int argc, char **argv)
     for(i=strlen(path);i>0;i--) {if(path[i-1]=='/') break;}
     memcpy(path+i,"../bin/",8); i+=8; path[i]=0;
     stage1=malloc(i+16); sprintf(stage1,"%s/../loader/boot.bin",path);
-    sysfile=malloc(i+16); sprintf(sysfile,"%ssys.part",path);
+    sys1file=malloc(i+16); sprintf(sys1file,"%ssys.x86_64.part",path);
+    sys2file=malloc(i+16); sprintf(sys2file,"%ssys.aarch64.part",path);
     espfile=malloc(i+16); sprintf(espfile,"%sesp.part",path);
-    usrfile=malloc(i+16); sprintf(usrfile,"%susr.part",path);
+    usr1file=malloc(i+16); sprintf(usr1file,"%susr.x86_64.part",path);
+    usr2file=malloc(i+16); sprintf(usr2file,"%susr.aarch64.part",path);
     varfile=malloc(i+16); sprintf(varfile,"%svar.part",path);
     homefile=malloc(i+16); sprintf(homefile,"%shome.part",path);
 

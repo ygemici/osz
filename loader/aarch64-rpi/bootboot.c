@@ -21,9 +21,6 @@ typedef unsigned long int   uint64_t;
 
 extern uint8_t _end;
 
-/* implemented in boot.S */
-extern void delay(uint32_t cnt);
-
 /* get BOOTBOOT structure */
 #define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
@@ -128,12 +125,12 @@ typedef struct {
 #define AUX_MU_BAUD     (MMIO_BASE+0x00215068)
 
 /* UART stuff */
-char uart_recv () { while(!(*((uint32_t*)AUX_MU_LSR)&0x01)); return (char)(*((uint32_t*)AUX_MU_IO)&0xFF); }
-void uart_send (uint32_t c) { while(!(*((uint32_t*)AUX_MU_LSR)&0x20)); *((uint32_t*)AUX_MU_IO)=c; }
-void uart_flush () { while(*((uint32_t*)AUX_MU_LSR)&0x100); }
-#define uart_getc uart_recv
-void uart_putc(char c) { uart_send((uint32_t)c); if(c=='\n') uart_send((uint32_t)'\r'); }
-void uart_puts(const char *s) { while(*s) uart_putc(*s++); }
+void uart_send(uint32_t c) { do{asm volatile("nop");}while(!((*((uint32_t*)AUX_MU_LSR))&0x20)); *((uint32_t*)AUX_MU_IO)=c; }
+void uart_hex(uint32_t d,int c) { uint32_t n;c<<=3;c-=4;for(;c>=0;c-=4){n=(d>>c)&0xF;n+=n>9?0x37:0x30;uart_send(n);} }
+void uart_putc(char c) { if(c=='\n') uart_send((uint32_t)'\r'); uart_send((uint32_t)c); }
+void uart_puts(char *s) { while(*s) uart_putc(*s++); }
+char uart_getc() {char r;do{asm volatile("nop");}while(!((*((uint32_t*)AUX_MU_LSR))&0x01));
+    r=(char)(*((uint32_t*)AUX_MU_IO));return r=='\r'?'\n':r;}
 #define DBG(s,...)
 #else
 #define DBG(s,...)
@@ -148,6 +145,9 @@ int atoi(unsigned char *c) { int r=0;while(*c>='0'&&*c<='9') {r*=10;r+=*c++-'0';
 int oct2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=3;r+=*s++-'0';} return r; }
 int hex2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=4;
     if(*s>='0' && *s<='9')r+=*s-'0';else if(*s>='A'&&*s<='F')r+=*s-'A'+10;s++;} return r; }
+
+/* delay cnt clockcycles */
+void delay(uint32_t cnt) { while(cnt--) { asm volatile("nop"); } }
 
 #include "tinf.h"
 // get filesystem drivers for initrd
@@ -172,7 +172,7 @@ char *cfgname="sys/config";
 /**
  * bootboot entry point
  */
-void bootboot_main()
+int bootboot_main(void)
 {
 #if DEBUG
     /* initialize UART */
@@ -180,12 +180,12 @@ void bootboot_main()
     *((uint32_t*)AUX_ENABLE) |=1;       // enable mini uart
     *((uint32_t*)AUX_MU_IER) = 0;
     *((uint32_t*)AUX_MU_CNTL) = 0;
-    *((uint32_t*)AUX_MU_LCR) = 3;   // 8 bits
+    *((uint32_t*)AUX_MU_LCR) = 3;       // 8 bits
     *((uint32_t*)AUX_MU_MCR) = 0;
     *((uint32_t*)AUX_MU_IER) = 0;
-    *((uint32_t*)AUX_MU_IIR) = 0xc6;// disable interrupts
-    *((uint32_t*)AUX_MU_BAUD) = 270;// 115200 baud
-    r=*((uint32_t*)AUX_MU_MCR);
+    *((uint32_t*)AUX_MU_IIR) = 0xc6;    // disable interrupts
+    *((uint32_t*)AUX_MU_BAUD) = 270;    // 115200 baud
+    r=*((uint32_t*)GPFSEL1);
     r&=~((7<<12)|(7<<15));              // gpio14, gpio15
     r|=(2<<12)|(2<<15);                 // alt5
     *((uint32_t*)GPFSEL1) = r;
@@ -193,14 +193,18 @@ void bootboot_main()
     delay(150);
     *((uint32_t*)GPPUDCLK0) = (1<<14)|(1<<15);
     delay(150);
-    *((uint32_t*)GPPUDCLK0) = 0;    // flush GPIO setup
-    *((uint32_t*)AUX_MU_CNTL) = 3;  // enable Tx, Rx
+    *((uint32_t*)GPPUDCLK0) = 0;        // flush GPIO setup
+    *((uint32_t*)AUX_MU_CNTL) = 3;      // enable Tx, Rx
     uart_puts("Booting OS...\n");
 #endif
+/*
     bootboot = (BOOTBOOT*)&_end;
     memcpy(&bootboot->magic, "BOOT", 4);
     bootboot->protocol = PROTOCOL_STATIC;
     bootboot->loader_type = LOADER_RPI;
     bootboot->size = 128;
     bootboot->pagesize = 4096;
+*/
+    // echo back everything
+    while(1) { uart_putc(uart_getc()); }
 }
