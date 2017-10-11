@@ -4,9 +4,22 @@
 include Config
 export O = @
 
-all: clrdd todogen util boot system apps usrs images
+all: chkconf clrdd todogen util boot system apps usrs images
 
 # housekeeping
+
+chkconf:
+ifeq ($(ARCH),aarch64)
+ifneq ($(PLATFORM),rpi)
+	@echo Invalid ARCH and PLATFORM combination in Config, PLATFORM != rpi
+	@false
+endif
+else
+ifeq ($(PLATFORM),rpi)
+	@echo Invalid ARCH and PLATFORM combination in Config, ARCH != aarch64
+	@false
+endif
+endif
 
 clrdd:
 	@rm bin/disk.dd bin/osZ-latest-$(ARCH)-$(PLATFORM).dd 2>/dev/null || true

@@ -29,7 +29,7 @@ Features
 Hardware Requirements
 ---------------------
 
- - 34 Mb free disk space
+ - 10 Mb free disk space
  - 32 Mb RAM
  - 800 x 600 / ARGB display
  - IBM PC with x86_64 processor  - or -

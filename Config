@@ -13,8 +13,12 @@ OPTIMIZE = 0
 #setting this to 1 will create a partition for root fs instead of initrd file
 NOINITRD = 0
 #size of partitions in kilobytes
-#EFI doesn't like ESP partitions smaller than 1024k with FAT12 and 33792k with FAT32
-ESPSIZE = 33792
+#EFI doesn't like smaller ESP partitions than 
+#  1024k with FAT12, 4096k with FAT16 and 33792k with FAT32
+#RPi doesn't like smaller paritions than
+#  8256k with FAT16 and 33792k with FAT32
+#ESPSIZE = 33792
+ESPSIZE = 8256
 USRSIZE = 768
 VARSIZE = 4
 HOMESIZE = 4

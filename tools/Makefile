@@ -61,7 +61,7 @@ ifneq ("$(wildcard ../loader/aarch64-rpi/start.elf)","")
 endif
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
-	$(O)mkfs.vfat -F 32 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
+	$(O)mkfs.vfat -F 16 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
 	@mkdir ../bin/tmp 2>/dev/null || true
 	@sudo /usr/bin/mount -o loop,user $(ESPFILE) ../bin/tmp
 	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
