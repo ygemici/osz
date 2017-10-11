@@ -4,8 +4,8 @@ OS/Z Device Drivers
 Supported devices
 -----------------
 
- * VESA2.0 VGA, GOP, UGA (set up by [loader](https://github.com/bztsrc/osz/blob/master/loader), 32 bit frame buffer)
- * x86_64 syscall, NX protection
+ * VESA 2.0 VBE, GOP, VideoCore (set up by [loader](https://github.com/bztsrc/osz/blob/master/loader), 32 bit frame buffer)
+ * x86_64: syscall, NX protection
  * x86_64-apic: IOAPIC + APIC, x2APIC, see [ISRs](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/isrs.sh)
  * x86_64-ibmpc: PIC, [PIT](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ibmpc/pit.S), [RTC](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/ibmpc/rtc.S)
  * PS2 [keyboard](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/keyboard.S) and [mouse](https://github.com/bztsrc/osz/blob/master/src/drivers/input/ps2/mouse.S)
