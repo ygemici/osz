@@ -8,6 +8,9 @@ SECTIONS
         __bss_start = ALIGN(16);
         *(.bss .bss.*)
         *(COMMON)
+        /* buffers with alignment requirements */
+        __mbr = ALIGN(16);
+        . += 512;
         __mailbox = ALIGN(16);
         . += 256;
         . = ALIGN(4096);

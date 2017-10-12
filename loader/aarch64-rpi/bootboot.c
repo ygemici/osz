@@ -29,6 +29,8 @@ typedef unsigned short int  uint16_t;
 typedef unsigned int        uint32_t;
 typedef unsigned long int   uint64_t;
 
+/* aligned buffers */
+extern uint8_t __mbr;
 // address of mailbox in memory
 extern uint32_t __mailbox;
 // address of bootboot struct in memory
@@ -116,6 +118,9 @@ typedef struct {
 
 /*** Raspberry Pi specific defines ***/
 #define MMIO_BASE       0x3F000000
+#define STMR_L          ((volatile uint32_t*)(MMIO_BASE+0x00003004))
+#define STMR_H          ((volatile uint32_t*)(MMIO_BASE+0x00003008))
+
 #define ARM_TIMER_CTL   ((volatile uint32_t*)(MMIO_BASE+0x0000B408))
 #define ARM_TIMER_CNT   ((volatile uint32_t*)(MMIO_BASE+0x0000B420))
 
@@ -124,11 +129,24 @@ typedef struct {
 #define PM_WDOG_MAGIC   0x5a000000
 #define PM_RTSC_FULLRST 0x00000020
 
+#define GPFSEL0         ((volatile uint32_t*)(MMIO_BASE+0x00200000))
 #define GPFSEL1         ((volatile uint32_t*)(MMIO_BASE+0x00200004))
+#define GPFSEL2         ((volatile uint32_t*)(MMIO_BASE+0x00200008))
+#define GPFSEL3         ((volatile uint32_t*)(MMIO_BASE+0x0020000C))
+#define GPFSEL4         ((volatile uint32_t*)(MMIO_BASE+0x00200010))
+#define GPFSEL5         ((volatile uint32_t*)(MMIO_BASE+0x00200014))
 #define GPSET0          ((volatile uint32_t*)(MMIO_BASE+0x0020001C))
+#define GPSET1          ((volatile uint32_t*)(MMIO_BASE+0x00200020))
 #define GPCLR0          ((volatile uint32_t*)(MMIO_BASE+0x00200028))
+#define GPLEV0          ((volatile uint32_t*)(MMIO_BASE+0x00200034))
+#define GPLEV1          ((volatile uint32_t*)(MMIO_BASE+0x00200038))
+#define GPEDS0          ((volatile uint32_t*)(MMIO_BASE+0x00200040))
+#define GPEDS1          ((volatile uint32_t*)(MMIO_BASE+0x00200044))
+#define GPHEN0          ((volatile uint32_t*)(MMIO_BASE+0x00200064))
+#define GPHEN1          ((volatile uint32_t*)(MMIO_BASE+0x00200068))
 #define GPPUD           ((volatile uint32_t*)(MMIO_BASE+0x00200094))
 #define GPPUDCLK0       ((volatile uint32_t*)(MMIO_BASE+0x00200098))
+#define GPPUDCLK1       ((volatile uint32_t*)(MMIO_BASE+0x0020009C))
 
 #define AUX_ENABLE      ((volatile uint32_t*)(MMIO_BASE+0x00215004))
 #define AUX_MU_IO       ((volatile uint32_t*)(MMIO_BASE+0x00215040))
@@ -142,6 +160,13 @@ typedef struct {
 #define AUX_MU_CNTL     ((volatile uint32_t*)(MMIO_BASE+0x00215060))
 #define AUX_MU_STAT     ((volatile uint32_t*)(MMIO_BASE+0x00215064))
 #define AUX_MU_BAUD     ((volatile uint32_t*)(MMIO_BASE+0x00215068))
+
+/* timing stuff */
+uint64_t getmicro(void){uint32_t h=*STMR_H,l=*STMR_L;if(h!=*STMR_H){h=*STMR_H;l=*STMR_L;} return(((uint64_t)h)<<32)|l;}
+/* delay cnt clockcycles */
+void delay(uint32_t cnt) { while(cnt--) { asm volatile("nop"); } }
+/* delay cnt microsec */
+void delaym(uint32_t cnt) { uint64_t t=getmicro();cnt+=t;while(getmicro()<cnt); }
 
 /* UART stuff */
 void uart_send(uint32_t c) { do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20)); *AUX_MU_IO=c; }
@@ -211,6 +236,225 @@ uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
     return mbox_read(ch)==(uint32_t)((uint64_t)mbox) && mbox[1]==MBOX_RESPONSE;
 }
 
+/* sdcard */
+#define EMMC_ARG2           ((volatile uint32_t*)(MMIO_BASE+0x00300000))
+#define EMMC_BLKSIZECNT     ((volatile uint32_t*)(MMIO_BASE+0x00300004))
+#define EMMC_ARG1           ((volatile uint32_t*)(MMIO_BASE+0x00300008))
+#define EMMC_CMDTM          ((volatile uint32_t*)(MMIO_BASE+0x0030000C))
+#define EMMC_RESP0          ((volatile uint32_t*)(MMIO_BASE+0x00300010))
+#define EMMC_RESP1          ((volatile uint32_t*)(MMIO_BASE+0x00300014))
+#define EMMC_RESP2          ((volatile uint32_t*)(MMIO_BASE+0x00300018))
+#define EMMC_RESP3          ((volatile uint32_t*)(MMIO_BASE+0x0030001C))
+#define EMMC_DATA           ((volatile uint32_t*)(MMIO_BASE+0x00300020))
+#define EMMC_STATUS         ((volatile uint32_t*)(MMIO_BASE+0x00300024))
+#define EMMC_CONTROL0       ((volatile uint32_t*)(MMIO_BASE+0x00300028))
+#define EMMC_CONTROL1       ((volatile uint32_t*)(MMIO_BASE+0x0030002C))
+#define EMMC_INTERRUPT      ((volatile uint32_t*)(MMIO_BASE+0x00300030))
+#define EMMC_INT_MASK       ((volatile uint32_t*)(MMIO_BASE+0x00300034))
+#define EMMC_INT_EN         ((volatile uint32_t*)(MMIO_BASE+0x00300038))
+#define EMMC_CONTROL2       ((volatile uint32_t*)(MMIO_BASE+0x0030003C))
+#define EMMC_SLOTISR_VER    ((volatile uint32_t*)(MMIO_BASE+0x003000FC))
+
+// command flags
+#define CMD_IS_DATA         0x00200000
+#define CMD_RSPNS_48        0x00020000
+#define TM_DAT_DIR_CH       0x00000010
+
+// COMMANDs
+#define CMD_READ_SINGLE     0x11220010
+
+// STATUS register settings
+#define SR_DAT_INHIBIT      0x00000002
+#define SR_CMD_INHIBIT      0x00000001
+
+// INTERRUPT register settings
+#define INT_DATA_TIMEOUT    0x00100000
+#define INT_CMD_TIMEOUT     0x00010000
+#define INT_READ_RDY        0x00000020
+#define INT_CMD_DONE        0x00000001
+
+#define INT_ERROR_MASK      0x017E8000
+
+// CONTROL register settings
+#define C0_SPI_MODE_EN      0x00100000
+#define C0_HCTL_HS_EN       0x00000004
+#define C0_HCTL_DWITDH      0x00000002
+
+#define C1_SRST_DATA        0x04000000
+#define C1_SRST_CMD         0x02000000
+#define C1_SRST_HC          0x01000000
+#define C1_TOUNIT_DIS       0x000f0000
+#define C1_TOUNIT_MAX       0x000e0000
+#define C1_CLK_GENSEL       0x00000020
+#define C1_CLK_EN           0x00000004
+#define C1_CLK_STABLE       0x00000002
+#define C1_CLK_INTLEN       0x00000001
+
+#define SD_OK               0
+#define SD_TIMEOUT          -1
+#define SD_ERROR            -2
+
+uint8_t sd_init=0;
+
+/**
+ * Wait for data
+ */
+int sdWaitData()
+{
+uart_puts("sdWaitData\n");
+    int cnt = 500000;
+    while((*EMMC_STATUS & SR_DAT_INHIBIT) && !(*EMMC_INTERRUPT & INT_ERROR_MASK) && cnt--) delaym(1);
+uart_puts(" cnt ");uart_hex(cnt,4);uart_putc(' ');
+uart_puts(" EMMC_STATUS ");uart_hex(*EMMC_STATUS,4);uart_putc(' ');
+uart_puts(" EMMC_INT ");uart_hex(*EMMC_INTERRUPT,4);uart_putc('\n');
+    if(cnt <= 0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) return SD_ERROR;
+    return SD_OK;
+}
+
+/**
+ * Wait for interrupt
+ */
+int sdWaitInt( uint32_t mask )
+{
+uart_puts("sdWaitInt ");
+uart_hex(mask,4);
+uart_putc('\n');
+    int cnt = 1000000;
+    uint32_t r, m=mask | INT_ERROR_MASK;
+    while(!(*EMMC_INTERRUPT & m) && cnt--) delaym(1);
+    r=*EMMC_INTERRUPT;
+uart_puts(" cnt ");uart_hex(cnt,4);uart_putc(' ');
+uart_puts(" EMMC_INT ");uart_hex(r,4);uart_putc('\n');
+    if(cnt<=0 || (r & INT_CMD_TIMEOUT) || (r & INT_DATA_TIMEOUT) ) { *EMMC_INTERRUPT=r; return SD_TIMEOUT; } else
+    if(r & INT_ERROR_MASK) { *EMMC_INTERRUPT=r; return SD_ERROR; }
+    *EMMC_INTERRUPT=mask;
+    return 0;
+}
+
+/**
+ * Send a command
+ */
+int sdCmd(uint32_t code, uint32_t arg)
+{
+uart_puts("sdCmd ");
+uart_hex(code,4);
+uart_putc(' ');
+uart_hex(arg,4);
+uart_putc('\n');
+    // Check for status indicating a command in progress.
+    int r,cnt = 1000000;
+    while((*EMMC_STATUS & SR_CMD_INHIBIT) && !(*EMMC_INTERRUPT & INT_ERROR_MASK) && cnt--) delaym(1);
+uart_puts(" cnt ");uart_hex(cnt,4);uart_putc(' ');
+uart_puts(" EMMC_STATUS ");uart_hex(*EMMC_STATUS,4);uart_putc(' ');
+uart_puts(" EMMC_INT ");uart_hex(*EMMC_INTERRUPT,4);uart_putc('\n');
+    if(cnt<=0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) return SD_ERROR;
+    
+    *EMMC_INTERRUPT=*EMMC_INTERRUPT;
+    *EMMC_ARG1=arg;
+    *EMMC_CMDTM=code;
+    if((r=sdWaitInt(INT_CMD_DONE))) return r;
+    return *EMMC_RESP0;
+}
+
+int sdInit()
+{
+    uint32_t r;
+    int cnt;
+    sd_init=0;
+uart_puts("sdInit\n");
+    // GPIO_CD
+    r=*GPFSEL4; r&=~(7<<(7*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<15); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    r=*GPHEN1; r|=1<<15; *GPHEN1=r;
+
+    // GPIO_CLK
+    r=*GPFSEL4; r&=~(7<<(8*3)); r|=(7<<(8*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<16); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    // GPIO_CMD
+    r=*GPFSEL4; r&=~(7<<(9*3)); r|=(7<<(9*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<17); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    // GPIO_DAT0
+    r=*GPFSEL5; r&=~(7<<(0*3)); r|=(7<<(0*3)); *GPFSEL5=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<18); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+    
+    // GPIO_DAT1
+    r=*GPFSEL5; r&=~(7<<(1*3)); r|=(7<<(1*3)); *GPFSEL5=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<19); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    // GPIO_DAT2
+    r=*GPFSEL5; r&=~(7<<(2*3)); r|=(7<<(2*3)); *GPFSEL5=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<20); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    // GPIO_DAT3
+    r=*GPFSEL5; r&=~(7<<(3*3)); r|=(7<<(3*3)); *GPFSEL5=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<21); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+uart_puts("GPFSEL4,5 ");
+uart_hex(*GPFSEL4,4);
+uart_putc(' ');
+uart_hex(*GPFSEL5,4);
+uart_putc('\n');
+
+    // clear ejected flag
+    *GPEDS1 |= ~(1 << (47-32));
+
+    *EMMC_INTERRUPT=*EMMC_INTERRUPT;
+    // reset
+    *EMMC_CONTROL0 = 0; // C0_SPI_MODE_EN;
+    *EMMC_CONTROL1 |= C1_SRST_HC;
+    delaym(10);
+    cnt = 10000;
+    while((*EMMC_CONTROL1 & C1_SRST_HC) && cnt--) delaym(10);
+    if(cnt<=0) return 0;
+
+    *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
+    delaym(10);
+
+    *EMMC_INT_EN   = 0xffffffff;
+    *EMMC_INT_MASK = 0xffffffff;
+
+    sd_init=1;
+    return 1;
+}
+
+/**
+ * read a block from sd card and return the number of bytes read
+ * returns 0 on error.
+ */
+int readblock(uint64_t lba, uint8_t *buffer)
+{
+    int r;
+    uint32_t *buf=(uint32_t*)buffer;
+uart_puts("readblock ");
+uart_hex(lba,4);
+uart_putc(' ');
+uart_hex((uint32_t)((uint64_t)buffer),4);
+uart_putc('\n');
+
+    if(!sd_init || !sdInit()) return 0;
+uart_puts("GPLEV1 ");
+uart_hex(*GPLEV1,4);
+uart_puts(" GPEDS1 ");
+uart_hex(*GPEDS1,4);
+uart_putc('\n');
+    // sd card absent or ejected?
+//    if(!(*GPLEV1 & (1 << (47-32))) || (*GPEDS1 & (1 << (47-32)))) { sd_init=0; return 0; }
+//uart_puts(" no eject\n");
+    if(!sdWaitData()) return 0;
+uart_puts(" after waitdata\n");
+    *EMMC_BLKSIZECNT = (1 << 16) | 512;
+    if((r=sdCmd(CMD_READ_SINGLE,lba))) return 0;
+uart_puts(" after sdCmd\n");
+    if((r=sdWaitInt(INT_READ_RDY))) return 0;
+uart_puts(" after waitInt\n");
+    for(r=0;r<128;r++) buf[r] = *EMMC_DATA;
+uart_puts(" read ok\n");
+    return 512;
+}
+
 /* string.h */
 uint32_t strlen(unsigned char *s) { uint32_t n=0; while(*s++) n++; return n; }
 void memcpy(void *dst, void *src, uint32_t n){uint8_t *a=dst,*b=src;while(n--) *a++=*b++; }
@@ -220,9 +464,6 @@ int atoi(unsigned char *c) { int r=0;while(*c>='0'&&*c<='9') {r*=10;r+=*c++-'0';
 int oct2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=3;r+=*s++-'0';} return r; }
 int hex2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=4;
     if(*s>='0' && *s<='9')r+=*s-'0';else if(*s>='A'&&*s<='F')r+=*s-'A'+10;s++;} return r; }
-
-/* delay cnt clockcycles */
-void delay(uint32_t cnt) { while(cnt--) { asm volatile("nop"); } }
 
 #if DEBUG
 void puts(char *s);
@@ -416,26 +657,6 @@ void puts(char *s)
 }
 
 /**
- * return the environment
- */
-void GetEnv()
-{
-    volatile uint32_t *mbox = &__mailbox;
-
-    mbox[0] = 7*4;
-    mbox[1] = MBOX_REQUEST;
-    mbox[2] = 0x50001;  //get command line
-    mbox[3] = 4;
-    mbox[4] = 4;
-    mbox[5] = 0;
-    mbox[6] = 0;
-    if(mbox_call(MBOX_CH_PROP,mbox)) {
-        uart_puts("Env\n");
-        uart_dump((void*)((uint64_t)(mbox[4]&0x3FFFFFFF)),32);
-    }
-}
-
-/**
  * bootboot entry point
  */
 int bootboot_main(void)
@@ -452,8 +673,8 @@ int bootboot_main(void)
     *AUX_MU_IIR = 0xc6;    // disable interrupts
     *AUX_MU_BAUD = 270;    // 115200 baud
     r=*GPFSEL1;
-    r&=~((7<<12)|(7<<15));              // gpio14, gpio15
-    r|=(2<<12)|(2<<15);                 // alt5
+    r&=~((7<<12)|(7<<15)); // gpio14, gpio15
+    r|=(2<<12)|(2<<15);    // alt5
     *GPFSEL1 = r;
     *GPPUD = 0;
     delay(150);
@@ -473,8 +694,15 @@ int bootboot_main(void)
     if(!GetLFB(0, 0)) goto viderr;
     puts("Booting OS...\n");
 
+    sdInit();
+    r=readblock(0,&__mbr);
+    uart_puts("MBR read ret ");
+    uart_hex(r,4);
+    uart_putc('\n');
+    if(r)
+        uart_dump((void*)&__mbr,32);
+
     // load BOOTBOOT/CONFIG
-    GetEnv();
 
     // load initrd (or check if initramfs command has already loaded it)
     DBG(" * Initrd loaded\n");
