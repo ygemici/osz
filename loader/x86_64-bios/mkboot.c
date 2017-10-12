@@ -31,7 +31,7 @@ int main(int argc, char** argv)
                 "Installs boot record on a disk. Disk can be a local file, a disk or partition\n"
                 "device. If you want to install it on a partition, you'll have to specify the\n"
                 "starting LBA of that partition as well. Requires that bootboot.bin is already\n"
-                "copied on the disk in a continuous area in order to work.\n\n"
+                "copied on the disk in a contiguous area in order to work.\n\n"
                 "Examples:\n"
                 "  ./mkboot diskimage.dd      - installing on a disk image\n"
                 "  ./mkboot /dev/sda          - installing as MBR\n"

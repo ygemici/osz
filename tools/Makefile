@@ -54,7 +54,7 @@ ifneq ("$(wildcard ../loader/bootboot.efi)","")
 endif
 else
 ifneq ("$(wildcard ../loader/kernel8.img)","")
-	$(O)cp ../loader/kernel8.img ../bin/ESP/kernel8.img || true
+	$(O)cp ../loader/kernel8.img ../loader/aarch64-rpi/config.txt ../bin/ESP/ || true
 endif
 ifneq ("$(wildcard ../loader/aarch64-rpi/start.elf)","")
 	$(O)cp ../loader/aarch64-rpi/LIC* ../loader/aarch64-rpi/*.bin ../loader/aarch64-rpi/*.elf ../loader/aarch64-rpi/*.dat ../bin/ESP/ || true
@@ -67,6 +67,9 @@ endif
 	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
 	@sudo /usr/bin/umount -f /dev/loop* 2>/dev/null || true
 	@rmdir ../bin/tmp
+ifneq ($(ARCH),x86_64)
+	@./mkfs.o $(ESPFILE) link INITRD BOOTBOOT/AARCH64
+endif
 
 initrd:
 ifeq ($(NOINITRD),1)

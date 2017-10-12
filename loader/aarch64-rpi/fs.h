@@ -32,7 +32,9 @@ file_t fsz_initrd(unsigned char *initrd_p, char *kernel)
     if(initrd_p==NULL || memcmp(sb->magic,FSZ_MAGIC,4) || kernel==NULL){
         return ret;
     }
-    DBG(" * FS/Z %s\n",kernel);
+    DBG(" * FS/Z ");
+    DBG(kernel);
+    DBG("\n");
     // Get the inode
     int i,ss=1<<(sb->logsec+11);
     char *s,*e;
@@ -116,7 +118,9 @@ file_t cpio_initrd(unsigned char *initrd_p, char *kernel)
     if(initrd_p==NULL || kernel==NULL || 
         (memcmp(initrd_p,"070701",6) && memcmp(initrd_p,"070702",6) && memcmp(initrd_p,"070707",6)))
         return ret;
-    DBG(" * cpio %s\n",kernel);
+    DBG(" * cpio ");
+    DBG(kernel);
+    DBG("\n");
     k=strlen((unsigned char*)kernel);
     // hpodc archive
     while(!memcmp(ptr,"070707",6)){
@@ -153,7 +157,9 @@ file_t tar_initrd(unsigned char *initrd_p, char *kernel)
     file_t ret = { NULL, 0 };
     if(initrd_p==NULL || kernel==NULL || memcmp(initrd_p+257,"ustar",5))
         return ret;
-    DBG(" * tar %s\n",kernel);
+    DBG(" * tar ");
+    DBG(kernel);
+    DBG("\n");
     k=strlen((unsigned char*)kernel);
     while(!memcmp(ptr+257,"ustar",5)){
         int fs=oct2bin(ptr+0x7c,11);
@@ -186,7 +192,10 @@ file_t sfs_initrd(unsigned char *initrd_p, char *kernel)
     // got a Starting Marker Entry?
     if(ptr[0]!=2)
         return ret;
-    DBG(" * SFS 1.%d %s\n",ver,kernel);
+    DBG(" * SFS 1.");
+    DBG(ver?"10":"0");
+    DBG(kernel);
+    DBG("\n");
     k=strlen((unsigned char*)kernel);
     // iterate on index until we reach the end or Volume Identifier
     while(ptr<end && ptr[0]!=0x01){

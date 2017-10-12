@@ -348,11 +348,11 @@ typedef struct {
  * Inode of /usr/vlc/bin/vlc: metalabel=1235
  * 
  * Normally meta labels do not exceed logical sector size. But when they do, the allocation
- * must be careful to allocate continuous sectors for a meta block. This complicates things
+ * must be careful to allocate contiguous sectors for a meta block. This complicates things
  * a bit when large meta label blocks (>4096) are written, but simplifies a lot on read by
  * eliminating the need of translating LSNs for meta labels file. As meta labels are read more
  * often than written, and usually one JSON is smaller than 4096, this is intentional.
- * In other words, meta label blocks are one or more continuous sectors per inode on disk, and
+ * In other words, meta label blocks are one or more contiguous sectors per inode on disk, and
  * meta labels file covers them just like bad sectors file covers bad sectors.
  */
 

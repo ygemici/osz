@@ -324,7 +324,7 @@ You can also create an Option ROM out of INITRD (on BIOS there's not much space 
 
 3.4. *BIOS ROM*: install __bootboot.bin__ in a **_BIOS Expansion ROM_**.
 
-3.5. *Raspberry Pi 3*: copy __kernel8.img__ on the boot partition, and add `initramfs BOOTBOOT\INITRD 0x80000` to [config.txt](http://elinux.org/RPi_config.txt#Boot).
+3.5. *Raspberry Pi 3*: copy __kernel8.img__ on the boot partition, and add `initramfs INITRD 0x100000` to [config.txt](http://elinux.org/RPi_config.txt#Boot).
 
 Troubleshooting
 ---------------

@@ -208,7 +208,7 @@ void pmm_free(phy_t base, size_t numpages)
     if(debug&DBG_PMM)
         kprintf("pmm_free(%x,%d) pid %x\n",base,numpages,((tcb_t*)0)->pid);
 #endif
-    /* check for continuous regions */
+    /* check for contiguous regions */
     for(i=0;i<pmm.size;i++) {
         /* add to the beginning */
         if(pmm.entries[i].base == base+s)

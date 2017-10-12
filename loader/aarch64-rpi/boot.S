@@ -12,7 +12,7 @@
 .global _start
 
 /*********************************************************************
- *     Entry point called by start.elf, loaded at address 0x80000    *
+ *                Entry point called by start.elf                    *
  *********************************************************************/
 _start:
     // magic
@@ -24,17 +24,18 @@ _start:
     cbz     x7, 2f
 1:  wfe
     b       1b
-2:  // set stack page aligned before our code
-    mov     x7, x30
-    and     x7, x7, #0xFFFFF000
-    mov     sp, x7
+2:  // set stack before our code
+//    mov     x7, x30
+//    and     x7, x7, #0xFFFFF000
+//    mov     sp, x7
+    mov     sp, #0x80000
     // clear bss
-    ldr     w0, =__bss_start
-    ldr     w1, =__bss_size
-1:  cbz     x1, 2f
-    str     xzr, [x0], #8
-    sub     x1, x1, #1
-    cbnz    x1, 1b
+    ldr     w7, =__bss_start
+    ldr     w8, =__bss_size
+1:  cbz     x8, 2f
+    str     xzr, [x7], #8
+    sub     x8, x8, #1
+    cbnz    x8, 1b
     // jump to C code
 2:  bl      bootboot_main
 1:  wfe

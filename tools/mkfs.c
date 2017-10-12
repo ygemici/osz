@@ -418,6 +418,102 @@ void add_dirs(char *dirname,int parent,int level)
     }
 }
 
+/* FAT functions */
+typedef struct {
+    char        jmp[3];
+    char        oem[8];
+    uint16_t    bps;
+    uint8_t     spc;
+    uint16_t    rsc;
+    uint8_t     nf;
+    uint16_t    nr;
+    uint16_t    ts16;
+    uint8_t     media;
+    uint16_t    spf16;
+    uint16_t    spt;
+    uint16_t    nh;
+    uint32_t    hs;
+    uint32_t    ts32;
+    uint32_t    spf32;
+    uint32_t    flg;
+    uint32_t    rc;
+    char        vol[6];
+    char        fst[8];
+    char        dmy[20];
+    char        fst2[8];
+} __attribute__((packed)) bpb_t;
+
+typedef struct {
+    char        name[8];
+    char        ext[3];
+    char        attr[9];
+    uint16_t    ch;
+    uint32_t    attr2;
+    uint16_t    cl;
+    uint32_t    size;
+} __attribute__((packed)) fatdir_t;
+
+int fatname(char *path, char *name)
+{
+    int i,j=0;
+    for(i=0;i<11;i++) name[i]=' ';
+    name[12]=0;
+    for(i=0;i<11 && path[i]!='/' && path[i]!=0;i++) {
+        if(path[i]=='.') {
+            j=8;
+        } else
+            name[j++]=path[i]>='a'&&path[i]<='z'?path[i]-('a'-'A'):path[i];
+    }
+    return i;
+}
+
+fatdir_t *fatlocate(char *data, char *path)
+{
+    int k=0;
+    bpb_t *bpb=(bpb_t*)data;
+    uint32_t data_sec, root_sec, datasec;
+    fatdir_t *dir;
+    char name[12];
+    data_sec=root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc;
+    if(bpb->spf16>0) {
+        data_sec+=(((uint32_t)bpb->nr)*32+511)/512;
+    } else {
+        root_sec+=(bpb->rc-2)*bpb->spc;
+    }
+    dir=(fatdir_t*)(fs+root_sec*512);
+    k=fatname(path,name);
+    while(dir->name[0]!=0) {
+        if(!memcmp(dir->name,&name,11)) {
+            datasec=(((dir->cl+(dir->ch<<16)-2)*bpb->spc)+data_sec);
+            if(datasec*512>read_size)
+                return NULL;
+            if(path[k]==0||path[k+1]==0)
+                return dir;
+            dir=(fatdir_t*)(fs+datasec*512);
+            k+=fatname(path+k+1,name);
+            continue;
+        }
+        dir++;
+    }
+    return NULL;
+}
+
+void fatlink(char *data, fatdir_t *olddir, char *path)
+{
+    bpb_t *bpb=(bpb_t*)data;
+    uint32_t root_sec;
+    fatdir_t *dir;
+    char name[12];
+    root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc;
+    if(bpb->spf16==0)
+        root_sec+=(bpb->rc-2)*bpb->spc;
+    dir=(fatdir_t*)(fs+root_sec*512);
+    while(dir->name[0]!=0) dir++;
+    fatname(path,name);
+    memcpy(dir,olddir,32);
+    memcpy(dir->name,name,11);
+}
+
 /* functions for the mkfs tool */
 /**
  * locate a file inside an FS/Z image
@@ -949,9 +1045,15 @@ void addlink(int argc, char **argv)
 {
     fs=readfileall(argv[1]); size=read_size;
     if(fs==NULL) { printf("mkfs: Unable to load %s\n",argv[1]); exit(2); }
-    FSZ_Inode *file = locate(fs,0,argv[4]);
-    if(file==NULL) { printf("mkfs: Unable to find target in image\n"); exit(2); }
-    link_inode(((uint64_t)file-(uint64_t)fs)/secsize,argv[3],0);
+    if(!memcmp(((bpb_t*)fs)->fst,"FAT16",5) || !memcmp(((bpb_t*)fs)->fst2,"FAT32",5)) {
+        fatdir_t *dir=fatlocate(fs,argv[4]);
+        if(dir==NULL) { printf("mkfs: Unable to find target in fat image\n"); exit(2); }
+        fatlink(fs, dir, argv[3]);
+    } else {
+        FSZ_Inode *file = locate(fs,0,argv[4]);
+        if(file==NULL) { printf("mkfs: Unable to find target in FS/Z image\n"); exit(2); }
+        link_inode(((uint64_t)file-(uint64_t)fs)/secsize,argv[3],0);
+    }
     //write out new image
     f=fopen(argv[1],"wb");
     fwrite(fs,size,1,f);
