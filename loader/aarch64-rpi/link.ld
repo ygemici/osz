@@ -8,14 +8,25 @@ SECTIONS
         __bss_start = ALIGN(16);
         *(.bss .bss.*)
         *(COMMON)
+        d = ALIGN(16);
         /* place these manually, gcc would otherwise waste a lot of memory */
         . = ALIGN(4096);
         __bootboot = .;
         . += 4096;
         __environment = .;
         . += 4096;
+        __paging = .;
+        . += 65536;
         __bss_end = .;
     }
     _end = .;
+
+   /DISCARD/ :
+   {
+        *(.comment)
+        *(.gnu*)
+        *(.note*)
+        *(.eh_frame*)
+   }
 }
 __bss_size = (__bss_end - __bss_start)>>3;

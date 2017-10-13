@@ -1,2 +1,0 @@
-initramfs INITRD 0x100000
-

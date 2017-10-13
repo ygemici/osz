@@ -10,6 +10,7 @@
 .section ".text.boot"
 
 .global _start
+.global jumptokernel
 
 /*********************************************************************
  *                Entry point called by start.elf                    *
@@ -25,9 +26,6 @@ _start:
 1:  wfe
     b       1b
 2:  // set stack before our code
-//    mov     x7, x30
-//    and     x7, x7, #0xFFFFF000
-//    mov     sp, x7
     mov     sp, #0x80000
     // clear bss
     ldr     w7, =__bss_start
@@ -40,3 +38,7 @@ _start:
 2:  bl      bootboot_main
 1:  wfe
     b       1b
+
+jumptokernel:
+    mov     w30, w0
+    ret

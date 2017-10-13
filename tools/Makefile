@@ -54,10 +54,10 @@ ifneq ("$(wildcard ../loader/bootboot.efi)","")
 endif
 else
 ifneq ("$(wildcard ../loader/kernel8.img)","")
-	$(O)cp ../loader/kernel8.img ../loader/aarch64-rpi/config.txt ../bin/ESP/ || true
-endif
+	$(O)cp ../loader/kernel8.img ../bin/ESP/ || true
 ifneq ("$(wildcard ../loader/aarch64-rpi/start.elf)","")
 	$(O)cp ../loader/aarch64-rpi/LIC* ../loader/aarch64-rpi/*.bin ../loader/aarch64-rpi/*.elf ../loader/aarch64-rpi/*.dat ../bin/ESP/ || true
+endif
 endif
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
@@ -95,7 +95,9 @@ else
 	@./mkfs.o $(INITRD) union bin/ "/sys/bin/" "/usr/.../bin/"
 	@./mkfs.o $(INITRD) union etc/ "/sys/etc/" "/usr/.../etc/"
 	@./mkfs.o $(INITRD) union lib/ "/sys/lib/" "/usr/.../lib/"
+ifneq ($(PLATFORM),rpi)
 	@gzip $(INITRD) && mv $(INITRD).gz $(INITRD) || true
+endif
 	@#./mkfs.o $(INITRD) initrdrom ../bin/initrd.rom
 endif
 

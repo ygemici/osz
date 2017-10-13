@@ -112,7 +112,7 @@ static void tinf_build_bits_base(unsigned char *bits, unsigned short *base, int 
 #endif
 
 /* build the fixed huffman trees */
-static void tinf_build_fixed_trees(TINF_TREE *lt, TINF_TREE *dt)
+static void tinf_build_fixed_trees(volatile TINF_TREE *lt, volatile TINF_TREE *dt)
 {
    int i;
 
@@ -137,7 +137,7 @@ static void tinf_build_fixed_trees(TINF_TREE *lt, TINF_TREE *dt)
 }
 
 /* given an array of code lengths, build a tree */
-static void tinf_build_tree(TINF_TREE *t, const unsigned char *lengths, unsigned int num)
+static void tinf_build_tree(volatile TINF_TREE *t, const unsigned char *lengths, unsigned int num)
 {
    unsigned short offs[16];
    unsigned int i, sum;
@@ -168,7 +168,7 @@ static void tinf_build_tree(TINF_TREE *t, const unsigned char *lengths, unsigned
  * -- decode functions -- *
  * ---------------------- */
 
-unsigned char uzlib_get_byte(TINF_DATA *d)
+unsigned char uzlib_get_byte(volatile TINF_DATA *d)
 {
     if (d->source) {
         return *d->source++;
@@ -197,7 +197,7 @@ uint32_t tinf_get_be_uint32(TINF_DATA *d)
 }
 
 /* get one bit from source stream */
-static int tinf_getbit(TINF_DATA *d)
+static int tinf_getbit(volatile TINF_DATA *d)
 {
    unsigned int bit;
 
@@ -217,7 +217,7 @@ static int tinf_getbit(TINF_DATA *d)
 }
 
 /* read a num bit value from a stream and add base */
-static unsigned int tinf_read_bits(TINF_DATA *d, int num, int base)
+static unsigned int tinf_read_bits(volatile TINF_DATA *d, int num, int base)
 {
    unsigned int val = 0;
 
@@ -235,7 +235,7 @@ static unsigned int tinf_read_bits(TINF_DATA *d, int num, int base)
 }
 
 /* given a data stream and a tree, decode a symbol */
-static int tinf_decode_symbol(TINF_DATA *d, TINF_TREE *t)
+static int tinf_decode_symbol(volatile TINF_DATA *d, volatile TINF_TREE *t)
 {
    int sum = 0, cur = 0, len = 0;
 
@@ -255,7 +255,7 @@ static int tinf_decode_symbol(TINF_DATA *d, TINF_TREE *t)
 }
 
 /* given a data stream, decode dynamic trees from it */
-static void tinf_decode_trees(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
+static void tinf_decode_trees(volatile TINF_DATA *d, volatile TINF_TREE *lt, volatile TINF_TREE *dt)
 {
    unsigned char lengths[288+32];
    unsigned int hlit, hdist, hclen;
@@ -332,7 +332,7 @@ static void tinf_decode_trees(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
  * ----------------------------- */
 
 /* given a stream and two trees, inflate a block of data */
-static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
+static int tinf_inflate_block_data(volatile TINF_DATA *d, volatile TINF_TREE *lt, volatile TINF_TREE *dt)
 {
     if (d->curlen == 0) {
         unsigned int offs;
@@ -370,7 +370,7 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
 }
 
 /* inflate an uncompressed block of data */
-static int tinf_inflate_uncompressed_block(TINF_DATA *d)
+static int tinf_inflate_uncompressed_block(volatile TINF_DATA *d)
 {
     if (d->curlen == 0) {
         unsigned int length, invlength;
@@ -418,7 +418,7 @@ void uzlib_init(void)
 }
 
 /* inflate next byte of compressed stream */
-int uzlib_uncompress(TINF_DATA *d)
+int uzlib_uncompress(volatile TINF_DATA *d)
 {
     do {
         int res;

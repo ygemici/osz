@@ -11,12 +11,13 @@ I provide pre-compiled images ready for use.
     If you want to recompile this, you'll need fasm (not included).
     [boot.bin](https://github.com/bztsrc/osz/blob/master/loader/boot.bin?raw=true) (512 bytes, works as MBR and VBR too), [bootboot.bin](https://github.com/bztsrc/osz/blob/master/loader/bootboot.bin?raw=true) (8k)
 
-3. *aarch64-rpi* ARMv8 boot loader for Raspberry Pi 3 (work in progress)
+3. *aarch64-rpi* ARMv8 boot loader for Raspberry Pi 3
     [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img?raw=true)
 
-Please note that the reference implementations do not support
-the full protocol at level 2, they only handle static mappings
-which makes them level 1 loaders.
+4. *kernel* a sample BOOTBOOT [compatible kernel](https://github.com/bztsrc/osz/blob/master/loader/mykernel) in C which draws lines and boxes
+
+Please note that the reference implementations do not support the full protocol at level 2,
+they only handle static mappings which makes them level 1 loaders.
 
 BOOTBOOT Protocol
 =================
@@ -73,7 +74,7 @@ Glossary
 * _file system driver_: a separated function that parses initrd for the kernel file.
   Without one the first executable found will be loaded.
 
-* _kernel file_: an ELF64 / PE32+ [executable inside initrd](https://github.com/bztsrc/osz/blob/master/loader/README.md#example-kernel),
+* _kernel file_: an ELF64 / PE32+ [executable inside initrd](https://github.com/bztsrc/osz/blob/master/loader/kernel),
   optionally with the following symbols: `fb`, `environment`, `bootboot` (see machine state and linker script).
 
 * _BOOTBOOT structure_: an informational structure defined in [bootboot.h](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
@@ -88,7 +89,7 @@ Boot process
 5. if file system is not recognized, scans for the first executable in the initrd.
 6. parses executable header and symbols to get link addresses (only level 2 compatible loaders).
 7. maps linear framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
-8. sets up stack, registers and jumps to kernel [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See example kernel below.
+8. sets up stack, registers and jumps to kernel [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See [example kernel](https://github.com/bztsrc/osz/blob/master/loader/kernel).
 
 Protocol levels
 ---------------
@@ -204,7 +205,8 @@ Gzip compressed initrds also supported to save disk space and fasten up load tim
 Example kernel
 --------------
 
-A minimal kernel that demostrates how to access BOOTBOOT environment:
+An [example kernel](https://github.com/bztsrc/osz/blob/master/loader/mykernel/kernel.c) is included with BOOTBOOT Protocol
+to demostrate how to access the environment:
 
 ```c
 #include <bootboot.h>
@@ -227,63 +229,14 @@ void _start()
     for(y=0;y<20;y++) { for(x=0;x<20;x++) { *((uint32_t*)(&fb + s*(y+10) + (x+40)*4))=0x0000FF00; } }
     for(y=0;y<20;y++) { for(x=0;x<20;x++) { *((uint32_t*)(&fb + s*(y+10) + (x+70)*4))=0x000000FF; } }
 
-    // stop for now
-    __asm__ __volatile__ ( "cli;hlt" );
-}
-
-```
-
-Compile and link it with:
-
-```shell
-gcc -Wall -fpic -ffreestanding -fno-stack-protector -m64 -mno-red-zone -c kernel.c -o kernel.o
-ld -nostdlib --nmagic -T link.ld -o mykernel
-strip -s -K fb -K bootboot -K environment mykernel
-```
-
-A minimal linker script would be:
-
-```c
-FBUF_ADDRESS = 0xfffffffffc000000;
-CORE_ADDRESS = 0xffffffffffe00000;
-
-ENTRY(_start)
-OUTPUT_FORMAT(elf64-x86-64)
-SECTIONS
-{
-    /* bootboot.fb_ptr holds the physical address, which is mapped here */
-    . = FBUF_ADDRESS;
-        fb = .;
-    /* the bootboot structure and your envirenment file mapped here */
-    . = CORE_ADDRESS;
-        bootboot = .;
-        . += 4096;
-        environment = .;
-        . += 4096;
-    /* rest of your code, from the C source above */
-    .text : AT(ADDR(.text) - CORE_ADDRESS)
-    {
-        _code = .;
-        *(.text)
-        *(.rodata)
-        . = ALIGN(4096);
-        _data = .;
-        *(.data)
-        . = ALIGN(4096);
-        __bss_start = .;
-    }
-   _end = .;
-
-   /DISCARD/ :
-   {
-        *(.comment)
-        *(.gnu*)
-        *(.note*)
-        *(.eh_frame*)
-   }
+    // hang for now
+    while(1);
 }
 ```
-See [src/core/(platform)/supervisor.ld](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld) for a more complex, real OS example.
+
+For compilation, see example bootboot kernel's [Makefile](https://github.com/bztsrc/osz/blob/master/loader/mykernel/Makefile) and
+[link.ld](https://github.com/bztsrc/osz/blob/master/loader/mykernel/link.ld). For a more complex, real OS example, see
+[src/core/(platform)/supervisor.ld](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/supervisor.ld).
 
 Installation
 ------------
@@ -292,14 +245,16 @@ Installation
 
 ```shell
 mkdir -r tmp/sys
-cp mykernel tmp/sys/core
+cp mykernel.x86_64.elf tmp/sys/core
 # copy more files to tmp/ directory
-cd tmp
+
 # create your file system image or an archive. For example use one of these:
+cd tmp
 find . | cpio -H newc -o | gzip > ../INITRD
 find . | cpio -H crc -o | gzip > ../INITRD
 find . | cpio -H hpodc -o | gzip > ../INITRD
 tar -czf ../INITRD *
+mkfs ../INITRD .
 ```
 
 2. Create FS0:\BOOTBOOT directory on the boot partition, and copy the image you've created
@@ -324,8 +279,17 @@ You can also create an Option ROM out of INITRD (on BIOS there's not much space 
 
 3.4. *BIOS ROM*: install __bootboot.bin__ in a **_BIOS Expansion ROM_**.
 
-3.5. *Raspberry Pi 3*: copy __kernel8.img__ on the boot partition, and add `initramfs INITRD 0x100000` to [config.txt](http://elinux.org/RPi_config.txt#Boot).
+3.5. *Raspberry Pi 3*: copy __kernel8.img__ on the boot partition. You'll need other [firmware files](https://github.com/raspberrypi/firmware/tree/master/boot) as well.
 
+Limitations
+-----------
+
+Known limitations:
+
+ - *BIOS / Multiboot* as it boots in protected mode, it only maps the first 4G of RAM. Initrd in ROM is limited to ~96k (compressed).
+ - *UEFI* the PCI Expansion ROM should be signed in order to work.
+ - *Raspberry Pi 3* initrd in ROM is not possible, and maps only the first 1G of RAM. Cards other than SDHC Class 10 not supported.
+ 
 Troubleshooting
 ---------------
 
@@ -350,6 +314,12 @@ BOOTBOOT-PANIC: Hardware not supported
 Really old hardware. On x86_64, your CPU is older than family 6.0 or PAE, MSR, LME features not supported.
 
 ```
+BOOTBOOT-PANIC: Unable to initialize SDHC card
+```
+
+The loader was unable to initialize EMMC for SDHC card access, probably hardware error or old card.
+
+```
 BOOTBOOT-PANIC: No boot partition
 ```
 
@@ -357,7 +327,7 @@ Either the disk does not have a GPT, or there's no EFI System Partition nor any 
 partition on it. Or the FAT file system is found but inconsistent, or doesn't have a BOOTBOOT directory.
 
 ```
-BOOTBOOT-PANIC: FS0:\BOOTBOOT\INITRD not found
+BOOTBOOT-PANIC: INITRD not found
 ```
 
 The loader could not find the initial ramdisk image on the boot partition. This message will be shown

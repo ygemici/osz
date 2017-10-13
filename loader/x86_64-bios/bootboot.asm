@@ -827,9 +827,11 @@ protmode_start:
             je          .loadesp
             bt          word [esi+48], 2        ;or bootable?
             jc          .loadesp
-            cmp         dword [esi], 'OS/Z'     ;or OS/Z partition for this archicture?
+            cmp         dword [esi], 'OS/Z'     ;or OS/Z root partition for this archicture?
             jne         .noto
             cmp         word [esi+4], 08664h
+            jne         .noto
+            cmp         dword [esi+12], 'root'
             je          .loadesp
 .noto:      add         esi, ebx
             dec         ecx
@@ -1290,15 +1292,13 @@ protmode_start:
 
             mov         dword [core_ptr], esi
 
-            mov         eax, dword [ebx+40]    ; code base
-            add         eax, dword [ebx+24]    ; + text size
-            add         eax, dword [ebx+28]    ; + data size
-            mov         dword [core_len], eax
-
             mov         eax, dword [ebx+36]    ; entry point
             mov         dword [entrypoint], eax
             mov         dword [entrypoint+4], 0
-
+            mov         eax, dword [ebx+40]    ; - code base
+            add         eax, dword [ebx+24]    ; + text size
+            add         eax, dword [ebx+28]    ; + data size
+            mov         dword [core_len], eax
             jmp         .aligned
 
             ; parse ELF

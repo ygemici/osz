@@ -42,16 +42,18 @@ extern "C" {
 /* data structures */
 
 typedef struct {
-   unsigned short table[16];  /* table of code length counts */
-   unsigned short trans[288]; /* code -> symbol translation table */
+   unsigned int table[16];  /* table of code length counts */
+   unsigned int trans[288]; /* code -> symbol translation table */
 } TINF_TREE;
 
 struct TINF_DATA;
 typedef struct TINF_DATA {
+   TINF_TREE ltree; /* dynamic length/symbol tree */
+   TINF_TREE dtree; /* dynamic distance tree */
    const unsigned char *source;
    /* If source above is NULL, this function will be used to read
       next byte from source stream */
-   unsigned char (*readSource)(struct TINF_DATA *data);
+   unsigned char (*readSource)(volatile struct TINF_DATA *data);
 
    unsigned int tag;
    unsigned int bitcount;
@@ -67,33 +69,26 @@ typedef struct TINF_DATA {
 
     /* Accumulating checksum */
     unsigned int checksum;
-    char checksum_type;
+    unsigned int checksum_type;
 
     int btype;
     int bfinal;
     unsigned int curlen;
     int lzOff;
-    unsigned char *dict_ring;
-    unsigned int dict_size;
-    unsigned int dict_idx;
-
-   TINF_TREE ltree; /* dynamic length/symbol tree */
-   TINF_TREE dtree; /* dynamic distance tree */
 } TINF_DATA;
 
 #define TINF_PUT(d, c) \
     { \
         *d->dest++ = c; \
-        if (d->dict_ring) { d->dict_ring[d->dict_idx++] = c; if (d->dict_idx == d->dict_size) d->dict_idx = 0; } \
     }
 
-unsigned char TINFCC uzlib_get_byte(TINF_DATA *d);
+unsigned char TINFCC uzlib_get_byte(volatile TINF_DATA *d);
 
 /* Decompression API */
 
 void TINFCC uzlib_init(void);
 void TINFCC uzlib_uncompress_init(TINF_DATA *d, void *dict, unsigned int dictLen);
-int  TINFCC uzlib_uncompress(TINF_DATA *d);
+int  TINFCC uzlib_uncompress(volatile TINF_DATA *d);
 int  TINFCC uzlib_uncompress_chksum(TINF_DATA *d);
 
 int TINFCC uzlib_zlib_parse_header(TINF_DATA *d);

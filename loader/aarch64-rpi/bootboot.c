@@ -6,18 +6,8 @@
  * This file is part of the BOOTBOOT Protocol package.
  * @brief Boot loader for the Raspberry Pi 3+ ARMv8
  *
- * memory occupied: 0-0x10000
- * 
- * Memory map
- *           0x0 - 0x2000         stack
- *        0x2000 - __bss_start    loader code and data
- *         bss+x - bss+x+0x1000   bootboot structure
- *  bss+x+0x1000 - bss+x+0x2000   environment
- *  bss+x+0x2000 - 0x10000        memory mapping structures
- *       0x10000 - x              initrd or compressed initrd
- *
  */
-#define DEBUG 1
+#define DEBUG 0
 
 #define NULL ((void*)0)
 #define PAGESIZE 4096
@@ -32,16 +22,21 @@ typedef unsigned short int  uint16_t;
 typedef unsigned int        uint32_t;
 typedef unsigned long int   uint64_t;
 
+#include "tinf.h"
+
 /* get BOOTBOOT structure */
 #include "../bootboot.h"
 
+extern void jumptokernel(uint64_t pc);
+
 /* aligned buffers */
 volatile uint32_t  __attribute__((aligned(16))) mbox[32];
-volatile uint8_t __attribute__((aligned(16))) __mbr[4096];
-/* we place these manually in linker script, gcc would otherwise waste a lotof memory */
+/* we place these manually in linker script, gcc would otherwise waste a lot of memory */
 volatile uint8_t __attribute__((aligned(PAGESIZE))) __bootboot[PAGESIZE];
 volatile uint8_t __attribute__((aligned(PAGESIZE))) __environment[PAGESIZE];
-
+volatile uint8_t __attribute__((aligned(PAGESIZE))) __paging[65536];
+#define __diskbuf __paging
+extern volatile uint8_t _end;
 
 /*** ELF64 defines and structs ***/
 #define ELFMAG      "\177ELF"
@@ -423,7 +418,7 @@ int sd_readblock(uint64_t lba, uint8_t *buffer, uint32_t num)
     int c = 0, d;
     uint32_t *buf=(uint32_t *)buffer;
     while( c < num ) {
-        if((r=sd_int(INT_READ_RDY))){DBG("BOOTBOOT-ERROR: Timeout waiting for ready to read");sd_err=r;return 0;}
+        if((r=sd_int(INT_READ_RDY))){DBG("BOOTBOOT-ERROR: Timeout waiting for ready to read\n");sd_err=r;return 0;}
         for(d=0;d<128;d++) buf[d] = *EMMC_DATA;
         c++; buf+=128;
     }
@@ -478,6 +473,21 @@ int sd_clk(uint32_t f)
 int sd_init()
 {
     int r,cnt;
+    // GPIO_CD
+    r=*GPFSEL4; r&=~(7<<(7*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<15); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+    r=*GPHEN1; r|=1<<15; *GPHEN1=r;
+
+    // GPIO_CLK, GPIO_CMD
+    r=*GPFSEL4; r|=(7<<(8*3))|(7<<(9*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<16)|(1<<17); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    // GPIO_DAT0, GPIO_DAT1, GPIO_DAT2, GPIO_DAT3
+    r=*GPFSEL5; r|=(7<<(0*3)) | (7<<(1*3)) | (7<<(2*3)) | (7<<(3*3)); *GPFSEL5=r;
+    *GPPUD=2; delay(150); 
+    *GPPUDCLK1=(1<<18) | (1<<19) | (1<<20) | (1<<21);
+    delay(150); *GPPUD=0; *GPPUDCLK1=0;
+    
     sd_hv = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
     // Reset the card.
     *EMMC_CONTROL0 = 0; *EMMC_CONTROL1 |= C1_SRST_HC;
@@ -542,13 +552,54 @@ int sd_init()
     return SD_OK;
 }
 
-
-#include "tinf.h"
 // get filesystem drivers for initrd
 #include "../../etc/include/fsZ.h"
 #include "fs.h"
 
 /*** other defines and structs ***/
+typedef struct {
+    uint32_t type[4];
+    uint8_t  uuid[16];
+    uint64_t start;
+    uint64_t end;
+    uint64_t flags;
+    uint8_t  name[72];
+} efipart_t;
+
+typedef struct {
+    char        jmp[3];
+    char        oem[8];
+    uint16_t    bps;
+    uint8_t     spc;
+    uint16_t    rsc;
+    uint8_t     nf;
+    uint16_t    nr;
+    uint16_t    ts16;
+    uint8_t     media;
+    uint16_t    spf16;
+    uint16_t    spt;
+    uint16_t    nh;
+    uint32_t    hs;
+    uint32_t    ts32;
+    uint32_t    spf32;
+    uint32_t    flg;
+    uint32_t    rc;
+    char        vol[6];
+    char        fst[8];
+    char        dmy[20];
+    char        fst2[8];
+} __attribute__((packed)) bpb_t;
+
+typedef struct {
+    char        name[8];
+    char        ext[3];
+    char        attr[9];
+    uint16_t    ch;
+    uint32_t    attr2;
+    uint16_t    cl;
+    uint32_t    size;
+} __attribute__((packed)) fatdir_t;
+
 typedef struct {
     uint32_t magic;
     uint32_t version;
@@ -578,6 +629,7 @@ BOOTBOOT *bootboot; // the BOOTBOOT structure
 // default environment variables. M$ states that 1024x768 must be supported
 int reqwidth = 1024, reqheight = 768;
 char *kernelname="sys/core";
+unsigned char *kne;
 
 // alternative environment name
 char *cfgname="sys/config";
@@ -726,12 +778,66 @@ void puts(char *s)
     }
 }
 
+void ParseEnvironment(uint8_t *env)
+{
+    uint8_t *end=env+PAGESIZE;
+    DBG(" * Environment\n");
+    env--; env[PAGESIZE]=0; kne=NULL;
+    while(env<end) {
+        env++;
+        // failsafe
+        if(env[0]==0)
+            break;
+        // skip white spaces
+        if(env[0]==' '||env[0]=='\t'||env[0]=='\r'||env[0]=='\n')
+            continue;
+        // skip comments
+        if((env[0]=='/'&&env[1]=='/')||env[0]=='#') {
+            while(env<end && env[0]!='\r' && env[0]!='\n' && env[0]!=0){
+                env++;
+            }
+            env--;
+            continue;
+        }
+        if(env[0]=='/'&&env[1]=='*') {
+            env+=2;
+            while(env[0]!=0 && env[-1]!='*' && env[0]!='/')
+                env++;
+        }
+        // parse screen dimensions
+        if(!memcmp(env,"screen=",7)){
+            env+=7;
+            reqwidth=atoi(env);
+            while(env<end && *env!=0 && *(env-1)!='x') env++;
+            reqheight=atoi(env);
+        }
+        // get kernel's filename
+        if(!memcmp(env,"kernel=",7)){
+            env+=7;
+            kernelname=(char*)env;
+            while(env<end && env[0]!='\r' && env[0]!='\n' &&
+                env[0]!=' ' && env[0]!='\t' && env[0]!=0)
+                    env++;
+            kne=env;
+            *env=0;
+            env++;
+        }
+    }
+}
+
 /**
  * bootboot entry point
  */
 int bootboot_main(void)
 {
-    uint32_t r;
+    uint32_t np,sp,r;
+    efipart_t *part;
+    volatile bpb_t *bpb;
+    uint8_t *initrd_ptr;
+    uint32_t initrd_size;
+    file_t ret={NULL,0};
+    uint64_t entrypoint;
+    MMapEnt *mmap;
 
     /* initialize UART */
     *AUX_ENABLE |=1;       // enable mini uart
@@ -760,68 +866,240 @@ int bootboot_main(void)
     bootboot->loader_type = LOADER_RPI;
     bootboot->size = 128;
     bootboot->pagesize = PAGESIZE;
+    bootboot->aarch64.mmio_ptr = MMIO_BASE;
     // set up a framebuffer so that we can write on screen
     if(!GetLFB(0, 0)) goto viderr;
     puts("Booting OS...\n");
 
     /* initialize SDHC card reader in EMMC */
-    // GPIO_CD
-    r=*GPFSEL4; r&=~(7<<(7*3)); *GPFSEL4=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<15); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-    r=*GPHEN1; r|=1<<15; *GPHEN1=r;
-
-    // GPIO_CLK, GPIO_CMD
-    r=*GPFSEL4; r|=(7<<(8*3))|(7<<(9*3)); *GPFSEL4=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<16)|(1<<17); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-    // GPIO_DAT0, GPIO_DAT1, GPIO_DAT2, GPIO_DAT3
-    r=*GPFSEL5; r|=(7<<(0*3)) | (7<<(1*3)) | (7<<(2*3)) | (7<<(3*3)); *GPFSEL5=r;
-    *GPPUD=2; delay(150); 
-    *GPPUDCLK1=(1<<18) | (1<<19) | (1<<20) | (1<<21);
-    delay(150); *GPPUD=0; *GPPUDCLK1=0;
-    
     if(sd_init()) {
         puts("BOOTBOOT-PANIC: Unable to initialize SDHC card\n");
         goto error;
     }
     
-    r=sd_readblock(0,(unsigned char*)&__mbr,8);
-    //r=readblock(0,&__mbr);
-    uart_puts("MBR read ret ");
-    uart_hex(r,4);
-    uart_putc('\n');
-//    if(r)
-        uart_dump((void*)&__mbr,36);
-    sd_readblock(1,(unsigned char*)&__mbr,1);
-        uart_dump((void*)&__mbr,36);
-
-    // load BOOTBOOT/CONFIG
-
-    // load initrd (or check if initramfs command has already loaded it)
+    /* read and parse GPT table */
+    r=sd_readblock(1,(unsigned char*)&__diskbuf,1);
+    if(r==0 || memcmp((void*)&__diskbuf, "EFI PART", 8)) {
+diskerr:
+        puts("BOOTBOOT-PANIC: No boot partition\n");
+        goto error;
+    }
+    // get number of partitions and size of partition entry
+    np=*((uint32_t*)((char*)&__diskbuf+80)); sp=*((uint32_t*)((char*)&__diskbuf+84));
+    // read GPT entries
+    r=sd_readblock(*((uint32_t*)((char*)&__diskbuf+72)),(unsigned char*)&__diskbuf,(np*sp+511)/512);
+    if(r==0) goto diskerr;
+    part=NULL;
+    for(r=0;r<np;r++) {
+        part = (efipart_t*)((char*)&__diskbuf+r*sp);
+            // ESP?
+        if((part->type[0]==0xC12A7328 && part->type[1]==0x11D2F81F) ||
+            // bootable?
+            part->flags&4 ||
+            // or OS/Z root partition for this architecture?
+            (part->type[0]==0x5A2F534F && (part->type[1]&0xFFFF)==0xAA64 && part->type[3]==0x746F6F72))
+            break;
+    }
+    if(part==NULL) goto diskerr;
+    r=sd_readblock(part->start,(unsigned char*)&_end,part->end-part->start+1);
+    if(r==0) goto diskerr;
     DBG(" * Initrd loaded\n");
-
+    initrd_ptr=NULL; initrd_size=0;
+    //is it a FAT partition?
+    bpb=(bpb_t*)&_end;
+    if(!memcmp((void*)bpb->fst,"FAT16",5) || !memcmp((void*)bpb->fst2,"FAT32",5)) {
+        // locate BOOTBOOT directory
+        uint32_t data_sec, root_sec, sec=0;
+        fatdir_t *dir, *dir2;
+        data_sec=root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc;
+        if(bpb->spf16>0) {
+            //sec=bpb->nr; WARNING gcc generates a code that cause unaligned exception
+            sec=*((uint32_t*)&bpb->nf);
+            sec>>=8;
+            sec&=0xFFFF;
+            sec<<=5;
+            sec+=511;
+            sec>>=9;
+            data_sec+=sec;
+        } else {
+            root_sec+=(bpb->rc-2)*bpb->spc;
+        }
+        dir=(fatdir_t*)((char*)&_end+root_sec*512);
+        while(dir->name[0]!=0 && memcmp(dir->name,"BOOTBOOT   ",11)) dir++;
+        if(dir->name[0]!='B') goto diskerr;
+        sec=((dir->cl+(dir->ch<<16)-2)*bpb->spc)+data_sec;
+        dir=dir2=(fatdir_t*)((char*)&_end+sec*512);
+        // locate environment and initrd
+        while(dir->name[0]!=0) {
+            sec=((dir->cl+(dir->ch<<16)-2)*bpb->spc)+data_sec;
+            if(!memcmp(dir->name,"CONFIG     ",11)) {
+                memcpy((void*)&__environment,(void*)((char*)&_end+sec*512),dir->size<PAGESIZE?dir->size:PAGESIZE-1);
+            } else
+            if(!memcmp(dir->name,"INITRD     ",11)) {
+                initrd_ptr=(uint8_t*)&_end+sec*512;
+                initrd_size=dir->size;
+            }
+            dir++;
+        }
+        if(initrd_size==0) {
+            dir=dir2;
+            while(dir->name[0]!=0) {
+                if(!memcmp(dir->name,"AARCH64    ",11)) {
+                    sec=((dir->cl+(dir->ch<<16)-2)*bpb->spc)+data_sec;
+                    initrd_ptr=(uint8_t*)&_end+sec*512;
+                    initrd_size=dir->size;
+                    break;
+                }
+                dir++;
+            }
+        }
+    } else {
+        initrd_ptr=(uint8_t*)&_end;
+        initrd_size=r;
+    }
+    if(initrd_ptr==NULL || initrd_size==0) {
+        puts("BOOTBOOT-PANIC: INITRD not found\n");
+        goto error;
+    }
+#if INITRD_DEBUG
+    uart_puts("Initrd at ");uart_hex((uint64_t)initrd_ptr,4);uart_putc(' ');uart_hex(initrd_size,4);uart_putc('\n');
+#endif
     // uncompress if it's compressed
-    DBG(" * Gzip compressed initrd\n");
-    
+    if(initrd_ptr[0]==0x1F && initrd_ptr[1]==0x8B) {
+        unsigned char *addr,f;
+        volatile TINF_DATA d;
+        DBG(" * Gzip compressed initrd\n");
+        // skip gzip header
+        addr=initrd_ptr+2;
+        if(*addr++!=8) goto gzerr;
+        f=*addr++; addr+=6;
+        if(f&4) { r=*addr++; r+=(*addr++ << 8); addr+=r; }
+        if(f&8) { while(*addr++ != 0); }
+        if(f&16) { while(*addr++ != 0); }
+        if(f&2) addr+=2;
+        d.source = addr;
+        memcpy((void*)&d.destSize,initrd_ptr+initrd_size-4,4);
+        // decompress
+        d.bitcount = 0;
+        d.bfinal = 0;
+        d.btype = -1;
+        d.curlen = 0;
+        d.dest = (unsigned char*)((uint64_t)(initrd_ptr+initrd_size+PAGESIZE-1)&~(PAGESIZE-1));
+        bootboot->initrd_ptr=(uint64_t)d.dest;
+        bootboot->initrd_size=d.destSize;
+#if INITRD_DEBUG
+        uart_puts("Inflating to ");uart_hex((uint64_t)d.dest,4);uart_putc(' ');uart_hex(d.destSize,4);uart_putc('\n');
+#endif
+        puts("Inflating image...\r");
+        do { r = uzlib_uncompress(&d); } while (!r);
+        puts("                  \r");
+        if (r != TINF_DONE) {
+gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
+            goto error;
+        }
+    } else {
+        bootboot->initrd_ptr=(uint64_t)initrd_ptr;
+        bootboot->initrd_size=initrd_size;
+    }
+#if INITRD_DEBUG
+    uart_dump((void*)bootboot->initrd_ptr,64);
+#endif
+    // round up to page size
+    bootboot->initrd_size=(bootboot->initrd_size+PAGESIZE-1)&~(PAGESIZE-1);
+
     // if no config, locate it in uncompressed initrd
+    if(1||*((uint8_t*)&__environment)==0) {
+        r=0;
+        while(ret.ptr==NULL && fsdrivers[r]!=NULL) {
+            ret=(*fsdrivers[r++])((unsigned char*)bootboot->initrd_ptr,cfgname);
+        }
+        if(ret.ptr!=NULL)
+            memcpy((void*)&__environment,(void*)(ret.ptr),ret.size<PAGESIZE?ret.size:PAGESIZE-1);
+        ret.ptr=NULL; ret.size=0;
+    }
 
     // parse config
-    DBG(" * Environment\n");
+    ParseEnvironment((unsigned char*)&__environment);
 
-    // get linear framebuffer if it's different
+    // locate sys/core
+    entrypoint=0;
+    r=0;
+    while(ret.ptr==NULL && fsdrivers[r]!=NULL) {
+        ret=(*fsdrivers[r++])((unsigned char*)bootboot->initrd_ptr,kernelname);
+    }
+    if(kne!=NULL)
+        *kne='\n';
+    // scan for the first executable
+    if(ret.ptr==NULL || ret.size==0) {
+        ret.size=0;
+        r=bootboot->initrd_size;
+        ret.ptr=(uint8_t*)bootboot->initrd_ptr;
+        while(r-->0) {
+            Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ret.ptr);
+            pe_hdr *pehdr=(pe_hdr*)(ret.ptr + ((mz_hdr*)(ret.ptr))->peaddr);
+            if((!memcmp(ehdr->e_ident,ELFMAG,SELFMAG)||!memcmp(ehdr->e_ident,"OS/Z",4))&&
+                ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
+                ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
+                ehdr->e_machine==EM_AARCH64&&
+                ehdr->e_phnum>0){
+                    ret.size=1;
+                    break;
+                }
+            if(((mz_hdr*)(core.ptr))->magic==MZ_MAGIC && pehdr->magic == PE_MAGIC && 
+                pehdr->machine == IMAGE_FILE_MACHINE_ARM64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
+                    ret.size=1;
+                    break;
+                }
+            ret.ptr++;
+        }
+    }
+    if(ret.ptr==NULL || ret.size==0) {
+        puts("BOOTBOOT-PANIC: Kernel not found in initrd\n");
+        goto error;
+    } else {
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ret.ptr);
+        pe_hdr *pehdr=(pe_hdr*)(ret.ptr + ((mz_hdr*)(ret.ptr))->peaddr);
+        if((!memcmp(ehdr->e_ident,ELFMAG,SELFMAG)||!memcmp(ehdr->e_ident,"OS/Z",4))&&
+            ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
+            ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
+            ehdr->e_machine==EM_AARCH64&&
+            ehdr->e_phnum>0){
+                DBG(" * Parsing ELF64\n");
+                Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
+                for(r=0;r<ehdr->e_phnum;r++){
+                    if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
+                        ret.ptr = (uint8_t*)ehdr;
+                        ret.size = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+                        entrypoint=ehdr->e_entry;
+                        break;
+                    }
+                    phdr=(Elf64_Phdr *)((uint8_t *)phdr+ehdr->e_phentsize);
+                }
+        } else
+        if(((mz_hdr*)(core.ptr))->magic==MZ_MAGIC && pehdr->magic == PE_MAGIC && 
+            pehdr->machine == IMAGE_FILE_MACHINE_ARM64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
+                DBG(" * Parsing PE32+\n");
+                ret.size = (pehdr->entry_point-pehdr->code_base) + pehdr->text_size + pehdr->data_size;
+                entrypoint = pehdr->entry_point;
+        }
+    }
+    if(ret.size<2 || entrypoint==0) {
+        puts("BOOTBOOT-PANIC: Kernel is not a valid executable\n");
+//#if DEBUG
+        uart_dump((void*)ret.ptr,16);
+//#endif
+        goto error;
+    }
+    // is core page aligned?
+    if((uint64_t)ret.ptr&(PAGESIZE-1)) {
+        memcpy((void*)(bootboot->initrd_ptr+bootboot->initrd_size), ret.ptr, ret.size);
+        ret.ptr=(uint8_t*)(bootboot->initrd_ptr+bootboot->initrd_size);
+    }
+    ret.size = (ret.size+PAGESIZE-1)&~(PAGESIZE-1);
+
+    // get linear framebuffer if it's different than current
     DBG(" * Screen VideoCore\n");
     if(reqwidth!=bootboot->fb_width || reqheight!=bootboot->fb_height) {
-#if DEBUG
-uart_puts("Fb not match, got");
-uart_hex(bootboot->fb_width,2);
-uart_putc('x');
-uart_hex(bootboot->fb_height,2);
-uart_puts(", need ");
-uart_hex(reqwidth,2);
-uart_putc('x');
-uart_hex(reqheight,2);
-uart_putc('\n');
-#endif
         if(!GetLFB(reqwidth, reqheight)) {
 viderr:
             puts("BOOTBOOT-PANIC: VideoCore error, no framebuffer\n");
@@ -829,21 +1107,63 @@ viderr:
         }
     }
 
-
-    // locate sys/core
-    DBG(" * Parsing ELF64\n");
-    DBG(" * Parsing PE32+\n");
-    
     // create memory mapping
 
     // generate memory map to bootboot struct
+    DBG(" * Memory Map\n");
+    mmap=(MMapEnt *)&bootboot->mmap;
+
+    // everything before the bootboot struct is free
+    mmap->ptr=0; mmap->size=(uint64_t)&__bootboot | MMAP_FREE;
+    mmap++; bootboot->size+=sizeof(MMapEnt);
+
+    // mark bss reserved 
+    mmap->ptr=(uint64_t)&__bootboot; mmap->size=((uint64_t)&_end-(uint64_t)&__bootboot) | MMAP_RESERVED;
+    mmap++; bootboot->size+=sizeof(MMapEnt);
+
+    // after bss and before initrd is free
+    mmap->ptr=(uint64_t)&_end; mmap->size=(bootboot->initrd_ptr-(uint64_t)&_end) | MMAP_FREE;
+    mmap++; bootboot->size+=sizeof(MMapEnt);
+
+    // initrd is reserved (and add aligned core's area to it)
+    r=bootboot->initrd_size;
+    if((uint64_t)ret.ptr==bootboot->initrd_ptr+r) r+=ret.size;
+    mmap->ptr=bootboot->initrd_ptr; mmap->size=r | MMAP_RESERVED;
+    mmap++; bootboot->size+=sizeof(MMapEnt);
+    r+=(uint32_t)bootboot->initrd_ptr;
+
+    mbox[0]=8*4;
+    mbox[1]=0;
+    mbox[2]=0x10005; // get memory size
+    mbox[3]=8;
+    mbox[4]=0;
+    mbox[5]=0;
+    mbox[6]=0;
+    mbox[7]=0;
+    if(!mbox_call(MBOX_CH_PROP, mbox))
+        // on failure (should never happen) assume 64Mb memory max
+        mbox[6]=64*1024*1024;
+
+    // everything after initrd is free
+    mmap->ptr=r; mmap->size=(mbox[6]-r) | MMAP_FREE;
+    mmap++; bootboot->size+=sizeof(MMapEnt);
+
+    // MMIO area
+    mmap->ptr=MMIO_BASE; mmap->size=((uint64_t)0x40000000-MMIO_BASE) | MMAP_MMIO;
+    mmap++; bootboot->size+=sizeof(MMapEnt);
 
     // jump to core's _start
+//#if DEBUG
+    uart_puts("Jumping to kernel entry point ");
+    uart_hex(entrypoint,8);
+    uart_putc('\n');
+//#endif
+//    jumptokernel(entrypoint);
 
-    // echo back everything until Enter pressed
+    // Wait until Enter or Space pressed, then reboot
 error:
     while(r!='\n' && r!=' ') r=uart_getc();
-    uart_puts("\n\n"); delay(1500);
+    uart_puts("\n\n"); delaym(1000);
 
     // reset
     *PM_WATCHDOG = PM_WDOG_MAGIC | 1;

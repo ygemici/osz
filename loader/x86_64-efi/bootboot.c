@@ -536,7 +536,7 @@ gotcore:
             pehdr->machine == IMAGE_FILE_MACHINE_AMD64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
             //Parse PE32+
             DBG(L" * Parsing PE32+ @%lx\n",core.ptr);
-            core.size = pehdr->code_base + pehdr->text_size + pehdr->data_size;
+            core.size = (pehdr->entry_point-pehdr->code_base) + pehdr->text_size + pehdr->data_size;
             entrypoint = pehdr->entry_point;
             goto gotcore;
         }
@@ -731,8 +731,10 @@ foundinrom:
                     break;
                 // use first partition with bootable flag as INITRD
                 if((gptEnt->Attributes & EFI_PART_USED_BY_OS) || 
-                    // or use the first OS/Z partition for this architecture
-                    (!CompareMem(&gptEnt->PartitionTypeGUID.Data1,"OS/Z",4) && gptEnt->PartitionTypeGUID.Data2==0x8664)) {
+                    // or use the first OS/Z root partition for this architecture
+                    (!CompareMem(&gptEnt->PartitionTypeGUID.Data1,"OS/Z",4) &&
+                    gptEnt->PartitionTypeGUID.Data2==0x8664 && 
+                    !CompareMem(&gptEnt->PartitionTypeGUID.Data4[4],"root",4))) {
                     lba_s=gptEnt->StartingLBA; lba_e=gptEnt->EndingLBA;
                     initrd.size = (((lba_e-lba_s)*bio->Media->BlockSize + PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                     status=EFI_SUCCESS;

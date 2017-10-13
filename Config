@@ -3,9 +3,9 @@
 
 # --- common configuration ---
 # x86_64 or aarch64
-ARCH = x86_64
+ARCH = aarch64
 # x86_64: ibmpc, acpi aarch64: rpi
-PLATFORM = ibmpc
+PLATFORM = rpi
 DEBUG = 1
 OPTIMIZE = 0
 

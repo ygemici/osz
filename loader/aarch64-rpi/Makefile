@@ -6,7 +6,7 @@ all: boot.S bootboot.c fs.h
 	@aarch64-elf-ld -r -b binary -o font.o font.psf
 	@aarch64-elf-ld -nostdlib -nostartfiles boot.o bootboot.o tinflate.o font.o -T link.ld -o bootboot.elf
 	@aarch64-elf-objcopy -O binary bootboot.elf ../kernel8.img
-	@rm *.o
+	@rm *.o bootboot.elf
 
 getfw:
 	wget -q https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/LICENCE.broadcom
