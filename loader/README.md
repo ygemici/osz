@@ -74,7 +74,7 @@ Glossary
 * _file system driver_: a separated function that parses initrd for the kernel file.
   Without one the first executable found will be loaded.
 
-* _kernel file_: an ELF64 / PE32+ [executable inside initrd](https://github.com/bztsrc/osz/blob/master/loader/kernel),
+* _kernel file_: an ELF64 / PE32+ [executable inside initrd](https://github.com/bztsrc/osz/blob/master/loader/mykernel),
   optionally with the following symbols: `fb`, `environment`, `bootboot` (see machine state and linker script).
 
 * _BOOTBOOT structure_: an informational structure defined in [bootboot.h](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
@@ -89,7 +89,7 @@ Boot process
 5. if file system is not recognized, scans for the first executable in the initrd.
 6. parses executable header and symbols to get link addresses (only level 2 compatible loaders).
 7. maps linear framebuffer, [environment](https://github.com/bztsrc/osz/blob/master/etc/sys/config) and [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) accordingly.
-8. sets up stack, registers and jumps to kernel [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See [example kernel](https://github.com/bztsrc/osz/blob/master/loader/kernel).
+8. sets up stack, registers and jumps to kernel [entry point](https://github.com/bztsrc/osz/blob/master/src/core/x86_64/start.S). See [example kernel](https://github.com/bztsrc/osz/blob/master/loader/mykernel).
 
 Protocol levels
 ---------------
