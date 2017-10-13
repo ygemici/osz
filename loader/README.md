@@ -14,7 +14,7 @@ I provide pre-compiled images ready for use.
 3. *aarch64-rpi* ARMv8 boot loader for Raspberry Pi 3
     [kernel8.img](https://github.com/bztsrc/osz/blob/master/loader/kernel8.img?raw=true)
 
-4. *kernel* a sample BOOTBOOT [compatible kernel](https://github.com/bztsrc/osz/blob/master/loader/mykernel) in C which draws lines and boxes
+4. *mykernel* an example BOOTBOOT [compatible kernel](https://github.com/bztsrc/osz/blob/master/loader/mykernel) in C which draws lines and boxes
 
 Please note that the reference implementations do not support the full protocol at level 2,
 they only handle static mappings which makes them level 1 loaders.

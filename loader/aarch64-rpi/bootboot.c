@@ -833,9 +833,6 @@ int bootboot_main(void)
     uint32_t np,sp,r;
     efipart_t *part;
     volatile bpb_t *bpb;
-    uint8_t *initrd_ptr;
-    uint32_t initrd_size;
-    file_t ret={NULL,0};
     uint64_t entrypoint;
     MMapEnt *mmap;
 
@@ -861,7 +858,7 @@ int bootboot_main(void)
 
     // create bootboot structure
     bootboot = (BOOTBOOT*)&__bootboot;
-    bootboot->magic[0]='B';bootboot->magic[1]=bootboot->magic[2]='O';bootboot->magic[3]='T';
+    memcpy((void*)&bootboot->magic,BOOTBOOT_MAGIC,4);
     bootboot->protocol = PROTOCOL_STATIC;
     bootboot->loader_type = LOADER_RPI;
     bootboot->size = 128;
@@ -904,7 +901,7 @@ diskerr:
     r=sd_readblock(part->start,(unsigned char*)&_end,part->end-part->start+1);
     if(r==0) goto diskerr;
     DBG(" * Initrd loaded\n");
-    initrd_ptr=NULL; initrd_size=0;
+    initrd.ptr=NULL; initrd.size=0;
     //is it a FAT partition?
     bpb=(bpb_t*)&_end;
     if(!memcmp((void*)bpb->fst,"FAT16",5) || !memcmp((void*)bpb->fst2,"FAT32",5)) {
@@ -936,41 +933,43 @@ diskerr:
                 memcpy((void*)&__environment,(void*)((char*)&_end+sec*512),dir->size<PAGESIZE?dir->size:PAGESIZE-1);
             } else
             if(!memcmp(dir->name,"INITRD     ",11)) {
-                initrd_ptr=(uint8_t*)&_end+sec*512;
-                initrd_size=dir->size;
+                initrd.ptr=(uint8_t*)&_end+sec*512;
+                initrd.size=dir->size;
             }
             dir++;
         }
-        if(initrd_size==0) {
+        // if initrd not found, try architecture specific name
+        if(initrd.size==0) {
             dir=dir2;
             while(dir->name[0]!=0) {
                 if(!memcmp(dir->name,"AARCH64    ",11)) {
                     sec=((dir->cl+(dir->ch<<16)-2)*bpb->spc)+data_sec;
-                    initrd_ptr=(uint8_t*)&_end+sec*512;
-                    initrd_size=dir->size;
+                    initrd.ptr=(uint8_t*)&_end+sec*512;
+                    initrd.size=dir->size;
                     break;
                 }
                 dir++;
             }
         }
     } else {
-        initrd_ptr=(uint8_t*)&_end;
-        initrd_size=r;
+        // initrd is on the entire partition
+        initrd.ptr=(uint8_t*)&_end;
+        initrd.size=r;
     }
-    if(initrd_ptr==NULL || initrd_size==0) {
+    if(initrd.ptr==NULL || initrd.size==0) {
         puts("BOOTBOOT-PANIC: INITRD not found\n");
         goto error;
     }
 #if INITRD_DEBUG
-    uart_puts("Initrd at ");uart_hex((uint64_t)initrd_ptr,4);uart_putc(' ');uart_hex(initrd_size,4);uart_putc('\n');
+    uart_puts("Initrd at ");uart_hex((uint64_t)initrd.ptr,4);uart_putc(' ');uart_hex(initrd.size,4);uart_putc('\n');
 #endif
     // uncompress if it's compressed
-    if(initrd_ptr[0]==0x1F && initrd_ptr[1]==0x8B) {
+    if(initrd.ptr[0]==0x1F && initrd.ptr[1]==0x8B) {
         unsigned char *addr,f;
         volatile TINF_DATA d;
         DBG(" * Gzip compressed initrd\n");
         // skip gzip header
-        addr=initrd_ptr+2;
+        addr=initrd.ptr+2;
         if(*addr++!=8) goto gzerr;
         f=*addr++; addr+=6;
         if(f&4) { r=*addr++; r+=(*addr++ << 8); addr+=r; }
@@ -978,13 +977,13 @@ diskerr:
         if(f&16) { while(*addr++ != 0); }
         if(f&2) addr+=2;
         d.source = addr;
-        memcpy((void*)&d.destSize,initrd_ptr+initrd_size-4,4);
+        memcpy((void*)&d.destSize,initrd.ptr+initrd.size-4,4);
         // decompress
         d.bitcount = 0;
         d.bfinal = 0;
         d.btype = -1;
         d.curlen = 0;
-        d.dest = (unsigned char*)((uint64_t)(initrd_ptr+initrd_size+PAGESIZE-1)&~(PAGESIZE-1));
+        d.dest = (unsigned char*)((uint64_t)(initrd.ptr+initrd.size+PAGESIZE-1)&~(PAGESIZE-1));
         bootboot->initrd_ptr=(uint64_t)d.dest;
         bootboot->initrd_size=d.destSize;
 #if INITRD_DEBUG
@@ -998,8 +997,9 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
             goto error;
         }
     } else {
-        bootboot->initrd_ptr=(uint64_t)initrd_ptr;
-        bootboot->initrd_size=initrd_size;
+        // not compressed, use as-is
+        bootboot->initrd_ptr=(uint64_t)initrd.ptr;
+        bootboot->initrd_size=initrd.size;
     }
 #if INITRD_DEBUG
     uart_dump((void*)bootboot->initrd_ptr,64);
@@ -1009,13 +1009,12 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
 
     // if no config, locate it in uncompressed initrd
     if(1||*((uint8_t*)&__environment)==0) {
-        r=0;
-        while(ret.ptr==NULL && fsdrivers[r]!=NULL) {
-            ret=(*fsdrivers[r++])((unsigned char*)bootboot->initrd_ptr,cfgname);
+        r=0; env.ptr=NULL;
+        while(env.ptr==NULL && fsdrivers[r]!=NULL) {
+            env=(*fsdrivers[r++])((unsigned char*)bootboot->initrd_ptr,cfgname);
         }
-        if(ret.ptr!=NULL)
-            memcpy((void*)&__environment,(void*)(ret.ptr),ret.size<PAGESIZE?ret.size:PAGESIZE-1);
-        ret.ptr=NULL; ret.size=0;
+        if(env.ptr!=NULL)
+            memcpy((void*)&__environment,(void*)(env.ptr),env.size<PAGESIZE?env.size:PAGESIZE-1);
     }
 
     // parse config
@@ -1023,42 +1022,42 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
 
     // locate sys/core
     entrypoint=0;
-    r=0;
-    while(ret.ptr==NULL && fsdrivers[r]!=NULL) {
-        ret=(*fsdrivers[r++])((unsigned char*)bootboot->initrd_ptr,kernelname);
+    r=0; core.ptr=NULL;
+    while(core.ptr==NULL && fsdrivers[r]!=NULL) {
+        core=(*fsdrivers[r++])((unsigned char*)bootboot->initrd_ptr,kernelname);
     }
     if(kne!=NULL)
         *kne='\n';
     // scan for the first executable
-    if(ret.ptr==NULL || ret.size==0) {
-        ret.size=0;
+    if(core.ptr==NULL || core.size==0) {
+        core.size=0;
         r=bootboot->initrd_size;
-        ret.ptr=(uint8_t*)bootboot->initrd_ptr;
+        core.ptr=(uint8_t*)bootboot->initrd_ptr;
         while(r-->0) {
-            Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ret.ptr);
-            pe_hdr *pehdr=(pe_hdr*)(ret.ptr + ((mz_hdr*)(ret.ptr))->peaddr);
+            Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(core.ptr);
+            pe_hdr *pehdr=(pe_hdr*)(core.ptr + ((mz_hdr*)(core.ptr))->peaddr);
             if((!memcmp(ehdr->e_ident,ELFMAG,SELFMAG)||!memcmp(ehdr->e_ident,"OS/Z",4))&&
                 ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
                 ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
                 ehdr->e_machine==EM_AARCH64&&
                 ehdr->e_phnum>0){
-                    ret.size=1;
+                    core.size=1;
                     break;
                 }
             if(((mz_hdr*)(core.ptr))->magic==MZ_MAGIC && pehdr->magic == PE_MAGIC && 
                 pehdr->machine == IMAGE_FILE_MACHINE_ARM64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
-                    ret.size=1;
+                    core.size=1;
                     break;
                 }
-            ret.ptr++;
+            core.ptr++;
         }
     }
-    if(ret.ptr==NULL || ret.size==0) {
+    if(core.ptr==NULL || core.size==0) {
         puts("BOOTBOOT-PANIC: Kernel not found in initrd\n");
         goto error;
     } else {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(ret.ptr);
-        pe_hdr *pehdr=(pe_hdr*)(ret.ptr + ((mz_hdr*)(ret.ptr))->peaddr);
+        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(core.ptr);
+        pe_hdr *pehdr=(pe_hdr*)(core.ptr + ((mz_hdr*)(core.ptr))->peaddr);
         if((!memcmp(ehdr->e_ident,ELFMAG,SELFMAG)||!memcmp(ehdr->e_ident,"OS/Z",4))&&
             ehdr->e_ident[EI_CLASS]==ELFCLASS64&&
             ehdr->e_ident[EI_DATA]==ELFDATA2LSB&&
@@ -1068,8 +1067,7 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
                 Elf64_Phdr *phdr=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff);
                 for(r=0;r<ehdr->e_phnum;r++){
                     if(phdr->p_type==PT_LOAD && phdr->p_vaddr>>48==0xffff && phdr->p_offset==0) {
-                        ret.ptr = (uint8_t*)ehdr;
-                        ret.size = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
+                        core.size = ((phdr->p_filesz+PAGESIZE-1)/PAGESIZE)*PAGESIZE;
                         entrypoint=ehdr->e_entry;
                         break;
                     }
@@ -1079,23 +1077,23 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
         if(((mz_hdr*)(core.ptr))->magic==MZ_MAGIC && pehdr->magic == PE_MAGIC && 
             pehdr->machine == IMAGE_FILE_MACHINE_ARM64 && pehdr->file_type == PE_OPT_MAGIC_PE32PLUS) {
                 DBG(" * Parsing PE32+\n");
-                ret.size = (pehdr->entry_point-pehdr->code_base) + pehdr->text_size + pehdr->data_size;
+                core.size = (pehdr->entry_point-pehdr->code_base) + pehdr->text_size + pehdr->data_size;
                 entrypoint = pehdr->entry_point;
         }
     }
-    if(ret.size<2 || entrypoint==0) {
+    if(core.size<2 || entrypoint==0) {
         puts("BOOTBOOT-PANIC: Kernel is not a valid executable\n");
-//#if DEBUG
-        uart_dump((void*)ret.ptr,16);
-//#endif
+#if DEBUG
+        uart_dump((void*)core.ptr,16);
+#endif
         goto error;
     }
     // is core page aligned?
-    if((uint64_t)ret.ptr&(PAGESIZE-1)) {
-        memcpy((void*)(bootboot->initrd_ptr+bootboot->initrd_size), ret.ptr, ret.size);
-        ret.ptr=(uint8_t*)(bootboot->initrd_ptr+bootboot->initrd_size);
+    if((uint64_t)core.ptr&(PAGESIZE-1)) {
+        memcpy((void*)(bootboot->initrd_ptr+bootboot->initrd_size), core.ptr, core.size);
+        core.ptr=(uint8_t*)(bootboot->initrd_ptr+bootboot->initrd_size);
     }
-    ret.size = (ret.size+PAGESIZE-1)&~(PAGESIZE-1);
+    core.size = (core.size+PAGESIZE-1)&~(PAGESIZE-1);
 
     // get linear framebuffer if it's different than current
     DBG(" * Screen VideoCore\n");
@@ -1108,6 +1106,7 @@ viderr:
     }
 
     // create memory mapping
+    // TODO: create MMU translation tables in __paging
 
     // generate memory map to bootboot struct
     DBG(" * Memory Map\n");
@@ -1127,7 +1126,7 @@ viderr:
 
     // initrd is reserved (and add aligned core's area to it)
     r=bootboot->initrd_size;
-    if((uint64_t)ret.ptr==bootboot->initrd_ptr+r) r+=ret.size;
+    if((uint64_t)core.ptr==bootboot->initrd_ptr+r) r+=core.size;
     mmap->ptr=bootboot->initrd_ptr; mmap->size=r | MMAP_RESERVED;
     mmap++; bootboot->size+=sizeof(MMapEnt);
     r+=(uint32_t)bootboot->initrd_ptr;
