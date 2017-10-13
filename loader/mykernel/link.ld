@@ -7,6 +7,7 @@
  * @brief An example linker script for sample kernel
  *
  */
+
 CORE_ADDRESS = 0xffffffffffe00000;
 
 ENTRY(_start)
@@ -39,7 +40,7 @@ SECTIONS
         *(.data)
         . = ALIGN(4096);
     } :text
-    .bss (NOLOAD)
+    .bss (NOLOAD):
     {
         __bss_start = .;
         *(.bss .bbs.*)
