@@ -17,7 +17,6 @@
 #include <efiprot.h>
 #include <efigpt.h>
 // get BOOTBOOT specific stuff
-#define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
 #include "tinf.h"
 // get filesystem drivers for initrd

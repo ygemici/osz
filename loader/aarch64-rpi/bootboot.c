@@ -19,6 +19,9 @@
  */
 #define DEBUG 1
 
+#define NULL ((void*)0)
+#define PAGESIZE 4096
+
 /* we don't have stdint.h */
 typedef signed char         int8_t;
 typedef short int           int16_t;
@@ -29,18 +32,16 @@ typedef unsigned short int  uint16_t;
 typedef unsigned int        uint32_t;
 typedef unsigned long int   uint64_t;
 
-/* aligned buffers */
-extern uint8_t __mbr;
-// address of mailbox in memory
-extern uint32_t __mailbox;
-// address of bootboot struct in memory
-extern uint8_t __bootboot;
-// address of environment in memory
-extern uint8_t __environment;
-
 /* get BOOTBOOT structure */
-#define _BOOTBOOT_LOADER 1
 #include "../bootboot.h"
+
+/* aligned buffers */
+volatile uint32_t  __attribute__((aligned(16))) mbox[32];
+volatile uint8_t __attribute__((aligned(16))) __mbr[4096];
+/* we place these manually in linker script, gcc would otherwise waste a lotof memory */
+volatile uint8_t __attribute__((aligned(PAGESIZE))) __bootboot[PAGESIZE];
+volatile uint8_t __attribute__((aligned(PAGESIZE))) __environment[PAGESIZE];
+
 
 /*** ELF64 defines and structs ***/
 #define ELFMAG      "\177ELF"
@@ -112,9 +113,6 @@ typedef struct {
   uint32_t entry_point;   /* file offset of entry point */
   uint32_t code_base;     /* relative code addr in ram */
 } pe_hdr;
-
-#define NULL ((void*)0)
-#define PAGESIZE 4096
 
 /*** Raspberry Pi specific defines ***/
 #define MMIO_BASE       0x3F000000
@@ -236,6 +234,23 @@ uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
     return mbox_read(ch)==(uint32_t)((uint64_t)mbox) && mbox[1]==MBOX_RESPONSE;
 }
 
+/* string.h */
+uint32_t strlen(unsigned char *s) { uint32_t n=0; while(*s++) n++; return n; }
+void memcpy(void *dst, void *src, uint32_t n){uint8_t *a=dst,*b=src;while(n--) *a++=*b++; }
+int memcmp(void *s1, void *s2, uint32_t n){uint8_t *a=s1,*b=s2;while(n--){if(*a!=*b){return *a-*b;}a++;b++;} return 0; }
+/* other string functions */
+int atoi(unsigned char *c) { int r=0;while(*c>='0'&&*c<='9') {r*=10;r+=*c++-'0';} return r; }
+int oct2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=3;r+=*s++-'0';} return r; }
+int hex2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=4;
+    if(*s>='0' && *s<='9')r+=*s-'0';else if(*s>='A'&&*s<='F')r+=*s-'A'+10;s++;} return r; }
+
+#if DEBUG
+void puts(char *s);
+#define DBG(s) puts(s)
+#else
+#define DBG(s)
+#endif
+
 /* sdcard */
 #define EMMC_ARG2           ((volatile uint32_t*)(MMIO_BASE+0x00300000))
 #define EMMC_BLKSIZECNT     ((volatile uint32_t*)(MMIO_BASE+0x00300004))
@@ -256,16 +271,31 @@ uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
 #define EMMC_SLOTISR_VER    ((volatile uint32_t*)(MMIO_BASE+0x003000FC))
 
 // command flags
-#define CMD_IS_DATA         0x00200000
+#define CMD_NEED_APP        0x80000000
 #define CMD_RSPNS_48        0x00020000
-#define TM_DAT_DIR_CH       0x00000010
+#define CMD_ERRORS_MASK     0xfff9c004
+#define CMD_RCA_MASK        0xffff0000
 
 // COMMANDs
+#define CMD_GO_IDLE         0x00000000
+#define CMD_ALL_SEND_CID    0x02010000
+#define CMD_SEND_REL_ADDR   0x03020000
+#define CMD_CARD_SELECT     0x07030000
+#define CMD_SEND_IF_COND    0x08020000
+#define CMD_STOP_TRANS      0x0C030000
 #define CMD_READ_SINGLE     0x11220010
+#define CMD_READ_MULTI      0x12220032
+#define CMD_SET_BLOCKCNT    0x17020000
+#define CMD_APP_CMD         0x37000000
+#define CMD_SET_BUS_WIDTH   (0x06020000|CMD_NEED_APP)
+#define CMD_SEND_OP_COND    (0x29020000|CMD_NEED_APP)
+#define CMD_SEND_SCR        (0x33220010|CMD_NEED_APP)
 
 // STATUS register settings
+#define SR_READ_AVAILABLE   0x00000800
 #define SR_DAT_INHIBIT      0x00000002
 #define SR_CMD_INHIBIT      0x00000001
+#define SR_APP_CMD          0x00000020
 
 // INTERRUPT register settings
 #define INT_DATA_TIMEOUT    0x00100000
@@ -290,41 +320,45 @@ uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
 #define C1_CLK_STABLE       0x00000002
 #define C1_CLK_INTLEN       0x00000001
 
-#define SD_OK               0
+// SLOTISR_VER values
+#define HOST_SPEC_NUM       0x00ff0000
+#define HOST_SPEC_NUM_SHIFT 16
+#define HOST_SPEC_V3        2
+#define HOST_SPEC_V2        1
+#define HOST_SPEC_V1        0
+
+// SCR flads
+#define SCR_SD_BUS_WIDTH_4  0x00000400
+#define SCR_SUPP_SET_BLKCNT 0x02000000
+ 
+#define ACMD41_VOLTAGE      0x00ff8000
+#define ACMD41_CMD_COMPLETE 0x80000000
+#define ACMD41_CMD_CCS      0x40000000
+#define ACMD41_ARG_HC       0x51ff8000
+
+#define SD_OK                0
 #define SD_TIMEOUT          -1
 #define SD_ERROR            -2
 
-uint8_t sd_init=0;
+uint32_t sd_scr[2], sd_ocr, sd_rca, sd_err, sd_hv;
 
 /**
- * Wait for data
+ * Wait for data or command ready
  */
-int sdWaitData()
+int sd_status(uint32_t mask)
 {
-uart_puts("sdWaitData\n");
-    int cnt = 500000;
-    while((*EMMC_STATUS & SR_DAT_INHIBIT) && !(*EMMC_INTERRUPT & INT_ERROR_MASK) && cnt--) delaym(1);
-uart_puts(" cnt ");uart_hex(cnt,4);uart_putc(' ');
-uart_puts(" EMMC_STATUS ");uart_hex(*EMMC_STATUS,4);uart_putc(' ');
-uart_puts(" EMMC_INT ");uart_hex(*EMMC_INTERRUPT,4);uart_putc('\n');
-    if(cnt <= 0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) return SD_ERROR;
-    return SD_OK;
+    int cnt = 500000; while((*EMMC_STATUS & mask) && !(*EMMC_INTERRUPT & INT_ERROR_MASK) && cnt--) delaym(1);
+    return (cnt <= 0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) ? SD_ERROR : SD_OK;
 }
 
 /**
  * Wait for interrupt
  */
-int sdWaitInt( uint32_t mask )
+int sd_int(uint32_t mask)
 {
-uart_puts("sdWaitInt ");
-uart_hex(mask,4);
-uart_putc('\n');
-    int cnt = 1000000;
     uint32_t r, m=mask | INT_ERROR_MASK;
-    while(!(*EMMC_INTERRUPT & m) && cnt--) delaym(1);
+    int cnt = 1000000; while(!(*EMMC_INTERRUPT & m) && cnt--) delaym(1);
     r=*EMMC_INTERRUPT;
-uart_puts(" cnt ");uart_hex(cnt,4);uart_putc(' ');
-uart_puts(" EMMC_INT ");uart_hex(r,4);uart_putc('\n');
     if(cnt<=0 || (r & INT_CMD_TIMEOUT) || (r & INT_DATA_TIMEOUT) ) { *EMMC_INTERRUPT=r; return SD_TIMEOUT; } else
     if(r & INT_ERROR_MASK) { *EMMC_INTERRUPT=r; return SD_ERROR; }
     *EMMC_INTERRUPT=mask;
@@ -334,143 +368,180 @@ uart_puts(" EMMC_INT ");uart_hex(r,4);uart_putc('\n');
 /**
  * Send a command
  */
-int sdCmd(uint32_t code, uint32_t arg)
+int sd_cmd(uint32_t code, uint32_t arg)
 {
-uart_puts("sdCmd ");
-uart_hex(code,4);
-uart_putc(' ');
-uart_hex(arg,4);
-uart_putc('\n');
-    // Check for status indicating a command in progress.
-    int r,cnt = 1000000;
-    while((*EMMC_STATUS & SR_CMD_INHIBIT) && !(*EMMC_INTERRUPT & INT_ERROR_MASK) && cnt--) delaym(1);
-uart_puts(" cnt ");uart_hex(cnt,4);uart_putc(' ');
-uart_puts(" EMMC_STATUS ");uart_hex(*EMMC_STATUS,4);uart_putc(' ');
-uart_puts(" EMMC_INT ");uart_hex(*EMMC_INTERRUPT,4);uart_putc('\n');
-    if(cnt<=0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) return SD_ERROR;
-    
-    *EMMC_INTERRUPT=*EMMC_INTERRUPT;
-    *EMMC_ARG1=arg;
-    *EMMC_CMDTM=code;
-    if((r=sdWaitInt(INT_CMD_DONE))) return r;
-    return *EMMC_RESP0;
-}
-
-int sdInit()
-{
-    uint32_t r;
-    int cnt;
-    sd_init=0;
-uart_puts("sdInit\n");
-    // GPIO_CD
-    r=*GPFSEL4; r&=~(7<<(7*3)); *GPFSEL4=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<15); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-    r=*GPHEN1; r|=1<<15; *GPHEN1=r;
-
-    // GPIO_CLK
-    r=*GPFSEL4; r&=~(7<<(8*3)); r|=(7<<(8*3)); *GPFSEL4=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<16); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-    // GPIO_CMD
-    r=*GPFSEL4; r&=~(7<<(9*3)); r|=(7<<(9*3)); *GPFSEL4=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<17); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-    // GPIO_DAT0
-    r=*GPFSEL5; r&=~(7<<(0*3)); r|=(7<<(0*3)); *GPFSEL5=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<18); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-    
-    // GPIO_DAT1
-    r=*GPFSEL5; r&=~(7<<(1*3)); r|=(7<<(1*3)); *GPFSEL5=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<19); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-    // GPIO_DAT2
-    r=*GPFSEL5; r&=~(7<<(2*3)); r|=(7<<(2*3)); *GPFSEL5=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<20); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-    // GPIO_DAT3
-    r=*GPFSEL5; r&=~(7<<(3*3)); r|=(7<<(3*3)); *GPFSEL5=r;
-    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<21); delay(150); *GPPUD=0; *GPPUDCLK1=0;
-
-uart_puts("GPFSEL4,5 ");
-uart_hex(*GPFSEL4,4);
-uart_putc(' ');
-uart_hex(*GPFSEL5,4);
-uart_putc('\n');
-
-    // clear ejected flag
-    *GPEDS1 |= ~(1 << (47-32));
-
-    *EMMC_INTERRUPT=*EMMC_INTERRUPT;
-    // reset
-    *EMMC_CONTROL0 = 0; // C0_SPI_MODE_EN;
-    *EMMC_CONTROL1 |= C1_SRST_HC;
-    delaym(10);
-    cnt = 10000;
-    while((*EMMC_CONTROL1 & C1_SRST_HC) && cnt--) delaym(10);
-    if(cnt<=0) return 0;
-
-    *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
-    delaym(10);
-
-    *EMMC_INT_EN   = 0xffffffff;
-    *EMMC_INT_MASK = 0xffffffff;
-
-    sd_init=1;
-    return 1;
+    int r=0;
+    sd_err=SD_OK;
+    if(code&CMD_NEED_APP) {
+        r=sd_cmd(CMD_APP_CMD|(sd_rca?CMD_RSPNS_48:0),sd_rca);
+        if(sd_rca && !r) { DBG("BOOTBOOT-ERROR: failed to send SD APP command\n"); sd_err=SD_ERROR;return 0;}
+        code &= ~CMD_NEED_APP;
+    }
+    if(sd_status(SR_CMD_INHIBIT)) { DBG("BOOTBOOT-ERROR: EMMC busy\n"); sd_err= SD_TIMEOUT;return 0;}
+#if SD_DEBUG
+    uart_puts("EMMC: Sending command ");uart_hex(code,4);uart_puts(" arg ");uart_hex(arg,4);uart_putc('\n');
+#endif
+    *EMMC_INTERRUPT=*EMMC_INTERRUPT; *EMMC_ARG1=arg; *EMMC_CMDTM=code;
+    if(code==CMD_SEND_OP_COND) delaym(1000); else 
+    if(code==CMD_SEND_IF_COND || code==CMD_APP_CMD) delaym(100);
+    if((r=sd_int(INT_CMD_DONE))) {DBG("BOOTBOOT-ERROR: failed to send EMMC command\n");sd_err=r;return 0;}
+    r=*EMMC_RESP0;
+    if(code==CMD_GO_IDLE || code==CMD_APP_CMD) return 0; else
+    if(code==(CMD_APP_CMD|CMD_RSPNS_48)) return r&SR_APP_CMD; else
+    if(code==CMD_SEND_OP_COND) return r; else
+    if(code==CMD_SEND_IF_COND) return r==arg? SD_OK : SD_ERROR; else
+    if(code==CMD_ALL_SEND_CID) {r|=*EMMC_RESP3; r|=*EMMC_RESP2; r|=*EMMC_RESP1; return r; } else
+    if(code==CMD_SEND_REL_ADDR) {
+        sd_err=(((r&0x1fff))|((r&0x2000)<<6)|((r&0x4000)<<8)|((r&0x8000)<<8))&CMD_ERRORS_MASK;
+        return r&CMD_RCA_MASK;
+    }
+    return r&CMD_ERRORS_MASK;
+    // make gcc happy
+    return 0;
 }
 
 /**
  * read a block from sd card and return the number of bytes read
  * returns 0 on error.
  */
-int readblock(uint64_t lba, uint8_t *buffer)
+int sd_readblock(uint64_t lba, uint8_t *buffer, uint32_t num)
 {
+#if SD_DEBUG
+    uart_puts("sd_readblock lba ");uart_hex(lba,4);uart_puts(" num ");uart_hex(num,4);uart_putc('\n');
+#endif
+    if(sd_status(SR_DAT_INHIBIT)) {sd_err=SD_TIMEOUT; return 0;}
+    int transferCmd = ( num == 1 ? CMD_READ_SINGLE : CMD_READ_MULTI);
     int r;
-    uint32_t *buf=(uint32_t*)buffer;
-uart_puts("readblock ");
-uart_hex(lba,4);
-uart_putc(' ');
-uart_hex((uint32_t)((uint64_t)buffer),4);
-uart_putc('\n');
-
-    if(!sd_init || !sdInit()) return 0;
-uart_puts("GPLEV1 ");
-uart_hex(*GPLEV1,4);
-uart_puts(" GPEDS1 ");
-uart_hex(*GPEDS1,4);
-uart_putc('\n');
-    // sd card absent or ejected?
-//    if(!(*GPLEV1 & (1 << (47-32))) || (*GPEDS1 & (1 << (47-32)))) { sd_init=0; return 0; }
-//uart_puts(" no eject\n");
-    if(!sdWaitData()) return 0;
-uart_puts(" after waitdata\n");
-    *EMMC_BLKSIZECNT = (1 << 16) | 512;
-    if((r=sdCmd(CMD_READ_SINGLE,lba))) return 0;
-uart_puts(" after sdCmd\n");
-    if((r=sdWaitInt(INT_READ_RDY))) return 0;
-uart_puts(" after waitInt\n");
-    for(r=0;r<128;r++) buf[r] = *EMMC_DATA;
-uart_puts(" read ok\n");
-    return 512;
+    if( num > 1 && (sd_scr[0] & SCR_SUPP_SET_BLKCNT)) {
+    sd_cmd(CMD_SET_BLOCKCNT,num);
+    if(sd_err) return 0;
+    }
+    *EMMC_BLKSIZECNT = (num << 16) | 512;
+    sd_cmd(transferCmd,lba);
+    if(sd_err) return 0;
+    
+    int c = 0, d;
+    uint32_t *buf=(uint32_t *)buffer;
+    while( c < num ) {
+        if((r=sd_int(INT_READ_RDY))){DBG("BOOTBOOT-ERROR: Timeout waiting for ready to read");sd_err=r;return 0;}
+        for(d=0;d<128;d++) buf[d] = *EMMC_DATA;
+        c++; buf+=128;
+    }
+    
+    if( num > 1 && !(sd_scr[0] & SCR_SUPP_SET_BLKCNT)) sd_cmd(CMD_STOP_TRANS,0);
+    return sd_err!=SD_OK || c!=num? 0 : num*512;
 }
 
-/* string.h */
-uint32_t strlen(unsigned char *s) { uint32_t n=0; while(*s++) n++; return n; }
-void memcpy(void *dst, void *src, uint32_t n){uint8_t *a=dst,*b=src;while(n--) *a++=*b++; }
-int memcmp(void *s1, void *s2, uint32_t n){uint8_t *a=s1,*b=s2;while(n--){if(*a!=*b){return *a-*b;}a++;b++;} return 0; }
-/* other string functions */
-int atoi(unsigned char *c) { int r=0;while(*c>='0'&&*c<='9') {r*=10;r+=*c++-'0';} return r; }
-int oct2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=3;r+=*s++-'0';} return r; }
-int hex2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=4;
-    if(*s>='0' && *s<='9')r+=*s-'0';else if(*s>='A'&&*s<='F')r+=*s-'A'+10;s++;} return r; }
+/**
+ * set SD clock to frequency in Hz
+ */
+int sd_clk(uint32_t f)
+{
+    uint32_t d,c=41666666/f,x,s=32,h=0;
+    int cnt = 100000;
+    while((*EMMC_STATUS & (SR_CMD_INHIBIT|SR_DAT_INHIBIT)) && cnt--) delaym(1);
+    if(cnt<=0) {
+        DBG("BOOTBOOT-ERROR: timeout waiting for inhibit flag\n");
+        return SD_ERROR;
+    }
 
-#if DEBUG
-void puts(char *s);
-#define DBG(s) puts(s)
-#else
-#define DBG(s)
+    *EMMC_CONTROL1 &= ~C1_CLK_EN; delaym(10);
+    x=c-1; if(!x) s=0; else {
+        if(!(x & 0xffff0000u)) { x <<= 16; s -= 16; }
+        if(!(x & 0xff000000u)) { x <<= 8;  s -= 8; }
+        if(!(x & 0xf0000000u)) { x <<= 4;  s -= 4; }
+        if(!(x & 0xc0000000u)) { x <<= 2;  s -= 2; }
+        if(!(x & 0x80000000u)) { x <<= 1;  s -= 1; }
+        if(s>0) s--;
+        if(s>7) s=7;
+    }
+    if(sd_hv>HOST_SPEC_V2) d=c; else d=(1<<s);
+    if(d<=2) {d=2;s=0;}
+#if SD_DEBUG
+    uart_puts("sd_clk divisor ");uart_hex(d,4);uart_puts(", shift ");uart_hex(s,4);uart_putc('\n');
 #endif
+    if(sd_hv>HOST_SPEC_V2) h=(d&0x300)>>2;
+    d=(((d&0x0ff)<<8)|h);
+    *EMMC_CONTROL1=(*EMMC_CONTROL1&0xffff003f)|d; delaym(10);
+    *EMMC_CONTROL1 |= C1_CLK_EN; delaym(10);
+    cnt=10000; while(!(*EMMC_CONTROL1 & C1_CLK_STABLE) && cnt--) delaym(10);
+    if(cnt<=0) {
+        DBG("BOOTBOOT-ERROR: failed to get stable clock\n");
+        return SD_ERROR;
+    }
+    return SD_OK;
+}
+
+/**
+ * initialize EMMC to read SDHC card
+ */
+int sd_init()
+{
+    int r,cnt;
+    sd_hv = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
+    // Reset the card.
+    *EMMC_CONTROL0 = 0; *EMMC_CONTROL1 |= C1_SRST_HC;
+    cnt=10000; do{delaym(10);} while( (*EMMC_CONTROL1 & C1_SRST_HC) && cnt-- );
+    if(cnt<=0) {
+        DBG("BOOTBOOT-ERROR: failed to reset EMMC\n");
+        return SD_ERROR;
+    }
+    *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
+    delaym(10);
+    // Set clock to setup frequency.
+    if((r=sd_clk(400000))) return r;
+    *EMMC_INT_EN   = 0xffffffff;
+    *EMMC_INT_MASK = 0xffffffff;
+    sd_scr[0]=sd_scr[1]=sd_rca=sd_err=0;
+    sd_cmd(CMD_GO_IDLE,0);
+    if(sd_err) return sd_err;
+
+    sd_cmd(CMD_SEND_IF_COND,0x000001AA);
+    if(!sd_err) {
+        cnt=6; r=0; while(!(r&ACMD41_CMD_COMPLETE) && cnt--) {
+            delay(400);
+            r=sd_cmd(CMD_SEND_OP_COND,ACMD41_ARG_HC);
+            if(sd_err!=SD_TIMEOUT && sd_err!=SD_OK ) {
+                DBG("BOOTBOOT-ERROR: EMMC ACMD41 returned error\n");
+                return sd_err;
+            }
+        }
+        if(!(r&ACMD41_CMD_COMPLETE) || !cnt ) return SD_TIMEOUT;
+        if(!(r&ACMD41_VOLTAGE) || !(r&ACMD41_CMD_CCS)) return SD_ERROR;
+    } else
+        return sd_err;
+
+    sd_cmd(CMD_ALL_SEND_CID,0);
+
+    sd_rca = sd_cmd(CMD_SEND_REL_ADDR,0);
+    if(sd_err) return sd_err;
+
+    if((r=sd_clk(25000000))) return r;
+
+    sd_cmd(CMD_CARD_SELECT,sd_rca);
+    if(sd_err) return sd_err;
+
+    if(sd_status(SR_DAT_INHIBIT)) return SD_TIMEOUT;
+    *EMMC_BLKSIZECNT = (1<<16) | 8;
+    sd_cmd(CMD_SEND_SCR,0);
+    if(sd_err) return sd_err;
+    if(sd_int(INT_READ_RDY)) return SD_TIMEOUT;
+
+    r=0; cnt=100000; while(r<2 && cnt) {
+        if( *EMMC_STATUS & SR_READ_AVAILABLE )
+            sd_scr[r++] = *EMMC_DATA;
+        else
+            delaym(1);
+    }
+    if(r!=2) return SD_TIMEOUT;
+    if(sd_scr[0] & SCR_SD_BUS_WIDTH_4) {
+        sd_cmd(CMD_SET_BUS_WIDTH,sd_rca|2);
+        if(sd_err) return sd_err;
+        *EMMC_CONTROL0 |= C0_HCTL_DWITDH;
+    }
+    return SD_OK;
+}
+
 
 #include "tinf.h"
 // get filesystem drivers for initrd
@@ -517,7 +588,6 @@ char *cfgname="sys/config";
 int GetLFB(uint32_t width, uint32_t height)
 {
     font_t *font = (font_t*)&_binary_font_psf_start;
-    volatile uint32_t *mbox = &__mailbox;
 
     //query natural width, height if not given
     if(width==0 && height==0) {
@@ -694,13 +764,36 @@ int bootboot_main(void)
     if(!GetLFB(0, 0)) goto viderr;
     puts("Booting OS...\n");
 
-    sdInit();
-    r=readblock(0,&__mbr);
+    /* initialize SDHC card reader in EMMC */
+    // GPIO_CD
+    r=*GPFSEL4; r&=~(7<<(7*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<15); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+    r=*GPHEN1; r|=1<<15; *GPHEN1=r;
+
+    // GPIO_CLK, GPIO_CMD
+    r=*GPFSEL4; r|=(7<<(8*3))|(7<<(9*3)); *GPFSEL4=r;
+    *GPPUD=2; delay(150); *GPPUDCLK1=(1<<16)|(1<<17); delay(150); *GPPUD=0; *GPPUDCLK1=0;
+
+    // GPIO_DAT0, GPIO_DAT1, GPIO_DAT2, GPIO_DAT3
+    r=*GPFSEL5; r|=(7<<(0*3)) | (7<<(1*3)) | (7<<(2*3)) | (7<<(3*3)); *GPFSEL5=r;
+    *GPPUD=2; delay(150); 
+    *GPPUDCLK1=(1<<18) | (1<<19) | (1<<20) | (1<<21);
+    delay(150); *GPPUD=0; *GPPUDCLK1=0;
+    
+    if(sd_init()) {
+        puts("BOOTBOOT-PANIC: Unable to initialize SDHC card\n");
+        goto error;
+    }
+    
+    r=sd_readblock(0,(unsigned char*)&__mbr,8);
+    //r=readblock(0,&__mbr);
     uart_puts("MBR read ret ");
     uart_hex(r,4);
     uart_putc('\n');
-    if(r)
-        uart_dump((void*)&__mbr,32);
+//    if(r)
+        uart_dump((void*)&__mbr,36);
+    sd_readblock(1,(unsigned char*)&__mbr,1);
+        uart_dump((void*)&__mbr,36);
 
     // load BOOTBOOT/CONFIG
 

@@ -8,11 +8,7 @@ SECTIONS
         __bss_start = ALIGN(16);
         *(.bss .bss.*)
         *(COMMON)
-        /* buffers with alignment requirements */
-        __mbr = ALIGN(16);
-        . += 512;
-        __mailbox = ALIGN(16);
-        . += 256;
+        /* place these manually, gcc would otherwise waste a lot of memory */
         . = ALIGN(4096);
         __bootboot = .;
         . += 4096;

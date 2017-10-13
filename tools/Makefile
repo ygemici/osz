@@ -67,9 +67,6 @@ endif
 	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
 	@sudo /usr/bin/umount -f /dev/loop* 2>/dev/null || true
 	@rmdir ../bin/tmp
-ifneq ($(ARCH),x86_64)
-	@./mkfs.o $(ESPFILE) link INITRD BOOTBOOT/AARCH64
-endif
 
 initrd:
 ifeq ($(NOINITRD),1)
