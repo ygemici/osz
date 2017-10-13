@@ -45,6 +45,10 @@ initial ramdisk. This is ideal for hobby OSes and microkernels. The advantage it
 can be splitted up into several files and yet they will be loaded together
 as if it were a monolitic kernel. And you can use your own file system for the initrd.
 
+Note: BOOTBOOT is not a boot manager, it's a boot loader protocol. If you want an interactive boot menu, you should
+integrate it *before* a BOOTBOOT compatible loader is called. Like GRUB chainloading it (or loading bootboot.bin as a
+kernel) or adding bootboot.efi to UEFI Boot Manager's menu.
+
 License
 -------
 
@@ -119,9 +123,10 @@ The screen is properly set up with a 32 bit linear framebuffer, mapped at the ne
 and aspect ratio too). That's more than enough for [Ultra HD 4K](https://en.wikipedia.org/wiki/4K_resolution) (3840 x 2160).
 
 The main information [bootboot structure](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h) is mapped
-at `bootboot` symbol (level 2 only). Your initrd (with the additional kernel modules and servers) is enitrely in the memory,
-and you can locate it using this struct's *initrd_ptr* and *initrd_size* members. The physical address of the framebuffer
-can be found in the *fb_ptr* field. The *boot time* and a platform independent *memory map* are also provided.
+at `bootboot` symbol (level 2 only). It consist of a fixed 128 bytes long header followed by various number of fixed
+records. Your initrd (with the additional kernel modules and servers) is enitrely in the memory, and you can locate it
+using this struct's *initrd_ptr* and *initrd_size* members. The physical address of the framebuffer can be found in
+the *fb_ptr* field. The *boot time* and a platform independent *memory map* are also provided.
 
 The configuration string (or command line if you like) is mapped at `environment` symbol (level 2 only).
 

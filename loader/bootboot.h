@@ -39,8 +39,8 @@ extern "C" {
 #define FB_BGRA   3
 
 // mmap entry, type is stored in least significant tetrad (half byte) of size
-// this means size described in 16 bytes units (not a problem, most modern
-// firmware reports memory in 4096 bytes units anyway.
+// this means size described in 16 byte units (not a problem, most modern
+// firmware report memory in pages, 4096 byte units anyway).
 typedef struct {
   uint64_t   ptr;
   uint64_t   size;
@@ -60,7 +60,7 @@ typedef struct {
 
 typedef struct {
   uint8_t    magic[4];    // 'BOOT', first 72 bytes are platform independent
-  uint32_t   size;        // length of bootboot structure
+  uint32_t   size;        // length of bootboot structure, minimum 128
 
   uint8_t    protocol;    // 1, static addresses, see PROTOCOL_* above
   uint8_t    loader_type; // see LOADER_* above
@@ -69,7 +69,7 @@ typedef struct {
   uint16_t   fb_type;     // framebuffer type, see FB_* above
 
   uint32_t   pagesize;    // 4096
-  uint32_t   bspid;       // Local APIC id of BSP
+  uint32_t   bspid;       // Bootsrap processor ID (Local APIC Id on x86_64)
 
   uint8_t    datetime[8]; // in BCD yyyymmddhhiiss
 
@@ -94,13 +94,13 @@ typedef struct {
       uint64_t unused2;
     } x86_64;
     struct {
+      uint64_t acpi_ptr;
       uint64_t mmio_ptr;
       uint64_t unused0;
       uint64_t unused1;
       uint64_t unused2;
       uint64_t unused3;
       uint64_t unused4;
-      uint64_t unused5;
     } aarch64;
   };
 
@@ -108,7 +108,7 @@ typedef struct {
   MMapEnt    mmap;
   /* use like this: 
    * MMapEnt *mmap_ent = &bootboot.mmap; mmap_ent++; 
-   * until you reach the end of the page */
+   * until you reach bootboot->size */
 } __attribute__((packed)) BOOTBOOT;
 
 
