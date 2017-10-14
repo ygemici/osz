@@ -9,14 +9,14 @@ SECTIONS
         *(.bss .bss.*)
         *(COMMON)
         d = ALIGN(16);
-        /* place these manually, gcc would otherwise waste a lot of memory */
+        /* place these manually, gcc would otherwise waste lots of memory */
         . = ALIGN(4096);
         __bootboot = .;
         . += 4096;
         __environment = .;
         . += 4096;
         __paging = .;
-        . += 65536;
+        . += (5*4096);
         __bss_end = .;
     }
     _end = .;

@@ -911,7 +911,7 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         }
 
         // create page tables
-        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 23, (EFI_PHYSICAL_ADDRESS*)&paging);
+        uefi_call_wrapper(BS->AllocatePages, 4, 0, 2, 24, (EFI_PHYSICAL_ADDRESS*)&paging);
         if (paging == NULL) {
             return report(EFI_OUT_OF_RESOURCES,L"AllocatePages");
         }
@@ -931,7 +931,7 @@ gzerr:          return report(EFI_COMPROMISED_DATA,L"Unable to uncompress");
         paging[3*512+1]=(UINT64)(env.ptr)+1;
         for(i=0;i<(core.size/PAGESIZE);i++)
             paging[3*512+2+i]=(UINT64)((UINT8 *)core.ptr+i*PAGESIZE+1);
-        paging[3*512+511]=(UINT64)((UINT8 *)paging+22*PAGESIZE+1);
+        paging[3*512+511]=(UINT64)((UINT8 *)paging+23*PAGESIZE+1);  // core stack
         //identity mapping
         //2M PDPE
         for(i=0;i<16;i++)
