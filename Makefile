@@ -168,4 +168,4 @@ testv: bin/disk.vdi
 testr: bin/osZ-latest-aarch64-rpi.dd
 	@echo "TEST"
 	@echo
-	qemu-system-aarch64 -name OS/Z -sdl -m 32 -d quest_errors -machine raspi3 -cpu cortex-a53 -kernel loader/kernel8.img -drive file=bin/osZ-latest-$(ARCH)-$(PLATFORM).dd,if=sd,format=raw -serial mon:stdio
+	qemu-system-aarch64 -name OS/Z -sdl -machine raspi3 -kernel loader/kernel8.img -drive file=bin/osZ-latest-$(ARCH)-$(PLATFORM).dd,if=sd,format=raw -serial mon:stdio

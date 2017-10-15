@@ -8,6 +8,9 @@
  *
  */
 #define DEBUG 1
+//#define SD_DEBUG DEBUG
+//#define INITRD_DEBUG DEBUG
+#define MEM_DEBUG DEBUG
 
 #define NULL ((void*)0)
 #define PAGESIZE 4096
@@ -157,20 +160,23 @@ typedef struct {
 #define AUX_MU_CNTL     ((volatile uint32_t*)(MMIO_BASE+0x00215060))
 #define AUX_MU_STAT     ((volatile uint32_t*)(MMIO_BASE+0x00215064))
 #define AUX_MU_BAUD     ((volatile uint32_t*)(MMIO_BASE+0x00215068))
+// qemu hack to see serial output
+#define UART0_DR        ((volatile uint32_t*)(MMIO_BASE+0x00201000))
+#define UART0_CR        ((volatile uint32_t*)(MMIO_BASE+0x00201030))
 
 /* timing stuff */
 uint64_t getmicro(void){uint32_t h=*STMR_H,l=*STMR_L;if(h!=*STMR_H){h=*STMR_H;l=*STMR_L;} return(((uint64_t)h)<<32)|l;}
 /* delay cnt clockcycles */
 void delay(uint32_t cnt) { while(cnt--) { asm volatile("nop"); } }
 /* delay cnt microsec */
-void delaym(uint32_t cnt) { uint64_t t=getmicro();cnt+=t;while(getmicro()<cnt); }
+void delaym(uint32_t cnt) {uint64_t t=getmicro();cnt+=t;while(getmicro()<cnt); }
 
 /* UART stuff */
-void uart_send(uint32_t c) { do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20)); *AUX_MU_IO=c; }
+void uart_send(uint32_t c) { do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20)); *AUX_MU_IO=c; *UART0_DR=c; }
+char uart_getc() {char r;do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));r=(char)(*AUX_MU_IO);return r=='\r'?'\n':r;}
 void uart_hex(uint64_t d,int c) { uint32_t n;c<<=3;c-=4;for(;c>=0;c-=4){n=(d>>c)&0xF;n+=n>9?0x37:0x30;uart_send(n);} }
 void uart_putc(char c) { if(c=='\n') uart_send((uint32_t)'\r'); uart_send((uint32_t)c); }
 void uart_puts(char *s) { while(*s) uart_putc(*s++); }
-char uart_getc() {char r;do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));r=(char)(*AUX_MU_IO);return r=='\r'?'\n':r;}
 void uart_dump(void *ptr,uint32_t l) {
     uint64_t a,b;
     unsigned char c;
@@ -493,6 +499,9 @@ int sd_init()
     delay(150); *GPPUD=0; *GPPUDCLK1=0;
     
     sd_hv = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
+#if SD_DEBUG
+    uart_puts("EMMC: GPIO set up\n");
+#endif
     // Reset the card.
     *EMMC_CONTROL0 = 0; *EMMC_CONTROL1 |= C1_SRST_HC;
     cnt=10000; do{delaym(10);} while( (*EMMC_CONTROL1 & C1_SRST_HC) && cnt-- );
@@ -500,6 +509,9 @@ int sd_init()
         DBG("BOOTBOOT-ERROR: failed to reset EMMC\n");
         return SD_ERROR;
     }
+#if SD_DEBUG
+    uart_puts("EMMC: reset OK\n");
+#endif
     *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
     delaym(10);
     // Set clock to setup frequency.
@@ -841,7 +853,8 @@ int bootboot_main(void)
     MMapEnt *mmap;
 
     /* initialize UART */
-    *AUX_ENABLE |=1;       // enable mini uart
+    *UART0_CR = 0;         // turn off UART0 or real hw. qemu doesn't care
+    *AUX_ENABLE |=1;       // enable UART1, mini uart
     *AUX_MU_IER = 0;
     *AUX_MU_CNTL = 0;
     *AUX_MU_LCR = 3;       // 8 bits
@@ -871,6 +884,12 @@ int bootboot_main(void)
     // set up a framebuffer so that we can write on screen
     if(!GetLFB(0, 0)) goto viderr;
     puts("Booting OS...\n");
+
+    /* check for system timer presence */
+    if(getmicro()==0) {
+        puts("BOOTBOOT-PANIC: Hardware not supported\n");
+        goto error;
+    }
 
     /* initialize SDHC card reader in EMMC */
     if(sd_init()) {
@@ -1153,7 +1172,7 @@ viderr:
     // MMIO area
     mmap->ptr=MMIO_BASE; mmap->size=((uint64_t)0x40000000-MMIO_BASE) | MMAP_MMIO;
     mmap++; bootboot->size+=sizeof(MMapEnt);
-#if DEBUG
+#if MEM_DEBUG
     /* dump memory map */
     mmap=(MMapEnt *)&bootboot->mmap;
     for(r=128;r<bootboot->size;r+=sizeof(MMapEnt)) {
@@ -1197,7 +1216,7 @@ viderr:
         paging[2*512+2+r]=(uint64_t)((uint8_t *)core.ptr+(uint64_t)r*PAGESIZE)|0b11|(1<<10);
     paging[2*512+511]=(uint64_t)((uint8_t*)&__paging+4*PAGESIZE)|0b11|(1<<10)/*|(1L<<54)|(1L<<53)*/; // core stack
 
-#if DEBUG
+#if MEM_DEBUG
     /* dump page translation tables */
     uart_puts("\nTTBR0\n L2 ");
     uart_hex((uint64_t)&__paging,8);
@@ -1245,7 +1264,7 @@ viderr:
     asm volatile ("msr ttbr1_el1, %0" : : "r" ((uint64_t)&__paging+PAGESIZE));
     asm volatile ("msr tcr_el1, %0; isb" : : "r" (reg));
     asm volatile ("msr sctlr_el1, %0; isb" : : "r" (1));
-#if DEBUG
+#if MEM_DEBUG
     uart_puts("\nMAIR_EL1 "); asm volatile ("mrs %0, mair_el1" :  "=r" (reg)); uart_hex(reg,8);
     uart_puts(" TTBR0 ");     asm volatile ("mrs %0, ttbr0_el1" : "=r" (reg)); uart_hex(reg,8);
     uart_puts(" TTBR1 ");     asm volatile ("mrs %0, ttbr1_el1" : "=r" (reg)); uart_hex(reg,8);
