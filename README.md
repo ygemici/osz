@@ -20,7 +20,7 @@ Features
 
  - [GNU toolchain](https://github.com/bztsrc/osz/tree/master/docs/compile.md)
  - Microkernel architecture with an effective [messaging system](https://github.com/bztsrc/osz/tree/master/docs/messages.md)
- - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from BIOS or from UEFI.
+ - Single disk image for [booting](https://github.com/bztsrc/osz/tree/master/docs/boot.md) from BIOS or from UEFI or on Raspberry Pi 3.
  - [Higher half kernel](https://github.com/bztsrc/osz/tree/master/docs/memory.md) mapping, full 64 bit support
  - It's [filesystem](https://github.com/bztsrc/osz/tree/master/docs/fs.md) can handle YottaBytes of data (unimagineable as of writing)
  - ELF64 object format support
