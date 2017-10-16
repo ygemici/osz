@@ -3,7 +3,7 @@ OS/Z Porting to new platforms
 
 The hardware abstraction layer is divided into one plus three layers:
 
- * [loader](https://github.com/bztsrc/osz/blob/master/loader) (not stricly part of the OS)
+ * [loader](https://github.com/bztsrc/osz/blob/master/loader) (not part of the OS)
  * [core](https://github.com/bztsrc/osz/blob/master/src/core)
  * [device drivers](https://github.com/bztsrc/osz/blob/master/docs/drivers.md)
  * [libc](https://github.com/bztsrc/osz/blob/master/src/lib/libc)
@@ -11,7 +11,7 @@ The hardware abstraction layer is divided into one plus three layers:
 Porting loader
 --------------
 
-In order to boot OS/Z, a [BOOTBOOT](https://github.com/bztsrc/osz/blob/master/loader) compliant loader must exists for
+In order to boot OS/Z, a [BOOTBOOT](https://github.com/bztsrc/bootboot) compliant loader must exists for
 the platform. The loader is not strictly part of the OS, as it can load kernels other than OS/Z `core`, and also from
 `core`'s perspective the loader abstracts the boot firmware away with a [common interface](https://github.com/bztsrc/osz/blob/master/loader/bootboot.h).
 

@@ -4,10 +4,10 @@ OS/Z Boot Process
 Loader
 ------
 
-OS/Z uses the [BOOTBOOT](https://github.com/bztsrc/osz/tree/master/loader) protocol to get the system running.
-The compatible loader is loaded by the firmware as the last step of POST. On every platforms, the loader initializes
-the hardware (including the framebuffer), loads initrd and locates `sys/core` inside. When found, it maps that at the
-top of the address space (-2M..0) and passes control to it.
+OS/Z uses the [BOOTBOOT](https://github.com/bztsrc/bootboot) protocol to get the system running.
+The compatible [loader](https://github.com/bztsrc/osz/tree/master/loader) is loaded by the firmware as the last step of POST.
+On every platforms, the loader initializes the hardware (including the framebuffer), loads initrd and locates `sys/core` inside.
+When found, it maps that at the top of the address space (-2M..0) and passes control to it.
 
 Core
 ----
