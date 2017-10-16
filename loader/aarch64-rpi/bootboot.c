@@ -7,10 +7,10 @@
  * @brief Boot loader for the Raspberry Pi 3+ ARMv8
  *
  */
-#define DEBUG 1
+#define DEBUG 0
 //#define SD_DEBUG DEBUG
 //#define INITRD_DEBUG DEBUG
-#define MEM_DEBUG DEBUG
+//#define MEM_DEBUG DEBUG
 
 #define NULL ((void*)0)
 #define PAGESIZE 4096
@@ -1055,7 +1055,7 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
     bootboot->initrd_ptr=(uint64_t)&_end;
     // round up to page size
     bootboot->initrd_size=(initrd.size+PAGESIZE-1)&~(PAGESIZE-1);
-#if DEBUG
+#if INITRD_DEBUG
     // dump initrd in memory
     uart_dump((void*)bootboot->initrd_ptr,1);
 #endif
@@ -1320,7 +1320,7 @@ viderr:
 
     // jump to core's _start
 #if DEBUG
-    uart_puts("Executing kernel entry point ");
+    uart_puts(" * Entry point ");
     uart_hex(entrypoint,8);
     uart_putc('\n');
 #endif
