@@ -32,18 +32,18 @@ typedef unsigned long int   uint64_t;
 
 /* import function from boot.S */
 extern void jumptokernel(uint64_t pc);
-extern uint64_t getttbr1();
-extern uint64_t gettcr();
-extern uint64_t getsctlr();
 
 /* aligned buffers */
 volatile uint32_t  __attribute__((aligned(16))) mbox[32];
 /* we place these manually in linker script, gcc would otherwise waste lots of memory */
 volatile uint8_t __attribute__((aligned(PAGESIZE))) __bootboot[PAGESIZE];
 volatile uint8_t __attribute__((aligned(PAGESIZE))) __environment[PAGESIZE];
-volatile uint8_t __attribute__((aligned(PAGESIZE))) __paging[5*PAGESIZE];
+volatile uint8_t __attribute__((aligned(PAGESIZE))) __paging[9*PAGESIZE];
 #define __diskbuf __paging
 extern volatile uint8_t _end;
+
+/* forward definitions */
+void puts(char *s);
 
 /*** ELF64 defines and structs ***/
 #define ELFMAG      "\177ELF"
@@ -117,9 +117,12 @@ typedef struct {
 } pe_hdr;
 
 /*** Raspberry Pi specific defines ***/
+#define CLOCKHZ         1000000
+
 #define MMIO_BASE       0x3F000000
 #define STMR_L          ((volatile uint32_t*)(MMIO_BASE+0x00003004))
 #define STMR_H          ((volatile uint32_t*)(MMIO_BASE+0x00003008))
+#define STMR_C3         ((volatile uint32_t*)(MMIO_BASE+0x00003018))
 
 #define ARM_TIMER_CTL   ((volatile uint32_t*)(MMIO_BASE+0x0000B408))
 #define ARM_TIMER_CNT   ((volatile uint32_t*)(MMIO_BASE+0x0000B420))
@@ -195,7 +198,27 @@ void uart_dump(void *ptr,uint32_t l) {
         uart_putc('\n');
     }
 }
-
+void uart_exc(uint64_t idx, uint64_t esr, uint64_t elr, uint64_t spsr, uint64_t far)
+{
+    uint32_t r;
+    puts("\nBOOTBOOT-EXCEPTION");
+    uart_puts(" #");
+    uart_hex(idx,1);
+    uart_puts(":\n  ESR_EL1 ");
+    uart_hex(esr,8);
+    uart_puts(" ELR_EL1 ");
+    uart_hex(elr,8);
+    uart_puts("\n SPSR_EL1 ");
+    uart_hex(spsr,8);
+    uart_puts(" FAR_EL1 ");
+    uart_hex(far,8);
+    uart_putc('\n');
+    while(r!='\n' && r!=' ') r=uart_getc();
+    uart_puts("\n\n"); delaym(1000);
+    *PM_WATCHDOG = PM_WDOG_MAGIC | 1;
+    *PM_RTSC = PM_WDOG_MAGIC | PM_RTSC_FULLRST;
+    while(1);
+}
 #define VIDEOCORE_MBOX  (MMIO_BASE+0x0000B880)
 #define MBOX_READ       ((volatile uint32_t*)(VIDEOCORE_MBOX+0x0))
 #define MBOX_POLL       ((volatile uint32_t*)(VIDEOCORE_MBOX+0x10))
@@ -250,7 +273,6 @@ int hex2bin(unsigned char *s, int n){ int r=0;while(n-->0){r<<=4;
     if(*s>='0' && *s<='9')r+=*s-'0';else if(*s>='A'&&*s<='F')r+=*s-'A'+10;s++;} return r; }
 
 #if DEBUG
-void puts(char *s);
 #define DBG(s) puts(s)
 #else
 #define DBG(s)
@@ -844,12 +866,12 @@ void ParseEnvironment(uint8_t *env)
 /**
  * bootboot entry point
  */
-int bootboot_main(void)
+int bootboot_main(uint64_t hcl)
 {
-    uint32_t np,sp,r;
+    uint32_t np,sp,r,pa,mp;
     efipart_t *part;
     volatile bpb_t *bpb;
-    uint64_t entrypoint, *paging, reg;
+    uint64_t entrypoint=0, *paging, reg;
     MMapEnt *mmap;
 
     /* initialize UART */
@@ -873,7 +895,7 @@ int bootboot_main(void)
     *GPPUDCLK0 = 0;        // flush GPIO setup
     *AUX_MU_CNTL = 3;      // enable Tx, Rx
 
-    // create bootboot structure
+    /* create bootboot structure */
     bootboot = (BOOTBOOT*)&__bootboot;
     memcpy((void*)&bootboot->magic,BOOTBOOT_MAGIC,4);
     bootboot->protocol = PROTOCOL_STATIC;
@@ -885,9 +907,15 @@ int bootboot_main(void)
     if(!GetLFB(0, 0)) goto viderr;
     puts("Booting OS...\n");
 
-    /* check for system timer presence */
-    if(getmicro()==0) {
+    /* check for system timer presence and 4k granule and at least 36 bits address */
+    asm volatile ("mrs %0, id_aa64mmfr0_el1" : "=r" (reg));
+    pa=reg&0xF;
+    if(getmicro()==0 || reg&(0xF<<28) || pa<1) {
         puts("BOOTBOOT-PANIC: Hardware not supported\n");
+        uart_puts("ID_AA64MMFR0_EL1 ");
+        uart_hex(reg,8);
+        uart_puts(" SYSTIMER ");
+        uart_puts(getmicro()==0?"none\n":"ok\n");
         goto error;
     }
 
@@ -896,7 +924,7 @@ int bootboot_main(void)
         puts("BOOTBOOT-PANIC: Unable to initialize SDHC card\n");
         goto error;
     }
-    
+
     /* read and parse GPT table */
     r=sd_readblock(1,(unsigned char*)&__diskbuf,1);
     if(r==0 || memcmp((void*)&__diskbuf, "EFI PART", 8)) {
@@ -1007,8 +1035,8 @@ diskerr:
         d.btype = -1;
         d.curlen = 0;
         d.dest = (unsigned char*)((uint64_t)(initrd.ptr+initrd.size+PAGESIZE-1)&~(PAGESIZE-1));
-        bootboot->initrd_ptr=(uint64_t)d.dest;
-        bootboot->initrd_size=d.destSize;
+        initrd.ptr=(uint8_t*)d.dest;
+        initrd.size=d.destSize;
 #if INITRD_DEBUG
         uart_puts("Inflating to ");uart_hex((uint64_t)d.dest,4);uart_putc(' ');uart_hex(d.destSize,4);uart_putc('\n');
 #endif
@@ -1019,17 +1047,18 @@ diskerr:
 gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
             goto error;
         }
-    } else {
-        // not compressed, use as-is
-        bootboot->initrd_ptr=(uint64_t)initrd.ptr;
-        bootboot->initrd_size=initrd.size;
     }
+    // copy the initrd to it's final position, making it properly aligned
+    if((uint64_t)initrd.ptr!=(uint64_t)&_end) {
+        memcpy((void*)&_end, initrd.ptr, initrd.size);
+    }
+    bootboot->initrd_ptr=(uint64_t)&_end;
+    // round up to page size
+    bootboot->initrd_size=(initrd.size+PAGESIZE-1)&~(PAGESIZE-1);
 #if DEBUG
-    /* dump initrd in memory */
+    // dump initrd in memory
     uart_dump((void*)bootboot->initrd_ptr,1);
 #endif
-    // round up to page size
-    bootboot->initrd_size=(bootboot->initrd_size+PAGESIZE-1)&~(PAGESIZE-1);
 
     // if no config, locate it in uncompressed initrd
     if(1||*((uint8_t*)&__environment)==0) {
@@ -1054,6 +1083,7 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
         *kne='\n';
     // scan for the first executable
     if(core.ptr==NULL || core.size==0) {
+        puts(" * Autodetecting kernel\n");
         core.size=0;
         r=bootboot->initrd_size;
         core.ptr=(uint8_t*)bootboot->initrd_ptr;
@@ -1108,7 +1138,7 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
     if(core.size<2 || entrypoint==0) {
         puts("BOOTBOOT-PANIC: Kernel is not a valid executable\n");
 #if DEBUG
-        /* dump executable */
+        // dump executable
         uart_dump((void*)core.ptr,16);
 #endif
         goto error;
@@ -1120,17 +1150,7 @@ gzerr:      puts("BOOTBOOT-PANIC: Unable to uncompress\n");
     }
     core.size = (core.size+PAGESIZE-1)&~(PAGESIZE-1);
 
-    // get linear framebuffer if it's different than current
-    DBG(" * Screen VideoCore\n");
-    if(reqwidth!=bootboot->fb_width || reqheight!=bootboot->fb_height) {
-        if(!GetLFB(reqwidth, reqheight)) {
-viderr:
-            puts("BOOTBOOT-PANIC: VideoCore error, no framebuffer\n");
-            goto error;
-        }
-    }
-
-    // generate memory map to bootboot struct
+    /* generate memory map to bootboot struct */
     DBG(" * Memory Map\n");
     mmap=(MMapEnt *)&bootboot->mmap;
 
@@ -1165,13 +1185,15 @@ viderr:
         // on failure (should never happen) assume 64Mb memory max
         mbox[6]=64*1024*1024;
 
-    // everything after initrd is free
-    mmap->ptr=r; mmap->size=(mbox[6]-r) | MMAP_FREE;
+    // everything after initrd to the top of memory is free
+    mp=mbox[6]-r;
+    mmap->ptr=r; mmap->size=mp | MMAP_FREE;
     mmap++; bootboot->size+=sizeof(MMapEnt);
 
     // MMIO area
     mmap->ptr=MMIO_BASE; mmap->size=((uint64_t)0x40000000-MMIO_BASE) | MMAP_MMIO;
     mmap++; bootboot->size+=sizeof(MMapEnt);
+
 #if MEM_DEBUG
     /* dump memory map */
     mmap=(MMapEnt *)&bootboot->mmap;
@@ -1195,26 +1217,41 @@ viderr:
     }
 #endif
 
-    // create MMU translation tables in __paging
+    /* get linear framebuffer if requested resolution different than current */
+    DBG(" * Screen VideoCore\n");
+    if(reqwidth!=bootboot->fb_width || reqheight!=bootboot->fb_height) {
+        if(!GetLFB(reqwidth, reqheight)) {
+viderr:
+            puts("BOOTBOOT-PANIC: VideoCore error, no framebuffer\n");
+            goto error;
+        }
+    }
+
+    /* create MMU translation tables in __paging */
     paging=(uint64_t*)&__paging;
     // LLBR0, identity L2
     paging[0]=(uint64_t)((uint8_t*)&__paging+3*PAGESIZE)|0b11|(1<<10); //AF=1,Block=1,Present=1
     // identity L2 2M blocks
+    mp>>=21;
+    np=MMIO_BASE>>21;
     for(r=1;r<512;r++)
-        paging[r]=(uint64_t)(((uint64_t)r<<21))|0b01|(1<<10);
+        paging[r]=(uint64_t)(((uint64_t)r<<21))|0b01|(1<<10)|(r>=np?1<<2:0);
     // identity L3
     for(r=0;r<512;r++)
-        paging[3*512+r]=(uint64_t)((r-1)*PAGESIZE)|0b11|(1<<10);
+        paging[3*512+r]=(uint64_t)(r*PAGESIZE)|0b11|(1<<10);
     // LLBR1, core L2
-    for(r=0;r<31;r++)
-        paging[512+480+r]=(uint64_t)(((uint8_t *)(bootboot->fb_ptr)+((uint64_t)r<<21)))|0b01|(1<<10); //map framebuffer
+    for(r=0;r<4;r++)
+        paging[512+480+r]=(uint64_t)((uint8_t*)&__paging+(4+r)*PAGESIZE)|0b11|(1<<10); //map framebuffer
     paging[512+511]=(uint64_t)((uint8_t*)&__paging+2*PAGESIZE)|0b11|(1<<10);// pointer to core L3
     // core L3
-    paging[2*512+0]=(uint64_t)((uint8_t*)&__bootboot)|0b11|(1<<10)/*|(1L<<54)|(1L<<53)*/;  // p, b, AF, UXN, PXN
-    paging[2*512+1]=(uint64_t)((uint8_t*)&__environment)|0b11|(1<<10)/*|(1L<<54)|(1L<<53)*/;
-    for(r=0;r<(core.size/PAGESIZE);r++)
+    paging[2*512+0]=(uint64_t)((uint8_t*)&__bootboot)|0b11|(1<<10);  // p, b, AF
+    paging[2*512+1]=(uint64_t)((uint8_t*)&__environment)|0b11|(1<<10);
+    for(r=0;r<(core.size/PAGESIZE)+1;r++)
         paging[2*512+2+r]=(uint64_t)((uint8_t *)core.ptr+(uint64_t)r*PAGESIZE)|0b11|(1<<10);
-    paging[2*512+511]=(uint64_t)((uint8_t*)&__paging+4*PAGESIZE)|0b11|(1<<10)/*|(1L<<54)|(1L<<53)*/; // core stack
+    paging[2*512+511]=(uint64_t)((uint8_t*)&__paging+8*PAGESIZE)|0b11|(1<<10); // core stack
+    // core L3 (lfb)
+    for(r=0;r<512;r++)
+        paging[4*512+r]=(uint64_t)((uint8_t*)bootboot->fb_ptr+r*PAGESIZE)|0b11|(1<<10); //map framebuffer
 
 #if MEM_DEBUG
     /* dump page translation tables */
@@ -1222,6 +1259,10 @@ viderr:
     uart_hex((uint64_t)&__paging,8);
     uart_puts("\n  ");
     for(r=0;r<4;r++) { uart_hex(paging[r],8); uart_putc(' '); }
+    uart_puts("...\n  ... ");
+    for(r=mp-4;r<mp;r++) { uart_hex(paging[r],8); uart_putc(' '); }
+    uart_puts("...\n  ... ");
+    for(r=np;r<np+4;r++) { uart_hex(paging[r],8); uart_putc(' '); }
     uart_puts("...\n  ... ");
     for(r=508;r<512;r++) { uart_hex(paging[r],8); uart_putc(' '); }
     uart_puts("\n L3 "); uart_hex((uint64_t)&paging[3*512],8); uart_puts("\n  ");
@@ -1247,8 +1288,8 @@ viderr:
         (0x00 <<16);     // coherent, nGnRnE
     asm volatile ("msr mair_el1, %0" : : "r" (reg));
     reg=(0b00LL << 37) | // TBI=0, no tagging
-        (0b000LL<< 32) | // IPS=32 bits
-        (0b00LL << 30) | // TG1=4k
+        ((uint64_t)pa << 32) | // IPS=autodetected
+        (0b10LL << 30) | // TG1=4k
         (0b11LL << 28) | // SH1=3 inner
         (0b11LL << 26) | // ORGN1=3 write back
         (0b11LL << 24) | // IRGN1=3 write back
@@ -1263,33 +1304,27 @@ viderr:
     asm volatile ("msr ttbr0_el1, %0" : : "r" ((uint64_t)&__paging));
     asm volatile ("msr ttbr1_el1, %0" : : "r" ((uint64_t)&__paging+PAGESIZE));
     asm volatile ("msr tcr_el1, %0; isb" : : "r" (reg));
-    asm volatile ("msr sctlr_el1, %0; isb" : : "r" (1));
-#if MEM_DEBUG
-    uart_puts("\nMAIR_EL1 "); asm volatile ("mrs %0, mair_el1" :  "=r" (reg)); uart_hex(reg,8);
-    uart_puts(" TTBR0 ");     asm volatile ("mrs %0, ttbr0_el1" : "=r" (reg)); uart_hex(reg,8);
-    uart_puts(" TTBR1 ");     asm volatile ("mrs %0, ttbr1_el1" : "=r" (reg)); uart_hex(reg,8);
-    uart_puts(" TCR_EL1 ");   asm volatile ("mrs %0, tcr_el1" :   "=r" (reg)); uart_hex(reg,8);
-    uart_puts(" SCTLR_EL1 "); asm volatile ("mrs %0, sctlr_el1" : "=r" (reg)); uart_hex(reg,8);
-/*
-    uart_putc('\n');
-    uart_dump((void*)&__bootboot,1);
-    uart_dump((void*)0xFFFFFFFFFFE00000,1);
-    uart_putc('\n');
-    uart_dump((void*)&__environment,1);
-    uart_dump((void*)0xFFFFFFFFFFE01000,1);
-*/
-    uart_puts("\n\n");
-    uart_dump((void*)core.ptr,1);
-    uart_dump((void*)0xFFFFFFFFFFE02000,1);
-#endif
+    asm volatile ("mrs %0, sctlr_el1" : "=r" (reg));
+    // set mandatory reserved bits
+    reg|=0xC00800;
+    reg&=~( (1<<25) |   // clear EE, little endian translation tables
+            (1<<24) |   // clear E0E
+            (1<<19) |   // clear WXN
+            (1<<12) |   // clear I, no instruction cache
+            (1<<4) |    // clear SA0
+            (1<<3) |    // clear SA
+            (1<<2) |    // clear C, no cache at all
+            (1<<1));    // clear A, no aligment check
+    reg|=(1<<0)|(1<<12)|(1<<2); // set M enable MMU, I instruction cache, C data cache
+    asm volatile ("msr sctlr_el1, %0; isb" : : "r" (reg));
 
     // jump to core's _start
 #if DEBUG
-    uart_puts("Kernel entry point ");
+    uart_puts("Executing kernel entry point ");
     uart_hex(entrypoint,8);
     uart_putc('\n');
 #endif
-//    jumptokernel(entrypoint);
+    jumptokernel(entrypoint);
 
     // Wait until Enter or Space pressed, then reboot
 error:

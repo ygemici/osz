@@ -16,7 +16,7 @@ SECTIONS
         __environment = .;
         . += 4096;
         __paging = .;
-        . += (5*4096);
+        . += (9*4096);
         __bss_end = .;
     }
     _end = .;
