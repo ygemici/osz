@@ -53,15 +53,16 @@ ifneq ("$(wildcard ../loader/bootboot.efi)","")
 	$(O)cp ../loader/bootboot.efi ../bin/ESP/BOOTMGR.EFI || true
 endif
 else
-ifneq ("$(wildcard ../loader/kernel8.img)","")
-	$(O)cp ../loader/kernel8.img ../bin/ESP/ || true
-ifneq ("$(wildcard ../loader/aarch64-rpi/start.elf)","")
-	$(O)cp ../loader/aarch64-rpi/LIC* ../loader/aarch64-rpi/*.bin ../loader/aarch64-rpi/*.elf ../loader/aarch64-rpi/*.dat ../bin/ESP/ || true
+ifneq ("$(wildcard ../loader/bootboot.img)","")
+	$(O)cp ../loader/bootboot.img ../bin/ESP/kernel8.img || true
+ifneq ("$(wildcard ../../bootboot/aarch64-rpi/start.elf)","")
+	$(O)cp ../../bootboot/aarch64-rpi/LIC* ../../bootboot/aarch64-rpi/*.bin ../../bootboot/aarch64-rpi/*.elf ../../bootboot/aarch64-rpi/*.dat ../bin/ESP/ || true
 endif
 endif
 endif
 	@dd if=/dev/zero of=$(ESPFILE) bs=1024 count=$(ESPSIZE) >/dev/null 2>/dev/null
-	$(O)mkfs.vfat -F 16 -n "EFI System" $(ESPFILE) 2>/dev/null >/dev/null
+	$(O)mkfs.vfat -F 16 -n "EFI System" $(ESPFILE) 
+	#2>/dev/null >/dev/null
 	@mkdir ../bin/tmp 2>/dev/null || true
 	@sudo /usr/bin/mount -o loop,user $(ESPFILE) ../bin/tmp
 	@sudo /usr/bin/cp -r ../bin/ESP/* ../bin/tmp/ || true
