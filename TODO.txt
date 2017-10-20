@@ -1,22 +1,24 @@
  --- Error fixes ---
+./core2/msg.c:263:            /* FIXME: naive implementation, no checks */
 ./src/drivers/fs/fsz/main.c:196:                // FIXME: block end reached, load next block from sdblk and alter dirent pointer
 ./src/fs/main.c:341:                //FIXME: no sprintf yet
-./src/core/msg.c:263:            /* FIXME: naive implementation, no checks */
 ./src/lib/libc/stdio.c:43:    // FIXME: use fprintf(stderr,...
  --- Features ---
 ./docs/howto4-rescueshell.md:20:TODO: write howto
+./core2/x86_64/libk.S:238:// TODO: use SSE2 copy
+./core2/x86_64/disasm.c:1216:            //TODO: esc
+./core2/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers
+./core2/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers
+./core2/msg.c:98:    /* TODO: use mq_buffstart properly as a circular buffer */
+./core2/msg.c:202:                // TODO: save memory dump to fs
+./core2/sched.c:164:    /* TODO: memory -> swap (except tcb) */
+./core2/sched.c:180:        /* TODO: swap -> memory */
 ./src/init/services.c:36:    // TODO: load and start user services
 ./src/drivers/fs/fsz/main.c:142:            // TODO: extents
 ./src/drivers/fs/fsz/main.c:235:    // TODO: if loc->creat, then create dir or path
 ./src/fs/vfs.c:575:                // TODO: handle up directory
 ./src/fs/vfs.c:578:                // TODO: detect file system in image
-./src/core/x86_64/libk.S:238:// TODO: use SSE2 copy
-./src/core/x86_64/disasm.c:1216:            //TODO: esc
-./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers
-./src/core/x86_64/ibmpc/pci.c:66:// TODO: enumerate bus and load drivers
-./src/core/msg.c:98:    /* TODO: use mq_buffstart properly as a circular buffer */
-./src/core/msg.c:202:                // TODO: save memory dump to fs
-./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
-./src/core/sched.c:180:        /* TODO: swap -> memory */
+./src/core/x86_64/libk.S:236:// TODO: use SSE2 copy
+./src/core/x86_64/ibmpc/platform.c:120:// TODO: enumerate bus and load drivers
 ./src/lib/libc/x86_64/crt0.S:43:    /* TODO: call ctors */
 ./src/lib/libc/x86_64/stdlib.S:352:    /* TODO: getentropy */

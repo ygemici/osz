@@ -34,6 +34,7 @@
 #include <limits.h>
 #ifndef _AS
 #include <stdint.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include "../../loader/bootboot.h"
 #endif
@@ -56,16 +57,6 @@
 #define TICKS_LO  2     //+16 overall ticks (jiffies, 128 bit)
 #define TICKS_HI  3     //+24
 
-/* system tables */
-#define systable_acpi_idx 0
-#define systable_smbi_idx 1
-#define systable_efi_idx 2
-#define systable_mp_idx 3
-#define systable_dsdt_idx 4
-#define systable_apic_idx 5
-#define systable_ioapic_idx 6
-#define systable_hpet_idx 7
-
 #include "msg.h"
 #include "env.h"
 
@@ -73,7 +64,6 @@
 #define LOCK_PMM    (1<<0)
 
 #ifndef _AS
-#include "mcb.h"
 #include "pmm.h"
 
 // import virtual addresses from linker
@@ -87,8 +77,8 @@ extern uint8_t tmpalarm;              // temporarily mapped tcb for next alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
 extern uint8_t __bss_start;           // start of bss segment
-extern ccb_t ccb;                     // CPU Control Block, mapped per core
-extern multicore_t mcb;               // MultiCore Control Block, mapped globally for all cores
+//extern ccb_t ccb;                     // CPU Control Block, mapped per core
+//extern multicore_t mcb;               // MultiCore Control Block, mapped globally for all cores
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
@@ -108,6 +98,8 @@ typedef struct {
     char *sym;
 } rela_t;
 
+// common data
+extern uint32_t numcores;
 extern uint64_t srand[4];
 extern uint64_t ticks[4];
 extern uint64_t systables[8];
@@ -121,14 +113,13 @@ extern void klockacquire(int bit);
 extern void klockrelease(int bit);
 
 // ----- Console -----
-/** wait for a key by polling keyboard */
-extern uint64_t kwaitkey();
-
 /** Initialize console printf for debugging and panicing */
 extern void kprintf_init();
 
 /** Set default colors and move cursor home */
 extern void kprintf_reset();
+extern void kprintf_fg(uint32_t color);
+extern void kprintf_bg(uint32_t color);
 
 /** fade the screen and reset cursor */
 extern void kprintf_fade();
@@ -147,6 +138,7 @@ extern void kprintf_poweroff();
 extern void kprintf_reboot();
 
 // ----- Platform -----
+extern uint64_t platform_waitkey(); // wait for a key by polling keyboard
 extern void platform_env();         // called by env_init()
 extern void platform_detect();      // called by sys_init() before isr_init()
 extern void platform_enumerate();   // called by sys_init()

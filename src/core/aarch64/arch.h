@@ -25,30 +25,24 @@
  * @brief Architecture dependent libk headers (for the core)
  */
 
-#include <errno.h>
 #include <limits.h>
 #ifndef _AS
 #include <stdint.h>
 #include <sys/types.h>
 #endif
-#include <syscall.h>
 #include "tcb.h"
+/*
 #include "ccb.h"
 #include "isr.h"
+*/
 #include "../core.h"
+
+/* system tables */
+#define systable_acpi_idx 0
+#define systable_mmio_idx 1
 
 #define task_map(m)
 #define breakpoint
-#define dataseg __attribute__ ((section (".data")))
-
-/* we don't have libc's stdarg */
-#ifndef _AS
-typedef unsigned char *valist;
-#define vastart(list, param) (list = (((valist)&param) + sizeof(void*)*6))
-// does anybody know why do we need *8 here? Empirically correct
-#define vastart_sprintf(list, param) (list = (((valist)&param) + sizeof(void*)*8))
-#define vaarg(list, type)    (*(type *)((list += sizeof(void*)) - sizeof(void*)))
-#endif
 
 /* VMM access bits */
 #define PG_CORE 0b00011

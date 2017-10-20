@@ -92,12 +92,14 @@ unsigned char *platform_parse(unsigned char *env)
  */
 void platform_timer()
 {
+/*
     if(clocksource==TMR_RTC) {
         rtc_init();
     } else {
         clocksource=TMR_PIT;
         pit_init();
     }
+*/
 }
 
 /**
@@ -107,7 +109,7 @@ void platform_detect()
 {
     // things needed for isr_init()
     // for MultiCore, use acpi platform
-    mcb.numcores=1;
+    numcores=1;
 }
 
 /**
@@ -116,7 +118,7 @@ void platform_detect()
 void platform_enumerate()
 {
 // TODO: enumerate bus and load drivers
-    pci_init();
+//    pci_init();
 }
 
 /**

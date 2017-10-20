@@ -28,23 +28,10 @@
 #ifndef _STDARG_H_
 #define _STDARG_H_ 1
 
-#include <sys/platform.h>
-
 #ifndef _AS
-typedef void *va_list;
-
-#ifdef __builtin_va_start
+typedef __builtin_va_list va_list;
 #define va_start(list, param) __builtin_va_start(list, param)
-#else
-#define va_start(list, param) __platform_va_start(list, param)
-#endif
-
-#ifdef __builtin_va_arg
 #define va_arg(list, type)    __builtin_va_arg(list, type)
-#else
-#define va_arg(list, type)    __platform_va_arg(list, type)
-#endif
-
 #endif
 
 #endif /* stdarg.h */

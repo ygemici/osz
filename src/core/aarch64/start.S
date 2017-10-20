@@ -25,6 +25,8 @@
  * @brief Kernel entry point
  */
 
+#include "arch.h"
+
 .section .text
 .global _start
 
@@ -32,3 +34,23 @@
  *                     OS/Z Loader entry point                        *
  **********************************************************************/
 _start:
+/* setup stack frame */
+    mov     sp, #-16
+    /* initialize console so that we can report errors and stats */
+    bl      kprintf_init
+#if DEBUG
+    bl      dbg_init
+    /* clear debug status */
+#endif
+
+    /* init entropy */
+/* jump to C function main() in 64 bit code segment */
+    bl      main
+
+    /* feature not supported */
+1:  ldr     x0, =nocpu
+    b       kpanic
+
+/* placed in text intentionally, it's rodata. */
+nocpu:
+.asciz "CPU not supported"

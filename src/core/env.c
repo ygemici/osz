@@ -28,17 +28,16 @@
 #include <arch.h>
 
 /*** parsed values ***/
-dataseg uint64_t nrphymax;
-dataseg uint64_t nrmqmax;
-dataseg uint64_t nrlogmax;
-dataseg uint64_t clocksource;
-dataseg uint64_t debug;
-dataseg uint64_t display;
-dataseg uint64_t quantum;
-dataseg uint8_t syslog;
-dataseg uint8_t networking;
-dataseg uint8_t sound;
-dataseg uint8_t rescueshell;
+uint64_t nrphymax;
+uint64_t nrmqmax;
+uint64_t nrlogmax;
+uint64_t clocksource;
+uint64_t debug;
+uint64_t display;
+uint64_t quantum;
+uint8_t syslog;
+uint8_t networking;
+uint8_t sound;
 
 /*** for overriding default or autodetected values ***/
 // platform specific variables

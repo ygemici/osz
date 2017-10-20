@@ -32,20 +32,17 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <syscall.h>
-/* only for user applications */
-#ifndef _OSZ_CORE_H
-# include <sys/platform.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <stdarg.h>
-# include <string.h>
-# include <syslog.h>
-# include <sound.h>
-# include <inet.h>
-# include <ui.h>
-# include <init.h>
-#endif
+#include <sys/platform.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <sound.h>
+#include <inet.h>
+#include <ui.h>
+#include <init.h>
 
 #endif /* osZ.h */

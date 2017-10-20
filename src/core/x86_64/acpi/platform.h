@@ -22,7 +22,7 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Interrupt Controller and Timer definitions for the platform
+ * @brief Platform specific definitions
  */
 
 #define ISR_CTRL CTRL_APIC

@@ -25,26 +25,27 @@
  * @brief Core, boot environment
  *
  *   Memory map
+ *        -96M MMIO on Raspberry Pi             (0xFFFFFFFFFA000000)
  *        -64M framebuffer for kprintf          (0xFFFFFFFFFC000000)
  *         -2M core      bootboot[1] struct     (0xFFFFFFFFFFE00000)
  *         -2M + 1page   environment[2]         (0xFFFFFFFFFFE01000)
- *         -2M + 2page.. core text segment v    (0xFFFFFFFFFFE02000)
+ *         -2M + 2page.. core text segment      (0xFFFFFFFFFFE02000)
  *         -2M + Xpage.. core bss          v    (0xFFFFFFFFFFExxxxx)
  *         ..0           core boot stack   ^    (0x0000000000000000)
 
  *       0-16G user      RAM identity mapped[3] (0x0000000000000000)
  *
- *   [1] see loader/bootboot.h
+ *   [1] see https://github.com/bztsrc/bootboot/blob/master/bootboot.h
  *   [2] see sys/config and env.c. Plain ascii key=value pairs,
  *       separated by newline characters.
  *   [3] when main() calls sys_enable(), user task will be mapped
- *       instead into 0 - 2^56 and shared memory in -2^56 - -64M.
+ *       instead into 0 - 2^56 and shared memory in -2^56 - -96M.
  */
 
 #include <arch.h>
 
 /* OS version string */
-dataseg char osver[] =
+char osver[] =
     OSZ_NAME " " OSZ_VER " " OSZ_ARCH "-" OSZ_PLATFORM " (build " OSZ_BUILD ")\n"
     "Use is subject to license terms. Copyright 2017 bzt (bztsrc@github), CC-by-nc-sa\n\n";
 
@@ -62,16 +63,16 @@ void main()
     env_init();
     // initialize Physical Memory Manager, required by new task creation and syslog
     pmm_init();
-
+/*
     // initialize the system, "idle" task and device driver tasks
     sys_init();
     // initialize "FS" task, special service_init(SRV_FS, "sys/fs")
     fs_init();
-
+*/
     /*** step 2: communication ***/
     // initialize "UI" task to handle user input / output
     // special service_init(SRV_UI, "sys/ui")
-    ui_init();
+//    ui_init();
 
     // other means of communication
 /*
@@ -90,6 +91,7 @@ void main()
 */
 
     /*** step 3: stand up and prosper. ***/
+/*
 #if DEBUG
     service_init(SRV_init, debug&DBG_TESTS? "sys/bin/test" : "sys/init");
 #else
@@ -99,10 +101,11 @@ void main()
     // through device driver's initialization routines. Each in different
     // task, scheduler will choose them one by one and...
     sys_enable();
-
+*/
     /*** step 4: go to dreamless sleep. ***/
     // ...we should never return here. Instead exiting init will poweroff
     // the machine as the last step in the shutdown procedure. But just in
     // case of any unwanted return, we say good bye here too.
     kprintf_poweroff();
+
 }

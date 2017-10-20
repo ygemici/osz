@@ -5,7 +5,10 @@ TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 LIBS =
 
-CFLAGS = -Wall -fpic -ffreestanding -fPIC
+CFLAGS = -Wall -fpic -ffreestanding -fPIC -fno-stack-protector -nostdinc
+ifeq ($(DEBUG),1)
+CFLAGS += -DDEBUG=1
+endif
 
 all: $(OBJS) ok
 
@@ -14,11 +17,11 @@ ok:
 	@true
 
 %.o: %.S
-	@echo "  src		$<"
+	@#echo "  src		$<"
 	@$(CC) -I../../../../etc/include -I../../../core/$(ARCH) $(OPT) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	@echo "  src		$<"
+	@#echo "  src		$<"
 	@$(CC) -I../../../../etc/include $(OPT) $(CFLAGS) -c $< -o ../$@
 
 clean:

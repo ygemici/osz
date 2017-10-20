@@ -29,18 +29,17 @@
 
 /* get addresses from linker script */
 extern uint8_t pmm_entries;
-/* kernel variables */
-extern uint64_t isr_entropy[4];
 /* memory pointers to allocate */
 extern rela_t *relas;
-extern uint64_t *safestack;
+//extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
+/* pointer to tmpmap in PT */
+extern void *kmap_tmp;
+extern uint64_t locks;
 
 /* Main scructure */
-dataseg pmm_t pmm;
-/* pointer to tmpmap in PT */
-dataseg void *kmap_tmp;
+pmm_t pmm;
 
 #if DEBUG
 void pmm_dump()
@@ -235,7 +234,7 @@ addregion2:
  */
 void pmm_init()
 {
-    char *types[] = { "????", "free", "resv", "ACPI", "ANVS", "MMIO" };
+    char *types[] = { "used", "free", "ACPI", "ANVS", "MMIO" };
 
     // memory map provided by the loader
     MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
@@ -244,7 +243,7 @@ void pmm_init()
     uint num = (bootboot.size-128)/16;
     uint i;
     uint64_t m = 0, e=bootboot.initrd_ptr+((bootboot.initrd_size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
-    if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || num>504)
+    if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || num>=248)
         kpanic("Memory map corrupt");
 
     // allocate at least 2 pages for free memory entries
@@ -279,7 +278,7 @@ void pmm_init()
 #if DEBUG
         if(debug&DBG_MEMMAP)
             kprintf("  %s %8x %8x %9d\n",
-                MMapEnt_Type(entry)<6?types[MMapEnt_Type(entry)]:types[0],
+                MMapEnt_Type(entry)<5?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Ptr(entry)+MMapEnt_Size(entry), MMapEnt_Size(entry)
             );
 #endif
@@ -294,14 +293,14 @@ void pmm_init()
             if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
                 m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
             if(!i) {
-                // map free physical pages to mcb and pmm.entries. Nocache is important for MultiCore
-                for(i=0;(uint)i<(uint)nrphymax+1;i++)
-                    kmap((uint64_t)((uint8_t*)&mcb) + i*__PAGESIZE,
+                // map free physical pages to pmm.entries. Nocache is important for MultiCore
+                for(i=0;(uint)i<(uint)nrphymax;i++)
+                    kmap((uint64_t)((uint8_t*)&pmm_entries) + i*__PAGESIZE,
                         (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
                         PG_CORE_NOCACHE);
-                // "preallocate" the memory for mcb and pmm.entries
-                entry->ptr +=(uint64_t)(((uint)nrphymax+1)*__PAGESIZE);
-                entry->size-=(uint64_t)(((uint)nrphymax+1)*__PAGESIZE);
+                // "preallocate" the memory for pmm.entries
+                entry->ptr +=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
+                entry->size-=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
                 i=true;
             }
         }
@@ -312,10 +311,8 @@ void pmm_init()
     if(m/1024/1024 < PHYMEM_MIN-1)
         kpanic("Not enough memory. At least %d Mb of RAM required, only %d Mb free.", PHYMEM_MIN, m/1024/1024);
 
-    // set up MultiCore Control Block which holds the pmm lock
-    kmemcpy(&mcb.magic, OSZ_MCB_MAGIC, 4);
-    mcb.locks = 0;
-    mcb.numcores = 1;
+    // set up the pmm lock
+    locks = 0;
 
     // iterate through memory map again but this time
     // record free areas in pmm.entries
@@ -378,7 +375,7 @@ void pmm_init()
     // but that's ok, sized to the needs of this source
     relas = (rela_t*)kalloc(2);
     //allocate stack for ISRs and syscall
-    safestack = kalloc(1);
+//    safestack = kalloc(1);
     //allocate syslog buffer
     syslog_buf = syslog_ptr = kalloc(nrlogmax);
 
@@ -394,7 +391,7 @@ void pmm_init()
     syslog_early("Memory Map (%d entries, %d Mb free)\n", num, pmm.totalpages*__PAGESIZE/1024/1024);
     while(num>0) {
         syslog_early(" %s %8x %9d\n",
-            MMapEnt_Type(entry)<7?types[MMapEnt_Type(entry)]:types[0],
+            MMapEnt_Type(entry)<5?types[MMapEnt_Type(entry)]:types[0],
             MMapEnt_Ptr(entry), MMapEnt_Size(entry)
         );
         num--;

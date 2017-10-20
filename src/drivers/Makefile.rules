@@ -23,7 +23,7 @@ $(BINTARGET):
 	@echo "  src		sys/drv/$(TARGET)"
 	@mkdir -p ../../../../bin/initrd/sys/drv/$(firstword $(subst /, ,$(TARGET)))
 	@../../../../tools/drivers.sh $(TARGET)
-	$(O)$(LD) $(LDFLAGS) $(EXTOBJS) $(OBJS) --build-id=none -T ../../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) $(LDFLAGS) $(EXTOBJS) $(OBJS) --build-id=none -T ../../../sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o $(BINTARGET) 2>/dev/null || true

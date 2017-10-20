@@ -27,7 +27,6 @@
 
 #define _AS 1
 #include "arch.h"
-#include "../mcb.h"
 
 .section .text
 .global idle
@@ -58,8 +57,6 @@
 .type kstrcmp, STT_FUNC
 .global ksend
 .type ksend, STT_FUNC
-.global kwaitkey
-.type kwaitkey, STT_FUNC
 .global kentropy
 .type kentropy, STT_FUNC
 .global klockacquire
@@ -76,7 +73,7 @@ idle:
 /* acquire a lock, for multi core system */
 klockacquire:
 1:  lock
-    btsq    %rdi, mcb + mcb_locks
+    btsq    %rdi, locks
     jnc     1f
     pause
     jmp     1b
@@ -85,7 +82,7 @@ klockacquire:
 /* release a lock */
 klockrelease:
     lock
-    btrq    %rdi, mcb + mcb_locks
+    btrq    %rdi, locks
     ret
 
 /* shuffle bits of random seed */
@@ -168,11 +165,11 @@ kpanic:
     /* if so, print rip and try to resolve symbol for it */
 1:  movq    $kpanicrip, %rdi
     call    kprintf
-    movq    __PAGESIZE-40, %rdi
-    call    elf_sym
-    mov     %rax, %rsi
-    movq    $kpanicsym, %rdi
-    call    kprintf
+//    movq    __PAGESIZE-40, %rdi
+//    call    elf_sym
+//    mov     %rax, %rsi
+//    movq    $kpanicsym, %rdi
+//    call    kprintf
 2:
 #if DEBUG
     movb    $13, %dil
@@ -192,20 +189,21 @@ kpanic:
     movq    $54, %rdi
     movq    $5, %rsi
     call    kprintf_center
-    push    kx
-    movl    $0x9c3c1b, fg
-    movl    $0x100000, bg
+    movl    $0x9c3c1b, %edi
+    call    kprintf_fg
+    movl    $0x100000, %edi
+    call    kprintf_bg
     movq    $kpanicsuffix, %rdi
     call    kprintf
-    movl    $0x500000, fg
+    movl    $0x500000, %edi
+    call    kprintf_fg
     movq    $kpanicsuffix2, %rdi
     call    kprintf
-    pop     kx
     addl    $46, kx
-    addl    $1, ky
+    subl    $7, ky
     call    kprintf_putlogo
     /* wait for user input */
-1:  call    kwaitkey
+1:  call    platform_waitkey
     /* don't accept Alt key. I press it when I press Alt+Q or Alt+F4 to close qemu and bochs :-) */
     cmpb    $0x38, %al
     je      1b
@@ -628,78 +626,3 @@ ksend:
 4:  xorq    %rax, %rax
     popf
     ret
-
-/* an early implementation, called by kprintf */
-kwaitkey:
-    xorq    %rax, %rax
-    xorq    %rdx, %rdx
-    /* is there a key waiting? */
-1:  inb     $0x64, %al
-    andb    $1, %al
-    jnz     2f
-    pause
-#if DEBUG
-    movw    $0x3fd, %dx
-    inb     %dx, %al
-    /* do we have a serial port at all? */
-    cmpb    $0xFF, %al
-    je      1b
-    /* is there a received byte waiting? */
-    andb    $1, %al
-    jz      1b
-    subb    $5, %dl
-    inb     %dx, %al
-    orb     %al, %al
-    jz      1b
-    movb    $0, dbg_iskbd
-    jmp     8f
-#else
-    jmp     1b
-#endif
-    /* yes, read the scancode */
-2:  inb     $0x60, %al
-    orb     %al, %al
-    jz      1b
-    movb    %al, %dl
-    /* acknowledge */
-    inb     $0x61, %al
-    outb    %al, $0x61
-#if DEBUG
-    /* handle shift key here for debugger */
-    movb    $1, dbg_iskbd
-    cmpb    $54, %dl
-    je      2f
-    cmpb    $42, %dl
-    jne     1f
-2:  movb    $1, dbg_isshft
-    jmp     3f
-1:  cmpb    $54+0x80, %dl
-    je      2f
-    cmpb    $42+0x80, %dl
-    jne     3f
-2:  movb    $0, dbg_isshft
-3:
-#endif
-    /* check extended scancode */
-    cmpb    $0xE0, %dl
-    jne     1f
-    movb    $1, 9f
-    jmp     kwaitkey
-1:  cmpb    $0xE1, %dl
-    jne     1f
-    movb    $2, 9f
-    jmp     kwaitkey
-1:  cmpb    $0xFF, %dl
-    jne     1f
-    movb    $3, 9f
-    jmp     kwaitkey
-1:  xorq    %rax, %rax
-    movb    9f, %ah
-    movb    $0, 9f
-    movb    %dl, %al
-    bt      $7, %ax
-    jc      kwaitkey
-8:  /* extended scancode in ax */
-    ret
-9:
-    .byte 0

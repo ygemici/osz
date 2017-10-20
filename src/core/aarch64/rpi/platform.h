@@ -22,6 +22,16 @@
  *     you must distribute your contributions under the same license as
  *     the original.
  *
- * @brief Interrupt Controller and Timer definitions for the platform
+ * @brief Platform specific definitions
  */
 
+#define MMIO_BASE    0xfffffffffa000000
+
+#define PM_RTSC         ((volatile uint32_t*)(MMIO_BASE+0x0010001c))
+#define PM_WATCHDOG     ((volatile uint32_t*)(MMIO_BASE+0x00100024))
+#define PM_WDOG_MAGIC   0x5a000000
+#define PM_RTSC_FULLRST 0x00000020
+
+#define AUX_MU_LSR      ((volatile uint32_t*)(MMIO_BASE+0x00215054))
+#define AUX_MU_IO       ((volatile uint32_t*)(MMIO_BASE+0x00215040))
+#define UART0_DR        ((volatile uint32_t*)(MMIO_BASE+0x00201000))

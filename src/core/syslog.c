@@ -38,8 +38,8 @@ extern char tmpstr[33];
 extern char nullstr[];
 
 /* the buffer */
-dataseg char *syslog_buf;
-dataseg char *syslog_ptr;
+char *syslog_buf;
+char *syslog_ptr;
 
 /* simple sprintf implementation (core can't use libc) */
 char *sprintf(char *dst,char* fmt, ...);
@@ -90,10 +90,8 @@ char *sprintf_puthex(char *dst, int64_t c)
     return sprintf(dst,&tmpstr[i]);
 }
 
-char *sprintf(char *dst,char* fmt, ...)
+char *vsprintf(char *dst,char* fmt, va_list args)
 {
-    valist args;
-    vastart_sprintf(args, fmt);
     uint64_t arg;
     char *p;
 
@@ -114,8 +112,8 @@ char *sprintf(char *dst,char* fmt, ...)
                 cnt += fmt[0]-'0';
                 fmt++;
             }
-            p = *((char**)(args));
-            arg = vaarg(args, int64_t);
+            if(fmt[0]!='s')
+                arg = va_arg(args, int64_t);
             if(fmt[0]=='c') {
                 *dst = (char)arg; dst++;
                 fmt++;
@@ -132,7 +130,9 @@ char *sprintf(char *dst,char* fmt, ...)
                 dst = sprintf_puthex(dst, arg);
             }
             if(fmt[0]=='s') {
+                p = va_arg(args, char*);
                 dst = sprintf(dst, p);
+                arg=kstrlen(p); if(arg<cnt) { cnt-=arg; while(cnt-->0) *dst++=' '; }
             }
             reent--;
         } else {
@@ -143,14 +143,21 @@ put:        *dst++ = *fmt;
     return dst;
 }
 
+char *sprintf(char *dst,char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    return vsprintf(dst,fmt,args);
+}
+
+
 /**
  * early RFC5424 compatible logger
  */
 void syslog_early(char* fmt, ...)
 {
-    valist args;
-    vastart(args, fmt);
-    uint64_t arg;
+    va_list args;
+    va_start(args, fmt);
     char *p;
     if(fmt==NULL||fmt[0]==0)
         return;
@@ -179,46 +186,8 @@ void syslog_early(char* fmt, ...)
     syslog_ptr = sprintf(syslog_ptr, "%1d%1d - boot - - - ",
         ((bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)/10)%10,
         (bootboot.timezone<0?-bootboot.timezone:bootboot.timezone)%10);
-
     /* copy the message */
-    while(fmt[0]!=0) {
-        // argument access
-        if(fmt[0]=='%' && !reent) {
-            fmt++; cnt=0;
-            if(fmt[0]=='%') {
-                goto put;
-            }
-            while(fmt[0]>='0'&&fmt[0]<='9') {
-                cnt *= 10;
-                cnt += fmt[0]-'0';
-                fmt++;
-            }
-            p = *((char**)(args));
-            arg = vaarg(args, int64_t);
-            if(fmt[0]=='c') {
-                *syslog_ptr = (char)arg; syslog_ptr++;
-                fmt++;
-                continue;
-            }
-            reent++;
-            if(fmt[0]=='a') {
-                syslog_ptr = sprintf_putascii(syslog_ptr, arg);
-            }
-            if(fmt[0]=='d') {
-                syslog_ptr = sprintf_putdec(syslog_ptr, arg);
-            }
-            if(fmt[0]=='x') {
-                syslog_ptr = sprintf_puthex(syslog_ptr, arg);
-            }
-            if(fmt[0]=='s') {
-                syslog_ptr = sprintf(syslog_ptr, p);
-            }
-            reent--;
-        } else {
-put:        *syslog_ptr++ = *fmt;
-        }
-        fmt++;
-    }
+    syslog_ptr = vsprintf(syslog_ptr, fmt, args);
     while(*(syslog_ptr-1)=='\n')
         syslog_ptr--;
     *syslog_ptr = '\n';

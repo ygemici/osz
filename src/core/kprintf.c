@@ -28,27 +28,16 @@
 #include <arch.h>
 #include "font.h"
 
-/* re-entrant counter */
-dataseg char reent;
-/* for temporary strings */
-dataseg char tmpstr[33];
-/* first position in line, used by carridge return */
-dataseg int fx;
-/* current cursor position */
-dataseg int kx;
-dataseg int ky;
-/* maximum coordinates */
-dataseg int maxx;
-dataseg int maxy;
-/* scrolled lines counter */
-dataseg int scry;
+/* re-entrant counter, temp string */
+char reent, tmpstr[33];
+/* first position in line, current cursor, maximum coordinates, scrolled */
+int fx, kx, ky, maxx, maxy, scry;
 
 /* colors */
-dataseg uint32_t fg;
-dataseg uint32_t bg;
+uint32_t fg, bg;
 
 /* argument counter */
-dataseg uint8_t cnt;
+uint8_t cnt;
 
 /* string constants and ascii arts */
 char kpanicprefix[] = "OS/Z panic: ";
@@ -60,7 +49,7 @@ char kpanicsuffix[] =
     "   __|  _ \\  _ \\ __|   _ \\  \\    \\ |_ _|  __|         \n"
     "  (    (   |   / _|    __/ _ \\  .  |  |  (            \n"
     " \\___|\\___/ _|_\\___|  _| _/  _\\_|\\_|___|\\___|         \n";
-char kpanicsuffix2[] =
+char __attribute__((aligned(16))) kpanicsuffix2[] =
     "                                                      \n"
     "                       KEEP CALM                      \n"
     "               AND RESTART YOUR COMPUTER              \n"
@@ -77,7 +66,6 @@ extern char _binary_logo_start;
 extern uint64_t isr_currfps;
 extern uint64_t isr_lastfps;
 #if DEBUG
-dataseg uint64_t dbg_rip;
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
 extern void dbg_init();
@@ -97,12 +85,34 @@ void kprintf_reset()
 }
 
 /**
+ * set foreground color
+ */
+void kprintf_fg(uint32_t color)
+{
+    switch(bootboot.fb_type) {
+//        case FB_ABGR: fg=((color>>16)&0xff)|(color&0xff00)|((color&0xff)<<16); break;
+        default: fg=color; break;
+    }
+}
+
+/**
+ * set background color
+ */
+void kprintf_bg(uint32_t color)
+{
+    switch(bootboot.fb_type) {
+        case FB_ABGR: bg=((color>>16)&0xff)|(color&0xff00)|((color&0xff)<<16); break;
+        default: bg=color; break;
+    }
+}
+
+/**
  * move cursor to top left corner of a centered window
  */
 void kprintf_center(int w, int h)
 {
     kx = fx = (maxx-w)/2;
-    ky = (maxy-h)/2;
+    ky = (maxy-h)/2-1;
 }
 
 /**
@@ -137,17 +147,17 @@ void kprintf_init()
         for(x=0;x<64;x++){
             if(data[0]!=0) {
                 // make it darker as normal
-                *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)(
-                    (((uint8_t)palette[(uint8_t)data[0]*3+0]>>3)<<0)+
-                    (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
-                    (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16)
-                );
+                kprintf_fg( (((uint8_t)palette[(uint8_t)data[0]*3+0]>>3)<<0)+
+                            (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
+                            (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16) );
+                *((uint32_t*)(FBUF_ADDRESS + line))=fg;
             }
             data++;
             line+=4;
         }
         offs+=bootboot.fb_scanline;
     }
+    fg = 0xC0C0C0;
 }
 
 /**
@@ -217,17 +227,17 @@ void kprintf_putlogo()
         for(x=0;x<64;x++){
             if(data[0]!=0) {
                 // make it red instead of blue
-                *((uint32_t*)(FBUF_ADDRESS + line))=(uint32_t)(
-                    (((uint8_t)data[2]>>4)<<0)+
-                    (((uint8_t)data[1]>>2)<<8)+
-                    (((uint8_t)data[0]>>0)<<16)
-                );
+                kprintf_fg( (((uint8_t)data[2]>>4)<<0)+
+                            (((uint8_t)data[1]>>2)<<8)+
+                            (((uint8_t)data[0]>>0)<<16) );
+                *((uint32_t*)(FBUF_ADDRESS + line))=fg;
             }
             data++;
             line+=4;
         }
         offs+=bootboot.fb_scanline;
     }
+    fg = 0xC0C0C0;
 }
 
 /**
@@ -447,7 +457,7 @@ void kprintf_scrollscr()
             fg = oldfg;
             kx = fx; ky--;
             // wait for user input. Turn off pause if user presses Esc
-            if(kwaitkey()==1)
+            if(platform_waitkey()==1)
                 scry=-1;
             // clear the last row
             for(y=0;y<font->height;y++){
@@ -542,8 +552,8 @@ void kprintf_unicodetable()
  */
 void kprintf(char* fmt, ...)
 {
-    valist args;
-    vastart(args, fmt);
+    va_list args;
+    va_start(args, fmt);
     uint64_t arg;
     char *p;
 
@@ -597,8 +607,8 @@ void kprintf(char* fmt, ...)
                 cnt += fmt[0]-'0';
                 fmt++;
             }
-            p = *((char**)(args));
-            arg = vaarg(args, int64_t);
+            if(fmt[0]!='s')
+                arg = va_arg(args, int64_t);
             if(fmt[0]=='c') {
                 kprintf_putchar((int)((unsigned char)arg));
                 goto nextchar;
@@ -623,6 +633,7 @@ void kprintf(char* fmt, ...)
                 kprintf_uuid((uuid_t*)arg);
             } else
             if(fmt[0]=='s') {
+                p = va_arg(args, char*);
                 kprintf(p);
                 // padding with spaces
                 arg=kstrlen(p); if(arg<cnt) { cnt-=arg; while(cnt-->0) { kprintf_putchar(' '); kx++; } }

@@ -6,7 +6,7 @@ SRCS+= $(wildcard *.S)
 TMP = $(SRCS:.c=.o)
 OBJS = $(TMP:.S=.o)
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' -DOSZ_ARCH='"$(ARCH)"' -DOSZ_BUILD='$(BUILD)' \
- -Wall -fpic -ffreestanding -nostdinc -fno-stack-protector -I../../../../etc/include
+ -Wall -fpic -ffreestanding -nostdinc -nostdlib -fno-stack-protector -I../../../../etc/include
 
 all: $(OBJS)
 

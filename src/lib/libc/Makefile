@@ -27,7 +27,7 @@ $(BINTARGET): $(SRCS)
 	$(O)$(CC) $(OPT) $(CFLAGS) -c service.c -o ../../../bin/service.o || true
 	@make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 	@echo "  lnk		$(TARGET) ($(ARCH))"
-	$(O)$(LD) -nostdlib -shared -Bsymbolic -Bshareable -L../../../bin/initrd/sys/lib -L.. *.o $(ARCH)/*.o -T ../../core/$(ARCH)/sharedlib.ld -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) -nostdlib -shared -Bsymbolic -Bshareable -L../../../bin/initrd/sys/lib -L.. *.o $(ARCH)/*.o -T ../../sharedlib.ld -o $(BINTARGET) $(LIBS)
 
 clean:
 	@rm *.o *.so $(ARCH)/*.o $(BINTARGET) ../../../bin/initrd/sys/lib/crt0.o ../../../bin/service.o 2>/dev/null || true

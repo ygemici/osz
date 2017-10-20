@@ -27,8 +27,6 @@
  * Calling convention: SystemV AMD64 ABI
  */
 
-.include "sys/core.h"
-
 .global _start
 .global exit
 .global atexit

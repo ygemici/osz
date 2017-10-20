@@ -6,13 +6,13 @@ BINTARGET = ../../bin/initrd/$(TARGET)
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 LIBS =
-LDFLAGS = -nostdlib
+LDFLAGS = -nostdlib -nostartfiles --build-id=none
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
 ARCHOBJS+= $(wildcard $(ARCH)/$(PLATFORM)/*.o)
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' \
  -DOSZ_ARCH='"$(ARCH)"' -DOSZ_PLATFORM='"$(PLATFORM)"' -DOSZ_BUILD='$(BUILD)' \
- -fpic -fno-stack-protector -nostdinc -I. -I./$(ARCH) -I./$(ARCH)/$(PLATFORM) -I../../etc/include \
- -Wall -ffreestanding -fno-builtin
+ -fpic -fno-stack-protector -nostdlib -nostdinc -I. -I./$(ARCH) -I./$(ARCH)/$(PLATFORM) -I../../etc/include \
+ -Wall -ffreestanding
 ifeq ($(ARCH),x86_64)
 CFLAGS += -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
 endif
@@ -33,7 +33,6 @@ main.o: main.c ../../etc/sys/etc/os-release
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 
 platform:
-	$(O)make -e --no-print-directory -C $(ARCH) $(PLATFORM)/isrs.S | grep -v 'Nothing to be done' | grep -v 'up to date' || true
 	$(O)make -e --no-print-directory -C $(ARCH)/$(PLATFORM) all | grep -v 'Nothing to be done' || true
 	$(O)make -e --no-print-directory -C $(ARCH) all | grep -v 'Nothing to be done' || true
 
@@ -49,7 +48,7 @@ logo.o: ../../etc/logo.tga
 
 $(BINTARGET): platform font.o logo.o $(SRCS)
 	@echo "  lnk		$(TARGET) ($(ARCH)-$(PLATFORM))"
-	$(O)$(LD) $(LDFLAGS) -T $(ARCH)/supervisor.ld --build-id=none --nmagic -static $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) $(LDFLAGS) -T link.ld $(ARCH)/start.o $(OBJS) $(ARCHOBJS) font.o logo.o -o $(BINTARGET) $(LIBS)
 ifeq ($(DEBUG),1)
 	@echo "0000000000200000 _init" >../../bin/core.sym
 	@../../tools/elftool.o -s 0 $(BINTARGET) | sort >>../../bin/core.sym

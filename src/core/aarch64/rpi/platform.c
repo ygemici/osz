@@ -25,10 +25,16 @@
  * @brief Platform glue code
  */
 
+#include "../arch.h"
+#include "platform.h"
+
+extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
+extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
+
 /**
- * Initialize platform dependent part. Called by main()
+ * Initalize platform variables. Called by env_init()
  */
-void platform_init()
+void platform_env()
 {
 }
 
@@ -37,8 +43,7 @@ void platform_init()
  */
 unsigned char *platform_parse(unsigned char *env)
 {
-    env++;
-    return env;
+    return env+1;
 }
 
 /**
@@ -46,6 +51,15 @@ unsigned char *platform_parse(unsigned char *env)
  */
 void platform_timer()
 {
+}
+
+/**
+ * Initalize platform, detect basic hardware. Called by sys_init()
+ */
+void platform_detect()
+{
+    // things needed for isr_init()
+    numcores=4;
 }
 
 /**
@@ -67,6 +81,12 @@ void platform_poweroff()
  */
 void platform_reset()
 {
+    uint32_t cnt=110000;
+    while(cnt--) { asm volatile("nop"); }
+    // flush AUX
+    do{asm volatile("nop");}while((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01));cnt=*AUX_MU_IO;
+    *PM_WATCHDOG = PM_WDOG_MAGIC | 1;
+    *PM_RTSC = PM_WDOG_MAGIC | PM_RTSC_FULLRST;
 }
 
 /**
@@ -74,4 +94,13 @@ void platform_reset()
  */
 void platform_halt()
 {
+    __asm__ __volatile__ ("1: wfe; b 1b");
+}
+
+/**
+ * an early implementation, called by kprintf
+ */
+uint64_t platform_waitkey()
+{
+    uint64_t r;do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));r=(uint64_t)(*AUX_MU_IO);return r==13?10:r;
 }

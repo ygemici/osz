@@ -7,7 +7,7 @@ LIBS += -lc
 CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fno-stack-protector -fvisibility=hidden
 LDFLAGS += -nostdlib -L../../bin/initrd/sys/lib -L../lib
 ifeq ($(LINKER),sharedlib)
-LDFLAGS += -shared -Bsymbolic -Bshareable
+LDFLAGS += -shared -Bsymbolic -Bshareable ../lib/libc/$(ARCH)/init.o
 endif
 
 ifeq ($(LINKER),)
@@ -21,7 +21,7 @@ all: $(OBJS) $(BINTARGET)
 
 $(BINTARGET): $(OBJS) $(EXTOBJ)
 	@echo "  src		$(TARGET)"
-	$(O)$(LD) $(LDFLAGS) $(OBJS) $(EXTOBJ) --build-id=none -T ../core/$(ARCH)/$(LINKER).ld -o $(BINTARGET) $(LIBS)
+	$(O)$(LD) $(LDFLAGS) $(OBJS) $(EXTOBJ) --build-id=none -T ../$(LINKER).ld -o $(BINTARGET) $(LIBS)
 ifeq ($(LINKER),sharedlib)
 ifneq ($(HASHEADER),1)
 	@#../../tools/elftool.o $(BINTARGET) >../../etc/include/sys/$(notdir $(TARGET)).h
