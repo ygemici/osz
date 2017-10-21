@@ -73,12 +73,12 @@ extern unsigned char environment[__PAGESIZE]; // configuration
 extern uint8_t tmpmap;                // temporarily mapped page
 extern uint8_t tmp2map;               // temporarily mapped page #2
 extern uint8_t tmp3map;               // temporarily mapped page #3
+extern uint8_t tmpfx;                 // temporarily mapped tcb for last fx
 extern uint8_t tmpalarm;              // temporarily mapped tcb for next alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
-extern uint8_t __bss_start;           // start of bss segment
+extern uint8_t __dynbss_start;        // start of bss segment
 //extern ccb_t ccb;                     // CPU Control Block, mapped per core
-//extern multicore_t mcb;               // MultiCore Control Block, mapped globally for all cores
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
@@ -204,10 +204,10 @@ extern void ui_init();
 
 // ----- Memory Management -----
 /** Initialize kernel memory mapping */
-extern void *kmap_init();
+extern uint64_t *kmap_init();
 
 /** Map a physical page at a virtual address */
-extern void kmap(virt_t virt, phy_t phys, uint8_t access);
+extern void kmap(virt_t virt, phy_t phys, uint16_t access);
 
 /** temporarily map a message queue at TMPQ_ADDRESS */
 extern void kmap_mq(phy_t tcbmemroot);

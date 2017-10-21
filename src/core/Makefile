@@ -13,8 +13,11 @@ CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER=
  -DOSZ_ARCH='"$(ARCH)"' -DOSZ_PLATFORM='"$(PLATFORM)"' -DOSZ_BUILD='$(BUILD)' \
  -fpic -fno-stack-protector -nostdlib -nostdinc -I. -I./$(ARCH) -I./$(ARCH)/$(PLATFORM) -I../../etc/include \
  -Wall -ffreestanding
+# gcc with -O2 generates ud2/brk instruction...
 ifeq ($(ARCH),x86_64)
 CFLAGS += -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3
+else
+CFLAGS +=
 endif
 ifeq ($(DEBUG),1)
 CFLAGS +=

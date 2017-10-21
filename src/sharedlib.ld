@@ -3,10 +3,6 @@
    are permitted in any medium without royalty provided the copyright
    notice and this notice are preserved.  */
 ENTRY(_init)
-SEARCH_DIR("../bin/initrd/sys/lib");
-SEARCH_DIR("../lib");
-SEARCH_DIR("../../lib");
-SEARCH_DIR("../../../lib");
 
 PHDRS
 {

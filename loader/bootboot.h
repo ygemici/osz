@@ -50,7 +50,7 @@ typedef struct {
 #define MMapEnt_Ptr(a)  (a->ptr)
 #define MMapEnt_Size(a) (a->size & 0xFFFFFFFFFFFFFFF0)
 #define MMapEnt_Type(a) (a->size & 0xF)
-#define MMapEnt_IsFree(a) ((a->size&0xF)==1||(a->size&0xF)==3)
+#define MMapEnt_IsFree(a) ((a->size&0xF)==1||(a->size&0xF)==2)
 
 #define MMAP_USED     0   // don't use. Reserved or unknown regions
 #define MMAP_FREE     1   // usable memory

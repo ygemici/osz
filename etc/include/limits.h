@@ -44,7 +44,7 @@
 #define MQ_ADDRESS     (__PAGESIZE)
 #define TEXT_ADDRESS   (__SLOTSIZE)                // 2M code segment
 #define BSS_ADDRESS    (0x0000000100000000UL)      // 4G data, tls memory, see bztalloc.c
-#define SBSS_ADDRESS   (0xFFFF800000000000UL)      // shared memory, see bztalloc.c
+#define SBSS_ADDRESS   (0xFFFFFF8000000000UL)      // -512G shared memory, see bztalloc.c
 
 #define CHAR_BIT    8
 #define SCHAR_MIN   (-128)

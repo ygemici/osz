@@ -45,11 +45,14 @@
 #define breakpoint
 
 /* VMM access bits */
-#define PG_CORE 0b00011
-#define PG_CORE_NOCACHE 0b11011
-#define PG_USER_RO 0b00101
-#define PG_USER_RW 0b00111
-#define PG_USER_RWNOCACHE 0b10111
-#define PG_USER_DRVMEM 0b11111
-#define PG_SLOT 0b10000000
+#define PG_CORE             0b011100000000  // nG=0,AF=1,SH=3,AP=0,NS=0,Attr=0
+#define PG_CORE_RO          0b011110000000  // nG=0,AF=1,SH=3,AP=2,NS=0,Attr=0
+#define PG_CORE_NOCACHE     0b110000001000  // nG=1,AF=1,SH=0,AP=0,NS=0,Attr=2
+#define PG_USER_RO          0b011111000000  // nG=0,AF=1,SH=3,AP=3,NS=0,Attr=0
+#define PG_USER_RW          0b011101000000  // nG=0,AF=1,SH=3,AP=1,NS=0,Attr=0
+#define PG_USER_RWNOCACHE   0b110001001000  // nG=1,AF=1,SH=0,AP=1,NS=0,Attr=2
+#define PG_USER_DRVMEM      0b110001000100  // nG=1,AF=1,SH=0,AP=1,NS=0,Attr=1
 
+#define PG_PAGE                       0b11  // 4k granule
+#define PG_SLOT                       0b01  // 2M granule
+#define PG_NX_BIT           54

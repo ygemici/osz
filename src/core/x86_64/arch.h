@@ -51,11 +51,13 @@
 #define breakpoint __asm__ __volatile__("xchg %bx, %bx")
 
 /* VMM access bits */
-#define PG_CORE 0b00011
-#define PG_CORE_NOCACHE 0b11011
-#define PG_USER_RO 0b00101
-#define PG_USER_RW 0b00111
-#define PG_USER_RWNOCACHE 0b10111
-#define PG_USER_DRVMEM 0b11111
-#define PG_SLOT 0b10000000
-
+#define PG_CORE             0b00011
+#define PG_CORE_RO          0b00001
+#define PG_CORE_NOCACHE     0b11011
+#define PG_USER_RO          0b00101
+#define PG_USER_RW          0b00111
+#define PG_USER_RWNOCACHE   0b10111
+#define PG_USER_DRVMEM      0b11111
+#define PG_PAGE          0b00000001
+#define PG_SLOT          0b10000000
+#define PG_NX_BIT           63

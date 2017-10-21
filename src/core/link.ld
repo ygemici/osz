@@ -27,6 +27,8 @@
 
 CORE_ADDRESS = 0xffffffffffe00000;
 
+ENTRY(_start)
+
 PHDRS
 {
   text PT_LOAD FILEHDR PHDRS;
@@ -40,27 +42,27 @@ SECTIONS
     environment = .;
     . += 4096;
     .text . + SIZEOF_HEADERS : AT(ADDR(.text) - . + SIZEOF_HEADERS) {
+        PROVIDE(_code = .);
         KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*)   /* code */
         *(.rodata .rodata.* .gnu.linkonce.r*)                   /* data */
+        . = ALIGN(4096);
+        PROVIDE(_data = .);
         *(.data .data.* .gnu.linkonce.d*)
         srandinitend = .;
     } :text
-    .dynamic : { *(.dynamic) } :text :dynamic
+    /* GNU ld bug workaround. It refuses to place symtab and strtab in text */
+    . += 0x4000;
     .bss (NOLOAD) : {
-        . = ALIGN(4096);       /* make sure bss section is page aligned */
+        . = ALIGN(16);
         __bss_start = .;
         *(.bss .bss.*)
         *(COMMON)
         __bss_end = .;
-        . = ALIGN(4096);
     } :text
-
-    /* GNU ld bug workaround. It refuses to place symtab and strtab in text */
-    . += 65536;
 
     /* dynamically allocated/mapped data */
     . = ALIGN(4096);
-    __bss_start = .;
+    __dynbss_start = .;
     /* mappings hack */
     tmpctrl = .;
     . += 4096;
@@ -85,11 +87,5 @@ SECTIONS
     /* physical memory manager free memory entries */
     pmm_entries = .;
 
-   /DISCARD/ :
-   {
-        *(.comment)
-        *(.gnu*)
-        *(.note*)
-        *(.eh_frame*)
-   }
+    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh*) *(.interp) }
 }

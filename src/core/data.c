@@ -39,6 +39,6 @@ uint8_t sys_fault;
 /* memory mappings */
 phy_t idle_mapping, core_mapping, identity_mapping;
 /* pointer to tmpmap in PT */
-void *kmap_tmp;
+uint64_t *kmap_tmp;
 /* memory allocated for relocation addresses */
 rela_t *relas;

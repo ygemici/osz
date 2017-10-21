@@ -4,9 +4,6 @@
    are permitted in any medium without royalty provided the copyright
    notice and this notice are preserved.  */
 ENTRY(_start)
-SEARCH_DIR("../bin/initrd/sys/lib");
-SEARCH_DIR("../../bin/initrd/sys/lib");
-SEARCH_DIR("../../../bin/initrd/sys/lib");
 STARTUP("crt0.o");
 
 PHDRS
@@ -85,7 +82,7 @@ SECTIONS
   .got            : { *(.got) *(.igot) } :data
   .got.plt        : { *(.got.plt)  *(.igot.plt) }
   PROVIDE (_edata = .);
-  __bss_start = 0x100000000;
+  __dynbss_start = 0x100000000;
   .bss            :
   {
    *(.dynbss)

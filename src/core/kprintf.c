@@ -567,7 +567,7 @@ void kprintf(char* fmt, ...)
         return;
     }
 #endif
-
+    arg = 0;
     while(fmt[0]!=0) {
         // special characters
         if(fmt[0]==8) {

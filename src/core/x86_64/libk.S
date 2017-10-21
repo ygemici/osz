@@ -325,7 +325,7 @@ kstrcmp:
    rdx: access rights
 */
 kmap:
-    /* these indeces on kmap_tmp must match supervisor.ld */
+    /* these indeces on kmap_tmp must match link.ld */
     /* shortcut for tmpmap. It's often called from sched_get_tcb */
     cmpq    $tmpmap, %rdi
     jne     1f
@@ -355,7 +355,7 @@ kmap:
     mov     %dl, %sil
     /* copy W bit to NX bit */
     andb    $2, %dl
-    shlq    $62, %rdx
+    shlq    $PG_NX_BIT-1, %rdx
     addq    %rdx, %rsi
     movq    %rsi, (%rax)
     invlpg  (%rdi)
@@ -364,6 +364,7 @@ kmap:
 kmap_init:
     push    %rbx
     push    %rcx
+    push    %rdx
     /* this is called very early. Relies on identity mapping
        to find the physical address of tmppte pointer in PTE */
     movq    $tmppte, %rcx
@@ -378,6 +379,7 @@ kmap_init:
     add     %rax, %rbx
     /* save core mapping pointer */
     addq    $__PAGESIZE-8, %rax
+    movb    $PG_CORE, (%rax)
     movq    (%rax), %rax
     movq    %rax, core_mapping
     /* PDPE */
@@ -388,6 +390,7 @@ kmap_init:
     andl    $0x1FF, %ebx
     shlq    $3, %rbx
     add     %rax, %rbx
+    movb    $PG_CORE, (%rbx)
     /* PDE */
     movq    (%rbx), %rax
     xorb    %al, %al
@@ -396,12 +399,38 @@ kmap_init:
     andl    $0x1FF, %ebx
     shlq    $3, %rbx
     add     %rax, %rbx
+    movb    $PG_CORE, (%rbx)
     /* save TMPQ_ADDRESS mapping pointer */
     movb    $PG_CORE_NOCACHE, %al
     movq    %rax, %r8
     /* PTE */
     movq    (%rbx), %rax
     xorb    %al, %al
+    // set bootboot and environment NX
+    btsq    $PG_NX_BIT, (%rax)
+    btsq    $PG_NX_BIT, 8(%rax)
+    // set stack NX and supervisor page
+    btsq    $PG_NX_BIT, 0xff8(%rax)
+    movb    $PG_CORE_NOCACHE, 0xff8(%rax)
+    push    %rax
+    movq    $_data, %rdx
+    andq    $0xFFFFF, %rdx
+    shrq    $12, %rdx
+    shlq    $3, %rdx
+    addq    %rax, %rdx
+    // set supervisor page attributes
+1:  movb    $PG_CORE_RO, (%rax)
+    btrq    $PG_NX_BIT, (%rax)
+    addq    $8, %rax
+    cmpq    %rdx, %rax
+    jb      1b
+    // no cache and exec for data and bss segments
+1:  movb    $PG_CORE_NOCACHE, (%rax)
+    btsq    $PG_NX_BIT, (%rax)
+    addq    $8, %rax
+    cmpb    $0, (%rax)
+    jnz     1b
+    pop     %rax
     movq    %rcx, %rbx
     shrq    $12, %rbx
     andl    $0x1FF, %ebx
@@ -422,6 +451,7 @@ kmap_init:
     andq    $0x0FFF, %rbx
     addq    %rcx, %rbx
     movq    %rbx, %rax
+    popq    %rdx
     popq    %rcx
     popq    %rbx
     ret

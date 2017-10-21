@@ -35,7 +35,7 @@ extern rela_t *relas;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 /* pointer to tmpmap in PT */
-extern void *kmap_tmp;
+extern uint64_t *kmap_tmp;
 extern uint64_t locks;
 
 /* Main scructure */
@@ -62,13 +62,13 @@ void pmm_dump()
 void* pmm_alloc(int pages)
 {
     pmm_entry_t *fmem = pmm.entries;
-    int i;
+    int i=0;
     uint64_t b;
     klockacquire(LOCK_PMM);
     // run-time asserts
     if(pmm.freepages>pmm.totalpages)
         kprintf("WARNING shound not happen pmm.freepages %d > pmm.totalpages %d",pmm.freepages,pmm.totalpages);
-    for(i=0;i<pmm.size;i++) {
+    while(i<pmm.size) {
         if(fmem->size>=pages) {
             /* add entropy */
             srand[(i+0)%4] ^= (uint64_t)fmem->base/__PAGESIZE;
@@ -102,7 +102,7 @@ void* pmm_alloc(int pages)
             klockrelease(LOCK_PMM);
             return (void*)b;
         }
-        fmem++;
+        fmem++; i++;
     }
     // out of memory, should never happen during boot
     //if(*((uint32_t*)0) != OSZ_TCB_MAGICH) {
@@ -256,13 +256,13 @@ void pmm_init()
     // initialize pmm structure
     pmm.magic = OSZ_PMM_MAGICH;
     pmm.size = 0;
-    // first 3 pages are for temporary mappings, tmpmap and tmp2map
+    // first bss pages are for temporary mappings, tmpmap and tmp2map
     // and their pte. Let's initialize them
     kmap_tmp = kmap_init();
 
     // buffers
     pmm.entries = fmem = (pmm_entry_t*)(&pmm_entries);
-    pmm.bss     = (uint8_t*)&__bss_start;
+    pmm.bss     = (uint8_t*)&__dynbss_start;
     pmm.bss_end = (uint8_t*)&pmm_entries + (uint64_t)(__PAGESIZE * nrphymax);
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
@@ -277,7 +277,7 @@ void pmm_init()
         kentropy();
 #if DEBUG
         if(debug&DBG_MEMMAP)
-            kprintf("  %s %8x %8x %9d\n",
+            kprintf("  %s %8x %8x %11d\n",
                 MMapEnt_Type(entry)<5?types[MMapEnt_Type(entry)]:types[0],
                 MMapEnt_Ptr(entry), MMapEnt_Ptr(entry)+MMapEnt_Size(entry), MMapEnt_Size(entry)
             );
@@ -297,7 +297,7 @@ void pmm_init()
                 for(i=0;(uint)i<(uint)nrphymax;i++)
                     kmap((uint64_t)((uint8_t*)&pmm_entries) + i*__PAGESIZE,
                         (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
-                        PG_CORE_NOCACHE);
+                        PG_CORE_NOCACHE|PG_PAGE);
                 // "preallocate" the memory for pmm.entries
                 entry->ptr +=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
                 entry->size-=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
@@ -368,14 +368,11 @@ void pmm_init()
         entry++;
     }
     pmm.freepages = pmm.totalpages;
-
     // ok, now we can allocate bss memory for core
 
     // These are compile time configurable buffer sizes,
     // but that's ok, sized to the needs of this source
     relas = (rela_t*)kalloc(2);
-    //allocate stack for ISRs and syscall
-//    safestack = kalloc(1);
     //allocate syslog buffer
     syslog_buf = syslog_ptr = kalloc(nrlogmax);
 
@@ -390,7 +387,7 @@ void pmm_init()
     entry = (MMapEnt*)&bootboot.mmap;
     syslog_early("Memory Map (%d entries, %d Mb free)\n", num, pmm.totalpages*__PAGESIZE/1024/1024);
     while(num>0) {
-        syslog_early(" %s %8x %9d\n",
+        syslog_early(" %s %8x %11d\n",
             MMapEnt_Type(entry)<5?types[MMapEnt_Type(entry)]:types[0],
             MMapEnt_Ptr(entry), MMapEnt_Size(entry)
         );
@@ -412,7 +409,7 @@ void* kalloc(int pages)
         pages=512;
     /* we allow non continous pages. For multi core system we must disable caching */
     while(pages-->0){
-        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE_NOCACHE);
+        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE_NOCACHE|PG_PAGE);
         pmm.bss_end += __PAGESIZE;
     }
     return bss;

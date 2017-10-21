@@ -359,7 +359,7 @@ dostat:         if(ret!=-1 && !errno()) {
                         if(msg->attr0!=-1)
                             taskctx_close(ctx, msg->attr0, true);
                         // get offset part of path
-                        o=getoffs(ptr);
+                        o=getoffs(msg->ptr);
                         if(o<0) o+=fcb[ret].reg.filesize;
                         // append flag overwrites it
                         if(msg->type & O_APPEND) o=fcb[ret].reg.filesize;

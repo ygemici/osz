@@ -100,6 +100,7 @@ char *vsprintf(char *dst,char* fmt, va_list args)
     if(fmt==NULL || (((virt_t)fmt>>32)!=0 && ((virt_t)fmt>>32)!=0xffffffff))
         fmt=nullstr;
 
+    arg = 0;
     while(fmt[0]!=0) {
         // argument access
         if(fmt[0]=='%' && !reent) {
