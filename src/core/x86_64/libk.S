@@ -142,6 +142,10 @@ kpanic:
     pushq   %rsi
     pushq   %rdx
     call    kprintf_fade
+#if DEBUG
+    movb    $10, %dil
+    call    dbg_putchar
+#endif
     /* clear the first line */
     movl    $0xFFDD33, fg
     movl    $0, bg
@@ -172,7 +176,7 @@ kpanic:
 //    call    kprintf
 2:
 #if DEBUG
-    movb    $13, %dil
+    movb    $10, %dil
     call    dbg_putchar
     movb    $10, %dil
     call    dbg_putchar
@@ -185,6 +189,14 @@ kpanic:
     call    dbg_enable
     jmp     2f
 1:
+    movb    $27, %dil
+    call    dbg_putchar
+    movb    $0x5b, %dil
+    call    dbg_putchar
+    movb    $0x37, %dil
+    call    dbg_putchar
+    movb    $0x6d, %dil
+    call    dbg_putchar
 #endif
     movq    $54, %rdi
     movq    $5, %rsi
@@ -199,6 +211,16 @@ kpanic:
     call    kprintf_fg
     movq    $kpanicsuffix2, %rdi
     call    kprintf
+#if DEBUG
+    movb    $27, %dil
+    call    dbg_putchar
+    movb    $0x5b, %dil
+    call    dbg_putchar
+    movb    $0x30, %dil
+    call    dbg_putchar
+    movb    $0x6d, %dil
+    call    dbg_putchar
+#endif
     addl    $46, kx
     subl    $7, ky
     call    kprintf_putlogo

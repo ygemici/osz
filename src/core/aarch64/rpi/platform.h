@@ -32,6 +32,12 @@
 #define PM_WDOG_MAGIC   0x5a000000
 #define PM_RTSC_FULLRST 0x00000020
 
+#define RNG_CTRL        ((volatile uint32_t*)(MMIO_BASE+0x00104000))
+#define RNG_STATUS      ((volatile uint32_t*)(MMIO_BASE+0x00104004))
+#define RNG_DATA        ((volatile uint32_t*)(MMIO_BASE+0x00104008))
+#define RNG_INT_MASK    ((volatile uint32_t*)(MMIO_BASE+0x00104010))
+
 #define AUX_MU_LSR      ((volatile uint32_t*)(MMIO_BASE+0x00215054))
 #define AUX_MU_IO       ((volatile uint32_t*)(MMIO_BASE+0x00215040))
 #define UART0_DR        ((volatile uint32_t*)(MMIO_BASE+0x00201000))
+

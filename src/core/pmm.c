@@ -88,7 +88,7 @@ void* pmm_alloc(int pages)
             pmm.freepages-=pages;
             if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
                 for(i=0;i<pages;i++) {
-                    kmap((virt_t)&tmp2map, b + i*__PAGESIZE, PG_CORE_NOCACHE);
+                    kmap((virt_t)&tmp2map, b + i*__PAGESIZE, PG_CORE_NOCACHE|PG_PAGE);
                     kmemset((char *)&tmp2map, 0, __PAGESIZE);
                 }
             } else {
@@ -162,7 +162,7 @@ void* pmm_allocslot()
             if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
                 p=b;
                 for(j=0;j<__SLOTSIZE/__PAGESIZE;j++) {
-                    kmap((virt_t)&tmp2map, p, PG_CORE_NOCACHE);
+                    kmap((virt_t)&tmp2map, p, PG_CORE_NOCACHE|PG_PAGE);
                     kmemset((char *)&tmp2map, 0, __PAGESIZE);
                     p+=__PAGESIZE;
                 }
@@ -235,15 +235,14 @@ addregion2:
 void pmm_init()
 {
     char *types[] = { "used", "free", "ACPI", "ANVS", "MMIO" };
-
     // memory map provided by the loader
     MMapEnt *entry = (MMapEnt*)&bootboot.mmap;
     // our new free pages directory, pmm.entries
     pmm_entry_t *fmem;
-    uint num = (bootboot.size-128)/16;
-    uint i;
-    uint64_t m = 0, e=bootboot.initrd_ptr+((bootboot.initrd_size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
-    if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || num>=248)
+    uint64_t num;
+    uint64_t i, m=0, n, *pte, e=bootboot.initrd_ptr+((bootboot.initrd_size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
+
+    if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || bootboot.size>__PAGESIZE)
         kpanic("Memory map corrupt");
 
     // allocate at least 2 pages for free memory entries
@@ -266,42 +265,45 @@ void pmm_init()
     pmm.bss_end = (uint8_t*)&pmm_entries + (uint64_t)(__PAGESIZE * nrphymax);
     // this is a chicken and egg scenario. We need free memory to
     // store the free memory table...
+    num = (bootboot.size-128)/16;
 #if DEBUG
     if(debug&DBG_MEMMAP)
         kprintf("\nMemory Map (%d entries)\n", num);
 #endif
-    i=false;
+    i=false; srand[0]++; srand[1]--;
     while(num>0) {
+        srand[num%4]++; srand[(num+2)%4]++;
         srand[(entry->ptr/__PAGESIZE + entry->size +
             1000*bootboot.datetime[7] + 100*bootboot.datetime[6] + bootboot.datetime[5])%4] *= 16807;
         kentropy();
+        n=MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
 #if DEBUG
         if(debug&DBG_MEMMAP)
             kprintf("  %s %8x %8x %11d\n",
                 MMapEnt_Type(entry)<5?types[MMapEnt_Type(entry)]:types[0],
-                MMapEnt_Ptr(entry), MMapEnt_Ptr(entry)+MMapEnt_Size(entry), MMapEnt_Size(entry)
+                MMapEnt_Ptr(entry), n, MMapEnt_Size(entry)
             );
 #endif
-        if(MMapEnt_IsFree(entry) &&
-           (uint)(MMapEnt_Size(entry)/__PAGESIZE)>=(uint)nrphymax) {
-            //failsafe, make it page aligned
-            if(entry->ptr & (__PAGESIZE-1)) {
-                entry->size -= (__PAGESIZE-(entry->ptr & (__PAGESIZE-1))) & 0xFFFFFFFFFFFFF0ULL;
-                entry->ptr = ((entry->ptr+__PAGESIZE)/__PAGESIZE)*__PAGESIZE;
-            }
+        if(MMapEnt_IsFree(entry)) {
             //get upper bound for free memory
-            if(MMapEnt_Ptr(entry)+MMapEnt_Size(entry) > m)
-                m = MMapEnt_Ptr(entry)+MMapEnt_Size(entry);
-            if(!i) {
-                // map free physical pages to pmm.entries. Nocache is important for MultiCore
-                for(i=0;(uint)i<(uint)nrphymax;i++)
-                    kmap((uint64_t)((uint8_t*)&pmm_entries) + i*__PAGESIZE,
-                        (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
-                        PG_CORE_NOCACHE|PG_PAGE);
-                // "preallocate" the memory for pmm.entries
-                entry->ptr +=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
-                entry->size-=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
-                i=true;
+            if(n > m) m = n;
+            if((uint)(MMapEnt_Size(entry)/__PAGESIZE)>=(uint)nrphymax) {
+                //failsafe, make it page aligned
+                if(entry->ptr & (__PAGESIZE-1)) {
+                    entry->size -= (__PAGESIZE-(entry->ptr & (__PAGESIZE-1))) & 0xFFFFFFFFFFFFF0ULL;
+                    entry->ptr = ((entry->ptr+__PAGESIZE)/__PAGESIZE)*__PAGESIZE;
+                }
+                if(!i) {
+                    // map free physical pages to pmm.entries. Nocache is important for MultiCore
+                    for(i=0;(uint)i<(uint)nrphymax;i++)
+                        kmap((uint64_t)((uint8_t*)&pmm_entries) + i*__PAGESIZE,
+                            (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
+                            PG_CORE_NOCACHE|PG_PAGE);
+                    // "preallocate" the memory for pmm.entries
+                    entry->ptr +=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
+                    entry->size-=(uint64_t)(((uint)nrphymax)*__PAGESIZE);
+                    i=true;
+                }
             }
         }
         num--;
@@ -378,8 +380,10 @@ void pmm_init()
 
     //first real message
     syslog_early(OSZ_NAME " " OSZ_VER " " OSZ_ARCH "-" OSZ_PLATFORM);
+    //make sure we don't expose random seed by generating a boot session uuid
+    i=srand[0]^srand[2];
     syslog_early("Started uuid %4x-%2x-%2x-%8x",
-        (uint32_t)srand[0],(uint16_t)srand[1],(uint16_t)srand[2],srand[3]);
+        (uint32_t)i,(uint16_t)(i>>32),(uint16_t)(i>>48),srand[1]^srand[3]);
     syslog_early("Frame buffer %d x %d @%x sc %d",bootboot.fb_width,bootboot.fb_height,bootboot.fb_ptr,bootboot.fb_scanline);
 
     //dump memory map to log
@@ -393,6 +397,17 @@ void pmm_init()
         );
         num--;
         entry++;
+    }
+
+    //map initrd in kernel space (up to 16M)
+    m=(bootboot.initrd_size+__SLOTSIZE-1)/__SLOTSIZE;
+    pte=(uint64_t*)pmm_alloc(m);
+    for(i=0;i<m;i++)
+        *((uint64_t*)(&tmpmqctrl + (i<<3))) = ((phy_t)pte + i*__PAGESIZE)|PG_CORE|PG_PAGE;
+    e-=bootboot.initrd_ptr; e/=__PAGESIZE;
+    for(i=0;i<e;i++) {
+        pte[i]=(bootboot.initrd_ptr + i*__PAGESIZE)|PG_CORE|PG_PAGE;
+        kentropy();
     }
 }
 

@@ -34,16 +34,19 @@
  *                     OS/Z Loader entry point                        *
  **********************************************************************/
 _start:
-/* setup stack frame */
+    /* setup stack frame */
     mov     sp, #-16
+
     /* initialize console so that we can report errors and stats */
     bl      kprintf_init
 #if DEBUG
-    bl      dbg_init
+    bl      platform_dbginit
     /* clear debug status */
 #endif
 
     /* init entropy */
+    bl      platform_srand
+
 /* jump to C function main() in 64 bit code segment */
     bl      main
 

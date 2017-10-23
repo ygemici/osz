@@ -41,12 +41,13 @@
 #include <syscall.h>
 #include <sys/debug.h>
 
-#define FBUF_ADDRESS  0xfffffffffc000000           //framebuffer address
-#define TMPQ_ADDRESS  0xffffffffffa00000           //temporarily mapped message queue
-#define CORE_ADDRESS  0xffffffffffe02000           //core text segment
+#define INITRD_ADDRESS 0xffffffffc0000000   //initrd map address
+#define FBUF_ADDRESS   0xfffffffffc000000   //framebuffer address
+#define TMPQ_ADDRESS   0xffffffffffa00000   //temporarily mapped message queue
+#define CORE_ADDRESS   0xffffffffffe02000   //core text segment
 
-#define TCB_ADDRESS   0
-#define BUF_ADDRESS   (0x00007fff00000000)         //128T-4G data, slot alloced buffers
+#define TCB_ADDRESS    0                    //Task Control Block for current task
+#define BUF_ADDRESS    (0x00007fff00000000) //128T-4G data, slot alloc'd buffers
 
 #define USERSTACK_MAX 256 //kbytes
 #define NRMQ_MAX      ((TEXT_ADDRESS-MQ_ADDRESS-(USERSTACK_MAX*1024))/__PAGESIZE)
@@ -78,13 +79,17 @@ extern uint8_t tmpalarm;              // temporarily mapped tcb for next alarm
 extern uint8_t tmpctrl;               // control page for mapping tmpmap
 extern uint8_t tmpmqctrl;             // temporarily mapped mq control page
 extern uint8_t __dynbss_start;        // start of bss segment
-//extern ccb_t ccb;                     // CPU Control Block, mapped per core
+extern ccb_t ccb;                     // CPU Control Block, mapped per core
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
 extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern pmm_t pmm;                     // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
+extern uint8_t sys_fault;             // system fault code
+extern char *syslog_buf;              // syslog buffer
+extern char *drvs;                    // device drivers map
+extern char *drvs_end;
 
 /* see etc/include/syscall.h */
 extern pid_t services[NUMSRV];
@@ -146,6 +151,11 @@ extern void platform_timer();       // called by isr_init()
 extern void platform_poweroff();    // called by kprintf_poweroff()
 extern void platform_reset();       // called by kprintf_reset()
 extern void platform_halt();        // hang the system
+extern void platform_srand();       // initialize random seed on the platform
+#if DEBUG
+extern void platform_dbginit();     // initialize debug console
+extern void platform_dbgputc(int c);// display a character on debug console
+#endif
 
 /** Parse configuration to get environment */
 extern void env_init();
@@ -256,6 +266,7 @@ extern bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event);
 // ----- Tasks -----
 /** Allocate and initialize process structures */
 extern tcb_t *task_new(char *cmdline, uint8_t prio);
+extern tcb_t *task_idle();
 
 /** Sanity check process data */
 extern bool_t task_check(tcb_t *tcb, phy_t *paging);

@@ -81,10 +81,9 @@ void platform_poweroff()
  */
 void platform_reset()
 {
-    uint32_t cnt=110000;
-    while(cnt--) { asm volatile("nop"); }
+    uint32_t cnt=10000;
     // flush AUX
-    do{asm volatile("nop");}while((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01));cnt=*AUX_MU_IO;
+    do{asm volatile("nop");}while(cnt-- && ((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01)));cnt=*AUX_MU_IO;
     *PM_WATCHDOG = PM_WDOG_MAGIC | 1;
     *PM_RTSC = PM_WDOG_MAGIC | PM_RTSC_FULLRST;
 }
@@ -94,7 +93,19 @@ void platform_reset()
  */
 void platform_halt()
 {
-    __asm__ __volatile__ ("1: wfe; b 1b");
+    asm volatile("1: wfe; b 1b");
+}
+
+/**
+ * Initialize random seed
+ */
+void platform_srand()
+{
+    uint64_t i=10000;
+    *RNG_STATUS=0x40000; *RNG_INT_MASK|=1; *RNG_CTRL|=1;
+    do{asm volatile("nop");}while(i--); while(!((*RNG_STATUS)>>24)) asm volatile("nop");
+    for(i=0;i<4;i++)
+        srand[i]^=*RNG_DATA;
 }
 
 /**
@@ -104,3 +115,20 @@ uint64_t platform_waitkey()
 {
     uint64_t r;do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));r=(uint64_t)(*AUX_MU_IO);return r==13?10:r;
 }
+
+#if DEBUG
+/**
+ * initialize debug console
+ */
+void platform_dbginit()
+{
+}
+
+/**
+ * display a character on debug console
+ */
+void platform_dbgputc(int c)
+{
+    do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20)); *AUX_MU_IO=c; *UART0_DR=c;
+}
+#endif

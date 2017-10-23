@@ -68,7 +68,6 @@ extern uint64_t isr_lastfps;
 #if DEBUG
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
-extern void dbg_init();
 extern void dbg_setpos();
 #endif
 
@@ -147,9 +146,9 @@ void kprintf_init()
         for(x=0;x<64;x++){
             if(data[0]!=0) {
                 // make it darker as normal
-                kprintf_fg( (((uint8_t)palette[(uint8_t)data[0]*3+0]>>3)<<0)+
-                            (((uint8_t)palette[(uint8_t)data[0]*3+1]>>3)<<8)+
-                            (((uint8_t)palette[(uint8_t)data[0]*3+2]>>3)<<16) );
+                kprintf_fg( (((uint8_t)palette[(uint8_t)data[0]*3+0]>>2)<<0)+
+                            (((uint8_t)palette[(uint8_t)data[0]*3+1]>>2)<<8)+
+                            (((uint8_t)palette[(uint8_t)data[0]*3+2]>>2)<<16) );
                 *((uint32_t*)(FBUF_ADDRESS + line))=fg;
             }
             data++;
@@ -168,8 +167,7 @@ void kprintf_reboot()
     // say we're rebooting (on serial too)
     kprintf_init();
 #if DEBUG
-    dbg_putchar(13);
-    dbg_putchar(10);
+    dbg_putchar('\n');
 #endif
     kprintf(rebootprefix);
     // reboot computer
@@ -179,8 +177,7 @@ void kprintf_reboot()
     kprintf_center(20, -8);
     kprintf(poweroffsuffix);
 #if DEBUG
-    dbg_putchar(13);
-    dbg_putchar(10);
+    dbg_putchar('\n');
 #endif
     platform_halt();
 }
@@ -193,8 +190,7 @@ void kprintf_poweroff()
     // say we're finished (on serial too)
     kprintf_init();
 #if DEBUG
-    dbg_putchar(13);
-    dbg_putchar(10);
+    dbg_putchar('\n');
 #endif
     kprintf(poweroffprefix);
     // turn off hardware
@@ -205,8 +201,7 @@ void kprintf_poweroff()
     kprintf_center(20, -8);
     kprintf(poweroffsuffix);
 #if DEBUG
-    dbg_putchar(13);
-    dbg_putchar(10);
+    dbg_putchar('\n');
 #endif
     platform_halt();
 }
@@ -418,8 +413,7 @@ void kprintf_putfps()
     fg=0x801010;
     kprintf(" %d fps, ts %d",isr_lastfps,ticks[TICKS_TS]);
 #if DEBUG
-    dbg_putchar(13);
-    dbg_putchar(10);
+    dbg_putchar('\n');
 #endif
     kx=ox; ky=oy;
     fg=of; bg=ob;
@@ -446,8 +440,7 @@ void kprintf_scrollscr()
             char *msg = " --- Press any key to continue --- ";
             kx = 0; ky=maxy-1;
 #if DEBUG
-        dbg_putchar(13);
-        dbg_putchar(10);
+        dbg_putchar('\n');
 #endif
             for(;*msg!=0;msg++) {
                     kprintf_putchar((int)(*msg));
@@ -550,10 +543,8 @@ void kprintf_unicodetable()
 /**
  * display a string on early console
  */
-void kprintf(char* fmt, ...)
+void vkprintf(char *fmt, va_list args)
 {
-    va_list args;
-    va_start(args, fmt);
     uint64_t arg;
     char *p;
 
@@ -674,10 +665,8 @@ newline:        kx=fx;
 #if DEBUG
                 if(dbg_tui)
                     dbg_setpos();
-                else {
-                    dbg_putchar(13);
-                    dbg_putchar(10);
-                }
+                else
+                    dbg_putchar('\n');
                 if(scry==-1 && !dbg_indump)
 #else
                 if(scry==-1)
@@ -687,4 +676,11 @@ newline:        kx=fx;
         }
         fmt++;
     }
+}
+
+void kprintf(char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    return vkprintf(fmt,args);
 }

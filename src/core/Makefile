@@ -3,7 +3,10 @@ include ../../Config
 TARGET = sys/core
 
 BINTARGET = ../../bin/initrd/$(TARGET)
-SRCS = $(wildcard *.c)
+SRCS = $(filter-out dbg.c,$(wildcard *.c))
+#ifeq $($(DEBUG),1)
+SRCS += dbg.c
+#endif
 OBJS = $(SRCS:.c=.o)
 LIBS =
 LDFLAGS = -nostdlib -nostartfiles --build-id=none

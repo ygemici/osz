@@ -31,28 +31,39 @@
 #include <sys/types.h>
 #endif
 #include "tcb.h"
-/*
 #include "ccb.h"
 #include "isr.h"
-*/
 #include "../core.h"
 
 /* system tables */
 #define systable_acpi_idx 0
 #define systable_mmio_idx 1
 
-#define task_map(m)
-#define breakpoint
+#define breakpoint asm volatile("brk #0")
+#define task_map(m) asm volatile("msr ttbr0_el1, %0"::"r"(m))
+#define task_enable(memroot,ip,sp)
+
+#define XLAT_OSH (2<<8)
+#define XLAT_ISH (3<<8)
+#define XLAT_RW  (0<<7)
+#define XLAT_RO  (1<<7)
+#define XLAT_CORE (0<<6)
+#define XLAT_USER (1<<6)
+#define XLAT_NS  (1<<5)
+#define XLAT_MEM (0<<2)
+#define XLAT_DEV (1<<2)
+#define XLAT_NC  (2<<2)
 
 /* VMM access bits */
 #define PG_CORE             0b011100000000  // nG=0,AF=1,SH=3,AP=0,NS=0,Attr=0
 #define PG_CORE_RO          0b011110000000  // nG=0,AF=1,SH=3,AP=2,NS=0,Attr=0
-#define PG_CORE_NOCACHE     0b110000001000  // nG=1,AF=1,SH=0,AP=0,NS=0,Attr=2
+//#define PG_CORE_NOCACHE     0b011000001000  // nG=0,AF=1,SH=3,AP=0,NS=0,Attr=2
+#define PG_CORE_NOCACHE     0b011000000000  // nG=0,AF=1,SH=2,AP=0,NS=0,Attr=0
 #define PG_USER_RO          0b011111000000  // nG=0,AF=1,SH=3,AP=3,NS=0,Attr=0
 #define PG_USER_RW          0b011101000000  // nG=0,AF=1,SH=3,AP=1,NS=0,Attr=0
-#define PG_USER_RWNOCACHE   0b110001001000  // nG=1,AF=1,SH=0,AP=1,NS=0,Attr=2
-#define PG_USER_DRVMEM      0b110001000100  // nG=1,AF=1,SH=0,AP=1,NS=0,Attr=1
-
+//#define PG_USER_RWNOCACHE   0b010001001000  // nG=1,AF=1,SH=0,AP=1,NS=0,Attr=2
+#define PG_USER_RWNOCACHE   0b011001000000  // nG=0,AF=1,SH=2,AP=1,NS=0,Attr=0
+#define PG_USER_DRVMEM      0b011001000100  // nG=0,AF=1,SH=2,AP=1,NS=0,Attr=1
 #define PG_PAGE                       0b11  // 4k granule
 #define PG_SLOT                       0b01  // 2M granule
 #define PG_NX_BIT           54

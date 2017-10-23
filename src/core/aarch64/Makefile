@@ -1,9 +1,9 @@
 include ../../../etc/sys/etc/os-release
 include ../../../Config
 
-SRCS = $(filter-out dbg.c disasm.c,$(wildcard *.c))
+SRCS = $(filter-out disasm.c,$(wildcard *.c))
 #ifeq $($(DEBUG),1)
-SRCS += dbg.c
+SRCS += disasm.c
 #endif
 SRCS+= $(wildcard *.S)
 TMP = $(SRCS:.c=.o)

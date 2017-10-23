@@ -59,10 +59,11 @@ _start:
 /* setup stack frame */
     xorq    %rsp, %rsp
     xorq    %rbp, %rbp
+
     /* initialize console so that we can report errors and stats */
     call    kprintf_init
 #if DEBUG
-    call    dbg_init
+    call    platform_dbginit
     /* clear debug status */
     xorq    %rax, %rax
     movq    %rax, %dr6
@@ -72,21 +73,11 @@ _start:
     movq    %rax, __PAGESIZE-40
 
     /* init entropy */
-    movq    $srand, %rdi
-    movq    %rbx, %rsi
-    movw    $512, %cx
-1:  lodsq
-    addq    %rax, (%rdi)
-    subq    %rax, 8(%rdi)
-    xorq    %rax, 16(%rdi)
-    addq    %rax, 24(%rdi)
-    pushq   %rcx
-    call    kentropy
-    popq    %rcx
-    dec     %cx
-    jnz     1b
+    call    platform_srand
+
 /* check and enable all CPU features that this release use
-   and gain entropy in the meantime */
+   and gain some more entropy in the meantime */
+    movq    $srand, %rdi
     xorq    %rax, %rax
     incb    %al
     cpuid

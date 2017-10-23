@@ -31,10 +31,8 @@
 #include <sys/types.h>
 #endif
 #include "tcb.h"
-/*
 #include "ccb.h"
 #include "isr.h"
-*/
 #include "../core.h"
 
 /* system tables */
@@ -47,8 +45,13 @@
 #define systable_ioapic_idx 6
 #define systable_hpet_idx 7
 
-#define task_map(m) __asm__ __volatile__ ("mov %0, %%rax; mov %%rax, %%cr3" : : "a"(m));
-#define breakpoint __asm__ __volatile__("xchg %bx, %bx")
+#define breakpoint asm volatile("xchg %bx, %bx")
+#define task_map(m) asm volatile("movq %0, %%cr3" : : "a"(m));
+#define task_enable(memroot,ip,sp) asm volatile( \
+        "mov %0, %%rax; mov %%rax, %%cr3;" \
+        "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;" \
+        "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" : \
+        : "a"(memroot), "b"(ip), "i"(sp));
 
 /* VMM access bits */
 #define PG_CORE             0b00011
@@ -59,5 +62,5 @@
 #define PG_USER_RWNOCACHE   0b10111
 #define PG_USER_DRVMEM      0b11111
 #define PG_PAGE          0b00000001
-#define PG_SLOT          0b10000000
+#define PG_SLOT          0b10000001
 #define PG_NX_BIT           63

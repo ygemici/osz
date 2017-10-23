@@ -30,8 +30,8 @@
 
 #define MMIO_ADDRESS  0xfffffffffa000000
 
-#define breakpoint __asm__ __volatile__("svc #0":::)
-#define breakbochs
-#define breakgdb __asm__ __volatile__ ("1:b 1b");
+#define breakpoint asm volatile("brk #0")
+#define breakbochs asm volatile("brk #0")
+#define breakgdb   asm volatile("1:b 1b")
 
 #endif

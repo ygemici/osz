@@ -129,7 +129,7 @@ void platform_poweroff()
     // Bochs poweroff hack
     char *s = "Shutdown";
     while (*s) {
-        __asm__ __volatile__ ("movw $0x8900, %%dx; outb %0, %%dx" : : "a"(*s));
+        asm volatile("movw $0x8900, %%dx; outb %0, %%dx" : : "a"(*s));
         s++;
     }
     // implement APM poweroff maybe?
@@ -141,7 +141,7 @@ void platform_poweroff()
  */
 void platform_reset()
 {
-    __asm__ __volatile__ ("movb $0xFE, %al; outb %al, $0x64");
+    asm volatile("movb $0xFE, %al; outb %al, $0x64");
 }
 
 /**
@@ -149,5 +149,49 @@ void platform_reset()
  */
 void platform_halt()
 {
-    __asm__ __volatile__ ("1: cli; hlt; jmp 1b");
+    asm volatile("1: cli; hlt; jmp 1b");
 }
+
+#if DEBUG
+/**
+ * initialize debug console
+ */
+void platform_dbginit()
+{
+    /* initialize uart as an alternative "keyboard" for debugger */
+    asm volatile(
+        "movw $0x3f9, %dx;"
+        "xorb %al, %al;outb %al, %dx;"                   //IER int off
+        "movb $0x80, %al;addb $2,%dl;outb %al, %dx;"     //LCR set divisor mode
+        "movb $1, %al;subb $3,%dl;outb %al, %dx;"        //DLL divisor lo 115200
+        "xorb %al, %al;incb %dl;outb %al, %dx;"          //DLH divisor hi
+        "xorb %al, %al;incb %dl;outb %al, %dx;"          //FCR fifo off
+        "movb $0x43, %al;incb %dl;outb %al, %dx;"        //LCR 8N1, break on
+        "movb $0x8, %al;incb %dl;outb %al, %dx;"         //MCR Aux out 2
+        "xorb %al, %al;subb $4,%dl;inb %dx, %al"         //clear receiver/transmitter
+    );
+}
+
+/**
+ * display a character on debug console
+ */
+void platform_dbgputc(int c)
+{
+    asm volatile(
+        "movl %0, %%ebx;"
+#ifndef NOBOCHSCONSOLE
+        // bochs e9 port hack
+        "movb %%bl, %%al;outb %%al, $0xe9;"
+#endif
+        // print character on serial
+        "movl $10000,%%ecx;movw $0x3fd,%%dx;"
+        // transmit buffer ready?
+        "1:inb %%dx, %%al;"
+        "cmpb $0xff,%%al;je 2f;"
+        "dec %%ecx;jz 2f;"
+        "andb $0x20,%%al;jz 1b;"
+        // send out character
+        "subb $5,%%dl;movb %%bl, %%al;outb %%al, %%dx;2:"
+    ::"r"(c));
+}
+#endif
