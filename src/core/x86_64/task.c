@@ -48,7 +48,7 @@ tcb_t *task_new(char *cmdline, uint8_t prio)
 
     /* allocate TCB */
     ptr=pmm_alloc(1);
-    kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE);
+    kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->state = tcb_state_running;
     tcb->priority = prio;
@@ -66,44 +66,44 @@ tcb_t *task_new(char *cmdline, uint8_t prio)
     // PML4
     ptr=pmm_alloc(1);
     tcb->memroot = (uint64_t)ptr;
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     // PDPE
     ptr=pmm_alloc(1);
-    paging[0]=(uint64_t)ptr+PG_USER_RW;
-    paging[511]=(core_mapping&~(__PAGESIZE-1))+PG_CORE;
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
+    paging[0]=(uint64_t)ptr+(PG_USER_RW|PG_PAGE);
+    paging[511]=(core_mapping&~(__PAGESIZE-1))+(PG_CORE|PG_PAGE);
+    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     // PDE
     ptr=pmm_alloc(1);
-    paging[0]=(uint64_t)ptr+PG_USER_RW;
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
+    paging[0]=(uint64_t)ptr+(PG_USER_RW|PG_PAGE);
+    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     // PT text
     ptr=pmm_alloc(1);
     //pt=(uint64_t)ptr;
-    paging[0]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
+    paging[0]=((uint64_t)ptr+(PG_USER_RW|PG_PAGE))|((uint64_t)1<<PG_NX_BIT);
     ptr2=pmm_alloc(1);
-    paging[1]=(uint64_t)ptr2+PG_USER_RW;
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
+    paging[1]=(uint64_t)ptr2+(PG_USER_RW|PG_PAGE);
+    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_NX_BIT);
     // map TCB
     tcb->self = (uint64_t)ptr;
-    paging[0]=(self+PG_USER_RO)|((uint64_t)1<<63);
+    paging[0]=(self+PG_USER_RO)|PG_PAGE|((uint64_t)1<<PG_NX_BIT);
     // allocate message queue
     for(i=0;i<nrmqmax;i++) {
         ptr=pmm_alloc(1);
-        paging[i+(MQ_ADDRESS/__PAGESIZE)]=((uint64_t)ptr+PG_USER_RO)|((uint64_t)1<<63);
+        paging[i+(MQ_ADDRESS/__PAGESIZE)]=((uint64_t)ptr+PG_USER_RO)|PG_PAGE|((uint64_t)1<<PG_NX_BIT);
     }
     // allocate stack
     ptr=pmm_alloc(1);
-    paging[511]=((uint64_t)ptr+PG_USER_RW)|((uint64_t)1<<63);
+    paging[511]=((uint64_t)ptr+PG_USER_RW)|PG_PAGE|((uint64_t)1<<PG_NX_BIT);
     // we don't need the table any longer, so we can use it to map the
     // message queue header for initialization
-    kmap((uint64_t)&tmpmap, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE|PG_PAGE);
     msghdr_t *msghdr = (msghdr_t *)&tmpmap;
     msghdr->mq_start = msghdr->mq_end = 1;
     msghdr->mq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
     msghdr->mq_buffstart = msghdr->mq_buffend = msghdr->mq_buffmin = (nrmqmax+1);
     msghdr->mq_buffsize = __SLOTSIZE/__PAGESIZE/2;
     // set up stack, watch out for alignment
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     i = 511-((kstrlen(cmdline)+2+15)/16*2);
     tcb->name = TEXT_ADDRESS - __PAGESIZE + i*8;
     kstrcpy((char*)(&paging[i--]), cmdline);
@@ -115,7 +115,7 @@ tcb_t *task_new(char *cmdline, uint8_t prio)
     tcb->rsp = tcb->cmdline = TEXT_ADDRESS - __PAGESIZE + (i+1)*8;
 //for(;i<512;i++) kprintf("%4x: %8x\n",((uint64_t)&paging[i])&0xFFFF,paging[i]);
     // map text segment mapping for elf loading
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
+    kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE|PG_PAGE);
 #if DEBUG
     if(debug&DBG_TASKS)
         kprintf("Task %x memroot %x stack %x %s\n",self/__PAGESIZE,tcb->memroot,ptr,cmdline);

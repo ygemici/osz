@@ -63,8 +63,7 @@ char poweroffsuffix[] =
 char nullstr[] = "(null)";
 
 extern char _binary_logo_start;
-extern uint64_t isr_currfps;
-extern uint64_t isr_lastfps;
+extern uint64_t lastfps;
 #if DEBUG
 extern uint8_t dbg_indump;
 extern uint8_t dbg_tui;
@@ -89,7 +88,7 @@ void kprintf_reset()
 void kprintf_fg(uint32_t color)
 {
     switch(bootboot.fb_type) {
-//        case FB_ABGR: fg=((color>>16)&0xff)|(color&0xff00)|((color&0xff)<<16); break;
+        case FB_ABGR: fg=((color>>16)&0xff)|(color&0xff00)|((color&0xff)<<16); break;
         default: fg=color; break;
     }
 }
@@ -172,7 +171,7 @@ void kprintf_reboot()
     kprintf(rebootprefix);
     // reboot computer
     platform_reset();
-    // if it didn't work, show a message and freeze. Should never happen.
+    // if it didn't work, show a message and freeze.
     fg = 0x29283f;
     kprintf_center(20, -8);
     kprintf(poweroffsuffix);
@@ -411,7 +410,7 @@ void kprintf_putfps()
     int ox=kx,oy=ky,of=fg,ob=bg;
     kx=0; ky=maxy-1; bg=0;
     fg=0x801010;
-    kprintf(" %d fps, ts %d",isr_lastfps,ticks[TICKS_TS]);
+    kprintf(" %d fps, ts %d",lastfps,ticks[TICKS_TS]);
 #if DEBUG
     dbg_putchar('\n');
 #endif

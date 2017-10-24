@@ -30,8 +30,7 @@
 /* number of cores */
 uint32_t numcores = 1;
 /* current fps counter */
-uint64_t isr_currfps;
-uint64_t isr_lastfps;
+uint64_t currfps, lastfps;
 /* locks, timer ticks, random seed, system tables */
 uint64_t locks, ticks[4], srand[4], systables[8];
 /* system fault code, idle first scheduled flag */
@@ -46,6 +45,9 @@ rela_t *relas;
 char *drvs, *drvs_end;
 /* pids of services. Negative pids are service ids and looked up in this table */
 pid_t services[NUMSRV];
+/* irq routing */
+pid_t *irq_routing_table;
+uint16_t maxirq, tmrirq;
 
 /* external resources */
 extern tcb_t *sched_get_tcb(pid_t task);
@@ -70,20 +72,19 @@ void sys_init()
         // should never happen!
         kpanic("Missing /sys/drivers\n");
     }
-kprintf("Drivers:\n%s",drvs);
-    return;
     /* create idle task */
     tcb_t *tcb = task_idle();
     // Don't add to scheduler queue, normally it will never be scheduled
     kmemcpy(&tcb->owner, "core", 5);
     idle_mapping = tcb->memroot;
-    idle_first = true;
 
     /*** Platform specific initialization ***/
     syslog_early("Device drivers");
     platform_detect();
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
+kprintf("Drivers:\n%s",drvs);
+    return;
 
     kmemcpy(&fn[0], "sys/drv/", 8);
     // load devices which are not coverable by bus enumeration
@@ -125,6 +126,7 @@ inline void sys_enable()
     dbg_init();
 #endif
     sys_fault = false;
+    idle_first = true;
 
     // map FS task's TCB
     kmap((uint64_t)&tmpmap,
@@ -137,12 +139,44 @@ inline void sys_enable()
 }
 
 /**
+ * Add a task into IRQ Routing Table
+ */
+int sys_installirq(uint16_t irq, phy_t memroot)
+{
+    if(irq>=0 && irq<maxirq) {
+        if(irq_routing_table[irq]!=0) {
+            syslog_early("too many IRQ handlers for %d\n", irq);
+            return EBUSY;
+        }
+#if DEBUG
+    if(debug&DBG_IRQ)
+        kprintf("IRQ %d: %x\n", irq, memroot);
+#endif
+        irq_routing_table[irq] = memroot;
+        return SUCCESS;
+    } else {
+        return EINVAL;
+    }
+}
+
+/**
  * Called when the "idle" task first scheduled 
  */
 void sys_ready()
 {
     /* finish up ISR initialization */
-//    isr_fini();
+    int i;
+    idle_first = false;
+    syslog_early("IRQ Routing Table (%d IRQs)", maxirq);
+    for(i=0;i<maxirq;i++) {
+        if(i==tmrirq)
+            syslog_early(" %3d: core (Timer)", i);
+        else if(irq_routing_table[i])
+            syslog_early(" %3d: %x", i, irq_routing_table[i]);
+        // enable IRQs
+        if(i==tmrirq || irq_routing_table[i])
+            isr_enableirq(i);
+    }
     /* log we're ready */
     syslog_early("Ready. Memory %d of %d pages free.", pmm.freepages, pmm.totalpages);
 

@@ -31,7 +31,6 @@
 extern uint8_t pmm_entries;
 /* memory pointers to allocate */
 extern rela_t *relas;
-//extern uint64_t *safestack;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 /* pointer to tmpmap in PT */

@@ -169,3 +169,11 @@ void kmap(virt_t virt, phy_t phys, uint16_t access)
     asm volatile ("dsb ishst; tlbi vaae1, %0; dc cvau, %1; dsb ish; isb" : : "r" (virt>>12), "r"(virt));
 //kprintf("kmap(%x,%x,%x) %x=%x\n",virt, phys, access, ptr, *ptr);
 }
+
+void kmap_mq(phy_t tcbmemroot)
+{
+}
+
+void kmap_buf(phy_t tcbmemroot, virt_t ptr, size_t size)
+{
+}

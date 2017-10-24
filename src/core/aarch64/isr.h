@@ -25,6 +25,8 @@
  * @brief Interrupt Service Routines header file
  */
 
+#define ISR_NUMIRQ 16
+
 #define ISR_EXCMAX 7      //maximum code size of exception ISRs in alignment
 #define ISR_IRQMAX 7      //maximum code size of IRQ ISRs in alignment
 #define ISR_STACK 64      //minimum size of stack for ISRs

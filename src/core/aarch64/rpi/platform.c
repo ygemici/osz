@@ -28,6 +28,7 @@
 #include "../arch.h"
 #include "platform.h"
 
+extern uint8_t dbg_iskbd;
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 
@@ -36,6 +37,10 @@ extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint6
  */
 void platform_env()
 {
+    //drain AUX buffer
+    register uint64_t r;
+    while((*AUX_MU_LSR&0x01)) r=(uint64_t)(*AUX_MU_IO);
+    r++; //make gcc happy
 }
 
 /**
@@ -51,6 +56,7 @@ unsigned char *platform_parse(unsigned char *env)
  */
 void platform_timer()
 {
+    clocksource=1;
 }
 
 /**
@@ -74,6 +80,8 @@ void platform_enumerate()
  */
 void platform_poweroff()
 {
+    platform_waitkey();
+    platform_reset();
 }
 
 /**
@@ -101,11 +109,13 @@ void platform_halt()
  */
 void platform_srand()
 {
-    uint64_t i=10000;
+    register uint64_t i;
     *RNG_STATUS=0x40000; *RNG_INT_MASK|=1; *RNG_CTRL|=1;
-    do{asm volatile("nop");}while(i--); while(!((*RNG_STATUS)>>24)) asm volatile("nop");
-    for(i=0;i<4;i++)
-        srand[i]^=*RNG_DATA;
+    while(!((*RNG_STATUS)>>24)) asm volatile("nop");
+    for(i=0;i<4;i++) {
+        srand[i]+=*RNG_DATA;
+        srand[i]^=(uint64_t)(*RNG_DATA)<<16;
+    }
 }
 
 /**
@@ -113,7 +123,10 @@ void platform_srand()
  */
 uint64_t platform_waitkey()
 {
-    uint64_t r;do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));r=(uint64_t)(*AUX_MU_IO);return r==13?10:r;
+    register uint64_t r;
+    do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));r=(uint64_t)(*AUX_MU_IO);
+    dbg_iskbd=false;
+    return r==13?10:r;
 }
 
 #if DEBUG

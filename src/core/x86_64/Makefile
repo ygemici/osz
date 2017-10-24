@@ -12,19 +12,16 @@ CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER=
  -DOSZ_ARCH='"$(ARCH)"' -DOSZ_PLATFORM='"$(PLATFORM)"' -DOSZ_BUILD='$(BUILD)' \
  -Wall -fpic -ffreestanding -nostdinc -nostdlib -fno-stack-protector -I../../../etc/include -I./$(PLATFORM)
 
-#all: $(PLATFORM)/isrs.S $(OBJS)
-all: $(OBJS)
+all: $(PLATFORM)/isrs.S $(OBJS)
 
-$(PLATFORM)/isrs.S: isr.h $(PLATFORM)/platform.h
+$(PLATFORM)/isrs.S: isr.h isr.c $(PLATFORM)/platform.h
 	@./isrs.sh 2>/dev/null || true
 
-#%.o: %.S $(PLATFORM)/isrs.S
-%.o: %.S
+%.o: %.S $(PLATFORM)/isrs.S
 	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) -D_AS=1 $(OPT) $(CFLAGS) -c $< -o $@
 
-#%.o: %.c $(PLATFORM)/isrs.S
-%.o: %.c
+%.o: %.c $(PLATFORM)/isrs.S
 	@#echo "  src		$(ARCH)/$<"
 	$(O)$(CC) $(OPT) $(CFLAGS) -c $< -o $@
 

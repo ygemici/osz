@@ -37,25 +37,24 @@ extern void idle();
 tcb_t *task_new(char *cmdline, uint8_t prio)
 {
     tcb_t *tcb = (tcb_t*)(pmm.bss_end);
-/*
-    uint64_t *paging = (uint64_t *)&tmpmap, self;
-    void *ptr, *ptr2;
-    uint i;
-*/
+    uint64_t /* *paging = (uint64_t *)&tmpmap,*/ self;
+    void *ptr/*, *ptr2*/;
+//    uint i;
+
     /* allocate at least 1 page for message queue */
     if(nrmqmax<1)
         nrmqmax=1;
 
     /* allocate TCB */
-/*
     ptr=pmm_alloc(1);
-    kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE);
+    kmap((uint64_t)pmm.bss_end, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->state = tcb_state_running;
     tcb->priority = prio;
     self = (uint64_t)ptr;
     tcb->pid = (pid_t)(self/__PAGESIZE);
     tcb->allocmem = 8 + nrmqmax;
+/*
     tcb->cs = 0x20+3; // ring 3 user code
     tcb->ss = 0x18+3; // ring 3 user data
     tcb->rflags = 0x202; // enable interrupts and mandatory bit 1
@@ -118,11 +117,11 @@ tcb_t *task_new(char *cmdline, uint8_t prio)
 //for(;i<512;i++) kprintf("%4x: %8x\n",((uint64_t)&paging[i])&0xFFFF,paging[i]);
     // map text segment mapping for elf loading
     kmap((uint64_t)&tmpmap, (uint64_t)ptr2, PG_CORE_NOCACHE);
+*/
 #if DEBUG
     if(debug&DBG_TASKS)
         kprintf("Task %x memroot %x stack %x %s\n",self/__PAGESIZE,tcb->memroot,ptr,cmdline);
 #endif
-*/
     return tcb;
 }
 

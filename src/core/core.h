@@ -181,9 +181,9 @@ extern void vmm_unmapbss(tcb_t *tcb,virt_t bss, size_t size);
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
 extern void isr_fini();
-extern void isr_enableirq(uint8_t irq);
-extern void isr_disableirq(uint8_t irq);
-extern int  isr_installirq(uint8_t irq, phy_t memroot);
+extern void isr_enableirq(uint16_t irq);
+extern void isr_disableirq(uint16_t irq);
+extern int  sys_installirq(uint16_t irq, phy_t memroot);
 
 // ----- System -----
 /** Initialize main system "service" (idle task and device drivers) */
