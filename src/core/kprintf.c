@@ -76,7 +76,7 @@ extern void dbg_setpos();
 void kprintf_reset()
 {
     kx = ky = fx = 0;
-    scry = maxy - 1;
+    scry = maxy;
     reent = 0;
     fg = 0xC0C0C0;
     bg = 0;
@@ -265,7 +265,7 @@ void kprintf_putchar(int c)
     srand[(c+bootboot.datetime[7]+bootboot.datetime[6]+bootboot.datetime[5])%4] *= 16807;
 #if DEBUG
     // send it to serial too
-    dbg_putchar(c);
+    dbg_putchar((uint8_t)c);
 #endif
 }
 
@@ -653,7 +653,7 @@ nextchar:   kx++;
             if(kx>=maxx) {
 newline:        kx=fx;
                 ky++;
-                if(ky>=maxy) {
+                if(ky>=maxy-(scry==-1?0:1)) {
                     ky--;
 #if DEBUG
                     if(dbg_indump)

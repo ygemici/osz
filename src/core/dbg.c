@@ -127,7 +127,7 @@ char *prio[] = {
     "IDLE ONLY"
 };
 */
-void dbg_putchar(int c)
+void dbg_putchar(uint8_t c)
 {
     if(c<8 || c>255 || (dbg_indump==2 && (c<' '||c>=127)) || (c>=127&&c<160) || c==173)
         c='.';

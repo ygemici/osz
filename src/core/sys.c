@@ -39,8 +39,6 @@ uint8_t sys_fault, idle_first;
 phy_t idle_mapping, core_mapping, identity_mapping;
 /* pointer to tmpmap in PT */
 uint64_t *kmap_tmp;
-/* memory allocated for relocation addresses */
-rela_t *relas;
 /* device drivers map */
 char *drvs, *drvs_end;
 /* pids of services. Negative pids are service ids and looked up in this table */
@@ -73,9 +71,9 @@ void sys_init()
         kpanic("Missing /sys/drivers\n");
     }
     /* create idle task */
-    tcb_t *tcb = task_idle();
+    tcb_t *tcb = vmm_idletask();
     // Don't add to scheduler queue, normally it will never be scheduled
-    kmemcpy(&tcb->owner, "core", 5);
+    kmemcpy(&tcb->owner, "system", 7);
     idle_mapping = tcb->memroot;
 
     /*** Platform specific initialization ***/
@@ -83,8 +81,7 @@ void sys_init()
     platform_detect();
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
-kprintf("Drivers:\n%s",drvs);
-    return;
+//kprintf("Drivers:\n%s",drvs);return;
 
     kmemcpy(&fn[0], "sys/drv/", 8);
     // load devices which are not coverable by bus enumeration
@@ -106,7 +103,6 @@ kprintf("Drivers:\n%s",drvs);
         if(c>=drvs_end || *c==0) break;
         if(*c=='\n') c++;
     }
-    task_map(identity_mapping);
     // enumerate system buses
     platform_enumerate();
 
@@ -135,7 +131,7 @@ inline void sys_enable()
 
     syslog_early("Initializing");
     // fake an interrupt/exception handler return to force first task switch
-    task_enable(fstcb->memroot, &tcb->rip, TEXT_ADDRESS);
+    vmm_enable(fstcb->memroot, &tcb->rip, TEXT_ADDRESS);
 }
 
 /**
@@ -207,6 +203,6 @@ return;
     /* mount filesystems. It have to come from somewhere, so we choose the init task. */
     tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
     sched_awake(tcb);
-    task_map(tcb->memroot);
+    vmm_map(tcb->memroot);
     msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }

@@ -29,7 +29,7 @@
 public char _osver[192];
 public uint64_t _bogomips = 1000;
 public uint64_t _alarmstep = 1000;
-public uint64_t errn = SUCCESS;
+public uint64_t errn;
 #if DEBUG
 /* debug flags */
 public uint32_t _debug;
@@ -163,7 +163,7 @@ int atexit (void (*func) (void))
  *  in the reverse of the order in which they were registered,
  *  perform stdio cleanup, and terminate program execution with STATUS.
  */
-void _atexit(int status)
+void _atexit()
 {
     int i;
     /* call atexit handlers in reverse order */

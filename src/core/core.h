@@ -42,12 +42,13 @@
 #include <sys/debug.h>
 
 #define INITRD_ADDRESS 0xffffffffc0000000   //initrd map address
+#define VMM_ADDRESS    0xffffffffc1000000   //temporarily mapped vmm tables
 #define FBUF_ADDRESS   0xfffffffffc000000   //framebuffer address
 #define TMPQ_ADDRESS   0xffffffffffa00000   //temporarily mapped message queue
 #define CORE_ADDRESS   0xffffffffffe02000   //core text segment
 
 #define TCB_ADDRESS    0                    //Task Control Block for current task
-#define BUF_ADDRESS    (0x00007fff00000000) //128T-4G data, slot alloc'd buffers
+#define BUF_ADDRESS    0x0000007f00000000   //512G-4G data, slot alloc'd buffers
 
 #define USERSTACK_MAX 256 //kbytes
 #define NRMQ_MAX      ((TEXT_ADDRESS-MQ_ADDRESS-(USERSTACK_MAX*1024))/__PAGESIZE)
@@ -83,13 +84,13 @@ extern ccb_t ccb;                     // CPU Control Block, mapped per core
 
 // kernel variables
 extern uint64_t *irq_routing_table;   // IRQ Routing Table
-extern phy_t idle_mapping;            // memory mapping for "idle" task
 extern pmm_t pmm;                     // Physical Memory Manager data
 extern int scry;                      // scroll counter for console
 extern uint8_t sys_fault;             // system fault code
 extern char *syslog_buf;              // syslog buffer
 extern char *drvs;                    // device drivers map
 extern char *drvs_end;
+extern phy_t idle_mapping;
 
 /* see etc/include/syscall.h */
 extern pid_t services[NUMSRV];
@@ -154,7 +155,7 @@ extern void platform_halt();        // hang the system
 extern void platform_srand();       // initialize random seed on the platform
 #if DEBUG
 extern void platform_dbginit();     // initialize debug console
-extern void platform_dbgputc(int c);// display a character on debug console
+extern void platform_dbgputc(uint8_t c);// display a character on debug console
 #endif
 
 /** Parse configuration to get environment */
@@ -172,11 +173,35 @@ extern void *pmm_allocslot();
 /** Free physical memory */
 extern void pmm_free(phy_t base, size_t numpages);
 
+/** Allocate and initialize a new address space */
+extern tcb_t *vmm_idletask();
+extern tcb_t *vmm_newtask(char *cmdline, uint8_t prio);
+/** Map vmm tables for an existing address space */
+extern tcb_t *vmm_maptask(phy_t memroot);
+
+/*** set up the main entry point */
+extern void vmm_setip(virt_t func);
+/*** push an entry point for execution */
+extern void vmm_pushentry(virt_t func);
+
+/** Sanity check process data */
+extern bool_t vmm_check();
+extern void vmm_checklastpt();
+
+/** map core buffer in task's address space */
+extern virt_t vmm_mapbuf(void *buf, uint64_t npages, uint64_t access);
+
 /** Map a specific memory area into task's bss */
 extern void vmm_mapbss(tcb_t *tcb,virt_t bss, phy_t phys, size_t size, uint64_t access);
 
 /** Unmap task's bss */
 extern void vmm_unmapbss(tcb_t *tcb,virt_t bss, size_t size);
+
+/** Switch to an address space (macro) */
+//void vmm_map(memroot);
+
+/** Switch to an adress space and execute it (macro) */
+//void vmm_enable(memroot, func, stack);
 
 /** Initialize Interrupt Service Routines */
 extern void isr_init();
@@ -263,17 +288,6 @@ extern bool_t task_allowed(tcb_t *tcb, char *grp, uint8_t access);
 extern bool_t msg_allowed(tcb_t *sender, pid_t dest, evt_t event);
 
 
-// ----- Tasks -----
-/** Allocate and initialize process structures */
-extern tcb_t *task_new(char *cmdline, uint8_t prio);
-extern tcb_t *task_idle();
-
-/** Sanity check process data */
-extern bool_t task_check(tcb_t *tcb, phy_t *paging);
-
-/** map core buffer in task's address space */
-extern virt_t task_mapbuf(void *buf, uint64_t npages);
-
 // ----- Scheduler -----
 /** Add task to scheduling */
 extern void sched_add(tcb_t *tcb);
@@ -335,7 +349,7 @@ extern uint64_t ksend(msghdr_t *mqhdr, evt_t event, uint64_t arg0, uint64_t arg1
 /* enable internal debugger */
 extern void dbg_enable(virt_t rip, virt_t rsp, char *reason);
 /* put a character on serial line */
-extern void dbg_putchar(int c);
+extern void dbg_putchar(uint8_t c);
 #endif
 
 #endif

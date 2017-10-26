@@ -169,11 +169,11 @@ kpanic:
     /* if so, print rip and try to resolve symbol for it */
 1:  movq    $kpanicrip, %rdi
     call    kprintf
-//    movq    __PAGESIZE-40, %rdi
-//    call    elf_sym
-//    mov     %rax, %rsi
-//    movq    $kpanicsym, %rdi
-//    call    kprintf
+    movq    __PAGESIZE-40, %rdi
+    call    elf_sym
+    mov     %rax, %rsi
+    movq    $kpanicsym, %rdi
+    call    kprintf
 2:
 #if DEBUG
     movb    $10, %dil
@@ -225,10 +225,7 @@ kpanic:
     subl    $7, ky
     call    kprintf_putlogo
     /* wait for user input */
-1:  call    platform_waitkey
-    /* don't accept Alt key. I press it when I press Alt+Q or Alt+F4 to close qemu and bochs :-) */
-    cmpb    $0x38, %al
-    je      1b
+    call    platform_waitkey
     /* reboot computer */
 2:  call    kprintf_reboot
     cli
@@ -352,7 +349,7 @@ kmap:
     cmpq    $tmpmap, %rdi
     jne     1f
     movq    kmap_tmp, %rax
-    addq    $8, %rax
+    addq    $24, %rax
     jmp     2f
     /* shortcut for tmp2map */
 1:  cmpq    $tmp2map, %rdi
@@ -360,14 +357,14 @@ kmap:
     movq    kmap_tmp, %rax
     addq    $32, %rax
     jmp     2f
-    /* shortcut for tmpfx */
-1:  cmpq    $tmpfx, %rdi
+    /* shortcut for tmpalarm */
+1:  cmpq    $tmpalarm, %rdi
     jne     1f
     movq    kmap_tmp, %rax
     addq    $40, %rax
     jmp     2f
-    /* shortcut for tmpalarm */
-1:  cmpq    $tmpalarm, %rdi
+    /* shortcut for tmpfx */
+1:  cmpq    $tmpfx, %rdi
     jne     1f
     movq    kmap_tmp, %rax
     addq    $48, %rax
@@ -466,10 +463,10 @@ kmap_init:
     incw    %ax
     mov     %rax, (%rbx)
     /* map TMPQ_ADDRESS pde at tmpmqctrl */
-    addq    $8, %rbx
+    subq    $8, %rbx
     mov     %r8, (%rbx)
     /* record pointer at kmap_tmp */
-    subq    $24, %rbx
+    subq    $8, %rbx
     andq    $0x0FFF, %rbx
     addq    %rcx, %rbx
     movq    %rbx, %rax

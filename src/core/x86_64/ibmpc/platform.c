@@ -92,14 +92,12 @@ unsigned char *platform_parse(unsigned char *env)
  */
 void platform_timer()
 {
-/*
     if(clocksource==TMR_RTC) {
         rtc_init();
     } else {
         clocksource=TMR_PIT;
         pit_init();
     }
-*/
 }
 
 /**
@@ -170,15 +168,18 @@ void platform_dbginit()
         "movb $0x8, %al;incb %dl;outb %al, %dx;"         //MCR Aux out 2
         "xorb %al, %al;subb $4,%dl;inb %dx, %al"         //clear receiver/transmitter
     );
+    /* clear debug status */
+    asm volatile("xorq %rax, %rax; movq %rax, %dr6");
+
 }
 
 /**
  * display a character on debug console
  */
-void platform_dbgputc(int c)
+void platform_dbgputc(uint8_t c)
 {
     asm volatile(
-        "movl %0, %%ebx;"
+        "xorl %%ebx, %%ebx; movb %0, %%bl;"
 #ifndef NOBOCHSCONSOLE
         // bochs e9 port hack
         "movb %%bl, %%al;outb %%al, $0xe9;"

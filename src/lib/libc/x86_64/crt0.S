@@ -31,21 +31,23 @@
  */
 
 .global _start
+.extern exit
+.type exit, STT_FUNC
 
 .section .crt0
-
     /* initial RIP on task execution, first byte of text segment */
-    ret
-
-.section .text
-
+    retq
 _start:
-    /* TODO: call ctors */
+    /* linker puts ctors here */
+.section .crt0.init
     /* restore argc, argv as they may be ruined by shlib's _init */
     movq    (%rsp), %rdi
     movq    8(%rsp), %rsi
     /* call main(argc,argv) function */
     call    main
-    /* exit task */
-    movq    %rax, %rdi
-    jmp    exit@PLT
+    pushq   %rax
+    /* linker puts dtors here */
+.section .text
+    /* first instruction in text section, exit task */
+    popq    %rdi
+    jmp     exit@PLT

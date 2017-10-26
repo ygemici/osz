@@ -64,9 +64,6 @@ _start:
     call    kprintf_init
 #if DEBUG
     call    platform_dbginit
-    /* clear debug status */
-    xorq    %rax, %rax
-    movq    %rax, %dr6
 #endif
     /* clear task rip to avoid symbol lookup in case of panic */
     xorq    %rax, %rax

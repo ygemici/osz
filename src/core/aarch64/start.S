@@ -41,7 +41,6 @@ _start:
     bl      kprintf_init
 #if DEBUG
     bl      platform_dbginit
-    /* clear debug status */
 #endif
 
     /* init entropy */

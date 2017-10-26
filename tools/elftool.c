@@ -104,8 +104,9 @@ int main(int argc,char** argv)
                 if(dump && d->d_tag<1000)
                     printf("     %3d %08lx %s\n",(int)d->d_tag,d->d_un.d_ptr,
                         (d->d_tag==DT_STRTAB?"strtab":(d->d_tag==DT_SYMTAB?"symtab":
-                        (d->d_tag==DT_RELA?"rela":(d->d_tag==DT_RELASZ?"relasz":
-                        (d->d_tag==DT_RELAENT?"relaent":""))))));
+                        (d->d_tag==DT_RELA?"relad":(d->d_tag==DT_RELASZ?"reladsz":
+                        (d->d_tag==DT_RELAENT?"relaent":(d->d_tag==DT_JMPREL?"rela":
+                        (d->d_tag==DT_SYMENT?"syment":(d->d_tag==DT_PLTRELSZ?"relasz":"")))))))));
                 if(d->d_tag == DT_STRTAB) {
                     strtable = elf + (d->d_un.d_ptr&0xFFFFFFFF);
                 }

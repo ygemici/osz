@@ -9,7 +9,7 @@ SRCS += dbg.c
 #endif
 OBJS = $(SRCS:.c=.o)
 LIBS =
-LDFLAGS = -nostdlib -nostartfiles --build-id=none
+LDFLAGS = -nostdlib -nostartfiles --build-id=none -x
 ARCHOBJS = $(filter-out $(ARCH)/start.o,$(wildcard $(ARCH)/*.o))
 ARCHOBJS+= $(wildcard $(ARCH)/$(PLATFORM)/*.o)
 CFLAGS = -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -DOSZ_NAME='$(NAME)' -DOSZ_VER='$(VERSION)' \

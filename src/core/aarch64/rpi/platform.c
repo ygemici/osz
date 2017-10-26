@@ -28,9 +28,26 @@
 #include "../arch.h"
 #include "platform.h"
 
+extern phy_t identity_mapping;
 extern uint8_t dbg_iskbd;
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
+volatile uint32_t  __attribute__((aligned(16))) mbox[16];
+
+/* mailbox functions */
+uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
+{
+    uint32_t r;
+    do{asm volatile("nop");}while(*MBOX_STATUS & MBOX_FULL);
+    *MBOX_WRITE = (((uint32_t)((uint64_t)mbox)&~0xF) | (ch&0xF));
+    while(1) {
+        do{asm volatile("nop");}while(*MBOX_STATUS & MBOX_EMPTY);
+        r=*MBOX_READ;
+        if((uint8_t)(r&0xF)==ch)
+            return (r&~0xF)==(uint32_t)((uint64_t)mbox) && mbox[1]==MBOX_RESPONSE;
+    }
+    return false;
+}
 
 /**
  * Initalize platform variables. Called by env_init()
@@ -80,8 +97,41 @@ void platform_enumerate()
  */
 void platform_poweroff()
 {
-    platform_waitkey();
-    platform_reset();
+    uint64_t r=10000;
+    // flush AUX
+    do{asm volatile("nop");}while(r-- && ((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01)));r=*AUX_MU_IO;
+    asm volatile("dsb sy; isb");
+    // disable MMU cache
+    vmm_map(identity_mapping);
+    asm volatile ("mrs %0, sctlr_el1" : "=r" (r));
+    r&=~((1<<12) |   // clear I, no instruction cache
+         (1<<2));    // clear C, no cache at all
+    asm volatile ("msr sctlr_el1, %0; isb" : : "r" (r));
+    // power off devices one by one
+    for(r=0;r<16;r++) {
+        mbox[0]=8*4;
+        mbox[1]=MBOX_REQUEST;
+        mbox[2]=0x28001;        // set power state
+        mbox[3]=8;
+        mbox[4]=8;
+        mbox[5]=(uint32_t)r;    // device id
+        mbox[6]=0;              // bit 0: off, bit 1: no wait
+        mbox[7]=0;
+        mbox_call(MBOX_CH_PROP,mbox);
+    }
+    // power off gpio pins
+    *GPFSEL0 = 0; *GPFSEL1 = 0; *GPFSEL2 = 0; *GPFSEL3 = 0; *GPFSEL4 = 0; *GPFSEL5 = 0;
+    *GPPUD = 0;
+    for(r=150;r>0;r--) { asm volatile("nop"); }
+    *GPPUDCLK0 = 0xffffffff; *GPPUDCLK1 = 0xffffffff;
+    for(r=150;r>0;r--) { asm volatile("nop"); }
+    *GPPUDCLK0 = 0; *GPPUDCLK1 = 0;        // flush GPIO setup
+    // power off the SoC (GPU + CPU)
+    r = *PM_RSTS; r &= ~0xfffffaaa;
+    r |= 0x555;    // partition 63 used to indicate halt
+    *PM_RSTS = PM_WDOG_MAGIC | r;
+    *PM_WDOG = PM_WDOG_MAGIC | 10;
+    *PM_RSTC = PM_WDOG_MAGIC | PM_RSTC_FULLRST;
 }
 
 /**
@@ -89,11 +139,14 @@ void platform_poweroff()
  */
 void platform_reset()
 {
-    uint32_t cnt=10000;
+    uint32_t r=10000;
     // flush AUX
-    do{asm volatile("nop");}while(cnt-- && ((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01)));cnt=*AUX_MU_IO;
-    *PM_WATCHDOG = PM_WDOG_MAGIC | 1;
-    *PM_RTSC = PM_WDOG_MAGIC | PM_RTSC_FULLRST;
+    do{asm volatile("nop");}while(r-- && ((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01)));r=*AUX_MU_IO;
+    asm volatile("dsb sy; isb");
+    r = *PM_RSTS; r &= ~0xfffffaaa;
+    *PM_RSTS = PM_WDOG_MAGIC | r;   // partition 0
+    *PM_WDOG = PM_WDOG_MAGIC | 10;
+    *PM_RSTC = PM_WDOG_MAGIC | PM_RSTC_FULLRST;
 }
 
 /**
@@ -135,12 +188,33 @@ uint64_t platform_waitkey()
  */
 void platform_dbginit()
 {
+    uint32_t r;
+    /* initialize UART */
+    *UART0_CR = 0;         // turn off UART0 or real hw. qemu doesn't care
+    *AUX_ENABLE |=1;       // enable UART1, mini uart
+    *AUX_MU_IER = 0;
+    *AUX_MU_CNTL = 0;
+    *AUX_MU_LCR = 3;       // 8 bits
+    *AUX_MU_MCR = 0;
+    *AUX_MU_IER = 0;
+    *AUX_MU_IIR = 0xc6;    // disable interrupts
+    *AUX_MU_BAUD = 270;    // 115200 baud
+    r=*GPFSEL1;
+    r&=~((7<<12)|(7<<15)); // gpio14, gpio15
+    r|=(2<<12)|(2<<15);    // alt5
+    *GPFSEL1 = r;
+    *GPPUD = 0;
+    for(r=150;r>0;r--) { asm volatile("nop"); }
+    *GPPUDCLK0 = (1<<14)|(1<<15);
+    for(r=150;r>0;r--) { asm volatile("nop"); }
+    *GPPUDCLK0 = 0;        // flush GPIO setup
+    *AUX_MU_CNTL = 3;      // enable Tx, Rx
 }
 
 /**
  * display a character on debug console
  */
-void platform_dbgputc(int c)
+void platform_dbgputc(uint8_t c)
 {
     do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20)); *AUX_MU_IO=c; *UART0_DR=c;
 }

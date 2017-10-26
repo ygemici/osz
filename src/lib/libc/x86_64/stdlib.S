@@ -31,6 +31,8 @@
 #include <errno.h>
 #include "../../../core/x86_64/tcb.h"
 
+.type exit, STT_FUNC
+
 .global mq_call
 .global mq_send
 .global mq_recv
@@ -358,7 +360,9 @@ getentropy:
  * void exit(status)
  */
 exit:
+    pushq   %rdi
     callq   _atexit@PLT
+    popq    %rdi
     xorq    %rax, %rax
     xorq    %rsi, %rsi
     movb    $SYS_exit, %al

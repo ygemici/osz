@@ -1,7 +1,7 @@
 /*
  * src/core/link.ld
  *
- * Copyright 2016 CC-by-nc-sa bztsrc@github
+ * Copyright 2017 CC-by-nc-sa bztsrc@github
  * https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
  * You are free to:
@@ -63,21 +63,20 @@ SECTIONS
     /* dynamically allocated/mapped data */
     . = ALIGN(4096);
     __dynbss_start = .;
-    /* mappings hack */
+    /* virtual mappings hack */
     tmpctrl = .;
-    . += 4096;
-    /* kmap relies on these in order for speed up */
-    tmpmap = .;
-    . += 4096;
-    tmppte = .;
     . += 4096;
     tmpmqctrl = .;
     . += 4096;
+    tmppte = .;
+    . += 4096;
+    tmpmap = .;
+    . += 4096;
     tmp2map = .;
     . += 4096;
-    tmpfx = .;
-    . += 4096;
     tmpalarm = .;
+    . += 4096;
+    tmpfx = .;
     . += 4096;
     tmp3map = .;
     . += 4096;

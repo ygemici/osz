@@ -35,13 +35,21 @@
 #include "isr.h"
 #include "../core.h"
 
+#define ARCH_ELFEM 183
+
 /* system tables */
 #define systable_acpi_idx 0
 #define systable_mmio_idx 1
 
 #define breakpoint asm volatile("brk #0")
-#define task_map(m) asm volatile("msr ttbr0_el1, %0"::"r"(m))
-#define task_enable(memroot,ip,sp)
+#define vmm_map(m) asm volatile("msr ttbr0_el1, %0"::"r"(m|1))
+#define vmm_enable(memroot,func,stack) asm volatile( \
+        "msr ttbr0_el1, %0;" \
+        "msr elr_el1, %1;" \
+        "msr sp_el0, %2;" \
+        "mov sp, %2;" \
+        "eret" \
+        ::"r"(memroot), "r"(func), "r"(stack), "r"(stack))
 
 #define XLAT_OSH (2<<8)
 #define XLAT_ISH (3<<8)

@@ -31,11 +31,13 @@
 extern uint8_t pmm_entries;
 /* memory pointers to allocate */
 extern rela_t *relas;
+/* syslog buffer */
 extern char *syslog_buf;
 extern char *syslog_ptr;
 /* pointer to tmpmap in PT */
 extern uint64_t *kmap_tmp;
 extern uint64_t locks;
+extern char *loadedelf;
 
 /* Main scructure */
 pmm_t pmm;
@@ -374,6 +376,8 @@ void pmm_init()
     // These are compile time configurable buffer sizes,
     // but that's ok, sized to the needs of this source
     relas = (rela_t*)kalloc(2);
+    // allocate loaded elf list
+    loadedelf = (char*)kalloc(1);
     //allocate syslog buffer
     syslog_buf = syslog_ptr = kalloc(nrlogmax);
 

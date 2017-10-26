@@ -108,6 +108,8 @@ void main()
     // ...we should never return here. Instead exiting init will poweroff
     // the machine as the last step in the shutdown procedure. But just in
     // case of any unwanted return, we say good bye here too.
-    kprintf_poweroff();
+platform_waitkey();
+platform_reset();
+//    kprintf_poweroff();
 
 }

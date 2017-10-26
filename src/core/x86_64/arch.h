@@ -35,6 +35,8 @@
 #include "isr.h"
 #include "../core.h"
 
+#define ARCH_ELFEM 62
+
 /* system tables */
 #define systable_acpi_idx 0
 #define systable_smbi_idx 1
@@ -46,12 +48,12 @@
 #define systable_hpet_idx 7
 
 #define breakpoint asm volatile("xchg %bx, %bx")
-#define task_map(m) asm volatile("movq %0, %%cr3" : : "a"(m));
-#define task_enable(memroot,ip,sp) asm volatile( \
+#define vmm_map(m) asm volatile("movq %0, %%cr3" : : "a"(m))
+#define vmm_enable(memroot,func,stack) asm volatile( \
         "mov %0, %%rax; mov %%rax, %%cr3;" \
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;" \
         "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" : \
-        : "a"(memroot), "b"(ip), "i"(sp));
+        : "a"(memroot), "b"(func), "i"(stack))
 
 /* VMM access bits */
 #define PG_CORE             0b00011

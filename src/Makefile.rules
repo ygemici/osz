@@ -5,9 +5,9 @@ OBJS = $(SRCS:.c=.o)
 LIBS += -lc
 
 CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fno-stack-protector -fvisibility=hidden -O2
-LDFLAGS += -nostdlib -L../../bin/initrd/sys/lib --build-id=none
+LDFLAGS += -nostdlib -x -L../../bin/initrd/sys/lib --build-id=none
 ifeq ($(LINKER),sharedlib)
-LDFLAGS += -shared -Bsymbolic -Bshareable ../lib/libc/$(ARCH)/init.o
+LDFLAGS += -shared -Bsymbolic -Bshareable
 endif
 
 ifeq ($(LINKER),)

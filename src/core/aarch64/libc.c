@@ -159,10 +159,10 @@ void kmap(virt_t virt, phy_t phys, uint16_t access)
 {
     uint64_t *ptr;
     // shortcuts for speed up
-    if(virt==(virt_t)&tmpmap)   ptr=(uint64_t*)kmap_tmp[1]; else
+    if(virt==(virt_t)&tmpmap)   ptr=(uint64_t*)kmap_tmp[3]; else
     if(virt==(virt_t)&tmp2map)  ptr=(uint64_t*)kmap_tmp[4]; else
-    if(virt==(virt_t)&tmpfx)    ptr=(uint64_t*)kmap_tmp[5]; else
-    if(virt==(virt_t)&tmpalarm) ptr=(uint64_t*)kmap_tmp[6]; else
+    if(virt==(virt_t)&tmpalarm) ptr=(uint64_t*)kmap_tmp[5]; else
+    if(virt==(virt_t)&tmpfx)    ptr=(uint64_t*)kmap_tmp[6]; else
         ptr=kmap_getpte(virt);
     /* negate RO bit to NX bit */
     *ptr=phys|access|((access>>7)&1?0:(1L<<PG_NX_BIT));

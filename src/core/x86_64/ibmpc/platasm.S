@@ -85,6 +85,9 @@ platform_waitkey:
     inb     $0x61, %al
     outb    %al, $0x61
 #if DEBUG
+    /* don't accept Left Alt key. I press it when I press Alt+Q or Alt+F4 to close qemu and bochs :-) */
+    cmpb    $0x38, %dl
+    je      1b
     /* handle shift key here for debugger */
     movb    $1, dbg_iskbd
     cmpb    $54, %dl
