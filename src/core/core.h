@@ -149,6 +149,7 @@ extern void platform_env();         // called by env_init()
 extern void platform_detect();      // called by sys_init() before isr_init()
 extern void platform_enumerate();   // called by sys_init()
 extern void platform_timer();       // called by isr_init()
+extern virt_t platform_mapdrvmem(); // called by drv_init()
 extern void platform_poweroff();    // called by kprintf_poweroff()
 extern void platform_reset();       // called by kprintf_reset()
 extern void platform_halt();        // hang the system
@@ -173,6 +174,21 @@ extern void *pmm_allocslot();
 /** Free physical memory */
 extern void pmm_free(phy_t base, size_t numpages);
 
+/** Initialize kernel memory mapping */
+extern uint64_t *vmm_init();
+
+/** Map a physical page at a virtual address */
+extern void vmm_map(virt_t virt, phy_t phys, uint16_t access);
+
+/** temporarily map a message queue at TMPQ_ADDRESS */
+extern void vmm_mq(phy_t tcbmemroot);
+
+/** temporarily map a buffer (up to 2M) at TMPQ_ADDRESS */
+extern void vmm_buf(phy_t tcbmemroot, virt_t ptr, size_t size);
+
+/** return a pointer to PTE for virtual address */
+extern phy_t *vmm_getpte(virt_t virt);
+
 /** Allocate and initialize a new address space */
 extern tcb_t *vmm_idletask();
 extern tcb_t *vmm_newtask(char *cmdline, uint8_t prio);
@@ -180,7 +196,7 @@ extern tcb_t *vmm_newtask(char *cmdline, uint8_t prio);
 extern tcb_t *vmm_maptask(phy_t memroot);
 
 /*** set up the main entry point */
-extern void vmm_setip(virt_t func);
+extern void vmm_setexec(virt_t func);
 /*** push an entry point for execution */
 extern void vmm_pushentry(virt_t func);
 
@@ -198,7 +214,7 @@ extern void vmm_mapbss(tcb_t *tcb,virt_t bss, phy_t phys, size_t size, uint64_t 
 extern void vmm_unmapbss(tcb_t *tcb,virt_t bss, size_t size);
 
 /** Switch to an address space (macro) */
-//void vmm_map(memroot);
+//void vmm_switch(memroot);
 
 /** Switch to an adress space and execute it (macro) */
 //void vmm_enable(memroot, func, stack);
@@ -238,21 +254,6 @@ extern void syslog_early(char* fmt, ...);
 extern void ui_init();
 
 // ----- Memory Management -----
-/** Initialize kernel memory mapping */
-extern uint64_t *kmap_init();
-
-/** Map a physical page at a virtual address */
-extern void kmap(virt_t virt, phy_t phys, uint16_t access);
-
-/** temporarily map a message queue at TMPQ_ADDRESS */
-extern void kmap_mq(phy_t tcbmemroot);
-
-/** temporarily map a buffer (up to 2M) at TMPQ_ADDRESS */
-extern void kmap_buf(phy_t tcbmemroot, virt_t ptr, size_t size);
-
-/** return a pointer to PTE for virtual address */
-extern uint64_t *kmap_getpte(virt_t virt);
-
 /** Copy n bytes from src to desc */
 extern void kmemcpy(void *dest, void *src, int size);
 

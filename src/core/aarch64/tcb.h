@@ -105,8 +105,8 @@ typedef struct {
     uint64_t rsp;
     uint64_t ss;
 */
-    uint64_t rip;
-    uint64_t rsp;
+    uint64_t pc;
+    uint64_t sp;
 } __attribute__((packed)) tcb_t;
 
 // compile time upper bound check

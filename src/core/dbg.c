@@ -52,7 +52,6 @@ extern int scry;
 extern pmm_t pmm;
 extern uint64_t *safestack;
 extern uint8_t sys_fault;
-extern uint64_t lastsym;
 extern char *addr_base;
 extern uint64_t bogomips;
 extern uint64_t isr_lastfps;
@@ -71,6 +70,7 @@ extern char *sprintf(char *dst,char* fmt, ...);
 extern void sched_dump();
 
 // variables
+uint64_t lastsym;
 uint8_t dbg_enabled = 0;
 uint8_t dbg_tab;
 uint8_t dbg_inst;

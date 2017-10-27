@@ -78,12 +78,12 @@ void isr_disableirq(uint16_t irq)
  */
 void isr_init()
 {
-    char *tmrname[] = { "arm", "cpu" };
+    char *tmrname[] = { "arm", "sys" };
     uint64_t i=0, s;
     sched_next = 0;
 
     /*** CPU Control Block ***/
-    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(1), PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&ccb, (uint64_t)pmm_alloc(1), PG_CORE_NOCACHE|PG_PAGE);
     ccb.magic = OSZ_CCB_MAGICH;
 
     /*** IRQ Routing Table ***/

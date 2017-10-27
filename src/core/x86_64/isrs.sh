@@ -348,7 +348,7 @@ else
 	    movq	%rdi, ioapic
 	    movq	%rax, %rsi
 	    movb	\$PG_CORE_NOCACHE, %dl
-	    call	kmap
+	    call	vmm_map
 	    addq	\$__PAGESIZE, pmm + 40
 
 	    /* get number of IRQ lines */
@@ -428,7 +428,7 @@ else
 		    movq	%rdi, apic
 		    movq	%rax, %rsi
 		    movb	\$PG_CORE_NOCACHE, %dl
-		    call	kmap
+		    call	vmm_map
 		    addq	\$__PAGESIZE, pmm + 40
 		    /* setup */
 		    mov		apic, %rbx

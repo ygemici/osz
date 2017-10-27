@@ -97,6 +97,6 @@ Either a numeric value or exactly one flag.
 | 2     | pi   | x86_64-acpi  | Programmable Interval Timer (fallback) |
 | 2     | pi   | x86_64-ibmpc | Programmable Interval Timer (default) |
 | 3     | rt   | x86_64-ibmpc | Real Time Clock |
-| 1     | bu   | aarch64-rpi  | Built-in ARM timer (default) |
-| 2     | rt   | aarch64-rpi  | External Real Time Clock chip on GPIO |
+| 1     | ar   | aarch64-rpi  | Built-in ARM CPU timer (default) |
+| 2     | sy   | aarch64-rpi  | BCM2837 System Timer |
 

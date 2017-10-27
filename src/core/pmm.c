@@ -35,7 +35,7 @@ extern rela_t *relas;
 extern char *syslog_buf;
 extern char *syslog_ptr;
 /* pointer to tmpmap in PT */
-extern uint64_t *kmap_tmp;
+extern uint64_t *vmm_tmp;
 extern uint64_t locks;
 extern char *loadedelf;
 
@@ -64,7 +64,7 @@ void* pmm_alloc(int pages)
 {
     pmm_entry_t *fmem = pmm.entries;
     int i=0;
-    uint64_t b;
+    uint64_t b=0;
     klockacquire(LOCK_PMM);
     // run-time asserts
     if(pmm.freepages>pmm.totalpages)
@@ -86,34 +86,30 @@ void* pmm_alloc(int pages)
                 }
                 pmm.size--;
             }
-            pmm.freepages-=pages;
-            if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
-                for(i=0;i<pages;i++) {
-                    kmap((virt_t)&tmp2map, b + i*__PAGESIZE, PG_CORE_NOCACHE|PG_PAGE);
-                    kmemset((char *)&tmp2map, 0, __PAGESIZE);
-                }
-            } else {
-                kmemset((char *)b, 0, pages * __PAGESIZE);
-            }
-#if DEBUG
-            if(debug&DBG_PMM)
-                kprintf("pmm_alloc(%d)=%x pid %x\n",pages,b,
-                    *((uint32_t*)0) == OSZ_TCB_MAGICH?((tcb_t*)0)->pid:0);
-#endif
-            klockrelease(LOCK_PMM);
-            return (void*)b;
+            break;
         }
         fmem++; i++;
     }
+    klockrelease(LOCK_PMM);
+    if(b!=0) {
+        pmm.freepages-=pages;
+        for(i=0;i<pages;i++) {
+            vmm_map((virt_t)&tmp2map, b + i*__PAGESIZE, PG_CORE_NOCACHE|PG_PAGE);
+            kmemset((char *)&tmp2map, 0, __PAGESIZE);
+        }
+#if DEBUG
+        if(debug&DBG_PMM)
+            kprintf("pmm_alloc(%d)=%x pid %x\n",pages,b,
+                *((uint32_t*)0) == OSZ_TCB_MAGICH?((tcb_t*)0)->pid:0);
+#endif
+    } else {
     // out of memory, should never happen during boot
-    //if(*((uint32_t*)0) != OSZ_TCB_MAGICH) {
 #if DEBUG
         pmm_dump();
 #endif
         kpanic("pmm_alloc: Out of physical RAM");
-    //}
-    klockrelease(LOCK_PMM);
-    return NULL;
+    }
+    return (void*)b;
 }
 
 /**
@@ -163,7 +159,7 @@ void* pmm_allocslot()
             if(*((uint32_t*)0) == OSZ_TCB_MAGICH) {
                 p=b;
                 for(j=0;j<__SLOTSIZE/__PAGESIZE;j++) {
-                    kmap((virt_t)&tmp2map, p, PG_CORE_NOCACHE|PG_PAGE);
+                    vmm_map((virt_t)&tmp2map, p, PG_CORE_NOCACHE|PG_PAGE);
                     kmemset((char *)&tmp2map, 0, __PAGESIZE);
                     p+=__PAGESIZE;
                 }
@@ -257,8 +253,8 @@ void pmm_init()
     pmm.magic = OSZ_PMM_MAGICH;
     pmm.size = 0;
     // first bss pages are for temporary mappings, tmpmap and tmp2map
-    // and their pte. Let's initialize them
-    kmap_tmp = kmap_init();
+    // and their control page tables. Let's initialize them
+    vmm_tmp = vmm_init();
 
     // buffers
     pmm.entries = fmem = (pmm_entry_t*)(&pmm_entries);
@@ -297,7 +293,7 @@ void pmm_init()
                 if(!i) {
                     // map free physical pages to pmm.entries. Nocache is important for MultiCore
                     for(i=0;(uint)i<(uint)nrphymax;i++)
-                        kmap((uint64_t)((uint8_t*)&pmm_entries) + i*__PAGESIZE,
+                        vmm_map((uint64_t)((uint8_t*)&pmm_entries) + i*__PAGESIZE,
                             (uint64_t)MMapEnt_Ptr(entry) + i*__PAGESIZE,
                             PG_CORE_NOCACHE|PG_PAGE);
                     // "preallocate" the memory for pmm.entries
@@ -409,7 +405,7 @@ void pmm_init()
         *((uint64_t*)(&tmpmqctrl + (i<<3))) = ((phy_t)pte + i*__PAGESIZE)|PG_CORE|PG_PAGE;
     e-=bootboot.initrd_ptr; e/=__PAGESIZE;
     for(i=0;i<e;i++) {
-        pte[i]=(bootboot.initrd_ptr + i*__PAGESIZE)|PG_CORE|PG_PAGE;
+        vmm_map(INITRD_ADDRESS+i*__PAGESIZE,bootboot.initrd_ptr + i*__PAGESIZE,PG_CORE|PG_PAGE);
         kentropy();
     }
 }
@@ -427,7 +423,7 @@ void* kalloc(int pages)
         pages=512;
     /* we allow non continous pages. For multi core system we must disable caching */
     while(pages-->0){
-        kmap((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE_NOCACHE|PG_PAGE);
+        vmm_map((uint64_t)pmm.bss_end,(uint64_t)pmm_alloc(1),PG_CORE_NOCACHE|PG_PAGE);
         pmm.bss_end += __PAGESIZE;
     }
     return bss;

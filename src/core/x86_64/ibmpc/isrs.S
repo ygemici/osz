@@ -688,7 +688,7 @@ isr_exc14pagefault:
     movq	(%rsp), %rsi
     movq	%rsp, %rdx
     movb	$14, %dil
-    callq	excabort
+    callq	exc14pagefault
     addq	$64, ccb + ccb_ist1
     callq	isr_loadcontext
     iretq

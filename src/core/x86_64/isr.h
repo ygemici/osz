@@ -26,14 +26,14 @@
  */
 
 //controllers
-#define CTRL_PIC 0
-#define CTRL_APIC 1
+#define CTRL_PIC    0
+#define CTRL_APIC   1
 #define CTRL_x2APIC 2
 
 //timers
-#define TMR_HPET		1
-#define TMR_PIT			2
-#define TMR_RTC			3
+#define TMR_HPET    1
+#define TMR_PIT     2
+#define TMR_RTC     3
 
 // IDT constants
 // 1ddd0tttt0000iiiissssssssssssssss

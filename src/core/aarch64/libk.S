@@ -53,9 +53,6 @@ klockacquire:
 klockrelease:
     ret
 
-kstrcmp:
-2:  ret
-
 /* send a message to a message queue. This has to be effective
    and I didn't liked the code gcc generated, that's why it's
    asm, otherwise this routine is not platform specific.

@@ -28,9 +28,8 @@
 #include "arch.h"
 
 /* external resources */
-extern phy_t idle_mapping, core_mapping, identity_mapping;
+extern phy_t core_mapping;
 extern void idle();
-phy_t pdpe;
 uint64_t lastpt;
 
 /**
@@ -44,6 +43,8 @@ void exc14pagefault(uint64_t excno, uint64_t rip, uint64_t rsp)
     kpanic(" --- page fault %d ---",excno);
 //#endif
 }
+
+/** NOTE: bunch of vmm_* functions are implmented in assembly in libk.S **/
 
 /**
  * create a new address space, map it's vmm tables and init it's TCB
@@ -63,32 +64,27 @@ tcb_t *vmm_newtask(char *cmdline, uint8_t prio)
     /* allocate memory mappings */
     // PML4
     memroot=(uint64_t)pmm_alloc(1);
-    kmap((uint64_t)&tmpmap, memroot, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, memroot, PG_CORE_NOCACHE|PG_PAGE);
     // PDPE
     ptr=pmm_alloc(1);
     paging[0]=(uint64_t)ptr+(PG_USER_RW|PG_PAGE);
     paging[511]=(core_mapping&~(__PAGESIZE-1))+(PG_CORE|PG_PAGE);
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     // PDE
     ptr=pmm_alloc(1);
     paging[0]=vmm[0]=(uint64_t)ptr+(PG_USER_RW|PG_PAGE);
-    kmap((uint64_t)&tmp3map, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp3map, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     // PT text
     ptr=pmm_alloc(1);
     paging[0]=((uint64_t)ptr+(PG_USER_RW|PG_PAGE))|(1UL<<PG_NX_BIT);
-    kmap(VMM_ADDRESS, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
-    if(prio<=PRI_IDLE) {
-        //page table for first 2M code block
-//        ptr=pmm_alloc(1);
-//        paging[1]=(uint64_t)ptr+(PG_USER_RW|PG_PAGE);
-    }
+    vmm_map(VMM_ADDRESS, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     paging=(uint64_t*)VMM_ADDRESS;
 
     /* allocate TCB */
     ptr=pmm_alloc(1);
     paging[0]=(uint64_t)ptr|PG_USER_RO|PG_PAGE|(1UL<<PG_NX_BIT);
-    kmap((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     tcb->magic = OSZ_TCB_MAGICH;
     tcb->memroot = memroot;
     tcb->state = tcb_state_running;
@@ -107,7 +103,7 @@ tcb_t *vmm_newtask(char *cmdline, uint8_t prio)
     tcb->allocmem++;
     paging[511]=(uint64_t)ptr|PG_USER_RW|PG_PAGE|(1UL<<PG_NX_BIT);
     // set up stack, watch out for alignment
-    kmap((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp2map, (uint64_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
     paging = (uint64_t*)&tmp2map;
     i = 511-((kstrlen(cmdline)+2+15)/16*2);
     tcb->name = TEXT_ADDRESS - __PAGESIZE + i*8;
@@ -125,7 +121,7 @@ tcb_t *vmm_newtask(char *cmdline, uint8_t prio)
         paging[i+(MQ_ADDRESS/__PAGESIZE)]=(uint64_t)ptr|PG_USER_RO|PG_PAGE|(1UL<<PG_NX_BIT);
     }
     tcb->allocmem += nrmqmax;
-    kmap((uint64_t)&tmp2map, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp2map, (uint64_t)(paging[(MQ_ADDRESS/__PAGESIZE)]&~(__PAGESIZE-1)), PG_CORE_NOCACHE|PG_PAGE);
     msghdr_t *msghdr = (msghdr_t *)&tmp2map;
     msghdr->mq_start = msghdr->mq_end = 1;
     msghdr->mq_size = (nrmqmax*__PAGESIZE)/sizeof(msg_t);
@@ -134,7 +130,7 @@ tcb_t *vmm_newtask(char *cmdline, uint8_t prio)
 
 #if DEBUG
     if(debug&DBG_TASKS)
-        kprintf("Task %x memroot %x stack %x %s\n",tcb->pid,tcb->memroot,ptr,cmdline);
+        kprintf("Task %x memroot %x stack %x %s\n",tcb->pid,tcb->memroot,tcb->rsp,cmdline);
 #endif
     return tcb;
 }
@@ -159,12 +155,12 @@ tcb_t *vmm_maptask(phy_t memroot)
 {
     tcb_t *tcb = (tcb_t*)&tmpmap;
     uint64_t *vmm=(uint64_t*)&tmp3map, *paging = (uint64_t *)&tmpmap;
-    kmap((uint64_t)&tmpmap, memroot, PG_CORE_NOCACHE|PG_PAGE);
-    kmap((uint64_t)&tmpmap, paging[0], PG_CORE_NOCACHE|PG_PAGE);
-    kmap((uint64_t)&tmp3map, paging[0], PG_CORE_NOCACHE|PG_PAGE);
-    kmap((uint64_t)&tmpmap, paging[0], PG_CORE_NOCACHE|PG_PAGE);
-    kmap(VMM_ADDRESS, paging[0], PG_CORE_NOCACHE|PG_PAGE);
-    kmap((uint64_t)&tmpmap, paging[0], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, memroot, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[0], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp3map, paging[0], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[0], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map(VMM_ADDRESS, paging[0], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[0], PG_CORE_NOCACHE|PG_PAGE);
     paging=(uint64_t*)VMM_ADDRESS;
     lastpt=511;
     do {
@@ -181,13 +177,16 @@ tcb_t *vmm_maptask(phy_t memroot)
 /**
  * Set up the main entry point
  */
-void vmm_setip(virt_t func)
+void vmm_setexec(virt_t func)
 {
     tcb_t *tcb = (tcb_t*)&tmpmap;
     if(tcb->rip==0) {
+        func--;
+        vmm_map((virt_t)&tmp2map,*((uint64_t*)vmm_getpte(func&~0xFFF)),PG_CORE|PG_PAGE);
+        *((uint8_t*)(&tmp2map+(func&0xFFF)))=0xC3; // retq
         tcb->rip=func;
-kprintf("setip %x\n",func);
-}
+//kprintf("setexec %x\n",func);
+    }
 }
 
 /**
@@ -198,7 +197,7 @@ void vmm_pushentry(virt_t func)
     tcb_t *tcb = (tcb_t*)&tmpmap;
     tcb->rsp-=8;
     *((uint64_t*)tcb->rsp) = func;
-kprintf("pushentry %x\n",func);
+//kprintf("pushentry %x\n",func);
 }
 
 /**
@@ -233,7 +232,7 @@ virt_t vmm_mapbuf(void *buf, uint64_t npages, uint64_t access)
     uint64_t *paging = (uint64_t *)VMM_ADDRESS;
     for(i=0;i<npages;i++) {
         vmm_checklastpt();
-        paging[lastpt++]=((*((uint64_t*)kmap_getpte((uint64_t)buf+i*__PAGESIZE)))&~(__PAGESIZE-1))|
+        paging[lastpt++]=((*((uint64_t*)vmm_getpte((uint64_t)buf+i*__PAGESIZE)))&~(__PAGESIZE-1))|
             PG_PAGE|access|(access==PG_USER_RW?1UL<<PG_NX_BIT:0);
         tcb->linkmem++;
     }
@@ -250,8 +249,8 @@ void vmm_mapbss(tcb_t *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access
         return;
     uint64_t *paging = (uint64_t *)&tmp3map;
     int i;
-    phys &= ~(__PAGESIZE-1);
-    access &= (__PAGESIZE-1+(1UL<<63));
+    phys &= ~((0xFFFFUL<<48)|(__PAGESIZE-1));
+    access &= (__PAGESIZE-1+(1UL<<PG_NX_BIT));
     if(access==0)
         access=PG_USER_RW;
     // mark writable pages no execute too
@@ -262,28 +261,26 @@ void vmm_mapbss(tcb_t *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access
         kprintf("    vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
 #endif
 again:
-    kmap((uint64_t)&tmp3map, tcb->memroot, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp3map, tcb->memroot, PG_CORE_NOCACHE|PG_PAGE);
     //PML4E
     i=(bss>>(12+9+9+9))&0x1FF;
-    if((paging[i]&~(__PAGESIZE-1))==0) {
+    if((paging[i]&(__PAGESIZE-1))==0) {
         paging[i]=(uint64_t)pmm_alloc(1) + (access|PG_PAGE);
         tcb->allocmem++;
     }
-    pdpe=(phy_t)(paging[i] & ~(__PAGESIZE-1));
-    kmap((uint64_t)&tmp3map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp3map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     //PDPE
     i=(bss>>(12+9+9))&0x1FF;
-    pdpe+=i*8;
-    if((paging[i]&~(__PAGESIZE-1))==0) {
+    if((paging[i]&(__PAGESIZE-1))==0) {
         paging[i]=(uint64_t)pmm_alloc(1) + (access|PG_PAGE);
         tcb->allocmem++;
     }
-    kmap((uint64_t)&tmp3map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp3map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     //PDE
     i=(bss>>(12+9))&0x1FF;
-    if((paging[i]&~(__PAGESIZE-1))==0) {
+    if((paging[i]&(__PAGESIZE-1))==0) {
         //map 2M at once if it's aligned and big
-        if(phys&~((1<<(12+9))-1) && size>=__SLOTSIZE) {
+        if(!(phys&(__SLOTSIZE-1)) && size>=__SLOTSIZE) {
             //fill PD records
             size=((size+__SLOTSIZE-1)/__SLOTSIZE)*__SLOTSIZE;
             while(size>0) {
@@ -297,10 +294,10 @@ again:
             }
             return;
         }
-        paging[i]=(uint64_t)pmm_alloc(1) + access;
+        paging[i]=(uint64_t)pmm_alloc(1) | access | PG_PAGE;
         tcb->allocmem++;
     }
-    kmap((uint64_t)&tmp3map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmp3map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     //PTE
     i=(bss>>(12))&0x1FF;
     //fill PT records
@@ -334,13 +331,13 @@ void vmm_unmapbss(tcb_t *tcb, virt_t bss, size_t size)
         kprintf("    vmm_unmapbss(%x,%x,%d)\n", tcb->memroot, bss, size);
 #endif
 again:
-    kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE|PG_PAGE);
     //PML4E
     i=(bss>>(12+9+9+9))&0x1FF;
-    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     //PDPE
     i=(bss>>(12+9+9))&0x1FF;
-    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     //PDE
     i=(bss>>(12+9))&0x1FF;
     if(paging[i]&PG_SLOT) {
@@ -357,7 +354,7 @@ again:
         }
     }
     //PTE
-    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     i=(bss>>(12))&0x1FF;
     while(size>0) {
         if(paging[i]&1) {
@@ -372,20 +369,20 @@ again:
     }
 
     //free mapping pages
-    kmap((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, tcb->memroot, PG_CORE_NOCACHE|PG_PAGE);
     //PML4E
     i=(bss>>(12+9+9+9))&0x1FF;
-    kmap((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, paging[i], PG_CORE_NOCACHE|PG_PAGE);
     //PDPE
     for(i=0;i<512;i++) {
         if(paging[i]&1) {
             //PDE
-            kmap((uint64_t)&tmp2map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
+            vmm_map((uint64_t)&tmp2map, paging[i], PG_CORE_NOCACHE|PG_PAGE);
             sj=0;
             for(j=0;j<512;j++) {
                 if(paging2[j]&1 && (paging2[j]&PG_SLOT)==0) {
                     //PTE
-                    kmap((uint64_t)&tmp3map, paging2[j], PG_CORE_NOCACHE|PG_PAGE);
+                    vmm_map((uint64_t)&tmp3map, paging2[j], PG_CORE_NOCACHE|PG_PAGE);
                     sk=0;for(k=0;k<512;k++) if(paging3[k]&1) sk++;
                     if(sk==0) {
                         pmm_free((phy_t)(paging2[j]&~(__PAGESIZE-1+(1UL<<63))), 1);

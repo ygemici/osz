@@ -120,6 +120,15 @@ void platform_enumerate()
 }
 
 /**
+ * map driver memory. Called by drv_init()
+ */
+virt_t platform_mapdrvmem()
+{
+    // x86 has a separate I/O address space with in/out instructions
+    return 0;
+}
+
+/**
  * Power off the platform. Called by kprintf_poweroff()
  */
 void platform_poweroff()

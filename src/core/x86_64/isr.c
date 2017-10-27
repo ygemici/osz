@@ -88,7 +88,7 @@ void isr_init()
     safestack = kalloc(1);
 
     /*** CPU Control Block (TSS64 in kernel bss) ***/
-    kmap((uint64_t)&ccb, (uint64_t)pmm_alloc(1), PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&ccb, (uint64_t)pmm_alloc(1), PG_CORE_NOCACHE|PG_PAGE);
     ccb.magic = OSZ_CCB_MAGICH;
     //usr stack (userspace, first page)
     ccb.ist1 = __PAGESIZE;

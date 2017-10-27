@@ -356,11 +356,11 @@ isr_timer:
     movq    %rax, %rsi
     xorq    %rax, %rax
     movq    %rax, 720(%rdi)
-    /* map next alarm task, kmap(&tmpalarm, tcb->alarm*__PAGESIZE, PG_CORE_NOCACHE); */
+    /* map next alarm task, vmm_map(&tmpalarm, tcb->alarm*__PAGESIZE, PG_CORE_NOCACHE); */
     shlq    $12, %rsi
     xorq    %rdx, %rdx
     movw    $PG_CORE_NOCACHE, %dx
-    call    kmap
+    call    vmm_map
     jmp     3f
 1:
 

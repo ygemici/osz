@@ -25,6 +25,10 @@
  * @brief Interrupt Service Routines header file
  */
 
+//timers
+#define TMR_ARM    1
+#define TMR_SYS    2
+
 #define ISR_NUMIRQ 16
 
 #define ISR_EXCMAX 7      //maximum code size of exception ISRs in alignment

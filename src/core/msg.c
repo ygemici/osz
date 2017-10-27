@@ -35,7 +35,6 @@ extern uint64_t env_getts(char *p,int16_t timezone);
 extern uint64_t currfps;
 extern pid_t sched_next;
 extern phy_t identity_mapping;
-extern phy_t screen[2];
 
 /* pointer to PDE for TMPQ_ADDRESS */
 phy_t *mq_mapping;
@@ -82,13 +81,13 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
         return false;
 
     // map destination task's message queue
-    kmap((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->pid)*__PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
+    vmm_map((uint64_t)&tmpmap, (uint64_t)((task!=0?task:srctcb->pid)*__PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
     if(dsttcb->magic != OSZ_TCB_MAGICH) {
         coreerrno = ESRCH;
         return false;
     }
     sched_next = dsttcb->memroot;
-    kmap_mq(dsttcb->memroot);
+    vmm_mq(dsttcb->memroot);
 
     /* mappings:
      *  tmpmap: destination task's tcb
@@ -122,8 +121,9 @@ uint64_t msg_sends(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, uin
             arg0 = arg0 & (__PAGESIZE-1);
             arg0 += msghdr->mq_buffstart*__PAGESIZE;
             // get mapping for message buffer
+            // TODO: use vmm_map()
             for(s = bs; s > 0; s --) {
-                pte = *kmap_getpte((uint64_t)p);
+                pte = *vmm_getpte((uint64_t)p);
                 paging[msghdr->mq_buffstart] = (pte & ~(__PAGESIZE-1)) | PG_USER_RO|PG_PAGE;
                 p += __PAGESIZE;
                 msghdr->mq_buffstart++;
@@ -218,9 +218,9 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
                 currfps++;
                 /* swap screen[0] and screen[1] mapping */
 /*
-                kmap((uint64_t)&tmpmap,  (uint64_t)(screen[0] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+                vmm_map((uint64_t)&tmpmap,  (uint64_t)(screen[0] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
                 i = (screen[0] & (__PAGESIZE-1))/sizeof(phy_t);
-                kmap((uint64_t)&tmp2map, (uint64_t)(screen[1] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
+                vmm_map((uint64_t)&tmp2map, (uint64_t)(screen[1] & ~(__PAGESIZE-1)), PG_CORE_NOCACHE);
                 j = (screen[1] & (__PAGESIZE-1))/sizeof(phy_t);
                 tmp = paging[i]; paging[i] = paging2[j]; paging2[j] = tmp;
 */
@@ -317,13 +317,13 @@ uint64_t msg_syscall(evt_t event, uint64_t arg0, uint64_t arg1, uint64_t arg2, u
                 coreerrno = ESRCH;
                 return (uint64_t)false;
             }
-            kmap((uint64_t)&tmpmap, (uint64_t)(arg0*__PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
+            vmm_map((uint64_t)&tmpmap, (uint64_t)(arg0*__PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
             if(dsttcb->magic != OSZ_TCB_MAGICH) {
                 coreerrno = ESRCH;
                 return (uint64_t)false;
             }
             // map destination buffer temporarily
-            kmap_buf(dsttcb->memroot,arg1,arg3);
+            vmm_buf(dsttcb->memroot,arg1,arg3);
             // copy from current address space to buffer
             kmemcpy((void*)(TMPQ_ADDRESS + (arg1&(__SLOTSIZE-1))),(void*)arg2,arg3);
             break;

@@ -48,12 +48,12 @@
 #define systable_hpet_idx 7
 
 #define breakpoint asm volatile("xchg %bx, %bx")
-#define vmm_map(m) asm volatile("movq %0, %%cr3" : : "a"(m))
-#define vmm_enable(memroot,func,stack) asm volatile( \
+#define vmm_switch(m) asm volatile("movq %0, %%cr3" : : "a"(m))
+#define vmm_enable(t) asm volatile( \
         "mov %0, %%rax; mov %%rax, %%cr3;" \
         "xorq %%rdi, %%rdi;xorq %%rsi, %%rsi;xorq %%rdx, %%rdx;xorq %%rcx, %%rcx;" \
         "movq %1, %%rsp; movq %2, %%rbp; xchg %%bx, %%bx; iretq" : \
-        : "a"(memroot), "b"(func), "i"(stack))
+        : "a"(t->memroot), "b"(&t->rip), "i"(TEXT_ADDRESS))
 
 /* VMM access bits */
 #define PG_CORE             0b00011

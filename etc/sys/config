@@ -24,7 +24,7 @@ quantum=10
 //  ir = IRQ Routing Table, sc = scheduler, ms = messaging,
 //  ma = memory allocation, bl=block io, fs=file systems,
 //  fi = file io, ca = cache, te = run tests instead of init
-debug=ms,te,bl,fi
+debug=ms,te,bl,fi,ta
 
 // display transformation type, decimal number 0-3 or one of:
 //  0 mc = mono channel, rgb color

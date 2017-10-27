@@ -9,7 +9,7 @@ LIBS += -lc
 
 CFLAGS += -DDEBUG=$(DEBUG) -DOPTIMIZE=$(OPTIMIZE) -Wall -fPIC -ffreestanding -fvisibility=hidden -fno-stack-protector -nostdinc \
 -I../../../../etc/include -I../../../core/$(ARCH) -I../../../lib/libc -I../../../lib/libc/$(ARCH) -I../../../fs
-LDFLAGS += -nostdlib -shared -Bshareable -x -L../../../../bin/initrd/sys/lib -L../../../lib -lc
+LDFLAGS += -nostdlib -shared -Bshareable -x -L../../../../bin/initrd/sys/lib -L../../../lib
 
 all: $(OBJS) $(EXTOBJS) $(BINTARGET)
 

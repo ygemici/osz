@@ -25,7 +25,7 @@
  * @brief Platform specific definitions
  */
 
-#define MMIO_BASE    0xfffffffffa000000
+#define MMIO_BASE    0xfffffffff8000000
 
 #define PM_RSTC         ((volatile uint32_t*)(MMIO_BASE+0x0010001c))
 #define PM_RSTS         ((volatile uint32_t*)(MMIO_BASE+0x00100020))

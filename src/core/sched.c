@@ -34,21 +34,20 @@ uint64_t sched_next;            //next task to map when isr finishes
 
 /**
  * get and map a TCB. You can also pass a TCB as input for
- * performance reasons. Also, kmap(tmpmap) is pre-cached.
+ * performance reasons. Also, vmm_map(tmpmap) is pre-cached.
  */
 tcb_t *sched_get_tcb(pid_t task)
 {
+    // last mapped or last used tcb
+    if((uint64_t)task==(uint64_t)&tmpmap ||
+       (uint64_t)task==(uint64_t)&tmpalarm ||
+       (uint64_t)task==(uint64_t)&tmpfx)
+        return (tcb_t*)(task);
     // active tcb
     if(task==0)
-        return (tcb_t*)0;
-    // last mapped or last used tcb
-    if((uint64_t)task==(uint64_t)(&tmpmap) ||
-       (uint64_t)task==(uint64_t)(&tmp2map) ||
-       (uint64_t)task==(uint64_t)(&tmpalarm) ||
-       (uint64_t)task==(uint64_t)pmm.bss_end)
-        return (tcb_t*)(task);
+        task=((tcb_t*)task)->pid;
     // map a new tcb
-    kmap((uint64_t)&tmpmap, (uint64_t)(task * __PAGESIZE), PG_CORE_NOCACHE);
+    vmm_map((uint64_t)&tmpmap, (uint64_t)(task * __PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
     return (tcb_t*)(&tmpmap);
 }
 
@@ -126,7 +125,7 @@ void sched_alarm(tcb_t *tcb, uint64_t sec, uint64_t nsec)
         tcb->alarm = ccb.hd_timerq;
         ccb.hd_timerq = pid;
         // map the tcb at the head of the queue for easy access
-        kmap((uint64_t)&tmpalarm, (uint64_t)(ccb.hd_timerq * __PAGESIZE), PG_CORE_NOCACHE);
+        vmm_map((uint64_t)&tmpalarm, (uint64_t)(ccb.hd_timerq * __PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
     } else {
         /* walk through ccb.hd_timerq queue */
         do {

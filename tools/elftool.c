@@ -90,7 +90,10 @@ int main(int argc,char** argv)
 
     /* Program header */
     if(dump)
-        printf("Segments\n");
+        printf("ELF %s %s, entry point: %08lx\n\nSegments\n",
+            ehdr->e_machine==62?"x86_64":"aarch64",
+            ehdr->e_type==2?"executable":"shared library",
+            ehdr->e_entry);
     for(i = 0; i < ehdr->e_phnum; i++){
         if(dump)
             printf(" %2d %08lx %6ld %s\n",(int)phdr->p_type,phdr->p_offset,phdr->p_filesz,

@@ -35,8 +35,6 @@
 .type exit, STT_FUNC
 
 .section .crt0
-    /* initial RIP on task execution, first byte of text segment */
-    retq
 _start:
     /* linker puts ctors here */
 .section .crt0.init

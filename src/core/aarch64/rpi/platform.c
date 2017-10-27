@@ -28,11 +28,16 @@
 #include "../arch.h"
 #include "platform.h"
 
+extern void armtmr_init();
+extern void systmr_init();
+
 extern phy_t identity_mapping;
 extern uint8_t dbg_iskbd;
+extern uint64_t lastpt;
 extern unsigned char *env_hex(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 extern unsigned char *env_dec(unsigned char *s, uint64_t *v, uint64_t min, uint64_t max);
 volatile uint32_t  __attribute__((aligned(16))) mbox[16];
+extern int scry;
 
 /* mailbox functions */
 uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
@@ -50,6 +55,28 @@ uint8_t mbox_call(uint8_t ch, volatile uint32_t *mbox)
 }
 
 /**
+ * parse clocksource configuration
+ */
+unsigned char *env_cs(unsigned char *s)
+{
+    uint64_t tmp;
+    if(*s>='0' && *s<='9') {
+        s = env_dec(s, &tmp, 0, 3);
+        clocksource=(uint8_t)tmp;
+        return s;
+    }
+    // skip separators
+    while(*s==' '||*s=='\t')
+        s++;
+    clocksource=0;
+    if(s[0]=='a' && s[1]=='r')  clocksource=TMR_ARM;  // CPU timer
+    if(s[0]=='s' && s[1]=='y')  clocksource=TMR_SYS;  // system timer
+    while(*s!=0 && *s!='\n')
+        s++;
+    return s;
+}
+
+/**
  * Initalize platform variables. Called by env_init()
  */
 void platform_env()
@@ -58,6 +85,7 @@ void platform_env()
     register uint64_t r;
     while((*AUX_MU_LSR&0x01)) r=(uint64_t)(*AUX_MU_IO);
     r++; //make gcc happy
+    scry=-1;
 }
 
 /**
@@ -65,7 +93,13 @@ void platform_env()
  */
 unsigned char *platform_parse(unsigned char *env)
 {
-    return env+1;
+    // manually override clock source
+    if(!kmemcmp(env, "clock=", 6)) {
+        env += 6;
+        env = env_cs(env);
+    } else
+        env++;
+    return env;
 }
 
 /**
@@ -73,7 +107,14 @@ unsigned char *platform_parse(unsigned char *env)
  */
 void platform_timer()
 {
-    clocksource=1;
+    // no autodetection, ARM CPU timer always there
+    if(clocksource==0)
+        clocksource=TMR_ARM;
+
+    if(clocksource==TMR_ARM)
+        armtmr_init();
+    else
+        systmr_init();
 }
 
 /**
@@ -93,6 +134,17 @@ void platform_enumerate()
 }
 
 /**
+ * map driver memory into task's address space. Called by drv_init()
+ */
+virt_t platform_mapdrvmem(tcb_t *tcb)
+{
+    virt_t v=(((lastpt+511)/512)*512)*__PAGESIZE;
+    vmm_mapbss(tcb, v, *((phy_t*)vmm_getpte(MMIO_BASE))&~((0xFFFFUL<<48)|0xFFF), 64*1024*1024, PG_USER_DRVMEM); 
+    return v;
+}
+
+
+/**
  * Power off the platform. Called by kprintf_poweroff()
  */
 void platform_poweroff()
@@ -102,7 +154,7 @@ void platform_poweroff()
     do{asm volatile("nop");}while(r-- && ((*AUX_MU_LSR&0x20)||(*AUX_MU_LSR&0x01)));r=*AUX_MU_IO;
     asm volatile("dsb sy; isb");
     // disable MMU cache
-    vmm_map(identity_mapping);
+    vmm_switch(identity_mapping);
     asm volatile ("mrs %0, sctlr_el1" : "=r" (r));
     r&=~((1<<12) |   // clear I, no instruction cache
          (1<<2));    // clear C, no cache at all

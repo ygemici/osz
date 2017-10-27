@@ -12,9 +12,10 @@
 ./src/fs/vfs.c:578:                // TODO: detect file system in image
 ./src/core/x86_64/libk.S:255:// TODO: use SSE2 copy
 ./src/core/x86_64/ibmpc/platform.c:118:// TODO: enumerate bus and load drivers
-./src/core/msg.c:102:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/msg.c:101:    /* TODO: use mq_buffstart properly as a circular buffer */
+./src/core/msg.c:124:            // TODO: use vmm_map()
 ./src/core/msg.c:206:                // TODO: save memory dump to fs
-./src/core/sched.c:165:    /* TODO: memory -> swap (except tcb) */
-./src/core/sched.c:181:        /* TODO: swap -> memory */
+./src/core/sched.c:164:    /* TODO: memory -> swap (except tcb) */
+./src/core/sched.c:180:        /* TODO: swap -> memory */
 ./src/lib/libc/aarch64/stdlib.S:213:    /* TODO: getentropy */
 ./src/lib/libc/x86_64/stdlib.S:354:    /* TODO: getentropy */

@@ -39,16 +39,6 @@
 .type kmemset, STT_FUNC
 .global kmemcmp
 .type kmemcmp, STT_FUNC
-.global kmap
-.type kmap, STT_FUNC
-.global kmap_init
-.type kmap_init, STT_FUNC
-.global kmap_mq
-.type kmap_mq, STT_FUNC
-.global kmap_buf
-.type kmap_buf, STT_FUNC
-.global kmap_getpte
-.type kmap_getpte, STT_FUNC
 .global kstrcpy
 .type kstrcpy, STT_FUNC
 .global kstrlen
@@ -63,6 +53,16 @@
 .type klockacquire, STT_FUNC
 .global klockrelease
 .type klockrelease, STT_FUNC
+.global vmm_map
+.type vmm_map, STT_FUNC
+.global vmm_init
+.type vmm_init, STT_FUNC
+.global vmm_mq
+.type vmm_mq, STT_FUNC
+.global vmm_buf
+.type vmm_buf, STT_FUNC
+.global vmm_getpte
+.type vmm_getpte, STT_FUNC
 
 /* idle task's code */
 idle:
@@ -343,34 +343,35 @@ kstrcmp:
    rsi: physical address
    rdx: access rights
 */
-kmap:
-    /* these indeces on kmap_tmp must match link.ld */
+vmm_map:
+    /* these indeces on vmm_tmp must match link.ld */
     /* shortcut for tmpmap. It's often called from sched_get_tcb */
     cmpq    $tmpmap, %rdi
     jne     1f
-    movq    kmap_tmp, %rax
+    movq    vmm_tmp, %rax
     addq    $24, %rax
     jmp     2f
     /* shortcut for tmp2map */
 1:  cmpq    $tmp2map, %rdi
     jne     1f
-    movq    kmap_tmp, %rax
+    movq    vmm_tmp, %rax
     addq    $32, %rax
     jmp     2f
     /* shortcut for tmpalarm */
 1:  cmpq    $tmpalarm, %rdi
     jne     1f
-    movq    kmap_tmp, %rax
+    movq    vmm_tmp, %rax
     addq    $40, %rax
     jmp     2f
     /* shortcut for tmpfx */
 1:  cmpq    $tmpfx, %rdi
     jne     1f
-    movq    kmap_tmp, %rax
+    movq    vmm_tmp, %rax
     addq    $48, %rax
     jmp     2f
-1:  call    kmap_getpte
-2:  andw    $0xF000, %si
+1:  call    vmm_getpte
+2:  movq    $0x0000FFFFFFFFF000, %rbx
+    andq    %rbx, %rsi
     mov     %dl, %sil
     /* copy W bit to NX bit */
     andb    $2, %dl
@@ -380,7 +381,7 @@ kmap:
     invlpg  (%rdi)
     ret
 
-kmap_init:
+vmm_init:
     push    %rbx
     push    %rcx
     push    %rdx
@@ -465,7 +466,7 @@ kmap_init:
     /* map TMPQ_ADDRESS pde at tmpmqctrl */
     subq    $8, %rbx
     mov     %r8, (%rbx)
-    /* record pointer at kmap_tmp */
+    /* record pointer at vmm_tmp */
     subq    $8, %rbx
     andq    $0x0FFF, %rbx
     addq    %rcx, %rbx
@@ -477,10 +478,10 @@ kmap_init:
 
 /* map a message queue temporarily
    IN rdi: tcb->memroot */
-kmap_mq:
+vmm_mq:
     movq    %rdi, %rdx
     movq    $MQ_ADDRESS, %rdi
-    call    kmap_getpte2
+    call    vmm_getpte2
     movb    $PG_CORE_NOCACHE, %r12b
     movq    $tmpmqctrl, %rax
     addq    $__PAGESIZE-24, %rax
@@ -498,13 +499,13 @@ kmap_mq:
     movq    $tmp2map, %rdi
     movq    %rdx, %rsi
     movb    $PG_CORE_NOCACHE, %sil
-    call    kmap
+    call    vmm_map
 
     ret
 
 /* map a buffer temporarily (up to 2M)
    IN: rdi: tcb->memroot, rsi: pointer, rdx: size */
-kmap_buf:
+vmm_buf:
     andq    $__SLOTSIZE-1, %rdx
     push    %rdx
     push    %rsi
@@ -512,7 +513,7 @@ kmap_buf:
     movq    %rsi, %rdi
     push    %rdx
     push    %rdi
-    call    kmap_getpte2
+    call    vmm_getpte2
     movb    $PG_CORE_NOCACHE, %r12b
     movq    $tmpmqctrl, %rax
     addq    $__PAGESIZE-24, %rax
@@ -530,7 +531,7 @@ kmap_buf:
     je      1f
     // map the next slot too
     addq    $__SLOTSIZE, %rsi
-    call    kmap_getpte2
+    call    vmm_getpte2
     movb    $PG_CORE_NOCACHE, %r12b
     movq    $tmpmqctrl, %rax
     addq    $__PAGESIZE-16, %rax
@@ -549,11 +550,11 @@ kmap_buf:
 
 /* IN rdi: virtual address
  * OUT rax: address of page entry in PT */
-kmap_getpte:
+vmm_getpte:
     movq    %cr3, %rdx
-kmap_getpte2:
+vmm_getpte2:
     /* we have tmpctrl, so we can map PTE */
-    movq    kmap_tmp, %r10
+    movq    vmm_tmp, %r10
     xorq    %r9, %r9
     /* PML4 */
     movq    %rdi, %rax

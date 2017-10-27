@@ -42,24 +42,25 @@ extern int errno();
 #define EACCES       7  // Access denied
 #define ENOMEM       8  // Out of memory
 #define ENOEXEC      9  // Exec format error
-#define EEXIST      10  // File exists
-#define ENOENT      11  // No such file or directory
-#define ENODEV      12  // No such device
-#define ENOTDIR     13  // Not a directory
-#define EISDIR      14  // Is a directory
-#define ENOTUNI     15  // Not an union
-#define EISUNI      16  // Is an union
-#define ENOFS       17  // No filesystem found
-#define EBADFS      18  // Corrupt filesystem
-#define EROFS       19  // Read-only file system
-#define ENOSPC      20  // No space left on device
-#define ENOTSUP     21  // File type not supported by file system
-#define EIO         22  // I/O error
-#define EPIPE       23  // Broken pipe
-#define ESPIPE      24  // Illegal seek
-#define ENOTSHM     25  // Not a shared memory buffer
-#define EBADF       26  // Bad file number
-#define ENOTBIG     27  // Buffer not big enough
+#define ERTEXEC     10  // Run-time linking error
+#define EEXIST      11  // File exists
+#define ENOENT      12  // No such file or directory
+#define ENODEV      13  // No such device
+#define ENOTDIR     14  // Not a directory
+#define EISDIR      15  // Is a directory
+#define ENOTUNI     16  // Not an union
+#define EISUNI      17  // Is an union
+#define ENOFS       18  // No filesystem found
+#define EBADFS      19  // Corrupt filesystem
+#define EROFS       20  // Read-only file system
+#define ENOSPC      21  // No space left on device
+#define ENOTSUP     22  // File type not supported by file system
+#define EIO         23  // I/O error
+#define EPIPE       24  // Broken pipe
+#define ESPIPE      25  // Illegal seek
+#define ENOTSHM     26  // Not a shared memory buffer
+#define EBADF       27  // Bad file number
+#define ENOTBIG     28  // Buffer not big enough
 
 /*
 #define EINTR        4  // Interrupted system call

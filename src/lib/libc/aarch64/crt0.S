@@ -28,9 +28,16 @@
  */
 
 .global _start
-.global exit
-.global atexit
+.extern exit
+.type exit, STT_FUNC
 
-.section .text
+.section .crt0
 _start:
-    ret
+    /* linker puts ctors here */
+.section .crt0.init
+    /* restore argc, argv as they may be ruined by shlib's _init */
+    /* call main(argc,argv) function */
+    /* linker puts dtors here */
+.section .text
+    /* first instruction in text section, exit task */
+    b       exit

@@ -31,18 +31,9 @@
 
 /* external resources */
 extern char osver[];
-extern uint8_t _code;
-extern uint64_t *stack_ptr;
-extern uint8_t sys_fault;
-extern uint8_t idle_first;
-extern uint8_t scrptr;
-extern uint64_t fstab;
-extern uint64_t fstab_size;
-extern uint64_t alarmstep;
-extern uint64_t bogomips;
-extern uint64_t buffer_ptr;
-extern uint64_t lastpt;
-extern uint64_t coreerrno;
+extern uint8_t _code, sys_fault, idle_first, scrptr;
+extern uint64_t fstab, fstab_size, alarmstep, bogomips, lastpt, coreerrno;
+extern uint64_t buffer_ptr, mmio_ptr, env_ptr;
 
 extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
@@ -51,17 +42,15 @@ extern unsigned char *env_dec(unsigned char *s, uint *v, uint min, uint max);
 
 /* memory allocated for relocation addresses */
 rela_t *relas;
-
-/* dynsym */
 unsigned char *nosym = (unsigned char*)"(no symbol)";
 unsigned char *mqsym = (unsigned char*)"(mq)";
 unsigned char *lssym = (unsigned char*)"(local stack)";
-#if DEBUG
-extern ccb_t ccb;
-virt_t lastsym;
-#endif
 #define SOMAXNAME 32
 char *loadedelf = NULL;
+
+#if DEBUG
+extern virt_t lastsym;
+#endif
 
 /**
  * load an ELF64 binary into text segment starting at 2M
@@ -103,8 +92,10 @@ void *elf_load(char *fn)
         phdr_l->p_type!=PT_DYNAMIC
         ) {
 elferr:
+            if(idle_first)
+                kpanic("Missing or corrupt ELF: %s", fn);
 #if DEBUG
-            kprintf("WARNING corrupt ELF binary: %s\n", fn);
+            kprintf("Missing or corrupt ELF: %s\n", fn);
 #endif
             return (void*)(-1);
     }
@@ -127,7 +118,7 @@ elferr:
         vmm_checklastpt();
         ptr=pmm_alloc(1);
         if(l>0) {
-            kmap((virt_t)&tmp3map, (phy_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+            vmm_map((virt_t)&tmp3map, (phy_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
             kmemcpy(&tmp3map, (uint8_t*)elf + phdr_d->p_paddr + i*__PAGESIZE, l>__PAGESIZE?__PAGESIZE:l);
             l-=__PAGESIZE;
         }
@@ -424,9 +415,8 @@ bool_t elf_rtlink()
     char *strtable;
     int strsz, syment, relasz, reladsz, relaent;
 
-    /* switch address space to make sure we flush changes in vmm tables */
-kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
-    vmm_map(((tcb_t*)&tmpmap)->memroot);
+    /*** switch address space to make sure we flush changes in vmm tables ***/
+    vmm_switch(((tcb_t*)&tmpmap)->memroot);
     /*** collect addresses to relocate ***/
     for(j=512; j<lastpt; j++) {
         ehdr=(Elf64_Ehdr *)(j*__PAGESIZE);
@@ -434,9 +424,9 @@ kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
             continue;
         relasz=reladsz=0; relaent=24;
         /* set up instruction pointer for the first elf */
-        // crt0 starts with a 'ret', so real entry point will be popped from stack and
-        // executed as the last after shared library's entry point all called
-        vmm_setip((virt_t)ehdr + (ehdr->e_entry/16)*16);
+        // real entry point must be popped from stack and executed
+        // after shared library's entry points all called
+        vmm_setexec((virt_t)ehdr + ehdr->e_entry);
 #if DEBUG
         if(debug&DBG_RTIMPORT)
             kprintf(" ELF %x%4D", ehdr, ehdr);
@@ -517,13 +507,23 @@ kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
             if(n >= 2*__PAGESIZE/sizeof(rela_t))
                 break;
             s = (Elf64_Sym *)((char *)sym + ELF64_R_SYM(rela->r_info) * syment);
-            rel->offs = (virt_t)((uint8_t*)ehdr + (int64_t)rela->r_offset);
-            rel->sym = strtable + s->st_name;
+            vo = (virt_t)((uint8_t*)ehdr + (int64_t)rela->r_offset);
+            if(s!=NULL && *(strtable + s->st_name)!=0) {
+                rel->offs = vo;
+                rel->sym = strtable + s->st_name;
 #if DEBUG
-            if(debug&DBG_RTIMPORT)
-                kprintf("    %x T %s\n", rel->offs, strtable + s->st_name);
+                if(debug&DBG_RTIMPORT)
+                    kprintf("    %x T %s\n", rel->offs, strtable + s->st_name);
 #endif
-            n++; rel++;
+                n++; rel++;
+            } else {
+#if DEBUG
+                if(debug&DBG_RTIMPORT)
+                    kprintf("    %x T base+%x\n", vo, *((uint64_t*)vo));
+#endif
+                *((uint64_t*)vo) += j*__PAGESIZE;
+                //*((uint64_t*)vo) = j*__PAGESIZE + relad->r_addend;
+            }
             /* move pointer to next rela entry */
             rela = (Elf64_Rela *)((uint8_t *)rela + relaent);
         }
@@ -534,6 +534,7 @@ kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
         ehdr=(Elf64_Ehdr *)(j*__PAGESIZE);
         if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
             continue;
+        // place entry points onto the stack in reverse order
         vmm_pushentry((virt_t)ehdr + ehdr->e_entry);
         phdr_l=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff+2*ehdr->e_phentsize);
         d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr_l->p_offset);
@@ -611,43 +612,42 @@ kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
                     objptr = (uint64_t*)vo;
                     // export data to drivers and services
                     if(tcb->priority == PRI_DRV || tcb->priority == PRI_SRV) {
-                        k=0;
                         if(!kmemcmp(strtable + s->st_name,"_bogomips",10) && s->st_size==8)
-                            {k=8; *objptr=bogomips;}
+                            {*objptr=bogomips;} else
                         if(!kmemcmp(strtable + s->st_name,"_alarmstep",11) && s->st_size==8)
-                            {k=8; *objptr=alarmstep;}
+                            {*objptr=alarmstep;} else
+                        if(!kmemcmp(strtable + s->st_name,"_mmio_ptr",10) && s->st_size==8)
+                            {*objptr=mmio_ptr;} else
                         if(!kmemcmp(strtable + s->st_name,"_initrd_ptr",12) && s->st_size==8)
-                            {k=8; *objptr=BUF_ADDRESS;}
+                            {*objptr=BUF_ADDRESS;} else
                         if(!kmemcmp(strtable + s->st_name,"_initrd_size",13) && s->st_size==8)
-                            {k=8; *objptr=bootboot.initrd_size;}
+                            {*objptr=bootboot.initrd_size;} else
                         if(!kmemcmp(strtable + s->st_name,"_fstab_ptr",11) && s->st_size==8)
-                            {k=8; *objptr=(fstab-bootboot.initrd_ptr+BUF_ADDRESS);}
+                            {*objptr=(fstab-INITRD_ADDRESS+BUF_ADDRESS);} else
                         if(!kmemcmp(strtable + s->st_name,"_fstab_size",12) && s->st_size==8)
-                            {k=8; *objptr=fstab_size;}
-                        if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
-                            {k=4; kmemcpy(objptr,&bootboot.fb_width,4);}
-                        if(!kmemcmp(strtable + s->st_name,"_fb_height",11) && s->st_size>=4)
-                            {k=4; kmemcpy(objptr,&bootboot.fb_height,4);}
-                        if(!kmemcmp(strtable + s->st_name,"_fb_scanline",13) && s->st_size>=4)
-                            {k=4; kmemcpy(objptr,&bootboot.fb_scanline,4);}
-                        if(!kmemcmp(strtable + s->st_name,"_fb_type",9) && s->st_size>0)
-                            {k=1; kmemcpy(objptr,&bootboot.fb_type,1);}
-                        if(!kmemcmp(strtable + s->st_name,"_display_type",14) && s->st_size>0)
-                            {k=1; kmemcpy(objptr,&display,1);}
-                        if(!kmemcmp(strtable + s->st_name,"_debug",7) && s->st_size>0)
-                            {k=4; kmemcpy(objptr,&debug,4);}
-                        if(!kmemcmp(strtable + s->st_name,"_screen_ptr",12) && s->st_size==8)
-                            {k=8; *objptr=BUF_ADDRESS;scrptr=true;}
+                            {*objptr=fstab_size;} else
                         if(!kmemcmp(strtable + s->st_name,"_fb_ptr",8) && s->st_size==8)
-                            {k=8; *objptr=(virt_t)BUF_ADDRESS + ((virt_t)__SLOTSIZE * ((virt_t)__PAGESIZE / 8));}
+                            {*objptr=(virt_t)BUF_ADDRESS;scrptr=true;} else
+                        if(!kmemcmp(strtable + s->st_name,"_fb_width",10) && s->st_size>=4)
+                            {kmemcpy(objptr,&bootboot.fb_width,4);} else
+                        if(!kmemcmp(strtable + s->st_name,"_fb_height",11) && s->st_size>=4)
+                            {kmemcpy(objptr,&bootboot.fb_height,4);} else
+                        if(!kmemcmp(strtable + s->st_name,"_fb_scanline",13) && s->st_size>=4)
+                            {kmemcpy(objptr,&bootboot.fb_scanline,4);} else
+                        if(!kmemcmp(strtable + s->st_name,"_fb_type",9) && s->st_size>0)
+                            {kmemcpy(objptr,&bootboot.fb_type,1);} else
+                        if(!kmemcmp(strtable + s->st_name,"_display_type",14) && s->st_size>0)
+                            {kmemcpy(objptr,&display,1);} else
                         if(!kmemcmp(strtable + s->st_name,"_syslog_ptr",12) && s->st_size==8)
-                            {k=8; *objptr=buffer_ptr;}
-                        if(!kmemcmp(strtable + s->st_name,"_syslog_size",13) && s->st_size>=4)
-                            {k=4; *objptr=nrlogmax*__PAGESIZE;}
+                            {*objptr=buffer_ptr;} else
+                        if(!kmemcmp(strtable + s->st_name,"_syslog_size",13) && s->st_size==8)
+                            {*objptr=nrlogmax*__PAGESIZE;} else
                         if(!kmemcmp(strtable + s->st_name,"_environment",13) && s->st_size==8)
-                            {k=8; *objptr=buffer_ptr;}
+                            {*objptr=env_ptr;}
                     }
-                    // export data to user processes
+                    // export data to user processes (regardless to priority)
+                    if(!kmemcmp(strtable + s->st_name,"_debug",7) && s->st_size>=4)
+                        {kmemcpy(objptr,&debug,4);} else
                     if(!kmemcmp(strtable + s->st_name,"_osver",7) && s->st_size > vs) {
                         kmemcpy(objptr,&osver,vs+1);
                     }
@@ -681,7 +681,7 @@ kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
         rela_t *r = (rela_t*)((char *)relas + i*sizeof(rela_t));
         if(r->offs!=0) {
             if(idle_first)
-                kpanic("pid %x: shared library missing for %s", tcb->pid, r->sym);
+                kpanic("pid %x: shared library missing for '%s'", tcb->pid, r->sym);
             else {
                 coreerrno=ENOEXEC;
                 return false;
@@ -689,30 +689,6 @@ kprintf("rtlink %x\n",((tcb_t*)&tmpmap)->memroot);
         }
     }
 
-    // push entry point as the last callback
-    // crt0 starts with a 'ret', so _start function address
-    // will be popped up and executed.
-/*
-    Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[0]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
-    if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG) || ehdr->e_phoff==ehdr->e_entry)
-//        kpanic("no executor?");
-        return false;
-    *stack_ptr = ehdr->e_entry + TEXT_ADDRESS;
-    stack_ptr--;
-    tcb->rsp -= 8;
-
-    // go again (other way around) and save entry points onto stack,
-    // but skip the first ELF as executor's entry point is already
-    // pushed on the stack
-    for(j=__PAGESIZE/8-1; j>1; j--) {
-        Elf64_Ehdr *ehdr=(Elf64_Ehdr *)(paging[j]&~(__PAGESIZE-1)&~((uint64_t)1<<63));
-        if(ehdr==NULL || kmemcmp(ehdr->e_ident,ELFMAG,SELFMAG))
-            continue;
-        *stack_ptr = ehdr->e_entry + TEXT_ADDRESS + j*__PAGESIZE;
-        stack_ptr--;
-        tcb->rsp -= 8;
-    }
-*/
     // sanity check task
     return vmm_check();
 }

@@ -27,7 +27,7 @@
  *   Memory map
  *       -512G shared memory                    (0xFFFFFF8000000000)
  *         -1G initial ramdisk                  (0xFFFFFFFFC0000000)
- *        -96M MMIO on Raspberry Pi             (0xFFFFFFFFFA000000)
+ *       -128M MMIO on Raspberry Pi             (0xFFFFFFFFF8000000)
  *        -64M framebuffer for kprintf          (0xFFFFFFFFFC000000)
  *         -2M core      bootboot[1] struct     (0xFFFFFFFFFFE00000)
  *         -2M + 1page   environment[2]         (0xFFFFFFFFFFE01000)
@@ -67,14 +67,12 @@ void main()
     pmm_init();
     // initialize the system, "idle" task and device driver tasks
     sys_init();
-/*
-    // initialize "FS" task, special service_init(SRV_FS, "sys/fs")
-    fs_init();
-*/
+    // initialize "FS" task
+    service_init(SRV_FS, "sys/fs");
+
     /*** step 2: communication ***/
     // initialize "UI" task to handle user input / output
-    // special service_init(SRV_UI, "sys/ui")
-//    ui_init();
+//    service_init(SRV_UI, "sys/ui");
 
     // other means of communication
 /*
@@ -92,6 +90,7 @@ void main()
     }
 */
 
+kprintf("So far so good!\n");platform_waitkey();platform_reset();
     /*** step 3: stand up and prosper. ***/
 /*
 #if DEBUG
@@ -108,8 +107,5 @@ void main()
     // ...we should never return here. Instead exiting init will poweroff
     // the machine as the last step in the shutdown procedure. But just in
     // case of any unwanted return, we say good bye here too.
-platform_waitkey();
-platform_reset();
-//    kprintf_poweroff();
-
+    kprintf_poweroff();
 }

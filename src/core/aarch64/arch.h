@@ -42,14 +42,14 @@
 #define systable_mmio_idx 1
 
 #define breakpoint asm volatile("brk #0")
-#define vmm_map(m) asm volatile("msr ttbr0_el1, %0"::"r"(m|1))
-#define vmm_enable(memroot,func,stack) asm volatile( \
-        "msr ttbr0_el1, %0;" \
+#define vmm_switch(m) asm volatile("msr ttbr0_el1, %0;tlbi vmalle1;isb"::"r"(m|1))
+#define vmm_enable(t) asm volatile( \
+        "msr ttbr0_el1, %0;tlbi vmalle1;isb;" \
         "msr elr_el1, %1;" \
         "msr sp_el0, %2;" \
         "mov sp, %2;" \
         "eret" \
-        ::"r"(memroot), "r"(func), "r"(stack), "r"(stack))
+        ::"r"(t->memroot), "r"(t->pc), "r"(t->sp), "r"(t->sp))
 
 #define XLAT_OSH (2<<8)
 #define XLAT_ISH (3<<8)

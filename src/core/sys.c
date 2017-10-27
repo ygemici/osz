@@ -33,12 +33,12 @@ uint32_t numcores = 1;
 uint64_t currfps, lastfps;
 /* locks, timer ticks, random seed, system tables */
 uint64_t locks, ticks[4], srand[4], systables[8];
-/* system fault code, idle first scheduled flag */
+/* system fault code, idle scheduled first time flag */
 uint8_t sys_fault, idle_first;
 /* memory mappings */
 phy_t idle_mapping, core_mapping, identity_mapping;
 /* pointer to tmpmap in PT */
-uint64_t *kmap_tmp;
+uint64_t *vmm_tmp;
 /* device drivers map */
 char *drvs, *drvs_end;
 /* pids of services. Negative pids are service ids and looked up in this table */
@@ -53,8 +53,7 @@ extern tcb_t *sched_get_tcb(pid_t task);
 extern void dbg_init();
 #endif
 
-phy_t screen[2];
-char fn[256];
+char fn[64];
 
 /**
  * Initialize the "idle" task and device drivers
@@ -75,13 +74,13 @@ void sys_init()
     // Don't add to scheduler queue, normally it will never be scheduled
     kmemcpy(&tcb->owner, "system", 7);
     idle_mapping = tcb->memroot;
+    idle_first = true;
 
     /*** Platform specific initialization ***/
     syslog_early("Device drivers");
     platform_detect();
     /* interrupt service routines (idt, pic, ioapic etc.) */
     isr_init();
-//kprintf("Drivers:\n%s",drvs);return;
 
     kmemcpy(&fn[0], "sys/drv/", 8);
     // load devices which are not coverable by bus enumeration
@@ -92,7 +91,7 @@ void sys_init()
             (f[2]!='f' || f[3]!='s') && 
             (f[2]!='i' || f[3]!='n' || f[4]!='e' || f[5]!='t')) {
                 f+=2;
-                if(c-f<255-8) {
+                if(c-f<64-8) {
                     kmemcpy(&fn[8], f, c-f);
                     fn[c-f+8]=0;
                     drv_init(fn);
@@ -105,6 +104,11 @@ void sys_init()
     }
     // enumerate system buses
     platform_enumerate();
+    // fallback video driver if specific driver not loaded
+    if(!services[-SRV_video]) {
+        kmemcpy(&fn[8], "display/fb.so", 14);
+        drv_init(fn);
+    }
 
     syslog_early("Services");
 }
@@ -114,24 +118,18 @@ void sys_init()
  */
 inline void sys_enable()
 {
-    tcb_t *tcb = (tcb_t*)0;
-    tcb_t *fstcb = (tcb_t*)(&tmpmap);
-
 #if DEBUG
     // enable debugger, it can be used only with task mappings
     dbg_init();
 #endif
     sys_fault = false;
-    idle_first = true;
 
     // map FS task's TCB
-    kmap((uint64_t)&tmpmap,
-        (uint64_t)(services[-SRV_FS]*__PAGESIZE),
-        PG_CORE_NOCACHE);
+    vmm_map((uint64_t)&tmpmap, (uint64_t)(services[-SRV_FS]*__PAGESIZE), PG_CORE_NOCACHE|PG_PAGE);
 
     syslog_early("Initializing");
     // fake an interrupt/exception handler return to force first task switch
-    vmm_enable(fstcb->memroot, &tcb->rip, TEXT_ADDRESS);
+    vmm_enable(((tcb_t*)&tmpmap));
 }
 
 /**
@@ -203,6 +201,6 @@ return;
     /* mount filesystems. It have to come from somewhere, so we choose the init task. */
     tcb_t *tcb=sched_get_tcb(services[-SRV_init]);
     sched_awake(tcb);
-    vmm_map(tcb->memroot);
+    vmm_switch(tcb->memroot);
     msg_sends(EVT_DEST(SRV_FS) | EVT_FUNC(SYS_mountfs),0,0,0,0,0,0);
 }
