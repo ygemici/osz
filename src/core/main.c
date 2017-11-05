@@ -72,7 +72,7 @@ void main()
 
     /*** step 2: communication ***/
     // initialize "UI" task to handle user input / output
-//    service_init(SRV_UI, "sys/ui");
+    service_init(SRV_UI, "sys/ui");
 
     // other means of communication
 /*

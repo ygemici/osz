@@ -30,7 +30,7 @@
 /* external resources */
 extern void idle();
 extern uint64_t *vmm_tmp;
-extern phy_t tmppte, identity_mapping, _data;
+extern phy_t tmppte, identity_mapping, __data;
 extern char kpanictlb[];
 uint64_t lastpt;
 
@@ -59,6 +59,7 @@ uint64_t *vmm_init()
         (0x04 << 8) |    // Attr=1: device, nGnRE (must be OSH too)
         (0x44 <<16);     // Attr=2: non cacheable
     asm volatile ("msr mair_el1, %0" : : "r" (l3));
+
     /* this is called very early. Relies on identity mapping
        to find the physical address of tmppte pointer in L3 */
     ptr=(uint64_t*)(l2&~0xFFF);
@@ -71,7 +72,7 @@ uint64_t *vmm_init()
     ptr=(uint64_t*)l3;
     ptr[0]&=~0xFFF; ptr[0]|=(1L<<PG_NX_BIT)|PG_CORE|PG_PAGE;             // bootboot
     ptr[1]&=~0xFFF; ptr[1]|=(1L<<PG_NX_BIT)|PG_CORE|PG_PAGE;             // environment
-    j=(uint32_t)(((uint64_t)&_data&0xfffff)>>12);
+    j=(uint32_t)(((uint64_t)&__data&0xfffff)>>12);
     for(i=2;i<j;i++) { ptr[i]&=~0xFFF; ptr[i]|=PG_CORE_RO|PG_PAGE; } // code
     for(i=j;ptr[i]&1;i++) { ptr[i]&=~0xFFF; ptr[i]|=(1L<<PG_NX_BIT)|PG_CORE_NOCACHE|PG_PAGE; } // data
     ptr[511]&=~0xFFF; ptr[511]|=(1L<<PG_NX_BIT)|PG_CORE_NOCACHE|PG_PAGE; // stack
@@ -349,7 +350,10 @@ virt_t vmm_mapbuf(void *buf, uint64_t npages, uint64_t access)
     tcb_t *tcb = (tcb_t*)&tmpmap;
     uint64_t *paging = (uint64_t *)VMM_ADDRESS;
     virt_t virt;
-//kprintf("vmm_mapbuf @%d %x %d\n",lastpt, buf,npages);
+#if DEBUG
+//    if(debug&DBG_VMM)
+        kprintf("vmm_mapbuf @%d %x %d\n",lastpt, buf,npages);
+#endif
     for(i=0;i<npages;i++) {
         vmm_checklastpt();
         virt=(uint64_t)buf+i*__PAGESIZE;
@@ -392,7 +396,7 @@ void vmm_mapbss(tcb_t *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access
     if(!(access & (1<<7)))
         access |= (1UL<<PG_NX_BIT);
 #if DEBUG
-    if(debug&DBG_VMM)
+//    if(debug&DBG_VMM)
         kprintf("    vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
 #endif
 again:

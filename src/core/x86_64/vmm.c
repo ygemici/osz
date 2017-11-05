@@ -230,6 +230,10 @@ virt_t vmm_mapbuf(void *buf, uint64_t npages, uint64_t access)
     int i=0;
     tcb_t *tcb = (tcb_t*)&tmpmap;
     uint64_t *paging = (uint64_t *)VMM_ADDRESS;
+#if DEBUG
+//    if(debug&DBG_VMM)
+        kprintf("    vmm_mapbuf(%x,%d,%x)\n", buf, npages, access);
+#endif
     for(i=0;i<npages;i++) {
         vmm_checklastpt();
         paging[lastpt++]=((*((uint64_t*)vmm_getpte((uint64_t)buf+i*__PAGESIZE)))&~(__PAGESIZE-1))|
@@ -257,7 +261,7 @@ void vmm_mapbss(tcb_t *tcb, virt_t bss, phy_t phys, size_t size, uint64_t access
     if(access & 2)
         access |= (1UL<<PG_NX_BIT);
 #if DEBUG
-    if(debug&DBG_VMM)
+//    if(debug&DBG_VMM)
         kprintf("    vmm_mapbss(%x,%x,%x,%d,%x)\n", tcb->memroot, bss, phys, size, access);
 #endif
 again:

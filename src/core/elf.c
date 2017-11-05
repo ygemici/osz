@@ -100,10 +100,10 @@ elferr:
             return (void*)(-1);
     }
 #if DEBUG
-    if(debug&DBG_ELF)
-        kprintf("  loadelf %x (%d+%d pages) @%d %s\n",elf,
+//    if(debug&DBG_ELF)
+        kprintf("  loadelf %x (%d+%d pages) @%d %x %s\n",elf,
             (phdr_c->p_memsz+__PAGESIZE-1)/__PAGESIZE,(phdr_d->p_memsz+__PAGESIZE-1)/__PAGESIZE,
-            lastpt,fn);
+            lastpt,lastpt*__PAGESIZE,fn);
 #endif
     /* clear autodetected IRQ number. Reuse otherwise unused field here */
     elf->e_version=0xFFFF;
@@ -114,17 +114,21 @@ elferr:
     l=phdr_d->p_filesz;
     /* GNU ld bug workaround: keep symtab and strtab */
     l+=__PAGESIZE; if(l>phdr_d->p_memsz) l=phdr_d->p_memsz;
+kprintf("data @%d %d %d\n",lastpt,l,size);
     for(i=0;i<size;i++) {
         vmm_checklastpt();
         ptr=pmm_alloc(1);
+//kprintf("ptr=%x\n",ptr);
         if(l>0) {
-            vmm_map((virt_t)&tmp3map, (phy_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
-            kmemcpy(&tmp3map, (uint8_t*)elf + phdr_d->p_paddr + i*__PAGESIZE, l>__PAGESIZE?__PAGESIZE:l);
-            l-=__PAGESIZE;
+            vmm_map((virt_t)&tmp2map, (phy_t)ptr, PG_CORE_NOCACHE|PG_PAGE);
+            kmemcpy(&tmp2map, (uint8_t*)elf + phdr_d->p_paddr + i*__PAGESIZE, l>__PAGESIZE?__PAGESIZE:l);
+            if(l>__PAGESIZE) l-=__PAGESIZE; else l=0;
         }
+kprintf("adding lastpt %d %x\n",lastpt,&paging[lastpt]);
         paging[lastpt++]=((uint64_t)ptr&~(__PAGESIZE-1))|PG_PAGE|PG_USER_RW|1UL<<PG_NX_BIT;
         tcb->allocmem++;
     }
+kprintf("dynamic\n");
     /* dynamic table, parse needed so records */
     d = (Elf64_Dyn *)((uint8_t *)elf + phdr_l->p_offset);
     while(d->d_tag != DT_NULL) {
@@ -417,6 +421,7 @@ bool_t elf_rtlink()
 
     /*** switch address space to make sure we flush changes in vmm tables ***/
     vmm_switch(((tcb_t*)&tmpmap)->memroot);
+kprintf("rtlink %x 512-%d\n",((tcb_t*)&tmpmap)->memroot,lastpt);
     /*** collect addresses to relocate ***/
     for(j=512; j<lastpt; j++) {
         ehdr=(Elf64_Ehdr *)(j*__PAGESIZE);
@@ -429,15 +434,15 @@ bool_t elf_rtlink()
         vmm_setexec((virt_t)ehdr + ehdr->e_entry);
 #if DEBUG
         if(debug&DBG_RTIMPORT)
-            kprintf(" ELF %x%4D", ehdr, ehdr);
+            kprintf(" ELF %x\n", ehdr);
 #endif
         /* get program headers. We have fixed segments: code, data, dynamic linkage */
         phdr_l=(Elf64_Phdr *)((uint8_t *)ehdr+ehdr->e_phoff+2*ehdr->e_phentsize);
-
+//kprintf("phdr_l %x off %x\n%D",phdr_l,phdr_l->p_offset,ehdr);
         /* dynamic table */
         d = (Elf64_Dyn *)((uint8_t *)ehdr + phdr_l->p_offset);
 #if DEBUG
-        if(debug&DBG_RTIMPORT)
+//        if(debug&DBG_RTIMPORT)
             kprintf("  Import %x (%d bytes):\n", d, (int)phdr_l->p_memsz);
 #endif
         while(d->d_tag != DT_NULL) {

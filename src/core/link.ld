@@ -42,11 +42,11 @@ SECTIONS
     environment = .;
     . += 4096;
     .text . + SIZEOF_HEADERS : AT(ADDR(.text) - . + SIZEOF_HEADERS) {
-        PROVIDE(_code = .);
+        PROVIDE(__code = .);
         KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*)   /* code */
         *(.rodata .rodata.* .gnu.linkonce.r*)                   /* data */
         . = ALIGN(4096);
-        PROVIDE(_data = .);
+        PROVIDE(__data = .);
         *(.data .data.* .gnu.linkonce.d*)
         srandinitend = .;
     } :text

@@ -433,7 +433,7 @@ vmm_init:
     btsq    $PG_NX_BIT, 0xff8(%rax)
     movb    $PG_CORE_NOCACHE, 0xff8(%rax)
     push    %rax
-    movq    $_data, %rdx
+    movq    $__data, %rdx
     andq    $0xFFFFF, %rdx
     shrq    $12, %rdx
     shlq    $3, %rdx

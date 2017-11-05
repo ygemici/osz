@@ -29,6 +29,8 @@
 
 /* get addresses from linker script */
 extern uint8_t pmm_entries;
+extern uint8_t __dynbss_start;
+extern uint8_t __code;
 /* memory pointers to allocate */
 extern rela_t *relas;
 /* syslog buffer */
@@ -237,7 +239,8 @@ void pmm_init()
     // our new free pages directory, pmm.entries
     pmm_entry_t *fmem;
     uint64_t num;
-    uint64_t i, m=0, n, *pte, e=bootboot.initrd_ptr+((bootboot.initrd_size+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
+    uint64_t i, m=0, n, *pte, e=bootboot.initrd_ptr+
+        ((bootboot.initrd_size+&__dynbss_start-&__code+__PAGESIZE-1)/__PAGESIZE)*__PAGESIZE;
 
     if(kmemcmp(&bootboot.magic,BOOTBOOT_MAGIC,4) || bootboot.size>__PAGESIZE)
         kpanic("Memory map corrupt");
